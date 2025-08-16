@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function()
  { // 監聽所有需要動畫效果的元素 
-constanimatedElements = document.querySelectorAll('.animated-element'); 
+const animatedElements = document.querySelectorAll('.animated-element'); 
 
 // 觀察者實例，用來檢查元素是否進入視窗 
 // 修正：將 Intersection-Observer 改為 IntersectionObserver 
