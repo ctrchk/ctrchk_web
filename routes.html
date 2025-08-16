@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港城市運輸單車 CTRC HK - 單車路線</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css)">
+    <style>
+        .filter-buttons {
+            text-align: center;
+            margin-bottom: 2em;
+        }
+        .filter-button {
+            background-color: #2c3e50;
+            color: #fff;
+            border: none;
+            padding: 0.8em 1.5em;
+            margin: 0.5em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .filter-button:hover, .filter-button.active {
+            background-color: #04D93C;
+            transform: translateY(-3px);
+        }
+        .all-routes-section .route-cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2em;
+        }
+        .route-card-full {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        .route-card-full:hover {
+            transform: translateY(-5px);
+        }
+        .route-card-full a {
+            padding: 1.5em;
+            display: block;
+            color: inherit;
+        }
+        .route-card-full a.disabled-link {
+            pointer-events: none;
+            cursor: default;
+        }
+        .route-card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1em;
+        }
+        .route-id-code {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            margin-right: 1em;
+            white-space: nowrap;
+        }
+        .route-alias {
+            margin: 0;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        .route-card-content p {
+            margin: 0.5em 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <a href="/" style="color: white; text-decoration: none;">香港城市運輸單車 CTRC HK</a>
+        </div>
+        <nav>
+            <a href="/about.html">關於我們</a>
+            <a href="/routes.html">單車路線</a>
+            <a href="/coming_soon.html">網店</a>
+            <a href="/contact.html">聯絡我們</a>
+            <a href="/coming_soon.html" class="cta-button">登入</a>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <section class="hero">
+            <h1>所有單車路線</h1>
+            <p>在這裡找到所有為你精心規劃的將軍澳和沙田區單車路線。</p>
+        </section>
+
+        <section class="content all-routes-section">
+            <div class="route-cards-container animated-element" id="all-routes-container">
+                </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

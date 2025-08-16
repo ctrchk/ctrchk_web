@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx version="1.1" creator="https://onthegomap.com" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>0.81 km route</name>
+    <link href="https://onthegomap.com">
+      <text>On The Go Map</text>
+    </link>
+    <time>2025-08-12T19:54:03.698Z</time>
+    <copyright author="On The Go Map, OpenStreetMap Contributors">
+      <year>2025</year>
+    </copyright>
+  </metadata>
+  <trk>
+    <name>0.81 km route</name>
+    <trkseg>
+      <trkpt lat="22.31702" lon="114.26346"/>
+      <trkpt lat="22.31747" lon="114.26281"/>
+      <trkpt lat="22.31755" lon="114.26263"/>
+      <trkpt lat="22.31786" lon="114.2622"/>
+      <trkpt lat="22.31791" lon="114.26224"/>
+      <trkpt lat="22.31801" lon="114.26231"/>
+      <trkpt lat="22.31804" lon="114.26233"/>
+      <trkpt lat="22.3183" lon="114.26245"/>
+      <trkpt lat="22.31833" lon="114.26239"/>
+      <trkpt lat="22.31835" lon="114.26236"/>
+      <trkpt lat="22.31852" lon="114.26208"/>
+      <trkpt lat="22.31853" lon="114.26206"/>
+      <trkpt lat="22.31854" lon="114.26204"/>
+      <trkpt lat="22.31868" lon="114.26215"/>
+      <trkpt lat="22.31869" lon="114.26216"/>
+      <trkpt lat="22.31908" lon="114.26237"/>
+      <trkpt lat="22.31922" lon="114.26241"/>
+      <trkpt lat="22.3196" lon="114.26243"/>
+      <trkpt lat="22.31982" lon="114.26242"/>
+      <trkpt lat="22.32011" lon="114.26238"/>
+      <trkpt lat="22.32057" lon="114.26228"/>
+      <trkpt lat="22.32087" lon="114.26215"/>
+      <trkpt lat="22.32123" lon="114.26192"/>
+      <trkpt lat="22.32143" lon="114.26174"/>
+      <trkpt lat="22.32145" lon="114.26173"/>
+      <trkpt lat="22.32146" lon="114.26159"/>
+      <trkpt lat="22.32139" lon="114.26147"/>
+      <trkpt lat="22.32121" lon="114.26161"/>
+      <trkpt lat="22.32044" lon="114.26222"/>
+      <trkpt lat="22.32019" lon="114.26222"/>
+      <trkpt lat="22.32017" lon="114.26215"/>
+    </trkseg>
+  </trk>
+</gpx>
