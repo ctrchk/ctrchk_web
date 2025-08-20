@@ -1,3 +1,4 @@
+//Hop to Row: 195/+
 document.addEventListener('DOMContentLoaded', function()
  { // 監聽所有需要動畫效果的元素 
 const animatedElements = document.querySelectorAll('.animated-element'); 
@@ -191,6 +192,7 @@ threshold: 0.1
             }
 
 
+         //Not working below ---
             routeDetailContainer.innerHTML = `
                 <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
                     <h1 class="route-hero-title">${route.alias || '路線詳情'}</h1>
