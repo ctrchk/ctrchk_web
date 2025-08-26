@@ -168,8 +168,17 @@ threshold: 0.1
     }
 
     // 處理路線詳情頁面
-    const urlParams = new URLSearchParams(window.location.search);
-    const routeId = urlParams.get('id');
+    let urlParams = null;
+    let routeId = null;
+    try {
+        if (window.location && window.location.search) {
+            urlParams = new URLSearchParams(window.location.search);
+            routeId = urlParams.get('id');
+        }
+    } catch (e) {
+        // Fallback: no URL params available
+        routeId = null;
+    }
     const routeDetailContainer = document.getElementById('route-detail-container');
 
     if (routeDetailContainer && routeId) {
@@ -192,7 +201,7 @@ threshold: 0.1
             }
 
 
-         //Not working below ---
+         
             routeDetailContainer.innerHTML = `
                 <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
                     <h1 class="route-hero-title">${route.alias || '路線詳情'}</h1>
