@@ -8,18 +8,19 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Login function
 async function login(email, password) {
-    const { user, session, error } = await supabase.auth.signIn({
+    const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
     });
 
     if (error) {
         console.error('Login error:', error.message);
+        // Optionally update the UI here
         return;
     }
 
-    console.log('Logged in user:', user);
-    console.log('Session:', session);
+    console.log('Logged in user:', data.user);
+    console.log('Session:', data.session);
 }
 
 // Example usage
@@ -28,6 +29,7 @@ document.getElementById('loginButton').addEventListener('click', () => {
     const password = document.getElementById('passwordInput').value;
     login(email, password);
 });
+
 supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN') {
         window.location.href = 'coming_soon.html';
@@ -35,5 +37,3 @@ supabase.auth.onAuthStateChange((event, session) => {
         console.log("No such credentials found");
     }
 });
-
-
