@@ -28,3 +28,10 @@ document.getElementById('loginButton').addEventListener('click', () => {
     const password = document.getElementById('passwordInput').value;
     login(email, password);
 });
+supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
+        window.location.href = 'coming_soon.html';
+    }
+});
+
+
