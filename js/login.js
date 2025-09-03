@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
 const supabaseUrl = 'https://cbvsrhwimwkwtxpftjbe.supabase.co';
-const supabaseAnonKey = process.env.ANON_SUPABASE_KEY;
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNidnNyaHdpbXdrd3R4cGZ0amJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NzAwNjIsImV4cCI6MjA3MjM0NjA2Mn0.idkNESZ-pJG0V74WCYXT4FudqPYD7XlPM5yEBGt4YlY';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Login function
@@ -31,6 +31,8 @@ document.getElementById('loginButton').addEventListener('click', () => {
 supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN') {
         window.location.href = 'coming_soon.html';
+    } else {
+        console.log("No such credentials found");
     }
 });
 
