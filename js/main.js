@@ -1,3 +1,5 @@
+console.log('--- main.js 檔案已成功載入並開始執行！ ---');
+
 /**
  * @file main.js
  * @description 網站全域腳本。【最終修正與結構優化版】
