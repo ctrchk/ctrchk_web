@@ -1,19 +1,24 @@
 //Hop to Row: 195/+
 document.addEventListener('DOMContentLoaded', function()
- { // 監聽所有需要動畫效果的元素 
-const animatedElements = document.querySelectorAll('.animated-element'); 
+ { 
+    // 【已修改】監聽所有需要動畫效果的元素，加入了 .timeline-item
+    const animatedElements = document.querySelectorAll('.animated-element, .timeline-item');
 
-// 觀察者實例，用來檢查元素是否進入視窗 
-// 修正：將 Intersection-Observer 改為 IntersectionObserver 
-const observer = new IntersectionObserver((entries) => { 
-entries.forEach(entry => { 
-if (entry.isIntersecting) { 
-entry.target.classList.add('is-visible'); 
-} 
-}); 
-}, { 
-threshold: 0.1 
-});
+    // 觀察者實例，用來檢查元素是否進入視窗
+    const observer = new IntersectionObserver((entries, observer) => { // <-- 在這裡加入 observer 參數
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                // 【效能優化】當動畫觸發後，停止觀察此元素
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+
+    
+// ... 後續程式碼 ...
 
     // 將觀察者附加到每個動畫元素上
     animatedElements.forEach(element => {
