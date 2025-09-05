@@ -1,31 +1,12 @@
-//Hop to Row: 195/+
-
 /**
  * @file main.js
- * @description 網站全域腳本，處理滾動動畫、路線篩選和路線詳情頁渲染。
+ * @description 網站全域腳本。【最終修正與結構優化版】
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // =========================================================================
-    // 動畫效果 IntersectionObserver
-    // =========================================================================
-    const animatedElements = document.querySelectorAll('.animated-element, .timeline-item');
-    const observer = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-                observer.unobserve(entry.target);
-            }
-        });
-    }, {
-        threshold: 0.1
-    });
-    animatedElements.forEach(element => {
-        observer.observe(element);
-    });
 
     // =========================================================================
-    // 路線資料庫
+    // 全站共用資料與函式
     // =========================================================================
     const routes = [
         { id: '900', alias: "市區海濱線", start: "寶琳(新都城二期)", end: "調景嶺彩明", via: "景林邨、香港單車館、將軍澳海濱、調景嶺站", nature: "旅遊", time: 40, length: "5.5km", difficulty: 3, image: "images/900.jpg", description: "這是專為新手打造的「海濱專線」。全程半個多小時，少坡、風景優美，讓你在寶琳與調景嶺之間輕鬆穿梭，沿途還有補給點可供休息。", tags: ["將軍澳", "海濱專線", "寶琳調景嶺線", "新手必試", "風景優美", "少坡"], color: "#990000", gpx: [{ label: "往寶琳", file: "900寶琳.gpx" }, { label: "往調景嶺", file: "900調景嶺.gpx" }] },
@@ -63,39 +44,33 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: '966T', alias: "大橋旅遊線", start: "調景嶺站", end: "康城站", via: "將軍澳跨灣大橋", nature: "旅遊", time: 16, length: "3.0km", difficulty: 3, image: "images/966T.jpg", description: "專為遊覽觀光設計的大橋特快路線。連接康城站與調景嶺站，適合單車新手挑戰自我，欣賞大橋景色。", tags: ["將軍澳", "旅遊專線", "多坡", "大橋特快", "新手必試", "連接地鐵站"], color: "#ff9900", gpx: [{ label: "往康城", file: "966T康城.gpx" }, { label: "往調景嶺", file: "966T調景嶺.gpx" }] },
         { id: 'S90', alias: "康城海濱線", start: "清水灣半島", end: null, via: "康城海濱", nature: "通勤", time: 20, length: "3.5km(來回)", difficulty: 2.5, image: "images/S90.jpg", description: "清水灣半島專線，連接將軍澳站。路況少坡，適合通勤，為居民提供一條快速的地鐵接駁選擇。", tags: ["將軍澳", "通勤專線", "少坡", "特快", "清水灣半島專線", "連接地鐵站"], color: "#00ff00", textColor: "black", gpx: [{ label: "來回", file: "S90康城循環.gpx" }] },
         { id: 'S91', alias: "清半接駁線", start: "清水灣半島", end: "將軍澳站", via: "北橋、怡明邨", nature: "混合", time: 6, length: "1.1km", difficulty: 1, image: "images/S91.jpg", description: "循環來往清水灣半島與康城站的循環線。適合清水灣半島居民通勤，也適合體驗康城海濱，道路平坦，讓你輕鬆騎行，探索康城風光。", tags: ["將軍澳", "平坦", "循環", "清水灣半島專線", "通勤", "旅遊"], color: "#ffff00", textColor: "black", gpx: [{ label: "往清水灣半島", file: "S91清水灣半島.gpx" }, { label: "往調景嶺", file: "S91調景嶺.gpx" }] },
-        // 沙田區規劃中路線
         { id: 'ST01', alias: "", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
-    // =========================================================================
-    // 首頁路線預覽功能
-    // =========================================================================
-    function renderHomePageRoutes() {
-        const container = document.getElementById('routes-preview-container');
-        if (container) {
-            const routesToShow = [...routes].filter(r => !r.id.startsWith("ST")).sort(() => 0.5 - Math.random()).slice(0, 3);
-            container.innerHTML = '';
-            routesToShow.forEach(route => {
-                const card = document.createElement('div');
-                card.className = 'route-card';
-                card.innerHTML = `
-                    <a href="/route_detail.html?id=${route.id}">
-                        <img src="${route.image}" alt="${route.alias || route.id}">
-                        <h3>${route.alias || route.id}</h3>
-                    </a>
-                `;
-                container.appendChild(card);
-            });
-        }
-    }
-    renderHomePageRoutes();
 
-    // =========================================================================
-    // 路線總覽頁面 (routes.html) - 全新【多選下拉式】篩選邏輯
-    // =========================================================================
-    const allRoutesContainer = document.getElementById('all-routes-container');
-    if (allRoutesContainer) {
-        
-        // --- 1. 定義篩選器結構和狀態 ---
+    // 將所有頁面特定的初始化程式碼包裹在函式中
+    function initHomePage() {
+        const container = document.getElementById('routes-preview-container');
+        if (!container) return;
+
+        const routesToShow = [...routes].filter(r => !r.id.startsWith("ST")).sort(() => 0.5 - Math.random()).slice(0, 3);
+        container.innerHTML = '';
+        routesToShow.forEach(route => {
+            const card = document.createElement('div');
+            card.className = 'route-card';
+            card.innerHTML = `
+                <a href="/route_detail.html?id=${route.id}">
+                    <img src="${route.image}" alt="${route.alias || route.id}">
+                    <h3>${route.alias || route.id}</h3>
+                </a>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function initRoutesPage() {
+        const allRoutesContainer = document.getElementById('all-routes-container');
+        if (!allRoutesContainer) return;
+
         const filterCategories = {
             "路線區域": ["將軍澳", "沙田區"],
             "路線類別": ["通勤", "旅遊", "單向", "循環", "快速", "特快", "長途"],
@@ -103,37 +78,29 @@ document.addEventListener('DOMContentLoaded', function() {
             "路線稱號": ["海濱專線", "坑口北專線", "維景灣畔專線", "清水灣半島專線", "康城專線", "寶琳調景嶺線", "學校線", "創新園路線", "南北三寶"],
             "接駁交通": ["連接地鐵站", "連接巴士總站", "接駁渡輪"]
         };
-
         const tagMap = { "單向": "單向線", "循環": "循環線" };
-        
-        let activeFilters = {}; // 用於儲存當前所有勾選的條件
+        let activeFilters = {};
 
-        // --- 2. 動態生成篩選器 UI ---
         const filterControls = document.createElement('div');
         filterControls.className = 'filter-controls animated-element';
 
         for (const category in filterCategories) {
-            // 初始化 activeFilters
             activeFilters[category] = [];
-
             const container = document.createElement('div');
             container.className = 'filter-dropdown-container';
-
             const button = document.createElement('button');
             button.className = 'filter-category-button';
             button.textContent = category;
             button.dataset.category = category;
-
             const menu = document.createElement('div');
             menu.className = 'filter-dropdown-menu';
-            
+
             filterCategories[category].forEach(tag => {
                 const label = document.createElement('label');
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = tag;
                 checkbox.dataset.category = category;
-                
                 label.appendChild(checkbox);
                 label.appendChild(document.createTextNode(` ${tag}`));
                 menu.appendChild(label);
@@ -149,14 +116,10 @@ document.addEventListener('DOMContentLoaded', function() {
         filtersContainer.appendChild(filterControls);
         allRoutesContainer.before(filtersContainer);
 
-        // --- 3. 綁定事件處理 ---
-
-        // 點擊按鈕顯示/隱藏下拉選單
         document.querySelectorAll('.filter-category-button').forEach(button => {
             button.addEventListener('click', (e) => {
-                e.stopPropagation(); // 防止事件冒泡到 window
+                e.stopPropagation();
                 const currentMenu = button.nextElementSibling;
-                // 關閉其他已開啟的選單
                 document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
                     if (menu !== currentMenu) menu.classList.remove('show');
                 });
@@ -164,20 +127,20 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // 點擊頁面其他地方關閉選單
         window.addEventListener('click', () => {
             document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
                 menu.classList.remove('show');
             });
         });
 
-        // 點擊 checkbox 更新篩選狀態並應用篩選
         document.querySelectorAll('.filter-dropdown-menu input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 const category = checkbox.dataset.category;
                 const value = checkbox.value;
                 if (checkbox.checked) {
-                    activeFilters[category].push(value);
+                    if (!activeFilters[category].includes(value)) {
+                       activeFilters[category].push(value);
+                    }
                 } else {
                     activeFilters[category] = activeFilters[category].filter(item => item !== value);
                 }
@@ -185,20 +148,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // --- 4. 核心篩選與渲染邏輯 ---
-
         function applyFilters() {
             let filteredRoutes = [...routes];
-
             for (const category in activeFilters) {
                 const selectedTags = activeFilters[category];
-                if (selectedTags.length === 0) continue; // 如果此分類沒有篩選條件，則跳過
-
+                if (selectedTags.length === 0) continue;
                 filteredRoutes = filteredRoutes.filter(route => {
-                    // 檢查路線是否至少包含此分類中被選中的一個標籤
                     return selectedTags.some(tag => {
                         const actualTag = tagMap[tag] || tag;
-                        // 特殊處理通勤/旅遊/混合
                         if ((tag === "通勤" || tag === "旅遊") && route.nature === "混合") {
                             return true;
                         }
@@ -235,31 +192,79 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // 初始載入時顯示全部路線
         renderRoutes(routes);
     }
-    
-    // =========================================================================
-    // 路線詳情頁面 (route_detail.html) - 邏輯不變
-    // =========================================================================
-    const routeDetailContainer = document.getElementById('route-detail-container');
-    if (routeDetailContainer) {
-        // ... 此處詳情頁的邏輯與上一版完全相同，保持不變 ...
+
+    function initRouteDetailPage() {
+        const routeDetailContainer = document.getElementById('route-detail-container');
+        if (!routeDetailContainer) return;
+
         const urlParams = new URLSearchParams(window.location.search);
         const routeId = urlParams.get('id');
+
         if (routeId) {
             const route = routes.find(r => r.id === routeId);
             if (route) {
                 document.title = `香港城市運輸單車 - ${route.alias || route.id}`;
+
                 let gpxButtonsHtml = '';
                 if (route.gpx && route.gpx.length > 0) {
-                    gpxButtonsHtml = `...`; // 保持原有 gpx 按鈕邏輯
+                    gpxButtonsHtml = `
+                        <div class="gpx-download-container">
+                            ${route.gpx.map(gpxFile => `
+                                <a href="gpx/${gpxFile.file}" download="${gpxFile.file}" class="gpx-download-button">
+                                    ${gpxFile.label} <i class="fas fa-download"></i>
+                                </a>
+                            `).join('')}
+                        </div>
+                    `;
                 }
-                routeDetailContainer.innerHTML = `...`; // 保持原有詳情頁渲染邏輯
+
+                routeDetailContainer.innerHTML = `
+                    <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
+                        <h1 class="route-hero-title">${route.alias || '路線詳情'}</h1>
+                        <p class="route-id-text">路線編號: ${route.id}</p>
+                    </div>
+                    <div class="route-detail-grid animated-element">
+                        <div class="route-image-container">
+                            <img src="${route.image}" alt="${route.alias || route.id}" class="route-detail-image">
+                            ${gpxButtonsHtml}
+                        </div>
+                        <div class="route-detail-info">
+                            <p class="route-description">${route.description}</p>
+                            <div class="route-stats">
+                                <div><strong>起點:</strong> ${route.start}</div>
+                                <div><strong>終點:</strong> ${route.end || '循環線'}</div>
+                                <div><strong>主要途經:</strong> ${route.via || '無'}</div>
+                                <div><strong>性質:</strong> ${route.nature}</div>
+                                <div><strong>預計全程行車時間:</strong> ${route.time}分鐘</div>
+                                <div><strong>路線全長:</strong> ${route.length}</div>
+                                <div><strong>難度:</strong> ${'★'.repeat(Math.round(route.difficulty))} (${route.difficulty}/5)</div>
+                            </div>
+                            <div class="route-tags-container">
+                                <strong>標籤:</strong>
+                                <div class="route-tags">
+                                    ${route.tags.map(tag => `<span class="route-tag">${tag}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const newAnimatedElements = routeDetailContainer.querySelectorAll('.animated-element');
+                newAnimatedElements.forEach(el => observer.observe(el));
+
             } else {
-                routeDetailContainer.innerHTML = '<p>找不到指定的路線。</p>';
+                routeDetailContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">找不到指定的路線。</p>';
             }
         }
     }
+
+    // =========================================================================
+    // 執行對應頁面的初始化函式
+    // =========================================================================
+    initHomePage();
+    initRoutesPage();
+    initRouteDetailPage();
+
 });
-  
