@@ -262,11 +262,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-                    </div>
-                </div>
-            `;
-        } else {
-            routeDetailContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">找不到指定的路線。</p>';
-        }
-    }
-});
+  
