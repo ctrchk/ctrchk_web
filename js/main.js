@@ -1,31 +1,32 @@
 //Hop to Row: 195/+
-document.addEventListener('DOMContentLoaded', function()
- { 
-    // 【已修改】監聽所有需要動畫效果的元素，加入了 .timeline-item
-    const animatedElements = document.querySelectorAll('.animated-element, .timeline-item');
 
-    // 觀察者實例，用來檢查元素是否進入視窗
-    const observer = new IntersectionObserver((entries, observer) => { // <-- 在這裡加入 observer 參數
+/**
+ * @file main.js
+ * @description 網站全域腳本，處理滾動動畫、路線篩選和路線詳情頁渲染。
+ */
+
+document.addEventListener('DOMContentLoaded', function() {
+    // =========================================================================
+    // 動畫效果 IntersectionObserver
+    // =========================================================================
+    const animatedElements = document.querySelectorAll('.animated-element, .timeline-item');
+    const observer = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('is-visible');
-                // 【效能優化】當動畫觸發後，停止觀察此元素
                 observer.unobserve(entry.target);
             }
         });
     }, {
         threshold: 0.1
     });
-
-    
-// ... 後續程式碼 ...
-
-    // 將觀察者附加到每個動畫元素上
     animatedElements.forEach(element => {
         observer.observe(element);
     });
 
-    // 路線資料，根據你提供的資訊進行整合
+    // =========================================================================
+    // 路線資料庫
+    // =========================================================================
     const routes = [
         { id: '900', alias: "市區海濱線", start: "寶琳(新都城二期)", end: "調景嶺彩明", via: "景林邨、香港單車館、將軍澳海濱、調景嶺站", nature: "旅遊", time: 40, length: "5.5km", difficulty: 3, image: "images/900.jpg", description: "這是專為新手打造的「海濱專線」。全程半個多小時，少坡、風景優美，讓你在寶琳與調景嶺之間輕鬆穿梭，沿途還有補給點可供休息。", tags: ["將軍澳", "海濱專線", "寶琳調景嶺線", "新手必試", "風景優美", "少坡"], color: "#990000", gpx: [{ label: "往寶琳", file: "900寶琳.gpx" }, { label: "往調景嶺", file: "900調景嶺.gpx" }] },
         { id: '900A', alias: "寶調特快", start: "寶琳(新都城二期)", end: "調景嶺總站", via: "景林邨、寶順路、調景嶺站", nature: "混合", time: 20, length: "4.2km", difficulty: 1.5, image: "images/900A.jpg", description: "一條專為單車新手設計的輕鬆路線。取道寶順路專用單車徑來往寶琳與調景嶺，路況平坦，僅需 20 分鐘即可往返，是假日體驗單車樂的最佳選擇。", tags: ["將軍澳", "寶琳調景嶺線", "新手必試", "特快", "平坦", "通勤", "旅遊"], color: "#990000", gpx: [{ label: "往寶琳", file: "900A寶琳.gpx" }, { label: "往調景嶺", file: "900A調景嶺.gpx" }] },
@@ -66,19 +67,21 @@ document.addEventListener('DOMContentLoaded', function()
         { id: 'ST01', alias: "", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
 
-    // 動態生成主頁預覽路線卡片
+
+    // =========================================================================
+    // 首頁路線預覽功能
+    // =========================================================================
     function renderHomePageRoutes() {
         const container = document.getElementById('routes-preview-container');
         if (container) {
-            // 隨機選取三條路線作為預覽
             const routesToShow = [...routes].filter(r => !r.id.startsWith("ST")).sort(() => 0.5 - Math.random()).slice(0, 3);
-            container.innerHTML = ''; // 清空現有內容
+            container.innerHTML = '';
             routesToShow.forEach(route => {
                 const card = document.createElement('div');
                 card.className = 'route-card';
                 card.innerHTML = `
                     <a href="/route_detail.html?id=${route.id}">
-                        <img src="${route.image}" alt="${route.title}">
+                        <img src="${route.image}" alt="${route.alias || route.id}">
                         <h3>${route.alias || route.id}</h3>
                     </a>
                 `;
@@ -88,29 +91,62 @@ document.addEventListener('DOMContentLoaded', function()
     }
     renderHomePageRoutes();
 
-    // 處理路線總覽頁面
+    // =========================================================================
+    // 路線總覽頁面 (routes.html) - 全新篩選邏輯
+    // =========================================================================
     const allRoutesContainer = document.getElementById('all-routes-container');
     if (allRoutesContainer) {
-        const filterButtonsContainer = document.createElement('div');
-        filterButtonsContainer.className = 'filter-buttons';
+        // 定義篩選分類和對應的標籤
+        const filterCategories = {
+            "路線區域": ["將軍澳", "沙田區"],
+            "路線類別": ["通勤", "旅遊", "單向", "循環", "快速", "特快", "長途"],
+            "路線特色": ["新手必試", "風景優美", "黃昏日落", "挑戰", "運動訓練", "平坦", "少坡", "多坡"],
+            "路線稱號": ["海濱專線", "坑口北專線", "維景灣畔專線", "清水灣半島專線", "康城專線", "寶琳調景嶺線", "學校線", "創新園路線", "南北三寶"],
+            "接駁交通": ["連接地鐵站", "連接巴士總站", "接駁渡輪"]
+        };
 
-        // 路線篩選按鈕 - 根據所有獨特標籤生成
-        const allTags = ["全部", "將軍澳", "沙田區"];
-        const natureTags = ["通勤", "旅遊"];
-        const uniqueOtherTags = Array.from(new Set(routes.flatMap(r => r.tags).filter(tag => !allTags.includes(tag) && !natureTags.includes(tag)))).sort();
-        const allFilterTags = [...allTags, ...natureTags, ...uniqueOtherTags];
+        // 標籤映射，用於處理同義詞，例如 "單向" 按鈕對應到 "單向線" 標籤
+        const tagMap = {
+            "單向": "單向線",
+            "循環": "循環線"
+        };
+        
+        // 創建篩選器 UI
+        const filterSection = document.createElement('div');
+        filterSection.className = 'filter-section animated-element';
+        
+        let filterHtml = `
+            <div class="filter-category">
+                <h3>總覽</h3>
+                <div class="filter-buttons">
+                    <button class="filter-button active" data-tag="全部">全部</button>
+                </div>
+            </div>
+        `;
 
-        allFilterTags.forEach(tag => {
-            const button = document.createElement('button');
-            button.className = 'filter-button';
-            button.textContent = tag;
-            button.dataset.tag = tag;
-            button.addEventListener('click', () => filterRoutes(tag, button));
-            filterButtonsContainer.appendChild(button);
+        for (const category in filterCategories) {
+            filterHtml += `
+                <div class="filter-category">
+                    <h3>${category}</h3>
+                    <div class="filter-buttons">
+            `;
+            filterCategories[category].forEach(tag => {
+                filterHtml += `<button class="filter-button" data-tag="${tag}">${tag}</button>`;
+            });
+            filterHtml += `</div></div>`;
+        }
+
+        filterSection.innerHTML = filterHtml;
+        allRoutesContainer.before(filterSection); // 將篩選器插入到路線卡片容器之前
+
+        // 為所有篩選按鈕添加點擊事件
+        document.querySelectorAll('.filter-button').forEach(button => {
+            button.addEventListener('click', () => {
+                filterRoutes(button.dataset.tag, button);
+            });
         });
 
-        allRoutesContainer.before(filterButtonsContainer);
-
+        // 渲染路線卡片的函式
         function renderRoutes(routesToRender) {
             allRoutesContainer.innerHTML = '';
             if (routesToRender.length > 0) {
@@ -137,103 +173,99 @@ document.addEventListener('DOMContentLoaded', function()
             }
         }
 
+        // 篩選路線的核心邏輯
         function filterRoutes(selectedTag, buttonElement) {
             document.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
             buttonElement.classList.add('active');
 
-            let filteredRoutes = routes.filter(route => {
-                if (selectedTag === "全部") {
+            if (selectedTag === "全部") {
+                renderRoutes(routes);
+                return;
+            }
+            
+            const actualTag = tagMap[selectedTag] || selectedTag; // 使用映射後的標籤
+
+            const filteredRoutes = routes.filter(route => {
+                // 對於通勤/旅遊，如果路線性質是 "混合"，也應該被選中
+                if ((selectedTag === "通勤" || selectedTag === "旅遊") && route.nature === "混合") {
                     return true;
                 }
-                if (selectedTag === "將軍澳") {
-                    return !route.id.startsWith("ST");
-                }
-                if (selectedTag === "沙田區") {
-                    return route.id.startsWith("ST");
-                }
-                const natureTags = ["通勤", "旅遊"];
-                if (natureTags.includes(selectedTag)) {
-                    if (route.nature === "混合") {
-                        return true;
-                    }
-                    return route.nature === selectedTag;
-                }
-                return route.tags.includes(selectedTag);
+                return route.tags.includes(actualTag);
             });
 
             renderRoutes(filteredRoutes);
         }
 
-        const defaultFilterButton = filterButtonsContainer.querySelector('.filter-button[data-tag="全部"]');
-        if (defaultFilterButton) {
-            filterRoutes("全部", defaultFilterButton);
-        } else {
-            renderRoutes(routes);
-        }
+        // 初始載入時顯示全部路線
+        filterRoutes("全部", document.querySelector('.filter-button[data-tag="全部"]'));
     }
 
-    // 處理路線詳情頁面
-    let urlParams = null;
-    let routeId = null;
-    try {
-        if (window.location && window.location.search) {
-            urlParams = new URLSearchParams(window.location.search);
-            routeId = urlParams.get('id');
-        }
-    } catch (e) {
-        // Fallback: no URL params available
-        routeId = null;
-    }
+    // =========================================================================
+    // 路線詳情頁面 (route_detail.html)
+    // =========================================================================
     const routeDetailContainer = document.getElementById('route-detail-container');
+    if (routeDetailContainer) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const routeId = urlParams.get('id');
 
-    if (routeDetailContainer && routeId) {
-        const route = routes.find(r => r.id === routeId);
-        if (route) {
-            document.title = `香港城市運輸單車 - ${route.alias || route.id}`;
+        if (routeId) {
+            const route = routes.find(r => r.id === routeId);
+            if (route) {
+                document.title = `香港城市運輸單車 - ${route.alias || route.id}`;
 
-            // GPX 下載按鈕的 HTML
-            let gpxButtonsHtml = '';
-            if (route.gpx && route.gpx.length > 0) {
-                gpxButtonsHtml = `
-                    <div class="gpx-download-container">
-                        ${route.gpx.map(gpxFile => `
-                            <a href="gpx/${gpxFile.file}" download="${gpxFile.file}" class="gpx-download-button">
-                                ${gpxFile.label} <i class="fas fa-download"></i>
-                            </a>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-
-         
-            routeDetailContainer.innerHTML = `
-                <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
-                    <h1 class="route-hero-title">${route.alias || '路線詳情'}</h1>
-                    <p class="route-id-text">路線編號: ${route.id}</p>
-                </div>
-                <div class="route-detail-grid animated-element">
-                    <div class="route-image-container">
-                        <img src="${route.image}" alt="${route.alias || route.id}" class="route-detail-image">
-                        ${gpxButtonsHtml}
-                    </div>
-                    <div class="route-detail-info">
-                        <p class="route-description">${route.description}</p>
-                        <div class="route-stats">
-                            <div><strong>起點:</strong> ${route.start}</div>
-                            <div><strong>終點:</strong> ${route.end || '循環線'}</div>
-                            <div><strong>主要途經:</strong> ${route.via || '無'}</div>
-                            <div><strong>性質:</strong> ${route.nature}</div>
-                            <div><strong>預計全程行車時間:</strong> ${route.time}分鐘</div>
-                            <div><strong>路線全長:</strong> ${route.length}</div>
-                            <div><strong>難度:</strong> ${'★'.repeat(Math.floor(route.difficulty))} (${route.difficulty}/5)</div>
+                let gpxButtonsHtml = '';
+                if (route.gpx && route.gpx.length > 0) {
+                    gpxButtonsHtml = `
+                        <div class="gpx-download-container">
+                            ${route.gpx.map(gpxFile => `
+                                <a href="gpx/${gpxFile.file}" download="${gpxFile.file}" class="gpx-download-button">
+                                    ${gpxFile.label} <i class="fas fa-download"></i>
+                                </a>
+                            `).join('')}
                         </div>
-                        <div class="route-tags-container">
-                            <strong>標籤:</strong>
-                            <div class="route-tags">
-                                ${route.tags.map(tag => `<span class="route-tag">${tag}</span>`).join('')}
+                    `;
+                }
+
+                routeDetailContainer.innerHTML = `
+                    <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
+                        <h1 class="route-hero-title">${route.alias || '路線詳情'}</h1>
+                        <p class="route-id-text">路線編號: ${route.id}</p>
+                    </div>
+                    <div class="route-detail-grid animated-element">
+                        <div class="route-image-container">
+                            <img src="${route.image}" alt="${route.alias || route.id}" class="route-detail-image">
+                            ${gpxButtonsHtml}
+                        </div>
+                        <div class="route-detail-info">
+                            <p class="route-description">${route.description}</p>
+                            <div class="route-stats">
+                                <div><strong>起點:</strong> ${route.start}</div>
+                                <div><strong>終點:</strong> ${route.end || '循環線'}</div>
+                                <div><strong>主要途經:</strong> ${route.via || '無'}</div>
+                                <div><strong>性質:</strong> ${route.nature}</div>
+                                <div><strong>預計全程行車時間:</strong> ${route.time}分鐘</div>
+                                <div><strong>路線全長:</strong> ${route.length}</div>
+                                <div><strong>難度:</strong> ${'★'.repeat(Math.round(route.difficulty))} (${route.difficulty}/5)</div>
+                            </div>
+                            <div class="route-tags-container">
+                                <strong>標籤:</strong>
+                                <div class="route-tags">
+                                    ${route.tags.map(tag => `<span class="route-tag">${tag}</span>`).join('')}
+                                </div>
                             </div>
                         </div>
+                    </div>
+                `;
+                 // 手動觸發一次動畫元素的檢查，因為內容是動態載入的
+                const newAnimatedElements = routeDetailContainer.querySelectorAll('.animated-element');
+                newAnimatedElements.forEach(el => observer.observe(el));
+
+            } else {
+                routeDetailContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">找不到指定的路線。</p>';
+            }
+        }
+    }
+});
                     </div>
                 </div>
             `;
