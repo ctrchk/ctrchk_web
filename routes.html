@@ -6,73 +6,92 @@
     <title>香港城市運輸單車 CTRC HK - 單車路線</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css)">
-    <style>
-        .filter-buttons {
-            text-align: center;
-            margin-bottom: 2em;
-        }
-        .filter-button {
-            background-color: #2c3e50;
-            color: #fff;
-            border: none;
-            padding: 0.8em 1.5em;
-            margin: 0.5em;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
-        .filter-button:hover, .filter-button.active {
-            background-color: #04D93C;
-            transform: translateY(-3px);
-        }
-        .all-routes-section .route-cards-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2em;
-        }
-        .route-card-full {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-            overflow: hidden;
-        }
-        .route-card-full:hover {
-            transform: translateY(-5px);
-        }
-        .route-card-full a {
-            padding: 1.5em;
-            display: block;
-            color: inherit;
-        }
-        .route-card-full a.disabled-link {
-            pointer-events: none;
-            cursor: default;
-        }
-        .route-card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1em;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 1em;
-        }
-        .route-id-code {
-            font-size: 1.2em;
-            font-weight: bold;
-            padding: 0.5em 1em;
-            border-radius: 5px;
-            margin-right: 1em;
-            white-space: nowrap;
-        }
-        .route-alias {
-            margin: 0;
-            font-size: 1.3em;
-            font-weight: bold;
-        }
-        .route-card-content p {
-            margin: 0.5em 0;
-        }
-    </style>
+<style>
+    /* === 全新篩選器樣式 === */
+    .filters-container {
+        max-width: 1200px;
+        margin: 0 auto 2em auto;
+        padding: 1em;
+    }
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+        padding: 1em;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .filter-dropdown-container {
+        position: relative;
+    }
+    .filter-category-button {
+        background-color: #2c3e50;
+        color: #fff;
+        border: none;
+        padding: 0.8em 1.5em;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.3s ease;
+        font-size: 1em;
+        font-weight: bold;
+    }
+    .filter-category-button:hover, .filter-category-button.active {
+        background-color: #04D93C;
+        transform: translateY(-3px);
+    }
+    .filter-dropdown-menu {
+        display: none; /* 預設隱藏 */
+        position: absolute;
+        top: 110%;
+        left: 0;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        padding: 1em;
+        z-index: 100;
+        min-width: 220px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .filter-dropdown-menu.show {
+        display: block; /* 顯示下拉選單 */
+    }
+    .filter-dropdown-menu label {
+        display: block;
+        padding: 0.5em 0.8em;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: background-color 0.2s ease;
+    }
+    .filter-dropdown-menu label:hover {
+        background-color: #f4f4f4;
+    }
+    .filter-dropdown-menu input[type="checkbox"] {
+        margin-right: 0.8em;
+    }
+
+    /* === 路線卡片樣式 (與之前相同) === */
+    .all-routes-section .route-cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2em;
+    }
+    .route-card-full {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+        overflow: hidden;
+    }
+    .route-card-full:hover { transform: translateY(-5px); }
+    .route-card-full a { padding: 1.5em; display: block; color: inherit; }
+    .route-card-full a.disabled-link { pointer-events: none; cursor: default; }
+    .route-card-header { display: flex; align-items: center; margin-bottom: 1em; border-bottom: 1px solid #eee; padding-bottom: 1em; }
+    .route-id-code { font-size: 1.2em; font-weight: bold; padding: 0.5em 1em; border-radius: 5px; margin-right: 1em; white-space: nowrap; }
+    .route-alias { margin: 0; font-size: 1.3em; font-weight: bold; }
+    .route-card-content p { margin: 0.5em 0; }
+</style>
 </head>
 <body>
 
