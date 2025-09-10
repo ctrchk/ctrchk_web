@@ -1,3 +1,4 @@
+
 console.log('--- main.js 檔案已成功載入並開始執行！ ---');
 
 /**
@@ -200,6 +201,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function initRouteDetailPage() {
         const routeDetailContainer = document.getElementById('route-detail-container');
         if (!routeDetailContainer) return;
+
+        // Add IntersectionObserver definition for animated elements
+        const observer = new window.IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
 
         const urlParams = new URLSearchParams(window.location.search);
         const routeId = urlParams.get('id');
