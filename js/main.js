@@ -276,8 +276,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
     // 執行對應頁面的初始化函式
     // =========================================================================
-    initHomePage();
-    initRoutesPage();
-    initRouteDetailPage();
+    if (document.getElementById('routes-preview-container')) {
+        initHomePage();
+    }
+    if (document.getElementById('all-routes-container')) {
+        initRoutesPage();
+    }
+    if (document.getElementById('route-detail-container')) {
+        initRouteDetailPage();
+    }
 
 });
