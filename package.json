@@ -1,0 +1,25 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.1"
+  },
+  "name": "ctrchk",
+  "version": "1.0.0",
+  "description": "<!-- **ctrchk/ctrchk** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ctrchk/ctrchk.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ctrchk/ctrchk/issues"
+  },
+  "homepage": "https://github.com/ctrchk/ctrchk#readme"
+}
