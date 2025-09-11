@@ -203,14 +203,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!routeDetailContainer) return;
 
         // Add IntersectionObserver definition for animated elements
-        const observer = new window.IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('show');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 });
+        let observer;
+        if ('IntersectionObserver' in window) {
+            observer = new window.IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('show');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+        } else {
+            // Fallback: show all animated elements immediately
+            observer = {
+                observe: el => el.classList.add('show')
+            };
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const routeId = urlParams.get('id');
