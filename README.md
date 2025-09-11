@@ -1,5 +1,10 @@
 ## Hi there 👋
 
+This is the CTRC official website's origin code. 
+# Update Log: (Alpha)
+2025-08-16[Dead], currently. 
+
+
 <!--
 **ctrchk/ctrchk** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
