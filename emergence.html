@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrolling Text</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        .scrolling-text {
+            white-space: nowrap;
+            animation: scroll 10s linear infinite;
+            font-size: 24px;
+            color: #333;
+        }
+        @keyframes scroll {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scrolling-text">
+        因技術問題，網頁無法運作，不便之處敬請見諒 
+        Due to technical reasons we cannot run the website. Sorry for the inconvenience caused.
+    </div>
+</body>
+</html>
