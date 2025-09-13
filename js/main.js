@@ -7,6 +7,9 @@ console.log('--- main.js 檔案已成功載入並開始執行！ ---');
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Remove any accidental fade-out effect by resetting body opacity and visibility
+    document.body.style.opacity = '1';
+    document.body.style.visibility = 'visible';
 
     // =========================================================================
     // 全站共用資料與函式
