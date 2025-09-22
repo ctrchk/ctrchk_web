@@ -298,3 +298,103 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 });
+// Dark mode support
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.classList.add('dark');
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+    if (event.matches) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+});
+
+// Modal functionality
+const modal = document.getElementById('notificationModal');
+
+function closeNotification() {
+    const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
+    modalContent.classList.remove('modal-enter');
+    modalContent.classList.add('modal-exit');
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 200);
+}
+
+function showNotification() {
+    modal.style.display = 'flex';
+    const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
+    modalContent.classList.remove('modal-exit');
+    modalContent.classList.add('modal-enter');
+}
+
+// Event listeners
+function initializeNotificationModal() {
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeNotification();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display !== 'none') {
+            closeNotification();
+        }
+    });
+
+    // Show notification on page load (after a small delay for better UX)
+    window.addEventListener('load', function() {
+        setTimeout(() => {
+            showNotification();
+        }, 500);
+    });
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeNotificationModal);
+} else {
+    initializeNotificationModal();
+}
+
+// Optional: Add additional notification management functions
+const NotificationManager = {
+    // Show different types of notifications
+    showSuccess: function(title, message) {
+        // Implementation for success notifications
+        console.log('Success notification:', title, message);
+    },
+    
+    showWarning: function(title, message) {
+        // Implementation for warning notifications
+        console.log('Warning notification:', title, message);
+    },
+    
+    showError: function(title, message) {
+        // Implementation for error notifications
+        console.log('Error notification:', title, message);
+    },
+    
+    // Store user preference to not show again
+    setDismissed: function(notificationId) {
+        // You could implement localStorage here if available
+        // localStorage.setItem(`notification_${notificationId}_dismissed`, 'true');
+        console.log(`Notification ${notificationId} dismissed`);
+    },
+    
+    // Check if notification was previously dismissed
+    isDismissed: function(notificationId) {
+        // return localStorage.getItem(`notification_${notificationId}_dismissed`) === 'true';
+        return false; // Always show for now since localStorage isn't available
+    }
+};
+
+// Export functions for global access (if needed)
+window.closeNotification = closeNotification;
+window.showNotification = showNotification;
+window.NotificationManager = NotificationManager;

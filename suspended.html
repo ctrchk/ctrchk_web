@@ -43,5 +43,72 @@
 <footer style="width: 100%; text-align: center; position: absolute; bottom: 10px;">
         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
 </footer>
-    
+    <link rel="stylesheet" href="css/main.css">
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full modal-enter">
+            <!-- Header with close button -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        📢 重要公告 -- Important Announcement
+                    </h3>
+                </div>
+                <button 
+                    onclick="closeNotification()" 
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    aria-label="Close notification"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <div class="mb-4">
+                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                        網頁關閉事宜 Webpage Suspension Notice
+                    </h4>
+                    <p class="text-gray-600 dark:text-gray-300 leading-relaxed">
+                        不幸地，由於網頁問題相對我們預計的情況更為複雜，我們決定暫時關閉網頁以進行必要的維護和更新。<br>
+                        Unfortunately, due to the complexity of the website issues beyond our initial expectations, we have decided to temporarily suspend the website for necessary maintenance and updates.
+                    </p>
+                </div>
+
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        💡 <strong>Pro Tip:</strong> You can access your settings from the top-right menu to personalize your experience.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 pb-6">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button 
+                        onclick="closeNotification()" 
+                        class="flex-1 bg-primary hover:bg-purple-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                    >
+                        Got it!
+                    </button>
+                    <button 
+                        onclick="closeNotification()" 
+                        class="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg transition-colors duration-200"
+                    >
+                        Maybe later
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
 </html>
