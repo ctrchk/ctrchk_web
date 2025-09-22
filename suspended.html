@@ -14,6 +14,60 @@
             background-color: #f0f0f0;
             margin: 0;
             font-family: Arial, sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Dark mode styles */
+        body.dark {
+            background-color: #181818;
+            color: #e5e7eb;
+        }
+
+        body.dark .scrolling-text {
+            color: #e5e7eb;
+        }
+
+        body.dark .modal-content {
+            background-color: #374151;
+            color: #e5e7eb;
+        }
+
+        body.dark .modal-header {
+            border-bottom-color: #4b5563;
+        }
+
+        body.dark .modal-title,
+        body.dark .modal-content-title {
+            color: #f9fafb;
+        }
+
+        body.dark .modal-content-text {
+            color: #d1d5db;
+        }
+
+        body.dark .info-box {
+            background-color: #1e3a8a;
+            border-color: #3b82f6;
+        }
+
+        body.dark .info-text {
+            color: #93c5fd;
+        }
+
+        body.dark .btn-secondary {
+            background-color: #4b5563;
+            border-color: #6b7280;
+            color: #e5e7eb;
+        }
+
+        body.dark .btn-secondary:hover {
+            background-color: #374151;
+            border-color: #9ca3af;
+            color: #f9fafb;
+        }
+
+        body.dark .footer {
+            color: #9ca3af;
         }
         
         .scrolling-text {
@@ -209,6 +263,17 @@
                 flex-direction: row;
             }
         }
+
+        @media (max-width: 768px) {
+            .scrolling-text {
+                font-size: 18px;
+            }
+            
+            .modal-content {
+                margin: 16px;
+                max-width: calc(100% - 32px);
+            }
+        }
     </style>
 </head>
 <body>
@@ -218,10 +283,8 @@
     </div>
     <p>預 計 恢 復 時 間 Estimated Recovery Time: 2025 - 09 - 28 （年/Y）（月/M）（日/D）</p>
 
-    <!-- Notification Modal -->
     <div id="notificationModal" class="modal-overlay">
         <div class="modal-content">
-            <!-- Header with close button -->
             <div class="modal-header">
                 <div class="modal-header-left">
                     <div class="modal-icon">
@@ -229,9 +292,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h3 class="modal-title">
-                        📢 重要公告 Important Announcement
-                    </h3>
+                    <h3 class="modal-title">📢 重要公告 Important Announcement</h3>
                 </div>
                 <button class="close-button" onclick="closeNotification()" aria-label="Close notification">
                     <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,12 +301,9 @@
                 </button>
             </div>
 
-            <!-- Content -->
             <div class="modal-body">
                 <div>
-                    <h4 class="modal-content-title">
-                        網頁關閉事宜 Webpage Suspension Notice
-                    </h4>
+                    <h4 class="modal-content-title">網頁關閉事宜 Webpage Suspension Notice</h4>
                     <p class="modal-content-text">
                         不幸地，由於網頁問題相對我們預計的情況更為複雜，我們決定暫時關閉網頁以進行必要的維護和更新。<br><br>
                         Unfortunately, due to the complexity of the website issues beyond our initial expectations, we have decided to temporarily suspend the website for necessary maintenance and updates.
@@ -259,7 +317,6 @@
                 </div>
             </div>
 
-            <!-- Footer -->
             <div class="modal-footer">
                 <div class="button-group">
                     <button class="btn-primary" onclick="closeNotification()">
@@ -273,7 +330,23 @@
     <footer class="footer">
         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
+
     <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.body.classList.remove('dark');
+            }
+        });
+
         function closeNotification() {
             const modal = document.getElementById('notificationModal');
             if (modal) {
@@ -283,7 +356,18 @@
                 }, 200);
             }
         }
+
+        document.getElementById('notificationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNotification();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeNotification();
+            }
+        });
     </script>
-    <script src="/js/main.js"></script>
 </body>
 </html>
