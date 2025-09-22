@@ -263,10 +263,7 @@
             <div class="modal-footer">
                 <div class="button-group">
                     <button class="btn-primary" onclick="closeNotification()">
-                        明白了 Got it!
-                    </button>
-                    <button class="btn-secondary" onclick="closeNotification()">
-                        稍後再說 Maybe later
+                        <span id="gotItBtn">明白了 Got it!</span>
                     </button>
                 </div>
             </div>
@@ -276,6 +273,17 @@
     <footer class="footer">
         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
+    <script>
+        function closeNotification() {
+            const modal = document.getElementById('notificationModal');
+            if (modal) {
+                modal.classList.add('modal-exit');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 200);
+            }
+        }
+    </script>
     <script src="js/main.js"></script>
 </body>
 </html>
