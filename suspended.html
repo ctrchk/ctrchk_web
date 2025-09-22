@@ -276,45 +276,6 @@
     <footer class="footer">
         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
-
-    <script>
-        const modal = document.getElementById('notificationModal');
-
-        function closeNotification() {
-            const modalContent = modal.querySelector('.modal-content');
-            modalContent.classList.add('modal-exit');
-            
-            setTimeout(() => {
-                modal.style.display = 'none';
-            }, 200);
-        }
-
-        function showNotification() {
-            modal.style.display = 'flex';
-            const modalContent = modal.querySelector('.modal-content');
-            modalContent.classList.remove('modal-exit');
-        }
-
-        // Close modal when clicking outside
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                closeNotification();
-            }
-        });
-
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.style.display !== 'none') {
-                closeNotification();
-            }
-        });
-
-        // Show notification on page load
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                showNotification();
-            }, 500);
-        });
-    </script>
+    <script src="js/main.js"></script>
 </body>
 </html>

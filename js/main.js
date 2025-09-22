@@ -398,3 +398,4 @@ const NotificationManager = {
 window.closeNotification = closeNotification;
 window.showNotification = showNotification;
 window.NotificationManager = NotificationManager;
+
