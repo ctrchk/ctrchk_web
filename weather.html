@@ -60,6 +60,9 @@
                 <button id="load-demo-data" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
                     Show Demo Data
                 </button>
+                <button id="test-apis" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition">
+                    Test APIs
+                </button>
             </div>
         </div>
 
@@ -67,7 +70,7 @@
         <div id="loading" class="hidden flex flex-col justify-center items-center py-20">
             <div class="loading-spinner"></div>
             <span class="ml-3 text-gray-600 dark:text-gray-300 mt-4">Loading weather data...</span>
-            <div id="debug-info" class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center max-w-2xl">
+            <div id="debug-info" class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center max-w-4xl">
                 <!-- Debug information will appear here -->
             </div>
         </div>
@@ -154,44 +157,25 @@
                         value: 25,
                         unit: "C",
                         recordTime: "2024-01-15T10:00:00+08:00"
-                    },
-                    {
-                        place: "Tsim Sha Tsui",
-                        value: 27,
-                        unit: "C",
-                        recordTime: "2024-01-15T10:00:00+08:00"
                     }
                 ]
             },
-            warnings: {
-                "WHOT": {
-                    "name": "Very Hot Weather Warning",
-                    "code": "WHOT",
-                    "actionCode": "ISSUE",
-                    "issueTime": "2024-01-15T07:00:00+08:00",
-                    "updateTime": "2024-01-15T07:00:00+08:00"
-                }
-            },
+            warnings: {},
             tips: {
-                swt: [
-                    {
-                        desc: "Very hot weather with temperatures reaching 35°C in urban areas. Stay hydrated and avoid prolonged outdoor activities during peak hours.",
-                        updateTime: "2024-01-15T08:00:00+08:00"
-                    }
-                ]
+                specialWxTips: ["Demo weather tip: Stay hydrated in hot weather."]
             }
         };
 
         function updateDebugInfo(message) {
             const debugDiv = document.getElementById('debug-info');
             if (debugDiv) {
-                debugDiv.innerHTML += `<p>${message}</p>`;
+                debugDiv.innerHTML += `<p style="margin: 2px 0;">${message}</p>`;
             }
         }
 
         async function fetchWeatherData(dataType) {
             try {
-                updateDebugInfo(`Fetching ${dataType} from ctrchk API...`);
+                updateDebugInfo(`🔄 Fetching ${dataType}...`);
                 
                 const response = await fetch(`/api/${dataType}?lang=en`);
                 
@@ -200,14 +184,11 @@
                 }
                 
                 const data = await response.json();
-                updateDebugInfo(`✅ Successfully fetched ${dataType}`);
-                
-                // Debug: Show data structure
-                updateDebugInfo(`📊 ${dataType} data keys: ${Object.keys(data).join(', ')}`);
+                updateDebugInfo(`✅ ${dataType} - Success!`);
                 
                 return data;
             } catch (error) {
-                updateDebugInfo(`❌ Error fetching ${dataType}: ${error.message}`);
+                updateDebugInfo(`❌ ${dataType} - Error: ${error.message}`);
                 throw error;
             }
         }
@@ -230,20 +211,16 @@
 
         function displayTemperature(data) {
             const temperatureDiv = document.getElementById('temperature');
-            updateDebugInfo(`🌡️ Processing temperature data...`);
             
-            // The API returns temperature as an array directly
-            const temperatureData = data.temperature || [];
-            
-            if (!temperatureData || temperatureData.length === 0) {
+            if (!data || !data.temperature || data.temperature.length === 0) {
                 temperatureDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No temperature data available</p>';
-                updateDebugInfo(`⚠️ No temperature data found`);
+                updateDebugInfo(`⚠️ Temperature: No data found`);
                 return;
             }
 
-            updateDebugInfo(`📈 Found ${temperatureData.length} temperature readings`);
+            updateDebugInfo(`🌡️ Temperature: Displaying ${data.temperature.length} readings`);
 
-            const temperatureHTML = temperatureData.map(temp => `
+            const temperatureHTML = data.temperature.map(temp => `
                 <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
                     <div class="flex items-center justify-between">
                         <div>
@@ -264,7 +241,6 @@
 
         function displayWarnings(data) {
             const warningsDiv = document.getElementById('warnings');
-            updateDebugInfo(`⚠️ Processing warnings data...`);
             
             if (!data || Object.keys(data).length === 0) {
                 warningsDiv.innerHTML = `
@@ -275,12 +251,12 @@
                         </div>
                     </div>
                 `;
-                updateDebugInfo(`✅ No active warnings`);
+                updateDebugInfo(`✅ Warnings: No active warnings`);
                 lucide.createIcons();
                 return;
             }
 
-            updateDebugInfo(`🚨 Found ${Object.keys(data).length} warnings`);
+            updateDebugInfo(`🚨 Warnings: Displaying ${Object.keys(data).length} warnings`);
 
             const warningColors = {
                 'Red': 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300',
@@ -319,18 +295,16 @@
 
         function displaySpecialTips(data) {
             const tipsDiv = document.getElementById('special-tips');
-            updateDebugInfo(`💡 Processing special tips data...`);
             
-            // The API returns specialWxTips as an array of strings
             const tips = data.specialWxTips || [];
             
             if (!tips || tips.length === 0) {
                 tipsDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No special weather tips available</p>';
-                updateDebugInfo(`⚠️ No special tips found`);
+                updateDebugInfo(`⚠️ Special Tips: No tips found`);
                 return;
             }
 
-            updateDebugInfo(`📝 Found ${tips.length} special tips`);
+            updateDebugInfo(`💡 Special Tips: Displaying ${tips.length} tips`);
 
             const tipsHTML = tips.map(tip => `
                 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -372,39 +346,75 @@
             lucide.createIcons();
         }
 
+        async function testAPIs() {
+            showLoading();
+            updateDebugInfo(`🧪 Testing all API endpoints individually...`);
+            
+            const apis = ['rhrread', 'warnsum', 'swt'];
+            
+            for (const api of apis) {
+                try {
+                    const data = await fetchWeatherData(api);
+                    updateDebugInfo(`📊 ${api} data keys: ${Object.keys(data).slice(0, 5).join(', ')}...`);
+                } catch (error) {
+                    updateDebugInfo(`💥 ${api} failed: ${error.message}`);
+                }
+            }
+            
+            updateDebugInfo(`✅ API testing complete!`);
+        }
+
         async function loadRealWeatherData() {
             showLoading();
+            updateDebugInfo(`🚀 Loading real weather data...`);
+            
+            let successCount = 0;
+            let currentWeather = null;
+            let warningsSummary = null;
+            let specialTips = null;
+            
+            // Try to fetch each API individually
             try {
-                updateDebugInfo(`🚀 Starting to load real weather data...`);
-                
-                // Fetch all three data types
-                const [currentWeather, warningsSummary, specialTips] = await Promise.all([
-                    fetchWeatherData('rhrread'), // Current Weather Report for temperature
-                    fetchWeatherData('warnsum'), // Weather Warning Summary
-                    fetchWeatherData('swt')      // Special Weather Tips
-                ]);
-
-                updateDebugInfo(`📦 All data fetched, processing displays...`);
-
-                // Display the data
-                displayTemperature(currentWeather);
-                displayWarnings(warningsSummary);
-                displaySpecialTips(specialTips);
-
-                updateDebugInfo(`✅ All displays updated successfully!`);
-                showContent();
+                currentWeather = await fetchWeatherData('rhrread');
+                successCount++;
             } catch (error) {
-                updateDebugInfo(`❌ Error in loadRealWeatherData: ${error.message}`);
-                console.error('Error loading weather data:', error);
-                showError();
+                updateDebugInfo(`❌ Temperature API failed`);
             }
+            
+            try {
+                warningsSummary = await fetchWeatherData('warnsum');
+                successCount++;
+            } catch (error) {
+                updateDebugInfo(`❌ Warnings API failed`);
+            }
+            
+            try {
+                specialTips = await fetchWeatherData('swt');
+                successCount++;
+            } catch (error) {
+                updateDebugInfo(`❌ Special Tips API failed`);
+            }
+            
+            updateDebugInfo(`📈 ${successCount}/3 APIs succeeded`);
+            
+            if (successCount === 0) {
+                showError();
+                return;
+            }
+            
+            // Display whatever data we got
+            if (currentWeather) displayTemperature(currentWeather);
+            if (warningsSummary) displayWarnings(warningsSummary);
+            if (specialTips) displaySpecialTips(specialTips);
+            
+            updateDebugInfo(`🎉 Displaying ${successCount} sections!`);
+            showContent();
         }
 
         function loadDemoData() {
             showLoading();
             updateDebugInfo('Loading demo data...');
             
-            // Simulate loading delay
             setTimeout(() => {
                 updateDebugInfo('✅ Demo data loaded successfully');
                 
@@ -419,6 +429,7 @@
         // Event listeners
         document.getElementById('load-real-data').addEventListener('click', loadRealWeatherData);
         document.getElementById('load-demo-data').addEventListener('click', loadDemoData);
+        document.getElementById('test-apis').addEventListener('click', testAPIs);
 
         // Initialize icons when page loads
         document.addEventListener('DOMContentLoaded', () => {
