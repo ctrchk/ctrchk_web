@@ -188,9 +188,6 @@
             }
         };
 
-        // API configuration - Updated to use your serverless function
-        const API_BASE = '/api/weather';
-
         function updateDebugInfo(message) {
             const debugDiv = document.getElementById('debug-info');
             if (debugDiv) {
@@ -209,7 +206,8 @@
             try {
                 updateDebugInfo(`Fetching ${dataType} from ctrchk API...`);
                 
-                const response = await fetch(`${API_BASE}/${dataType}?lang=en`);
+                // Use direct endpoint calls
+                const response = await fetch(`/api/${dataType}?lang=en`);
                 
                 if (!response.ok) {
                     throw new Error(`API error! status: ${response.status}`);
@@ -243,12 +241,15 @@
         function displayTemperature(data) {
             const temperatureDiv = document.getElementById('temperature');
             
-            if (!data.temperature || data.temperature.length === 0) {
+            // Handle the actual API response structure
+            const temperatureData = data.temperature || [];
+            
+            if (!temperatureData || temperatureData.length === 0) {
                 temperatureDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No temperature data available</p>';
                 return;
             }
 
-            const temperatureHTML = data.temperature.map(temp => `
+            const temperatureHTML = temperatureData.map(temp => `
                 <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
                     <div class="flex items-center justify-between">
                         <div>
@@ -321,24 +322,31 @@
         function displaySpecialTips(data) {
             const tipsDiv = document.getElementById('special-tips');
             
-            if (!data.swt || data.swt.length === 0) {
+            // Handle the actual API response - look for specialWxTips instead of swt
+            const tips = data.specialWxTips || data.swt || [];
+            
+            if (!tips || tips.length === 0) {
                 tipsDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No special weather tips available</p>';
                 return;
             }
 
-            const tipsHTML = data.swt.map(tip => `
-                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div class="flex items-start">
-                        <i data-lucide="info" class="w-5 h-5 text-blue-500 mr-3 mt-1 flex-shrink-0"></i>
-                        <div class="flex-1">
-                            <p class="text-blue-700 dark:text-blue-300 leading-relaxed">${tip.desc}</p>
-                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-3">
-                                Updated: ${formatTime(tip.updateTime)}
-                            </p>
+            const tipsHTML = tips.map(tip => {
+                // Handle both string and object formats
+                const tipText = typeof tip === 'string' ? tip : tip.desc;
+                const tipTime = tip.updateTime ? formatTime(tip.updateTime) : '';
+                
+                return `
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <i data-lucide="info" class="w-5 h-5 text-blue-500 mr-3 mt-1 flex-shrink-0"></i>
+                            <div class="flex-1">
+                                <p class="text-blue-700 dark:text-blue-300 leading-relaxed">${tipText}</p>
+                                ${tipTime ? `<p class="text-xs text-blue-600 dark:text-blue-400 mt-3">Updated: ${tipTime}</p>` : ''}
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             tipsDiv.innerHTML = tipsHTML;
             lucide.createIcons();
@@ -372,7 +380,7 @@
         async function loadRealWeatherData() {
             showLoading();
             try {
-                // Fetch all three data types
+                // Fetch all three data types using direct API endpoints
                 const [currentWeather, warningsSummary, specialTips] = await Promise.all([
                     fetchWeatherData('rhrread'), // Current Weather Report for temperature
                     fetchWeatherData('warnsum'), // Weather Warning Summary
