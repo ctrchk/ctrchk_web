@@ -60,9 +60,6 @@
                 <button id="load-demo-data" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
                     Show Demo Data
                 </button>
-                <button id="test-apis" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition">
-                    Test APIs
-                </button>
             </div>
         </div>
 
@@ -86,14 +83,14 @@
 
         <!-- Main Content -->
         <div id="content" class="hidden">
-            <!-- Current Temperature -->
+            <!-- Current Weather Info -->
             <div class="weather-card rounded-2xl p-6 mb-6 shadow-lg">
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-4 flex items-center">
-                    <i data-lucide="thermometer" class="w-6 h-6 mr-2 text-primary"></i>
-                    Current Temperature
+                    <i data-lucide="cloud-sun" class="w-6 h-6 mr-2 text-primary"></i>
+                    Current Weather
                 </h2>
-                <div id="temperature" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Temperature data will be populated here -->
+                <div id="current-weather" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Current weather data will be populated here -->
                 </div>
             </div>
 
@@ -151,12 +148,6 @@
                         value: 26,
                         unit: "C",
                         recordTime: "2024-01-15T10:00:00+08:00"
-                    },
-                    {
-                        place: "King's Park",
-                        value: 25,
-                        unit: "C",
-                        recordTime: "2024-01-15T10:00:00+08:00"
                     }
                 ]
             },
@@ -209,33 +200,78 @@
             }
         }
 
-        function displayTemperature(data) {
-            const temperatureDiv = document.getElementById('temperature');
+        function displayCurrentWeather(data) {
+            const currentWeatherDiv = document.getElementById('current-weather');
             
-            if (!data || !data.temperature || data.temperature.length === 0) {
-                temperatureDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No temperature data available</p>';
-                updateDebugInfo(`⚠️ Temperature: No data found`);
-                return;
-            }
-
-            updateDebugInfo(`🌡️ Temperature: Displaying ${data.temperature.length} readings`);
-
-            const temperatureHTML = data.temperature.map(temp => `
-                <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="font-semibold text-gray-800 dark:text-white">${temp.place}</h3>
-                            <p class="text-2xl font-bold text-primary">${temp.value}°${temp.unit}</p>
+            updateDebugInfo(`🌡️ Processing current weather data...`);
+            
+            let weatherCards = [];
+            
+            // Temperature data
+            if (data.temperature && data.temperature.length > 0) {
+                weatherCards.push(...data.temperature.map(temp => `
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 dark:text-white">${temp.place}</h3>
+                                <p class="text-2xl font-bold text-primary">${temp.value}°${temp.unit}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Temperature</p>
+                            </div>
+                            <i data-lucide="thermometer" class="w-8 h-8 text-primary opacity-60"></i>
                         </div>
-                        <i data-lucide="thermometer" class="w-8 h-8 text-primary opacity-60"></i>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            ${formatTime(temp.recordTime)}
+                        </p>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        ${formatTime(temp.recordTime)}
-                    </p>
-                </div>
-            `).join('');
-
-            temperatureDiv.innerHTML = temperatureHTML;
+                `));
+            }
+            
+            // Humidity data
+            if (data.humidity && data.humidity.length > 0) {
+                weatherCards.push(...data.humidity.map(humidity => `
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 dark:text-white">${humidity.place}</h3>
+                                <p class="text-2xl font-bold text-blue-600">${humidity.value}${humidity.unit}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Humidity</p>
+                            </div>
+                            <i data-lucide="droplets" class="w-8 h-8 text-blue-600 opacity-60"></i>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            ${formatTime(humidity.recordTime)}
+                        </p>
+                    </div>
+                `));
+            }
+            
+            // UV Index data
+            if (data.uvindex && data.uvindex.length > 0) {
+                weatherCards.push(...data.uvindex.map(uv => `
+                    <div class="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 dark:text-white">${uv.place}</h3>
+                                <p class="text-2xl font-bold text-yellow-600">${uv.value}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">UV Index - ${uv.desc}</p>
+                            </div>
+                            <i data-lucide="sun" class="w-8 h-8 text-yellow-600 opacity-60"></i>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            ${formatTime(uv.recordTime)}
+                        </p>
+                    </div>
+                `));
+            }
+            
+            if (weatherCards.length === 0) {
+                currentWeatherDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No current weather data available</p>';
+                updateDebugInfo(`⚠️ No weather data found`);
+            } else {
+                currentWeatherDiv.innerHTML = weatherCards.join('');
+                updateDebugInfo(`🌤️ Displayed ${weatherCards.length} weather cards`);
+            }
+            
             lucide.createIcons();
         }
 
@@ -251,12 +287,12 @@
                         </div>
                     </div>
                 `;
-                updateDebugInfo(`✅ Warnings: No active warnings`);
+                updateDebugInfo(`✅ No active warnings`);
                 lucide.createIcons();
                 return;
             }
 
-            updateDebugInfo(`🚨 Warnings: Displaying ${Object.keys(data).length} warnings`);
+            updateDebugInfo(`🚨 Displaying ${Object.keys(data).length} warnings`);
 
             const warningColors = {
                 'Red': 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300',
@@ -296,15 +332,16 @@
         function displaySpecialTips(data) {
             const tipsDiv = document.getElementById('special-tips');
             
+            // Special tips are in the current weather data, not the swt endpoint
             const tips = data.specialWxTips || [];
             
             if (!tips || tips.length === 0) {
                 tipsDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No special weather tips available</p>';
-                updateDebugInfo(`⚠️ Special Tips: No tips found`);
+                updateDebugInfo(`⚠️ No special tips found`);
                 return;
             }
 
-            updateDebugInfo(`💡 Special Tips: Displaying ${tips.length} tips`);
+            updateDebugInfo(`💡 Displaying ${tips.length} special tips`);
 
             const tipsHTML = tips.map(tip => `
                 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -346,69 +383,32 @@
             lucide.createIcons();
         }
 
-        async function testAPIs() {
-            showLoading();
-            updateDebugInfo(`🧪 Testing all API endpoints individually...`);
-            
-            const apis = ['rhrread', 'warnsum', 'swt'];
-            
-            for (const api of apis) {
-                try {
-                    const data = await fetchWeatherData(api);
-                    updateDebugInfo(`📊 ${api} data keys: ${Object.keys(data).slice(0, 5).join(', ')}...`);
-                } catch (error) {
-                    updateDebugInfo(`💥 ${api} failed: ${error.message}`);
-                }
-            }
-            
-            updateDebugInfo(`✅ API testing complete!`);
-        }
-
         async function loadRealWeatherData() {
             showLoading();
             updateDebugInfo(`🚀 Loading real weather data...`);
             
-            let successCount = 0;
-            let currentWeather = null;
-            let warningsSummary = null;
-            let specialTips = null;
-            
-            // Try to fetch each API individually
             try {
-                currentWeather = await fetchWeatherData('rhrread');
-                successCount++;
+                // Fetch all three data types
+                const [currentWeatherData, warningsSummary, swtData] = await Promise.all([
+                    fetchWeatherData('rhrread'), // Current Weather Report
+                    fetchWeatherData('warnsum'), // Weather Warning Summary
+                    fetchWeatherData('swt')      // Special Weather Tips (backup)
+                ]);
+
+                updateDebugInfo(`📦 All data fetched, processing displays...`);
+
+                // Display the data
+                displayCurrentWeather(currentWeatherData);
+                displayWarnings(warningsSummary);
+                displaySpecialTips(currentWeatherData); // Tips are in rhrread data
+
+                updateDebugInfo(`✅ All displays updated successfully!`);
+                showContent();
             } catch (error) {
-                updateDebugInfo(`❌ Temperature API failed`);
-            }
-            
-            try {
-                warningsSummary = await fetchWeatherData('warnsum');
-                successCount++;
-            } catch (error) {
-                updateDebugInfo(`❌ Warnings API failed`);
-            }
-            
-            try {
-                specialTips = await fetchWeatherData('swt');
-                successCount++;
-            } catch (error) {
-                updateDebugInfo(`❌ Special Tips API failed`);
-            }
-            
-            updateDebugInfo(`📈 ${successCount}/3 APIs succeeded`);
-            
-            if (successCount === 0) {
+                updateDebugInfo(`❌ Error: ${error.message}`);
+                console.error('Error loading weather data:', error);
                 showError();
-                return;
             }
-            
-            // Display whatever data we got
-            if (currentWeather) displayTemperature(currentWeather);
-            if (warningsSummary) displayWarnings(warningsSummary);
-            if (specialTips) displaySpecialTips(specialTips);
-            
-            updateDebugInfo(`🎉 Displaying ${successCount} sections!`);
-            showContent();
         }
 
         function loadDemoData() {
@@ -418,7 +418,7 @@
             setTimeout(() => {
                 updateDebugInfo('✅ Demo data loaded successfully');
                 
-                displayTemperature(mockData.temperature);
+                displayCurrentWeather(mockData.temperature);
                 displayWarnings(mockData.warnings);
                 displaySpecialTips(mockData.tips);
                 
@@ -429,7 +429,6 @@
         // Event listeners
         document.getElementById('load-real-data').addEventListener('click', loadRealWeatherData);
         document.getElementById('load-demo-data').addEventListener('click', loadDemoData);
-        document.getElementById('test-apis').addEventListener('click', testAPIs);
 
         // Initialize icons when page loads
         document.addEventListener('DOMContentLoaded', () => {
