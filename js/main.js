@@ -53,6 +53,27 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'ST01', alias: "", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
 
+        function initAnimatedElements() {
+        const animatedElements = document.querySelectorAll('.animated-element');
+        if (animatedElements.length === 0) return;
+
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('show');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            animatedElements.forEach(el => observer.observe(el));
+        } else {
+            // 如果瀏覽器不支援，就立即顯示所有元素
+            animatedElements.forEach(el => el.classList.add('show'));
+        }
+    }
+
     // 將所有頁面特定的初始化程式碼包裹在函式中
     function initHomePage() {
         const container = document.getElementById('routes-preview-container');
@@ -205,23 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const routeDetailContainer = document.getElementById('route-detail-container');
         if (!routeDetailContainer) return;
 
-        // Add IntersectionObserver definition for animated elements
-        let observer;
-        if ('IntersectionObserver' in window) {
-            observer = new window.IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('show');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.1 });
-        } else {
-            // Fallback: show all animated elements immediately
-            observer = {
-                observe: el => el.classList.add('show')
-            };
-        }
+        // 【重要】這裡的動畫邏輯已被移除，由全域的 initAnimatedElements 處理
 
         const urlParams = new URLSearchParams(window.location.search);
         const routeId = urlParams.get('id');
