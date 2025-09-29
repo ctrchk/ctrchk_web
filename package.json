@@ -1,12 +1,12 @@
 {
   "dependencies": {
-    "@supabase/supabase-js": "^2.56.1"
+    "@supabase/supabase-js": "^2.56.1",
+    "@vercel/speed-insights": "^1.2.0"
   },
   "name": "ctrchk",
   "version": "1.0.0",
   "description": "<!-- **ctrchk/ctrchk** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
