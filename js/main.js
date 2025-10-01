@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const observer = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
-                        entry.target.classList.add('show');
+                        entry.target.classList.add('is-visible');
                         observer.unobserve(entry.target);
                     }
                 });
