@@ -14,14 +14,16 @@
         padding: 1em;
     }
     .filter-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1em;
-        padding: 1em;
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    padding: 1em;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    position: relative; /* 新增：為了讓 z-index 生效 */
+    z-index: 2;         /* 新增：提升層級，數字只要大於 1 即可 */
+}
     .filter-dropdown-container {
         position: relative;
     }
