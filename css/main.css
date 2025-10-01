@@ -243,20 +243,39 @@ footer {
     margin-bottom: 2em;
     padding: 0 2em;
     box-sizing: border-box;
+    /* 初始狀態保持透明 */
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    /* 動畫效果，設定 0.5 秒的過渡時間 */
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
+
 .timeline-item:nth-child(even) {
     left: 50%;
-    transform: translateY(20px);
 }
+
 .timeline-item:nth-child(even) .timeline-date {
     text-align: left;
 }
+
 .timeline-item:nth-child(odd) .timeline-date {
     text-align: right;
 }
+
+/* 關鍵修正：當父層 section.is-visible 時，觸發子層 timeline-item 的動畫 */
+.timeline-section.is-visible .timeline-item {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* (可選) 增加逐個出現的延遲效果，讓動畫更好看 */
+.timeline-section.is-visible .timeline-item:nth-child(1) { transition-delay: 0.1s; }
+.timeline-section.is-visible .timeline-item:nth-child(2) { transition-delay: 0.2s; }
+.timeline-section.is-visible .timeline-item:nth-child(3) { transition-delay: 0.3s; }
+.timeline-section.is-visible .timeline-item:nth-child(4) { transition-delay: 0.4s; }
+.timeline-section.is-visible .timeline-item:nth-child(5) { transition-delay: 0.5s; }
+.timeline-section.is-visible .timeline-item:nth-child(6) { transition-delay: 0.6s; }
+.timeline-section.is-visible .timeline-item:nth-child(7) { transition-delay: 0.7s; }
 .timeline-item.is-visible {
     opacity: 1;
     transform: translateY(0);
