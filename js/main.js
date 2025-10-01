@@ -54,6 +54,41 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'ST01', alias: "", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
 
+
+    // =========================================================================
+// 全站共用函式
+// =========================================================================
+
+/**
+ * 根據評分產生星星圖示 HTML
+ * @param {number} rating - 評分數字 (例如 3.5)
+ * @returns {string} - 回傳包含 Font Awesome 圖示的 HTML 字串
+ */
+function generateStarRating(rating) {
+    const totalStars = 5;
+    let starsHtml = '<span class="star-rating">';
+
+    // 計算實心星星的數量
+    const fullStars = Math.floor(rating);
+    for (let i = 0; i < fullStars; i++) {
+        starsHtml += '<i class="fas fa-star"></i>';
+    }
+
+    // 判斷是否有半顆星
+    if (rating % 1 >= 0.5) {
+        starsHtml += '<i class="fas fa-star-half-stroke"></i>';
+    }
+
+    // 計算空心星星的數量
+    const emptyStars = totalStars - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+        starsHtml += '<i class="far fa-star"></i>';
+    }
+
+    starsHtml += '</span>';
+    return starsHtml;
+}
+    
     // =========================================================================
     // 全站共用函式
     // =========================================================================
@@ -270,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div><strong>性質:</strong> ${route.nature}</div>
                                 <div><strong>預計全程行車時間:</strong> ${route.time}分鐘</div>
                                 <div><strong>路線全長:</strong> ${route.length}</div>
-                                <div><strong>難度:</strong> ${'★'.repeat(Math.round(route.difficulty))} (${route.difficulty}/5)</div>
+                                <div><strong>難度:</strong> ${generateStarRating(route.difficulty)} (${route.difficulty}/5)</div>
                             </div>
                             <div class="route-tags-container">
                                 <strong>標籤:</strong>
