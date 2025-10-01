@@ -1,4 +1,3 @@
-
 console.log('--- main.js 檔案已成功載入並開始執行！ ---');
 
 /**
@@ -7,12 +6,14 @@ console.log('--- main.js 檔案已成功載入並開始執行！ ---');
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Remove any accidental fade-out effect by resetting body opacity and visibility
+    // ------------------- 所有程式碼都從這裡開始 -------------------
+
+    // Reset body style on load
     document.body.style.opacity = '1';
     document.body.style.visibility = 'visible';
 
     // =========================================================================
-    // 全站共用資料與函式
+    // 全站共用資料
     // =========================================================================
     const routes = [
         { id: '900', alias: "市區海濱線", start: "寶琳(新都城二期)", end: "調景嶺彩明", via: "景林邨、香港單車館、將軍澳海濱、調景嶺站", nature: "旅遊", time: 40, length: "5.5km", difficulty: 3, image: "images/900.jpg", description: "這是專為新手打造的「海濱專線」。全程半個多小時，少坡、風景優美，讓你在寶琳與調景嶺之間輕鬆穿梭，沿途還有補給點可供休息。", tags: ["將軍澳", "海濱專線", "寶琳調景嶺線", "新手必試", "風景優美", "少坡"], color: "#990000", gpx: [{ label: "往寶琳", file: "900寶琳.gpx" }, { label: "往調景嶺", file: "900調景嶺.gpx" }] },
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: '929', alias: "坑口快速", start: "坑口站", end: "調景嶺總站", via: "坑口北、將軍澳海濱、將軍澳站、調景嶺站", nature: "混合", time: 35, length: "6.2km", difficulty: 3, image: "images/929.jpg", description: "坑口北專線，路況平坦，連接坑口各區、將軍澳市中心及調景嶺。這條多用途路線非常適合單車新手體驗。", tags: ["將軍澳", "新手必試", "平坦", "坑口北專線", "快速", "接駁渡輪", "通勤", "旅遊"], color: "#f1c232", gpx: [{ label: "往坑口", file: "929坑口.gpx" }, { label: "往調景嶺", file: "929調景嶺.gpx" }] },
         { id: '932', alias: "坑康線", start: "坑口站", end: "將軍澳創新園", via: "坑口北、北橋、清水灣半島、康城海濱、日出康城", nature: "混合", time: 45, length: "8.1km", difficulty: 4, image: "images/932.jpg", description: "連接坑口、清水灣半島、康城及創新園的長途特快路線。路況少坡，沿著海濱騎行，是挑戰長途的絕佳選擇。", tags: ["將軍澳", "長途", "少坡", "清水灣半島專線", "海濱專線", "風景優美", "坑口北專線", "快速", "創新園路線", "通勤", "旅遊"], color: "#ff00ff", gpx: [{ label: "往創新園", file: "932創新園.gpx" }, { label: "往坑口", file: "932坑口.gpx" }] },
         { id: '935', alias: "南北專線", start: "寶琳(將軍澳村)", end: "將軍澳創新園", via: "寶康路、北橋、康城海濱、日出康城", nature: "旅遊", time: 50, length: "9.6km", difficulty: 4.5, image: "images/935.jpg", description: "一條適合旅遊與運動訓練的長途路線。由單車徑最南端的創新園出發，沿著康城海濱及寶康路一路向北，途經將軍澳北，前往單車徑最北端的將軍澳村，享受開闊的騎行體驗。", tags: ["將軍澳", "旅遊專線", "長途", "海濱專線", "運動訓練", "南北三寶", "創新園路線"], color: "#38761d", gpx: [{ label: "往寶琳", file: "935寶琳.gpx" }, { label: "往創新園", file: "935創新園.gpx" }] },
-        { id: 'X935', alias: "南北特快", start: "寶琳(將軍澳村)", end: "將軍澳創新園", via: "寶琳北路、日出康城", nature: "旅遊", time: 40, length: "8.0km", difficulty: 4, image: "images/X935.jpg", description: "935的特快版本，無需跟從主線的迂迴走線，而是更加直接。此路線為長途旅遊線，路況優越，讓你能在更短時間內穿梭將軍澳南北。", tags: ["將軍澳", "旅遊專線", "特快", "長途", "海濱專線", "創新園路線", "南北三寶"], color: "#38761d", gpx: [{ label: "往寶琳", file: "X935寶琳.gpx" }, { label: "往創新園", file: "X935創新園.gpx" }] },
+        { id: 'X935', alias: "南北特快", start: "寶琳(將軍澳村)", end: "將軍澳創新園", via: "寶琳北路、日出康城", nature: "旅遊", time: 40, length: "8.0km", difficulty: 4, image: "images/X935.jpg", description: "935的特快版本，無需跟從主線的迂迴走線，而是更加直接。此路線為長途旅遊線，路況優越，讓你能在更短時間內穿梭將軍澳南北。", tags: ["將軍澳", "旅遊專線", "特快", "長途", "海濱專線", "創新園路線", "南北三寶"], color: "#38761d", gpx: [{ label: "往宝琳", file: "X935寶琳.gpx" }, { label: "往創新園", file: "X935創新園.gpx" }] },
         { id: '939', alias: "創新園專線", start: "峻瀅", end: "將軍澳創新園", via: "環保大道", nature: "旅遊", time: 30, length: "2.5km(單向)", difficulty: 3.5, image: "images/939.jpg", description: "一條連接峻瀅及將軍澳創新園的路線。非常適合單車新手體驗，享受周邊的休閒時光，人流極少。", tags: ["將軍澳", "旅遊專線", "平坦", "新手必試", "創新園路線", "人流較少", "循環"], color: "#741b47", gpx: [{ label: "來回", file: "939循環.gpx" }] },
         { id: '939M', alias: "", start: "康城站", end: "將軍澳創新園", via: "環保大道", nature: "通勤", time: 35, length: "2.9km(單向)", difficulty: 3.5, image: "images/939M.jpg", description: "連接康城站及創新園的特快通勤路線。路面平坦，專為通勤族設計，讓你可以由創新園快速轉乘地鐵。", tags: ["將軍澳", "通勤專線", "平坦", "快速", "創新園路線", "連接地鐵站", "人流較少", "循環"], color: "#741b47", gpx: [{ label: "往康城", file: "939M康城.gpx" }, { label: "往創新園", file: "939M循環.gpx" }] },
         { id: '955', alias: "寶琳循環線", start: "寶琳(新都城二期)", end: null, via: "寶順路、寶康路、寶琳北路", nature: "普通", time: 20, length: "4.1km", difficulty: 2, image: "images/955.jpg", description: "連接新都城二期（寶琳站）及寶琳各區的循環線。同時適合通勤與旅遊，及方便接駁其他交通。", tags: ["將軍澳", "平坦", "循環", "連接地鐵站", "連接巴士總站"], color: "#dd7e6b", gpx: [{ label: "順時針", file: "955順時針.gpx" }, { label: "逆時針", file: "955逆時針.gpx" }] },
@@ -53,6 +54,13 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'ST01', alias: "", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
 
+    // =========================================================================
+    // 全站共用函式
+    // =========================================================================
+
+    /**
+     * 初始化所有帶有 .animated-element 的元素，當它們進入可視範圍時顯示。
+     */
     function initAnimatedElements() {
         const animatedElements = document.querySelectorAll('.animated-element');
         if (animatedElements.length === 0) return;
@@ -74,11 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 將所有頁面特定的初始化程式碼包裹在函式中
+    // =========================================================================
+    // 頁面專屬初始化函式
+    // =========================================================================
+
     function initHomePage() {
         const container = document.getElementById('routes-preview-container');
         if (!container) return;
-
         const routesToShow = [...routes].filter(r => !r.id.startsWith("ST")).sort(() => 0.5 - Math.random()).slice(0, 3);
         container.innerHTML = '';
         routesToShow.forEach(route => {
@@ -107,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         const tagMap = { "單向": "單向線", "循環": "循環線" };
         let activeFilters = {};
-
         const filterControls = document.createElement('div');
         filterControls.className = 'filter-controls animated-element';
 
@@ -121,7 +130,6 @@ document.addEventListener('DOMContentLoaded', function() {
             button.dataset.category = category;
             const menu = document.createElement('div');
             menu.className = 'filter-dropdown-menu';
-
             filterCategories[category].forEach(tag => {
                 const label = document.createElement('label');
                 const checkbox = document.createElement('input');
@@ -132,7 +140,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 label.appendChild(document.createTextNode(` ${tag}`));
                 menu.appendChild(label);
             });
-
             container.appendChild(button);
             container.appendChild(menu);
             filterControls.appendChild(container);
@@ -166,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const value = checkbox.value;
                 if (checkbox.checked) {
                     if (!activeFilters[category].includes(value)) {
-                       activeFilters[category].push(value);
+                        activeFilters[category].push(value);
                     }
                 } else {
                     activeFilters[category] = activeFilters[category].filter(item => item !== value);
@@ -218,7 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 allRoutesContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">目前沒有符合條件的路線。</p>';
             }
         }
-        
         renderRoutes(routes);
     }
 
@@ -245,7 +251,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     `;
                 }
-
                 routeDetailContainer.innerHTML = `
                     <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
                         <h1 class="route-hero-title">${route.alias || '路線詳情'}</h1>
@@ -276,16 +281,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-                                initAnimatedElements();
-
+                initAnimatedElements();
             } else {
-                routeDetailContainer.innerHTML = '<p>...</p>';
+                routeDetailContainer.innerHTML = '<p>找不到指定的路線。</p>';
             }
         }
     }
 
     // =========================================================================
-    // 執行對應頁面的初始化函式
+    // 執行初始化
     // =========================================================================
     if (document.getElementById('routes-preview-container')) {
         initHomePage();
@@ -296,106 +300,82 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('route-detail-container')) {
         initRouteDetailPage();
     }
-});
-// Dark mode support
-if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.classList.add('dark');
-}
+    
+    // 【關鍵修正】確保動畫函式在所有頁面都會被執行
+    initAnimatedElements();
 
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    if (event.matches) {
+
+    // =========================================================================
+    // 其他全域腳本 (Dark mode, Modal 等)
+    // =========================================================================
+
+    // Dark mode support
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
     }
-});
-
-// Modal functionality
-const modal = document.getElementById('notificationModal');
-
-function closeNotification() {
-    const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
-    modalContent.classList.remove('modal-enter');
-    modalContent.classList.add('modal-exit');
-    
-    setTimeout(() => {
-        modal.style.display = 'none';
-    }, 200);
-}
-
-function showNotification() {
-    modal.style.display = 'flex';
-    const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
-    modalContent.classList.remove('modal-exit');
-    modalContent.classList.add('modal-enter');
-}
-
-// Event listeners
-function initializeNotificationModal() {
-    // Close modal when clicking outside
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeNotification();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+        if (event.matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
     });
 
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.style.display !== 'none') {
-            closeNotification();
-        }
-    });
+    // Modal functionality
+    const modal = document.getElementById('notificationModal');
 
-    // Show notification on page load (after a small delay for better UX)
-    window.addEventListener('load', function() {
+    function closeNotification() {
+        if (!modal) return; // 安全檢查
+        const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
+        modalContent.classList.remove('modal-enter');
+        modalContent.classList.add('modal-exit');
         setTimeout(() => {
-            showNotification();
-        }, 500);
-    });
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeNotificationModal);
-} else {
-    initializeNotificationModal();
-}
-
-// Optional: Add additional notification management functions
-const NotificationManager = {
-    // Show different types of notifications
-    showSuccess: function(title, message) {
-        // Implementation for success notifications
-        console.log('Success notification:', title, message);
-    },
-    
-    showWarning: function(title, message) {
-        // Implementation for warning notifications
-        console.log('Warning notification:', title, message);
-    },
-    
-    showError: function(title, message) {
-        // Implementation for error notifications
-        console.log('Error notification:', title, message);
-    },
-    
-    // Store user preference to not show again
-    setDismissed: function(notificationId) {
-        // You could implement localStorage here if available
-        // localStorage.setItem(`notification_${notificationId}_dismissed`, 'true');
-        console.log(`Notification ${notificationId} dismissed`);
-    },
-    
-    // Check if notification was previously dismissed
-    isDismissed: function(notificationId) {
-        // return localStorage.getItem(`notification_${notificationId}_dismissed`) === 'true';
-        return false; // Always show for now since localStorage isn't available
+            modal.style.display = 'none';
+        }, 200);
     }
-};
 
-// Export functions for global access (if needed)
-window.closeNotification = closeNotification;
-window.showNotification = showNotification;
-window.NotificationManager = NotificationManager;
-// Add this to your existing js/main.js file
+    function showNotification() {
+        if (!modal) return; // 安全檢查
+        modal.style.display = 'flex';
+        const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
+        modalContent.classList.remove('modal-exit');
+        modalContent.classList.add('modal-enter');
+    }
 
+    function initializeNotificationModal() {
+        if (!modal) return; // 如果頁面沒有 modal 元素，就直接返回
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeNotification();
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display !== 'none') {
+                closeNotification();
+            }
+        });
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                showNotification();
+            }, 500);
+        });
+    }
+
+    initializeNotificationModal();
+
+    const NotificationManager = {
+        showSuccess: function(title, message) { console.log('Success notification:', title, message); },
+        showWarning: function(title, message) { console.log('Warning notification:', title, message); },
+        showError: function(title, message) { console.log('Error notification:', title, message); },
+        setDismissed: function(notificationId) { console.log(`Notification ${notificationId} dismissed`); },
+        isDismissed: function(notificationId) { return false; }
+    };
+
+    // Export functions for global access (if needed)
+    window.closeNotification = closeNotification;
+    window.showNotification = showNotification;
+    window.NotificationManager = NotificationManager;
+
+    // ------------------- 所有程式碼都在這裡結束 -------------------
+});
