@@ -140,11 +140,18 @@ function initHomePage() {
             const card = document.createElement('div');
             card.className = 'route-card';
             card.innerHTML = `
-                <a href="/route_detail.html?id=${route.id}">
-                    <img src="${route.image}" alt="${route.alias || route.id}">
-                    <h3>${route.alias || route.id}</h3>
-                </a>
-            `;
+    <a href="/route_detail.html?id=${route.id}">
+        <img src="${route.image}" alt="${route.alias || route.id}">
+        <div class="route-card-title">
+            <h3>
+                <span class="route-card-id" style="background-color: ${route.color}; color: ${route.textColor || 'white'}">
+                    ${route.id}
+                </span>
+                ${route.alias || '(無別稱)'}
+            </h3>
+        </div>
+    </a>
+`;
             container.appendChild(card);
         }
     });
