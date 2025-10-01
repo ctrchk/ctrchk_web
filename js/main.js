@@ -121,12 +121,22 @@ function generateStarRating(rating) {
     // 頁面專屬初始化函式
     // =========================================================================
 
-    function initHomePage() {
-        const container = document.getElementById('routes-preview-container');
-        if (!container) return;
-        const routesToShow = [...routes].filter(r => !r.id.startsWith("ST")).sort(() => 0.5 - Math.random()).slice(0, 3);
-        container.innerHTML = '';
-        routesToShow.forEach(route => {
+function initHomePage() {
+    const container = document.getElementById('routes-preview-container');
+    if (!container) return;
+
+    // 1. 在這裡定義你想要精選的路線 ID
+    const featuredRouteIds = ['900', '960', '966T'];
+
+    // 2. 從 `routes` 總列表中，根據 ID 找出對應的路線資料
+    const routesToShow = featuredRouteIds.map(id => routes.find(route => route.id === id));
+
+    // 3. 清空容器，準備放入我們指定的路線
+    container.innerHTML = '';
+
+    // 4. 根據找到的路線資料，建立卡片
+    routesToShow.forEach(route => {
+        if (route) { // 確保路線真的被找到了
             const card = document.createElement('div');
             card.className = 'route-card';
             card.innerHTML = `
@@ -136,8 +146,9 @@ function generateStarRating(rating) {
                 </a>
             `;
             container.appendChild(card);
-        });
-    }
+        }
+    });
+}
 
     function initRoutesPage() {
         const allRoutesContainer = document.getElementById('all-routes-container');
