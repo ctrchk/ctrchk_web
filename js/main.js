@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
             animatedElements.forEach(el => observer.observe(el));
         } else {
             // 如果瀏覽器不支援，就立即顯示所有元素
-            animatedElements.forEach(el => el.classList.add('show'));
+            animatedElements.forEach(el => el.classList.add('is-visible'));
         }
     }
 
