@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'ST01', alias: "", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
 
-        function initAnimatedElements() {
+    function initAnimatedElements() {
         const animatedElements = document.querySelectorAll('.animated-element');
         if (animatedElements.length === 0) return;
 
@@ -226,8 +226,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const routeDetailContainer = document.getElementById('route-detail-container');
         if (!routeDetailContainer) return;
 
-        // 【重要】這裡的動畫邏輯已被移除，由全域的 initAnimatedElements 處理
-
         const urlParams = new URLSearchParams(window.location.search);
         const routeId = urlParams.get('id');
 
@@ -235,7 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const route = routes.find(r => r.id === routeId);
             if (route) {
                 document.title = `香港城市運輸單車 - ${route.alias || route.id}`;
-
                 let gpxButtonsHtml = '';
                 if (route.gpx && route.gpx.length > 0) {
                     gpxButtonsHtml = `
@@ -279,12 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-                
-                const newAnimatedElements = routeDetailContainer.querySelectorAll('.animated-element');
-                newAnimatedElements.forEach(el => observer.observe(el));
+                                initAnimatedElements();
 
             } else {
-                routeDetailContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">找不到指定的路線。</p>';
+                routeDetailContainer.innerHTML = '<p>...</p>';
             }
         }
     }
@@ -301,7 +296,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('route-detail-container')) {
         initRouteDetailPage();
     }
-
 });
 // Dark mode support
 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -405,23 +399,3 @@ window.showNotification = showNotification;
 window.NotificationManager = NotificationManager;
 // Add this to your existing js/main.js file
 
-// Add IntersectionObserver for animated elements
-document.addEventListener('DOMContentLoaded', function() {
-    const animatedElements = document.querySelectorAll('.animated-element');
-    
-    if ('IntersectionObserver' in window) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 });
-        
-        animatedElements.forEach(el => observer.observe(el));
-    } else {
-        // Fallback for older browsers
-        animatedElements.forEach(el => el.classList.add('is-visible'));
-    }
-});
