@@ -508,3 +508,24 @@ footer {
     margin-right: 2px; /* 星星之間的微小間距 */
     font-size: 1.1em; /* 稍微放大星星 */
 }
+
+
+/* --- 首頁精選路線卡片 - 標題樣式 --- */
+.route-card .route-card-title {
+    padding: 1em; /* 讓標題有內邊距，而不是貼著邊緣 */
+}
+
+.route-card .route-card-title h3 {
+    margin: 0; /* 移除 h3 預設的外邊距 */
+    display: flex; /* 使用 flex 佈局讓標籤和文字並排 */
+    align-items: center; /* 垂直居中對齊 */
+    gap: 0.8em; /* 在標籤和文字之間增加一些間距 */
+}
+
+.route-card .route-card-id {
+    font-size: 1em; /* 設定字體大小 */
+    font-weight: bold; /* 粗體字 */
+    padding: 0.3em 0.7em; /* 標籤的內邊距 */
+    border-radius: 5px; /* 圓角效果 */
+    white-space: nowrap; /* 防止編號換行 */
+}
