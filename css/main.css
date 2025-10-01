@@ -496,3 +496,15 @@ footer {
         border-color: transparent #fff transparent transparent;
     }
 }
+
+/* --- 路線詳情頁 - 星星評分樣式 --- */
+.star-rating {
+    display: inline-flex;
+    align-items: center;
+}
+
+.star-rating i {
+    color: #f5c518; /* 金黃色 */
+    margin-right: 2px; /* 星星之間的微小間距 */
+    font-size: 1.1em; /* 稍微放大星星 */
+}
