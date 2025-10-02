@@ -118,6 +118,20 @@
     border-color: #04D93C;
     box-shadow: 0 0 5px rgba(4, 217, 60, 0.5);
 }
+
+/* --- 【新增】針對平板等中等寬度螢幕的響應式佈局 --- */
+@media (max-width: 1024px) {
+    .filter-controls {
+        /* 在中等螢幕下，讓按鈕們整體居中顯示 */
+        justify-content: center;
+    }
+
+    .search-container {
+        /* 強制讓搜尋欄容器佔據 100% 寬度，這樣它就會獨佔一行 */
+        flex-basis: 100%;
+        max-width: none; /* 在此寬度下，取消最大寬度限制，讓它能填滿 */
+    }
+}
 </style>
 </head>
 <body>
