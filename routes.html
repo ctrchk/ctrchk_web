@@ -18,6 +18,7 @@
     flex-wrap: wrap;
     gap: 1em;
     padding: 1em;
+    align-items: center; 
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
@@ -97,8 +98,9 @@
 
     /* --- 搜尋欄樣式 --- */
 .search-container {
-    flex-grow: 1; /* 讓搜尋容器在空間足夠時填滿剩餘寬度 */
-    min-width: 250px; /* 設定最小寬度，避免在小螢幕被過度壓縮 */
+    flex-grow: 1;
+    min-width: 250px;
+    max-width: 450px; /* --- 新增這一行，限制搜尋欄的最大寬度 --- */
 }
 
 .search-input {
