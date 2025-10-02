@@ -113,25 +113,24 @@
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.search-input:focus {
-    outline: none;
-    border-color: #04D93C;
-    box-shadow: 0 0 5px rgba(4, 217, 60, 0.5);
-}
-
-/* --- 【新增】針對平板等中等寬度螢幕的響應式佈局 --- */
-@media (max-width: 1024px) {
-    .filter-controls {
-        /* 在中等螢幕下，讓按鈕們整體居中顯示 */
-        justify-content: center;
+    .search-input:focus {
+        outline: none;
+        border-color: #04D93C;
+        box-shadow: 0 0 5px rgba(4, 217, 60, 0.5);
     }
 
-    .search-container {
-        /* 強制讓搜尋欄容器佔據 100% 寬度，這樣它就會獨佔一行 */
-        flex-basis: 100%;
-        max-width: none; /* 在此寬度下，取消最大寬度限制，讓它能填滿 */
+    /* --- 請將這整段程式碼，複製並貼到 <style> 標籤的最末尾 --- */
+    /* 【關鍵修正】針對平板、筆電等中等寬度螢幕的響應式佈局 */
+    @media (max-width: 1100px) {
+        .filter-controls {
+            justify-content: center;
+        }
+
+        .search-container {
+            flex-basis: 100%;
+            max-width: none; 
+        }
     }
-}
 </style>
 </head>
 <body>
