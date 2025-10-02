@@ -93,6 +93,29 @@
     .route-id-code { font-size: 1.2em; font-weight: bold; padding: 0.5em 1em; border-radius: 5px; margin-right: 1em; white-space: nowrap; }
     .route-alias { margin: 0; font-size: 1.3em; font-weight: bold; }
     .route-card-content p { margin: 0.5em 0; }
+
+
+    /* --- 搜尋欄樣式 --- */
+.search-container {
+    flex-grow: 1; /* 讓搜尋容器在空間足夠時填滿剩餘寬度 */
+    min-width: 250px; /* 設定最小寬度，避免在小螢幕被過度壓縮 */
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.8em 1.2em;
+    border: 1px solid #ddd;
+    border-radius: 50px; /* 圓角膠囊形狀 */
+    font-size: 1em;
+    font-family: inherit; /* 繼承 body 的字體，避免樣式不一致 */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #04D93C;
+    box-shadow: 0 0 5px rgba(4, 217, 60, 0.5);
+}
 </style>
 </head>
 <body>
