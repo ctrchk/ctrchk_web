@@ -96,28 +96,27 @@
     .route-card-content p { margin: 0.5em 0; }
 
 
-    /* --- 搜尋欄樣式 --- */
-.search-container {
-    flex-grow: 1;
-    min-width: 250px;
-    max-width: 450px; /* --- 新增這一行，限制搜尋欄的最大寬度 --- */
+/* --- Hero 區塊內的搜尋欄樣式 --- */
+.hero-search-container {
+    max-width: 600px; /* 設定搜尋欄最大寬度 */
+    margin: 2em auto 0 auto; /* 上方間距、水平置中 */
 }
 
 .search-input {
     width: 100%;
-    padding: 0.8em 1.2em;
-    border: 1px solid #ddd;
+    padding: 1em 1.5em;
+    border: none; /* 移除邊框 */
     border-radius: 50px; /* 圓角膠囊形狀 */
-    font-size: 1em;
-    font-family: inherit; /* 繼承 body 的字體，避免樣式不一致 */
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-size: 1.1em;
+    font-family: inherit;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* 加上陰影增加立體感 */
+    transition: box-shadow 0.3s ease;
 }
 
-    .search-input:focus {
-        outline: none;
-        border-color: #04D93C;
-        box-shadow: 0 0 5px rgba(4, 217, 60, 0.5);
-    }
+.search-input:focus {
+    outline: none;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
 
     /* --- 請將這整段程式碼，複製並貼到 <style> 標籤的最末尾 --- */
     /* 【關鍵修正】針對平板、筆電等中等寬度螢幕的響應式佈局 */
@@ -152,6 +151,9 @@
         <section class="hero">
             <h1>所有單車路線</h1>
             <p>在這裡找到所有為你精心規劃的將軍澳和沙田區單車路線。</p>
+            <div class="hero-search-container">
+                <input type="text" id="hero-search-input" class="search-input" placeholder="搜尋路線編號、名稱、地點...">
+            </div>
         </section>
 
         <section class="content all-routes-section">
