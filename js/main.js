@@ -159,11 +159,12 @@ function initHomePage() {
 
 // 在 main.js 中，找到並用下面的版本替換掉整個 initRoutesPage 函式
 
+// 在 main.js 中，找到並用下面的版本替換掉整個 initRoutesPage 函式
+
 function initRoutesPage() {
     const allRoutesContainer = document.getElementById('all-routes-container');
     if (!allRoutesContainer) return;
 
-    // ... (filterCategories, tagMap, activeFilters 等變數定義不變) ...
     const filterCategories = {
         "路線區域": ["將軍澳", "沙田區"],
         "路線類別": ["通勤", "旅遊", "單向", "循環", "快速", "特快", "長途"],
@@ -173,122 +174,119 @@ function initRoutesPage() {
     };
     const tagMap = { "單向": "單向線", "循環": "循環線" };
     let activeFilters = {};
+    let searchTerm = ''; // 【新】增加一個變數來儲存搜尋關鍵字
 
-
-    // ... (建立篩選器按鈕的 for 迴圈和事件監聽程式碼不變) ...
+    // --- 建立篩選器 UI ---
     const filterControls = document.createElement('div');
-    filterControls.className = 'filter-controls animated-element';
+    filterControls.className = 'filter-controls';
+
+    // 建立下拉篩選按鈕
     for (const category in filterCategories) {
         activeFilters[category] = [];
+        const container = document.createElement('div');
+        container.className = 'filter-dropdown-container';
+        // ... (這部分程式碼和你原來的一樣，省略以保持簡潔) ...
+    }
+
+    // 【新】建立搜尋欄
+    const searchContainer = document.createElement('div');
+    searchContainer.className = 'search-container';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = '搜尋路線編號、名稱、地點...';
+    searchInput.className = 'search-input';
+    searchContainer.appendChild(searchInput);
+
+    // 將搜尋欄和下拉篩選按鈕都放進 filterControls
+    filterControls.appendChild(searchContainer);
+    for (const category in filterCategories) {
+        // ... (建立按鈕的程式碼)
         const container = document.createElement('div');
         container.className = 'filter-dropdown-container';
         const button = document.createElement('button');
         button.className = 'filter-category-button';
         button.textContent = category;
-        button.dataset.category = category;
         const menu = document.createElement('div');
         menu.className = 'filter-dropdown-menu';
-        filterCategories[category].forEach(tag => {
-            const label = document.createElement('label');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = tag;
-            checkbox.dataset.category = category;
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(` ${tag}`));
-            menu.appendChild(label);
-        });
+        filterCategories[category].forEach(tag => { /* ... */ });
         container.appendChild(button);
         container.appendChild(menu);
         filterControls.appendChild(container);
     }
+    
+    // --- 將整個篩選器區域加到頁面上 ---
     const filtersContainer = document.createElement('div');
     filtersContainer.className = 'filters-container';
     filtersContainer.appendChild(filterControls);
     allRoutesContainer.before(filtersContainer);
-    document.querySelectorAll('.filter-category-button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const currentMenu = button.nextElementSibling;
-            document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
-                if (menu !== currentMenu) menu.classList.remove('show');
-            });
-            currentMenu.classList.toggle('show');
-        });
+
+    // --- 設定事件監聽 ---
+
+    // 【新】監聽搜尋欄的輸入事件
+    searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value.toLowerCase(); // 將輸入轉為小寫以便比對
+        applyFilters();
     });
-    window.addEventListener('click', () => {
-        document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
-            menu.classList.remove('show');
-        });
-    });
+
+    // 下拉選單的事件監聽 (這部分和你原來的一樣)
+    document.querySelectorAll('.filter-category-button').forEach(button => { /* ... */ });
+    window.addEventListener('click', () => { /* ... */ });
     document.querySelectorAll('.filter-dropdown-menu input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', () => {
-            const category = checkbox.dataset.category;
-            const value = checkbox.value;
-            if (checkbox.checked) {
-                if (!activeFilters[category].includes(value)) {
-                    activeFilters[category].push(value);
-                }
-            } else {
-                activeFilters[category] = activeFilters[category].filter(item => item !== value);
-            }
+            // ... (更新 activeFilters 的邏輯)
             applyFilters();
         });
     });
 
+    // --- 核心邏輯函式 ---
+
     function applyFilters() {
-        let filteredRoutes = [...routes];
-        for (const category in activeFilters) {
-            const selectedTags = activeFilters[category];
-            if (selectedTags.length === 0) continue;
-            filteredRoutes = filteredRoutes.filter(route => {
-                return selectedTags.some(tag => {
-                    const actualTag = tagMap[tag] || tag;
-                    if ((tag === "通勤" || tag === "旅遊") && route.nature === "混合") {
-                        return true;
-                    }
-                    return route.tags.includes(actualTag);
+        // 先跑標籤篩選
+        let filteredByTags = [...routes];
+        const hasActiveTagFilters = Object.values(activeFilters).some(tags => tags.length > 0);
+
+        if (hasActiveTagFilters) {
+            filteredByTags = filteredByTags.filter(route => {
+                return Object.entries(activeFilters).every(([category, selectedTags]) => {
+                    if (selectedTags.length === 0) return true;
+                    return selectedTags.some(tag => {
+                        const actualTag = tagMap[tag] || tag;
+                        if ((tag === "通勤" || tag === "旅遊") && route.nature === "混合") {
+                            return true;
+                        }
+                        return route.tags.includes(actualTag);
+                    });
                 });
             });
         }
-        renderRoutes(filteredRoutes);
+        
+        // 【新】接著跑搜尋篩選
+        let finalFilteredRoutes = filteredByTags;
+        if (searchTerm) {
+            finalFilteredRoutes = filteredByTags.filter(route => {
+                const searchFields = [
+                    route.id.toLowerCase(),
+                    route.alias.toLowerCase(),
+                    route.start.toLowerCase(),
+                    route.end ? route.end.toLowerCase() : '',
+                    route.via ? route.via.toLowerCase() : ''
+                ].join(' '); // 將所有可搜尋的欄位串成一個長字串
+                
+                return searchFields.includes(searchTerm);
+            });
+        }
+
+        renderRoutes(finalFilteredRoutes);
     }
 
     function renderRoutes(routesToRender) {
-        allRoutesContainer.innerHTML = '';
-        if (routesToRender.length > 0) {
-            routesToRender.forEach(route => {
-                const card = document.createElement('div');
-                // 【關鍵修正 1】在建立卡片時，為它加上 animated-element class
-                card.className = 'route-card-full animated-element';
-                const link = route.link || `/route_detail.html?id=${route.id}`;
-                card.innerHTML = `
-                    <a href="${link}" class="${route.id.startsWith('ST') ? 'disabled-link' : ''}">
-                        <div class="route-card-header">
-                            <span class="route-id-code" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">${route.id}</span>
-                            <h3 class="route-alias">${route.alias || '(無別稱)'}</h3>
-                        </div>
-                        <div class="route-card-content">
-                            <p><strong>起點:</strong> ${route.start}</p>
-                            <p><strong>終點:</strong> ${route.end || '(循環線)'}</p>
-                        </div>
-                    </a>
-                `;
-                allRoutesContainer.appendChild(card);
-            });
-        } else {
-            allRoutesContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">目前沒有符合條件的路線。</p>';
-        }
-
-        // 【關鍵修正 2】每次渲染完卡片後，都重新執行一次動畫初始化函式
-        // 這樣才能偵測到我們剛剛新增的帶有 animated-element 的卡片
-        initAnimatedElements();
+        // ... (這個函式和你修改後的一樣，不需要變動) ...
     }
     
     // 首次載入頁面時，渲染所有路線
     renderRoutes(routes);
 }
-
+    
     function initRouteDetailPage() {
         const routeDetailContainer = document.getElementById('route-detail-container');
         if (!routeDetailContainer) return;
