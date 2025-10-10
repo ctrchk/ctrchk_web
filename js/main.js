@@ -60,6 +60,44 @@ document.addEventListener('DOMContentLoaded', function() {
 // =========================================================================
 
 /**
+ * 非同步載入共用的 HTML 元件 (例如 header, footer)
+ */
+async function loadSharedComponents() {
+    // 定義要載入的元件和它們的目標位置
+    // 格式: { html檔案路徑: '#目標容器的ID' }
+    const components = {
+        'header.html': '#header-placeholder'
+        // 如果未來你也想共用 footer，可以取消下面的註解
+        //, 'footer.html': '#footer-placeholder' 
+    };
+
+    // 建立一個陣列來存放所有的 fetch 請求
+    const fetchPromises = Object.entries(components).map(async ([file, placeholderId]) => {
+        const placeholder = document.querySelector(placeholderId);
+        
+        // 如果頁面上有這個容器，才進行載入
+        if (placeholder) {
+            try {
+                const response = await fetch(file);
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok for ${file}`);
+                }
+                const data = await response.text();
+                placeholder.innerHTML = data;
+            } catch (error) {
+                console.error('Error loading component:', file, error);
+                // 在頁面上顯示錯誤，方便除錯
+                placeholder.innerHTML = `<p style="color:red; text-align:center;">Error loading ${file}.</p>`;
+            }
+        }
+    });
+
+    // 等待所有元件都載入完成
+    await Promise.all(fetchPromises);
+    console.log('--- 共用元件 (Header/Footer) 已載入完成 ---');
+}
+    
+/**
  * 根據評分產生星星圖示 HTML
  * @param {number} rating - 評分數字 (例如 3.5)
  * @returns {string} - 回傳包含 Font Awesome 圖示的 HTML 字串
@@ -375,9 +413,15 @@ function initRoutesPage() {
         }
     }
 
-    // =========================================================================
-    // 執行初始化
-    // =========================================================================
+// =========================================================================
+// 執行初始化
+// =========================================================================
+
+// 1. 首先，呼叫函式來載入 Header, Footer 等共用元件
+loadSharedComponents().then(() => {
+    // 2. 當共用元件載入完成後，才執行頁面專屬的初始化邏輯
+    //    這樣可以確保 initHomePage 等函式執行時，Header 已經存在於頁面上了
+    
     if (document.getElementById('routes-preview-container')) {
         initHomePage();
     }
@@ -388,9 +432,11 @@ function initRoutesPage() {
         initRouteDetailPage();
     }
     
-    // 【關鍵修正】確保動畫函式在所有頁面都會被執行
+    // 確保動畫函式在所有頁面都會被執行
     initAnimatedElements();
+});
 
+// ... 你檔案後續的其他全域腳本 (Dark mode, Modal 等) ...
 
     // =========================================================================
     // 其他全域腳本 (Dark mode, Modal 等)
