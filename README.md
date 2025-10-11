@@ -2,7 +2,7 @@
 
 This is the CTRC official website's origin code. 
 # Update Log: (Alpha)
-2025-08-16[Dead], currently. 
+2025-10-12 00:31 GMT + 8 -- ALPHA RELEASE
 
 
 <!--
