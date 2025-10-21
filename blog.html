@@ -7,57 +7,93 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* === Blog 頁面專屬樣式 === */
-        .blog-container {
-            max-width: 800px;
+        /* === Blog 概覽頁專屬樣式 === */
+        .blog-list-container {
+            max-width: 900px; /* 可以比文章頁稍寬 */
             margin: 2em auto;
             padding: 0 1em;
         }
 
-        .blog-post {
+        .blog-post-summary {
+            display: flex; /* 讓圖片和文字並排 */
+            gap: 1.5em; /* 圖片和文字間的距離 */
             background-color: #fff;
-            padding: 2em;
+            padding: 1.5em;
             margin-bottom: 2em;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+            overflow: hidden; /* 確保內容不溢出 */
+        }
+        .blog-post-summary:hover {
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
         }
 
-        .blog-post h2 {
+        .post-summary-image {
+            flex: 0 0 200px; /* 固定圖片寬度為 200px */
+            height: 150px; /* 固定圖片高度 */
+        }
+        .post-summary-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 保持比例並裁剪 */
+            border-radius: 5px;
+        }
+
+        .post-summary-content {
+            flex: 1; /* 讓文字部分佔滿剩餘空間 */
+        }
+
+        .post-summary-content h2 {
             margin-top: 0;
+            margin-bottom: 0.3em;
+            font-size: 1.6em;
+        }
+        .post-summary-content h2 a {
             color: #2c3e50;
-            font-size: 2em;
-            border-bottom: 2px solid #04D93C;
-            padding-bottom: 0.5em;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .post-summary-content h2 a:hover {
+            color: #04D93C;
+        }
+
+        .post-meta-summary {
+            color: #777;
+            font-size: 0.85em;
             margin-bottom: 0.8em;
         }
 
-        .post-meta {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 1.5em;
-            border-bottom: 1px dashed #eee;
-            padding-bottom: 1em;
+        .post-excerpt {
+            color: #555;
+            margin-bottom: 1em;
+            line-height: 1.6;
         }
 
-        .post-meta span {
-            margin-right: 1em;
-        }
-
-        .post-content p {
-            line-height: 1.8;
-            margin-bottom: 1.2em;
-        }
-        .post-content a {
+        .read-more-link {
             color: #04D93C;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .read-more-link:hover {
             text-decoration: underline;
         }
-        .post-content a:hover {
-            color: #BFE340;
+
+        /* 響應式：小螢幕時圖片移到上方 */
+        @media (max-width: 600px) {
+            .blog-post-summary {
+                flex-direction: column; /* 改為垂直排列 */
+                gap: 1em;
+            }
+            .post-summary-image {
+                width: 100%; /* 圖片寬度變為 100% */
+                height: 200px; /* 可以調整高度 */
+                flex-basis: auto; /* 取消固定寬度 */
+            }
         }
     </style>
 </head>
 <body>
-
     <div id="header-placeholder"></div>
 
     <main>
@@ -66,29 +102,9 @@
             <p>分享關於城市單車、路線故事與最新動態。</p>
         </section>
 
-        <section class="blog-container animated-element">
-            <article class="blog-post">
-                <h2>歡迎來到城市運輸單車網誌！</h2>
-                <div class="post-meta">
-                    <span>作者：CTRC HK 團隊</span>
-                    <span>發佈日期：2025年10月21日</span>
-                </div>
-                <div class="post-content">
-                    <p>你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往。</p>
-                    <p>「城市減碳，由我做起」—— 這不僅是口號，更是我們希望透過單車出行實現的目標。在這個網誌中，我們將會分享：</p>
-                    <ul>
-                        <li><strong>路線故事：</strong> 探索我們精心規劃的路線背後的故事、風景亮點和騎行貼士。</li>
-                        <li><strong>單車知識：</strong> 從基礎保養到進階技巧，讓你更懂你的單車夥伴。</li>
-                        <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
-                        <li><strong>最新動態：</strong> 關於 CTRC HK 的最新消息、活動預告等。</li>
-                    </ul>
-                    <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
-                    <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
-                    <p>如果你有任何想看的主題或建議，歡迎隨時<a href="/contact">聯絡我們</a>。</p> 
-                    </div>
-            </article>
-
-            </section>
+        <section id="blog-list-container" class="blog-list-container animated-element">
+            <p style="text-align: center;">正在載入文章列表...</p>
+        </section>
     </main>
 
     <footer>
@@ -97,13 +113,9 @@
 
     <script src="js/main.js"></script>
     <script>
-        // 確保在 DOMContentLoaded 後執行載入共用元件的函式
-        // main.js 應該已經包含了這個呼叫，但再次確認更保險
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof loadSharedComponents === 'function') {
                 loadSharedComponents();
-            } else {
-                console.error('loadSharedComponents function not found in main.js');
             }
         });
     </script>
