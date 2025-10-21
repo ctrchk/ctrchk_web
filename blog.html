@@ -3,30 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港城市運輸單車 CTRC HK - 即將上線</title>
+    <title>香港城市運輸單車 CTRC HK - 網誌</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .coming-soon-section {
-            text-align: center;
-            padding: 8em 2em;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 70vh;
+        /* === Blog 頁面專屬樣式 === */
+        .blog-container {
+            max-width: 800px;
+            margin: 2em auto;
+            padding: 0 1em;
         }
-        .coming-soon-section h1 {
-            font-size: 3em;
+
+        .blog-post {
+            background-color: #fff;
+            padding: 2em;
+            margin-bottom: 2em;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .blog-post h2 {
+            margin-top: 0;
             color: #2c3e50;
-            margin-bottom: 0.5em;
+            font-size: 2em;
+            border-bottom: 2px solid #04D93C;
+            padding-bottom: 0.5em;
+            margin-bottom: 0.8em;
         }
-        .coming-soon-section p {
-            font-size: 1.2em;
-            color: #555;
+
+        .post-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 1.5em;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 1em;
         }
-        .coming-soon-section .cta-button {
-            margin-top: 2em;
+
+        .post-meta span {
+            margin-right: 1em;
+        }
+
+        .post-content p {
+            line-height: 1.8;
+            margin-bottom: 1.2em;
+        }
+        .post-content a {
+            color: #04D93C;
+            text-decoration: underline;
+        }
+        .post-content a:hover {
+            color: #BFE340;
         }
     </style>
 </head>
@@ -35,17 +61,51 @@
     <div id="header-placeholder"></div>
 
     <main>
-        <section class="coming-soon-section">
-            <h1>即將上線！</h1>
-            <p>這部分內容正在規劃和開發中，敬請期待！</p>
-            <a href="index.html" class="cta-button">返回首頁</a>
+        <section class="hero">
+            <h1>網誌文章</h1>
+            <p>分享關於城市單車、路線故事與最新動態。</p>
         </section>
+
+        <section class="blog-container animated-element">
+            <article class="blog-post">
+                <h2>歡迎來到城市運輸單車網誌！</h2>
+                <div class="post-meta">
+                    <span>作者：CTRC HK 團隊</span>
+                    <span>發佈日期：2025年10月21日</span>
+                </div>
+                <div class="post-content">
+                    <p>你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往。</p>
+                    <p>「城市減碳，由我做起」—— 這不僅是口號，更是我們希望透過單車出行實現的目標。在這個網誌中，我們將會分享：</p>
+                    <ul>
+                        <li><strong>路線故事：</strong> 探索我們精心規劃的路線背後的故事、風景亮點和騎行貼士。</li>
+                        <li><strong>單車知識：</strong> 從基礎保養到進階技巧，讓你更懂你的單車夥伴。</li>
+                        <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
+                        <li><strong>最新動態：</strong> 關於 CTRC HK 的最新消息、活動預告等。</li>
+                    </ul>
+                    <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
+                    <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
+                    <p>如果你有任何想看的主題或建議，歡迎隨時<a href="/contact">聯絡我們</a>。</p> 
+                    </div>
+            </article>
+
+            </section>
     </main>
 
     <footer>
-        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
-    </footer>
+         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+     </footer>
 
     <script src="js/main.js"></script>
+    <script>
+        // 確保在 DOMContentLoaded 後執行載入共用元件的函式
+        // main.js 應該已經包含了這個呼叫，但再次確認更保險
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof loadSharedComponents === 'function') {
+                loadSharedComponents();
+            } else {
+                console.error('loadSharedComponents function not found in main.js');
+            }
+        });
+    </script>
 </body>
 </html>
