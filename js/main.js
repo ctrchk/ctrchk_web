@@ -55,6 +55,36 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
 
 
+
+// =========================================================================
+// Blog 文章資料
+// =========================================================================
+const blogPosts = [
+    {
+        id: 'welcome-post', // 給文章一個獨特的 ID (不要用純數字開頭)
+        title: '歡迎來到城市運輸單車網誌！',
+        author: 'CTRC HK 團隊',
+        date: '2025年10月21日', // 你可以修改日期
+        image: 'images/blog/blog-welcome-banner.jpg', // 【新】文章預覽圖 (你需要準備一張圖片)
+        summary: '你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往...', // 文章摘要
+        content: `
+            <p>你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往。</p>
+            <p>「城市減碳，由我做起」—— 這不僅是口號，更是我們希望透過單車出行實現的目標。在這個網誌中，我們將會分享：</p>
+            <ul>
+                <li><strong>路線故事：</strong> 探索我們精心規劃的路線背後的故事、風景亮點和騎行貼士。</li>
+                <li><strong>單車知識：</strong> 從基礎保養到進階技巧，讓你更懂你的單車夥伴。</li>
+                <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
+                <li><strong>最新動態：</strong> 關於 CTRC HK 的最新消息、活動預告等。</li>
+            </ul>
+            <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
+            <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
+            <p>如果你有任何想看的主題或建議，歡迎隨時<a href="/contact">聯絡我們</a>。</p>
+        ` // 完整的文章 HTML 內容
+    }
+    // 未來可以在這裡加入更多文章物件
+    // , { id: 'another-post', title: '...', ... }
+];
+
     // =========================================================================
 // 全站共用函式
 // =========================================================================
@@ -154,6 +184,92 @@ function generateStarRating(rating) {
             animatedElements.forEach(el => el.classList.add('is-visible'));
         }
     }
+
+// =========================================================================
+// Blog 頁面處理函式
+// =========================================================================
+
+/**
+ * 初始化 Blog 列表頁面 (blog.html)
+ */
+function initBlogListPage() {
+    const container = document.getElementById('blog-list-container');
+    if (!container) return; // 只在 blog.html 執行
+
+    container.innerHTML = ''; // 清空載入提示
+
+    if (blogPosts && blogPosts.length > 0) {
+        blogPosts.forEach(post => {
+            const postElement = document.createElement('article');
+            postElement.className = 'blog-post-summary animated-element'; // 為每個項目加動畫
+            // 產生文章摘要的 HTML
+            postElement.innerHTML = `
+                <div class="post-summary-image">
+                    <a href="/blog_post?id=${post.id}"> 
+                        <img src="${post.image}" alt="${post.title}">
+                    </a>
+                </div>
+                <div class="post-summary-content">
+                    <h2><a href="/blog_post?id=${post.id}">${post.title}</a></h2>
+                    <div class="post-meta-summary">
+                        <span><i class="fas fa-user"></i> ${post.author}</span>
+                        <span><i class="fas fa-calendar-alt"></i> ${post.date}</span>
+                    </div>
+                    <p class="post-excerpt">${post.summary}</p>
+                    <a href="/blog_post?id=${post.id}" class="read-more-link">閱讀更多 &rarr;</a>
+                </div>
+            `;
+            container.appendChild(postElement);
+        });
+        // 渲染完畢後，觸發動畫
+        initAnimatedElements();
+    } else {
+        container.innerHTML = '<p>目前還沒有文章。</p>';
+    }
+}
+
+/**
+ * 初始化 Blog 文章詳情頁面 (blog_post.html)
+ */
+function initBlogPostPage() {
+    const container = document.getElementById('blog-post-container');
+    if (!container) return; // 只在 blog_post.html 執行
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const postId = urlParams.get('id');
+
+    if (postId && blogPosts) {
+        const post = blogPosts.find(p => p.id === postId);
+
+        if (post) {
+            // 動態設定頁面標題
+            document.title = `${post.title} - 香港城市運輸單車 CTRC HK`;
+            // 產生文章完整內容的 HTML
+            container.innerHTML = `
+                <div class="post-header">
+                    <h1>${post.title}</h1>
+                    <div class="post-meta">
+                        <span><i class="fas fa-user"></i> ${post.author}</span>
+                        <span><i class="fas fa-calendar-alt"></i> ${post.date}</span>
+                    </div>
+                </div>
+                <img src="${post.image}" alt="${post.title}" class="post-featured-image">
+                <div class="post-content">
+                    ${post.content}
+                </div>
+                <a href="/blog" class="back-to-blog"><i class="fas fa-arrow-left"></i> 返回網誌列表</a>
+            `;
+            // 觸發容器本身的動畫 (如果需要)
+             initAnimatedElements(); // 如果 .blog-post-full 有 animated-element
+        } else {
+            container.innerHTML = '<p style="text-align: center;">找不到指定的文章。</p>';
+             document.title = '找不到文章 - 香港城市運輸單車 CTRC HK';
+        }
+    } else {
+        container.innerHTML = '<p style="text-align: center;">文章 ID 無效。</p>';
+         document.title = '文章 ID 無效 - 香港城市運輸單車 CTRC HK';
+    }
+}
 
     // =========================================================================
     // 頁面專屬初始化函式
@@ -414,14 +530,8 @@ function initRoutesPage() {
     }
 
 // =========================================================================
-// 執行初始化
-// =========================================================================
-
-// 1. 首先，呼叫函式來載入 Header, Footer 等共用元件
-loadSharedComponents().then(() => {
-    // 2. 當共用元件載入完成後，才執行頁面專屬的初始化邏輯
-    //    這樣可以確保 initHomePage 等函式執行時，Header 已經存在於頁面上了
-    
+    // 執行初始化
+    // =========================================================================
     if (document.getElementById('routes-preview-container')) {
         initHomePage();
     }
@@ -431,10 +541,24 @@ loadSharedComponents().then(() => {
     if (document.getElementById('route-detail-container')) {
         initRouteDetailPage();
     }
-    
-    // 確保動畫函式在所有頁面都會被執行
+    // 【新增】判斷是否為 Blog 列表頁
+    if (document.getElementById('blog-list-container')) {
+        initBlogListPage();
+    }
+    // 【新增】判斷是否為 Blog 文章詳情頁
+    if (document.getElementById('blog-post-container')) {
+        initBlogPostPage();
+    }
+
+    // 全域執行，確保所有頁面的靜態 .animated-element 都能被觀察到
+    // 注意：由於 Blog 列表和詳情頁的內容是動態載入的，
+    // 動畫初始化已移至 initBlogListPage 和 initBlogPostPage 內部，
+    // 這裡的全域呼叫主要處理 about.html 等靜態頁面的動畫。
     initAnimatedElements();
-});
+
+    // 呼叫載入共用元件的函式
+    loadSharedComponents();
+
 
 // ... 你檔案後續的其他全域腳本 (Dark mode, Modal 等) ...
 
