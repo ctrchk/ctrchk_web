@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港城市運輸單車 CTRC HK - 網誌</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* === Blog 文章詳情頁專屬樣式 === */
+        .blog-post-full {
+            max-width: 800px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+
+        .post-header {
+            text-align: center;
+            margin-bottom: 2em;
+            padding-bottom: 1.5em;
+            border-bottom: 1px solid #eee;
+        }
+
+        .post-header h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 0.3em;
+        }
+
+        .post-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .post-meta span {
+            margin: 0 0.8em;
+        }
+
+        .post-featured-image {
+            width: 100%;
+            max-height: 400px; /* 限制圖片最大高度 */
+            object-fit: cover; /* 保持圖片比例並裁剪 */
+            border-radius: 8px;
+            margin-bottom: 2em;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .post-content p,
+        .post-content ul,
+        .post-content ol {
+            line-height: 1.8;
+            margin-bottom: 1.2em;
+        }
+         .post-content ul,
+         .post-content ol {
+            padding-left: 1.5em; /* 列表縮排 */
+         }
+        .post-content a {
+            color: #04D93C;
+            text-decoration: underline;
+        }
+        .post-content a:hover {
+            color: #BFE340;
+        }
+        .back-to-blog {
+             display: inline-block;
+             margin-top: 3em;
+             color: #2c3e50;
+             font-weight: bold;
+             text-decoration: none;
+             border: 1px solid #ccc;
+             padding: 0.5em 1em;
+             border-radius: 5px;
+             transition: background-color 0.3s, color 0.3s;
+         }
+         .back-to-blog:hover {
+             background-color: #f4f4f4;
+         }
+         .back-to-blog i {
+             margin-right: 0.5em;
+         }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <div id="blog-post-container" class="blog-post-full animated-element">
+            <p style="text-align: center;">正在載入文章...</p>
+        </div>
+    </main>
+
+    <footer>
+         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+     </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof loadSharedComponents === 'function') {
+                loadSharedComponents();
+            }
+        });
+    </script>
+</body>
+</html>
