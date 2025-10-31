@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用戶儀表板 - CTRC HK</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <script>
+        // 這是「頁面守衛」，它會在頁面渲染前執行
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            alert('你需要登入才能查看此頁面。');
+            // 在 main.js 和 auth.js 載入前就跳轉
+            window.location.replace('/login.html'); 
+        }
+    </script>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="hero">
+            <h1>歡迎回來！</h1>
+            <p id="welcome-email">正在載入你的資料...</p>
+        </section>
+
+        <section class="content animated-element">
+            <h2>你的騎行歷史</h2>
+            <div id="history-container">
+                </div>
+            
+            <div id="admin-section" style="display:none; margin-top: 3em;">
+                <h2>管理員面板</h2>
+                <p>你可以開始管理 Blog 文章了。</p>
+                <a href="/admin/create-post.html" class="cta-button">撰寫新文章</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script> 
+    
+    <script>
+        // 等待 auth.js 和 main.js 載入完畢
+        document.addEventListener('DOMContentLoaded', function() {
+            // 從 auth.js 獲取用戶資料
+            const user = getUserData();
+            if (user) {
+                document.getElementById('welcome-email').textContent = `你好, ${user.email}`;
+                
+                // 檢查是否為管理員
+                if (user.role === 'admin') {
+                    document.getElementById('admin-section').style.display = 'block';
+                }
+            }
+            
+            // 載入騎行歷史
+            loadCyclingHistory();
+        });
+
+        async function loadCyclingHistory() {
+            const container = document.getElementById('history-container');
+            container.textContent = '正在載入歷史紀錄...';
+            
+            try {
+                // 這是我們在 auth.js 中會建立的函數
+                const historyData = await fetchProtectedData('/api/getHistory'); 
+                
+                if (historyData.length === 0) {
+                    container.textContent = '你目前沒有任何騎行歷史。';
+                    return;
+                }
+
+                // 渲染數據
+                container.innerHTML = ''; // 清空
+                const ul = document.createElement('ul');
+                historyData.forEach(ride => {
+                    const li = document.createElement('li');
+                    li.textContent = `日期: ${ride.ride_date}, 距離: ${ride.distance_km} km`;
+                    ul.appendChild(li);
+                });
+                container.appendChild(ul);
+                
+            } catch (error) {
+                // fetchProtectedData 內部會處理 401 跳轉
+                console.error('載入歷史失敗:', error);
+                container.textContent = `載入失敗: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
