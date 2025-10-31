@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>註冊 - CTRC HK</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="content animated-element">
+            <div class="contact-form-container" style="max-width: 500px; margin: 2em auto;">
+                <h2 style="text-align: left;">建立新帳戶</h2>
+                
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="register-email">電子郵件</label>
+                        <input type="email" id="register-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">密碼</label>
+                        <input type="password" id="register-password" name="password" required minlength="8">
+                        <small>（至少 8 個字元）</small>
+                    </div>
+                    <button type="submit" class="cta-button">註冊</button>
+                </form>
+
+                <p style="margin-top: 1.5em;">
+                    已經有帳戶了？ <a href="/login.html" style="color: #04D93C; text-decoration: underline;">前往登入</a>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script src="js/auth.js"></script> 
+</body>
+</html>
