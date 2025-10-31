@@ -1,9 +1,72 @@
+// /js/main.js (完整修改版)
+
 console.log('--- main.js 檔案已成功載入並開始執行！ ---');
 
 /**
  * @file main.js
  * @description 網站全域腳本。【最終修正與結構優化版】
  */
+
+// =========================================================================
+// 登入/登出 UI 處理 (新加入的程式碼)
+// =========================================================================
+
+/**
+ * 檢查本地儲存中是否有 token
+ * @returns {boolean}
+ */
+function isLoggedIn() {
+    return !!localStorage.getItem('accessToken');
+}
+
+/**
+ * 處理登出
+ */
+function handleLogout() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+    alert('你已成功登出。');
+    window.location.href = '/index.html';
+}
+
+/**
+ * 根據登入狀態更新導覽列 (Header)
+ */
+function updateNavUI() {
+    // 這些 ID 來自 header.html
+    const loginBtn = document.getElementById('nav-login-btn');
+    const dashboardBtn = document.getElementById('nav-dashboard-btn');
+    const logoutBtn = document.getElementById('nav-logout-btn');
+
+    // 確保按鈕都存在
+    if (!loginBtn || !dashboardBtn || !logoutBtn) {
+        console.warn('導覽列按鈕未找到，無法更新 UI 狀態');
+        return;
+    }
+    
+    if (isLoggedIn()) {
+        // 已登入：顯示儀表板和登出，隱藏登入
+        loginBtn.style.display = 'none';
+        dashboardBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'inline-block';
+        
+        // 幫登出按鈕綁定點擊事件
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleLogout();
+        });
+    } else {
+        // 未登入：顯示登入，隱藏儀表板和登出
+        loginBtn.style.display = 'inline-block';
+        dashboardBtn.style.display = 'none';
+        logoutBtn.style.display = 'none';
+    }
+}
+
+
+// =========================================================================
+// DOMContentLoaded 主程式
+// =========================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
     // ------------------- 所有程式碼都從這裡開始 -------------------
@@ -13,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.style.visibility = 'visible';
 
     // =========================================================================
-    // 全站共用資料
+    // 全站共用資料 (你原有的程式碼)
     // =========================================================================
     const routes = [
         { id: '900', alias: "市區海濱線", start: "寶琳(新都城二期)", end: "調景嶺彩明", via: "景林邨、香港單車館、將軍澳海濱、調景嶺站", nature: "旅遊", time: 40, length: "5.5km", difficulty: 3, image: "images/900.jpg", description: "這是專為新手打造的「海濱專線」。全程半個多小時，少坡、風景優美，讓你在寶琳與調景嶺之間輕鬆穿梭，沿途還有補給點可供休息。", tags: ["將軍澳", "海濱專線", "寶琳調景嶺線", "新手必試", "風景優美", "少坡"], color: "#990000", gpx: [{ label: "往寶琳", file: "900寶琳.gpx" }, { label: "往調景嶺", file: "900調景嶺.gpx" }] },
@@ -31,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: '929', alias: "坑口快速", start: "坑口站", end: "調景嶺總站", via: "坑口北、將軍澳海濱、將軍澳站、調景嶺站", nature: "混合", time: 35, length: "6.2km", difficulty: 3, image: "images/929.jpg", description: "坑口北專線，路況平坦，連接坑口各區、將軍澳市中心及調景嶺。這條多用途路線非常適合單車新手體驗。", tags: ["將軍澳", "新手必試", "平坦", "坑口北專線", "快速", "接駁渡輪", "通勤", "旅遊"], color: "#f1c232", gpx: [{ label: "往坑口", file: "929坑口.gpx" }, { label: "往調景嶺", file: "929調景嶺.gpx" }] },
         { id: '932', alias: "坑康線", start: "坑口站", end: "將軍澳創新園", via: "坑口北、北橋、清水灣半島、康城海濱、日出康城", nature: "混合", time: 45, length: "8.1km", difficulty: 4, image: "images/932.jpg", description: "連接坑口、清水灣半島、康城及創新園的長途特快路線。路況少坡，沿著海濱騎行，是挑戰長途的絕佳選擇。", tags: ["將軍澳", "長途", "少坡", "清水灣半島專線", "海濱專線", "風景優美", "坑口北專線", "快速", "創新園路線", "通勤", "旅遊"], color: "#ff00ff", gpx: [{ label: "往創新園", file: "932創新園.gpx" }, { label: "往坑口", file: "932坑口.gpx" }] },
         { id: '935', alias: "南北專線", start: "寶琳(將軍澳村)", end: "將軍澳創新園", via: "寶康路、北橋、康城海濱、日出康城", nature: "旅遊", time: 50, length: "9.6km", difficulty: 4.5, image: "images/935.jpg", description: "一條適合旅遊與運動訓練的長途路線。由單車徑最南端的創新園出發，沿著康城海濱及寶康路一路向北，途經將軍澳北，前往單車徑最北端的將軍澳村，享受開闊的騎行體驗。", tags: ["將軍澳", "旅遊專線", "長途", "海濱專線", "運動訓練", "南北三寶", "創新園路線"], color: "#38761d", gpx: [{ label: "往寶琳", file: "935寶琳.gpx" }, { label: "往創新園", file: "935創新園.gpx" }] },
-        { id: 'X935', alias: "南北特快", start: "寶琳(將軍澳村)", end: "將軍澳創新園", via: "寶琳北路、日出康城", nature: "旅遊", time: 40, length: "8.0km", difficulty: 4, image: "images/X935.jpg", description: "935的特快版本，無需跟從主線的迂迴走線，而是更加直接。此路線為長途旅遊線，路況優越，讓你能在更短時間內穿梭將軍澳南北。", tags: ["將軍澳", "旅遊專線", "特快", "長途", "海濱專線", "創新園路線", "南北三寶"], color: "#38761d", gpx: [{ label: "往宝琳", file: "X935寶琳.gpx" }, { label: "往創新園", file: "X935創新園.gpx" }] },
+        { id: 'X935', alias: "南北特快", start: "寶琳(將軍澳村)", end: "將軍澳創新園", via: "寶琳北路、日出康城", nature: "旅遊", time: 40, length: "8.0km", difficulty: 4, image: "images/X935.jpg", description: "935的特快版本，無需跟從主線的迂迴走線，而是更加直接。此路線為長途旅遊線，路況優越，讓你能在更短時間内穿梭將軍澳南北。", tags: ["將軍澳", "旅遊專線", "特快", "長途", "海濱專線", "創新園路線", "南北三寶"], color: "#38761d", gpx: [{ label: "往宝琳", file: "X935寶琳.gpx" }, { label: "往創新園", file: "X935創新園.gpx" }] },
         { id: '939', alias: "創新園專線", start: "峻瀅", end: "將軍澳創新園", via: "環保大道", nature: "旅遊", time: 30, length: "2.5km(單向)", difficulty: 3.5, image: "images/939.jpg", description: "一條連接峻瀅及將軍澳創新園的路線。非常適合單車新手體驗，享受周邊的休閒時光，人流極少。", tags: ["將軍澳", "旅遊專線", "平坦", "新手必試", "創新園路線", "人流較少", "循環"], color: "#741b47", gpx: [{ label: "來回", file: "939循環.gpx" }] },
         { id: '939M', alias: " ", start: "康城站", end: "將軍澳創新園", via: "環保大道", nature: "通勤", time: 35, length: "2.9km(單向)", difficulty: 3.5, image: "images/939M.jpg", description: "連接康城站及創新園的特快通勤路線。路面平坦，專為通勤族設計，讓你可以由創新園快速轉乘地鐵。", tags: ["將軍澳", "通勤專線", "平坦", "快速", "創新園路線", "連接地鐵站", "人流較少", "循環"], color: "#741b47", gpx: [{ label: "往康城", file: "939M康城.gpx" }, { label: "往創新園", file: "939M循環.gpx" }] },
         { id: '955', alias: "寶琳循環線", start: "寶琳(新都城二期)", end: null, via: "寶順路、寶康路、寶琳北路", nature: "普通", time: 20, length: "4.1km", difficulty: 2, image: "images/955.jpg", description: "連接新都城二期（寶琳站）及寶琳各區的循環線。同時適合通勤與旅遊，及方便接駁其他交通。", tags: ["將軍澳", "平坦", "循環", "連接地鐵站", "連接巴士總站"], color: "#dd7e6b", gpx: [{ label: "順時針", file: "955順時針.gpx" }, { label: "逆時針", file: "955逆時針.gpx" }] },
@@ -54,113 +117,94 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'ST01', alias: " ", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
 
-
-
-// =========================================================================
-// Blog 文章資料
-// =========================================================================
-const blogPosts = [
-    {
-        id: 'welcome-post', // 給文章一個獨特的 ID (不要用純數字開頭)
-        title: '歡迎來到城市運輸單車網誌！',
-        author: 'CTRC HK 團隊',
-        date: '2025年10月21日', // 你可以修改日期
-        image: 'images/blog/blog-welcome-banner.jpg', // 【新】文章預覽圖 (你需要準備一張圖片)
-        summary: '你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往...', // 文章摘要
-        content: `
-            <p>你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往。</p>
-            <p>「城市減碳，由我做起」—— 這不僅是口號，更是我們希望透過單車出行實現的目標。在這個網誌中，我們將會分享：</p>
-            <ul>
-                <li><strong>路線故事：</strong> 探索我們精心規劃的路線背後的故事、風景亮點和騎行貼士。</li>
-                <li><strong>單車知識：</strong> 從基礎保養到進階技巧，讓你更懂你的單車夥伴。</li>
-                <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
-                <li><strong>最新動態：</strong> 關於 CTRC HK 的最新消息、活動預告等。</li>
-            </ul>
-            <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
-            <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
-            <p>如果你有任何想看的主題或建議，歡迎隨時<a href="/contact">聯絡我們</a>。</p>
-        ` // 完整的文章 HTML 內容
-    }
-    // 未來可以在這裡加入更多文章物件
-    // , { id: 'another-post', title: '...', ... }
-];
-
     // =========================================================================
-// 全站共用函式
-// =========================================================================
-
-/**
- * 非同步載入共用的 HTML 元件 (例如 header, footer)
- */
-async function loadSharedComponents() {
-    // 定義要載入的元件和它們的目標位置
-    // 格式: { html檔案路徑: '#目標容器的ID' }
-    const components = {
-        'header.html': '#header-placeholder'
-        // 如果未來你也想共用 footer，可以取消下面的註解
-        //, 'footer.html': '#footer-placeholder' 
-    };
-
-    // 建立一個陣列來存放所有的 fetch 請求
-    const fetchPromises = Object.entries(components).map(async ([file, placeholderId]) => {
-        const placeholder = document.querySelector(placeholderId);
-        
-        // 如果頁面上有這個容器，才進行載入
-        if (placeholder) {
-            try {
-                const response = await fetch(file);
-                if (!response.ok) {
-                    throw new Error(`Network response was not ok for ${file}`);
-                }
-                const data = await response.text();
-                placeholder.innerHTML = data;
-            } catch (error) {
-                console.error('Error loading component:', file, error);
-                // 在頁面上顯示錯誤，方便除錯
-                placeholder.innerHTML = `<p style="color:red; text-align:center;">Error loading ${file}.</p>`;
-            }
+    // Blog 文章資料 (你原有的程式碼)
+    // =========================================================================
+    const blogPosts = [
+        {
+            id: 'welcome-post', // 給文章一個獨特的 ID (不要用純數字開頭)
+            title: '歡迎來到城市運輸單車網誌！',
+            author: 'CTRC HK 團隊',
+            date: '2025年10月21日', // 你可以修改日期
+            image: 'images/blog/blog-welcome-banner.jpg', // 【新】文章預覽圖 (你需要準備一張圖片)
+            summary: '你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往...', // 文章摘要
+            content: `
+                <p>你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往。</p>
+                <p>「城市減碳，由我做起」—— 這不僅是口號，更是我們希望透過單車出行實現的目標。在這個網誌中，我們將會分享：</p>
+                <ul>
+                    <li><strong>路線故事：</strong> 探索我們精心規劃的路線背後的故事、風景亮點和騎行貼士。</li>
+                    <li><strong>單車知識：</strong> 從基礎保養到進階技巧，讓你更懂你的單車夥伴。</li>
+                    <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
+                    <li><strong>最新動態：</strong> 關於 CTRC HK 的最新消息、活動預告等。</li>
+                </ul>
+                <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
+                <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
+                <p>如果你有任何想看的主題或建議，歡迎隨時<a href="/contact">聯絡我們</a>。</p>
+            ` // 完整的文章 HTML 內容
         }
-    });
+    ];
 
-    // 等待所有元件都載入完成
-    await Promise.all(fetchPromises);
-    console.log('--- 共用元件 (Header/Footer) 已載入完成 ---');
-}
-    
-/**
- * 根據評分產生星星圖示 HTML
- * @param {number} rating - 評分數字 (例如 3.5)
- * @returns {string} - 回傳包含 Font Awesome 圖示的 HTML 字串
- */
-function generateStarRating(rating) {
-    const totalStars = 5;
-    let starsHtml = '<span class="star-rating">';
-
-    // 計算實心星星的數量
-    const fullStars = Math.floor(rating);
-    for (let i = 0; i < fullStars; i++) {
-        starsHtml += '<i class="fas fa-star"></i>';
-    }
-
-    // 判斷是否有半顆星
-    if (rating % 1 >= 0.5) {
-        starsHtml += '<i class="fas fa-star-half-stroke"></i>';
-    }
-
-    // 計算空心星星的數量
-    const emptyStars = totalStars - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-        starsHtml += '<i class="far fa-star"></i>';
-    }
-
-    starsHtml += '</span>';
-    return starsHtml;
-}
-    
     // =========================================================================
-    // 全站共用函式
+    // 全站共用函式 (你原有的程式碼)
     // =========================================================================
 
+    /**
+     * 異步載入共用的 HTML 元件 (例如 header, footer)
+     */
+    async function loadSharedComponents() {
+        const components = {
+            'header.html': '#header-placeholder'
+        };
+
+        const fetchPromises = Object.entries(components).map(async ([file, placeholderId]) => {
+            const placeholder = document.querySelector(placeholderId);
+            
+            if (placeholder) {
+                try {
+                    const response = await fetch(file);
+                    if (!response.ok) {
+                        throw new Error(`Network response was not ok for ${file}`);
+                    }
+                    const data = await response.text();
+                    placeholder.innerHTML = data;
+                } catch (error) {
+                    console.error('Error loading component:', file, error);
+                    placeholder.innerHTML = `<p style="color:red; text-align:center;">Error loading ${file}.</p>`;
+                }
+            }
+        });
+
+        // 等待所有元件都載入完成
+        await Promise.all(fetchPromises);
+        console.log('--- 共用元件 (Header) 已載入完成 ---');
+        
+        // ***** 這是唯一的修改點 *****
+        // Header 載入完成後，立即呼叫 updateNavUI 來更新登入狀態
+        updateNavUI();
+        // ***************************
+    }
+        
+    /**
+     * 根據評分產生星星圖示 HTML
+     */
+    function generateStarRating(rating) {
+        const totalStars = 5;
+        let starsHtml = '<span class="star-rating">';
+        const fullStars = Math.floor(rating);
+        for (let i = 0; i < fullStars; i++) {
+            starsHtml += '<i class="fas fa-star"></i>';
+        }
+        if (rating % 1 >= 0.5) {
+            starsHtml += '<i class="fas fa-star-half-stroke"></i>';
+        }
+        const emptyStars = totalStars - Math.ceil(rating);
+        for (let i = 0; i < emptyStars; i++) {
+            starsHtml += '<i class="far fa-star"></i>';
+        }
+        starsHtml += '</span>';
+        return starsHtml;
+    }
+    
     /**
      * 初始化所有帶有 .animated-element 的元素，當它們進入可視範圍時顯示。
      */
@@ -180,294 +224,258 @@ function generateStarRating(rating) {
 
             animatedElements.forEach(el => observer.observe(el));
         } else {
-            // 如果瀏覽器不支援，就立即顯示所有元素
             animatedElements.forEach(el => el.classList.add('is-visible'));
         }
     }
 
-// =========================================================================
-// Blog 頁面處理函式
-// =========================================================================
-
-/**
- * 初始化 Blog 列表頁面 (blog.html)
- */
-function initBlogListPage() {
-    const container = document.getElementById('blog-list-container');
-    if (!container) return; // 只在 blog.html 執行
-
-    container.innerHTML = ''; // 清空載入提示
-
-    if (blogPosts && blogPosts.length > 0) {
-        blogPosts.forEach(post => {
-            const postElement = document.createElement('article');
-            postElement.className = 'blog-post-summary animated-element'; // 為每個項目加動畫
-            // 產生文章摘要的 HTML
-            postElement.innerHTML = `
-                <div class="post-summary-image">
-                    <a href="/blog_post?id=${post.id}"> 
-                        <img src="${post.image}" alt="${post.title}">
-                    </a>
-                </div>
-                <div class="post-summary-content">
-                    <h2><a href="/blog_post?id=${post.id}">${post.title}</a></h2>
-                    <div class="post-meta-summary">
-                        <span><i class="fas fa-user"></i> ${post.author}</span>
-                        <span><i class="fas fa-calendar-alt"></i> ${post.date}</span>
-                    </div>
-                    <p class="post-excerpt">${post.summary}</p>
-                    <a href="/blog_post?id=${post.id}" class="read-more-link">閱讀更多 &rarr;</a>
-                </div>
-            `;
-            container.appendChild(postElement);
-        });
-        // 渲染完畢後，觸發動畫
-        initAnimatedElements();
-    } else {
-        container.innerHTML = '<p>目前還沒有文章。</p>';
-    }
-}
-
-/**
- * 初始化 Blog 文章詳情頁面 (blog_post.html)
- */
-function initBlogPostPage() {
-    const container = document.getElementById('blog-post-container');
-    if (!container) return; // 只在 blog_post.html 執行
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const postId = urlParams.get('id');
-
-    if (postId && blogPosts) {
-        const post = blogPosts.find(p => p.id === postId);
-
-        if (post) {
-            // 動態設定頁面標題
-            document.title = `${post.title} - 香港城市運輸單車 CTRC HK`;
-            // 產生文章完整內容的 HTML
-            container.innerHTML = `
-                <div class="post-header">
-                    <h1>${post.title}</h1>
-                    <div class="post-meta">
-                        <span><i class="fas fa-user"></i> ${post.author}</span>
-                        <span><i class="fas fa-calendar-alt"></i> ${post.date}</span>
-                    </div>
-                </div>
-                <img src="${post.image}" alt="${post.title}" class="post-featured-image">
-                <div class="post-content">
-                    ${post.content}
-                </div>
-                <a href="/blog" class="back-to-blog"><i class="fas fa-arrow-left"></i> 返回網誌列表</a>
-            `;
-            // 觸發容器本身的動畫 (如果需要)
-             initAnimatedElements(); // 如果 .blog-post-full 有 animated-element
-        } else {
-            container.innerHTML = '<p style="text-align: center;">找不到指定的文章。</p>';
-             document.title = '找不到文章 - 香港城市運輸單車 CTRC HK';
-        }
-    } else {
-        container.innerHTML = '<p style="text-align: center;">文章 ID 無效。</p>';
-         document.title = '文章 ID 無效 - 香港城市運輸單車 CTRC HK';
-    }
-}
-
     // =========================================================================
-    // 頁面專屬初始化函式
+    // Blog 頁面處理函式 (你原有的程式碼)
     // =========================================================================
 
-function initHomePage() {
-    const container = document.getElementById('routes-preview-container');
-    if (!container) return;
+    function initBlogListPage() {
+        const container = document.getElementById('blog-list-container');
+        if (!container) return; 
 
-    // 1. 在這裡定義你想要精選的路線 ID
-    const featuredRouteIds = ['900', '960', '966T'];
+        container.innerHTML = ''; 
 
-    // 2. 從 `routes` 總列表中，根據 ID 找出對應的路線資料
-    const routesToShow = featuredRouteIds.map(id => routes.find(route => route.id === id));
-
-    // 3. 清空容器，準備放入我們指定的路線
-    container.innerHTML = '';
-
-    // 4. 根據找到的路線資料，建立卡片
-    routesToShow.forEach(route => {
-        if (route) { // 確保路線真的被找到了
-            const card = document.createElement('div');
-            card.className = 'route-card';
-            card.innerHTML = `
-    <a href="/route_detail.html?id=${route.id}">
-        <img src="${route.image}" alt="${route.alias || route.id}">
-        <div class="route-card-title">
-            <h3>
-                <span class="route-card-id" style="background-color: ${route.color}; color: ${route.textColor || 'white'}">
-                    ${route.id}
-                </span>
-                ${route.alias || '(無別稱)'}
-            </h3>
-        </div>
-    </a>
-`;
-            container.appendChild(card);
-        }
-    });
-}
-
-// 在 main.js 中，找到並用下面的版本替換掉整個 initRoutesPage 函式
-
-// 在 main.js 中，找到並用下面的版本替換掉整個 initRoutesPage 函式
-
-// 在 main.js 中，找到 initRoutesPage 函式，並用下面的版本完整取代它
-
-// 在 main.js 中，找到並用這個最終版本，完整取代舊的 initRoutesPage 函式
-
-// 請用這段完整、正確的程式碼，取代你 js/main.js 中舊的 initRoutesPage 函式
-
-function initRoutesPage() {
-    const allRoutesContainer = document.getElementById('all-routes-container');
-    const heroSearchInput = document.getElementById('hero-search-input');
-
-    // 如果頁面缺少必要元素，就停止執行以避免錯誤
-    if (!allRoutesContainer || !heroSearchInput) return;
-
-    const filterCategories = {
-        "路線區域": ["將軍澳", "沙田區"],
-        "路線類別": ["通勤", "旅遊", "單向", "循環", "快速", "特快", "長途"],
-        "路線特色": ["新手必試", "風景優美", "黃昏日落", "挑戰", "運動訓練", "平坦", "少坡", "多坡"],
-        "路線稱號": ["海濱專線", "坑口北專線", "維景灣畔專線", "清水灣半島專線", "康城專線", "寶琳調景嶺線", "學校線", "創新園路線", "南北三寶"],
-        "接駁交通": ["連接地鐵站", "連接巴士總站", "接駁渡輪"]
-    };
-    const tagMap = { "單向": "單向線", "循環": "循環線" };
-    let activeFilters = {};
-    let searchTerm = '';
-
-    // --- 1. 建立篩選器 UI (只有按鈕) ---
-    const filterControls = document.createElement('div');
-    filterControls.className = 'filter-controls';
-    
-    for (const category in filterCategories) {
-        activeFilters[category] = [];
-        const container = document.createElement('div');
-        container.className = 'filter-dropdown-container';
-        const button = document.createElement('button');
-        button.className = 'filter-category-button';
-        button.textContent = category;
-        const menu = document.createElement('div');
-        menu.className = 'filter-dropdown-menu';
-        filterCategories[category].forEach(tag => {
-            const label = document.createElement('label');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = tag;
-            checkbox.dataset.category = category; // 【重要修正】補上這一行
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(` ${tag}`));
-            menu.appendChild(label);
-        });
-        container.appendChild(button);
-        container.appendChild(menu);
-        filterControls.appendChild(container);
-    }
-    
-    const filtersContainer = document.createElement('div');
-    filtersContainer.className = 'filters-container';
-    filtersContainer.appendChild(filterControls);
-    allRoutesContainer.before(filtersContainer);
-
-    // --- 2. 設定事件監聽 ---
-    heroSearchInput.addEventListener('input', (e) => {
-        searchTerm = e.target.value.toLowerCase();
-        applyFilters();
-    });
-
-    document.querySelectorAll('.filter-category-button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const currentMenu = button.nextElementSibling;
-            document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
-                if (menu !== currentMenu) menu.classList.remove('show');
-            });
-            currentMenu.classList.toggle('show');
-        });
-    });
-
-    window.addEventListener('click', () => {
-        document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
-            menu.classList.remove('show');
-        });
-    });
-
-    document.querySelectorAll('.filter-dropdown-menu input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            const category = checkbox.dataset.category;
-            const value = checkbox.value;
-            if (checkbox.checked) {
-                if (!activeFilters[category].includes(value)) activeFilters[category].push(value);
-            } else {
-                activeFilters[category] = activeFilters[category].filter(item => item !== value);
-            }
-            applyFilters();
-        });
-    });
-
-    // --- 3. 核心邏輯函式 ---
-    function applyFilters() {
-        let filteredByTags = [...routes];
-        const hasActiveTagFilters = Object.values(activeFilters).some(tags => tags.length > 0);
-
-        if (hasActiveTagFilters) {
-            filteredByTags = filteredByTags.filter(route => {
-                return Object.entries(activeFilters).every(([category, selectedTags]) => {
-                    if (selectedTags.length === 0) return true;
-                    return selectedTags.some(tag => {
-                        const actualTag = tagMap[tag] || tag;
-                        if ((tag === "通勤" || tag === "旅遊") && route.nature === "混合") return true;
-                        return route.tags.includes(actualTag);
-                    });
-                });
-            });
-        }
-        
-        let finalFilteredRoutes = filteredByTags;
-        if (searchTerm.trim() !== '') {
-            finalFilteredRoutes = filteredByTags.filter(route => {
-                const searchFields = [
-                    route.id, route.alias, route.start, route.end || '', route.via || ''
-                ].join(' ').toLowerCase();
-                return searchFields.includes(searchTerm);
-            });
-        }
-        renderRoutes(finalFilteredRoutes);
-    }
-
-    function renderRoutes(routesToRender) {
-        allRoutesContainer.innerHTML = '';
-        if (routesToRender.length > 0) {
-            routesToRender.forEach(route => {
-                const card = document.createElement('div');
-                card.className = 'route-card-full animated-element';
-                const link = route.link || `/route_detail.html?id=${route.id}`;
-                card.innerHTML = `
-                    <a href="${link}" class="${route.id.startsWith('ST') ? 'disabled-link' : ''}">
-                        <div class="route-card-header">
-                            <span class="route-id-code" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">${route.id}</span>
-                            <h3 class="route-alias">${route.alias || '(無別稱)'}</h3>
+        if (blogPosts && blogPosts.length > 0) {
+            blogPosts.forEach(post => {
+                const postElement = document.createElement('article');
+                postElement.className = 'blog-post-summary animated-element';
+                postElement.innerHTML = `
+                    <div class="post-summary-image">
+                        <a href="/blog_post?id=${post.id}"> 
+                            <img src="${post.image}" alt="${post.title}">
+                        </a>
+                    </div>
+                    <div class="post-summary-content">
+                        <h2><a href="/blog_post?id=${post.id}">${post.title}</a></h2>
+                        <div class="post-meta-summary">
+                            <span><i class="fas fa-user"></i> ${post.author}</span>
+                            <span><i class="fas fa-calendar-alt"></i> ${post.date}</span>
                         </div>
-                        <div class="route-card-content">
-                            <p><strong>起點:</strong> ${route.start}</p>
-                            <p><strong>終點:</strong> ${route.end || '(循環線)'}</p>
+                        <p class="post-excerpt">${post.summary}</p>
+                        <a href="/blog_post?id=${post.id}" class="read-more-link">閱讀更多 &rarr;</a>
+                    </div>
+                `;
+                container.appendChild(postElement);
+            });
+            initAnimatedElements();
+        } else {
+            container.innerHTML = '<p>目前還沒有文章。</p>';
+        }
+    }
+
+    function initBlogPostPage() {
+        const container = document.getElementById('blog-post-container');
+        if (!container) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const postId = urlParams.get('id');
+
+        if (postId && blogPosts) {
+            const post = blogPosts.find(p => p.id === postId);
+
+            if (post) {
+                document.title = `${post.title} - 香港城市運輸單車 CTRC HK`;
+                container.innerHTML = `
+                    <div class="post-header">
+                        <h1>${post.title}</h1>
+                        <div class="post-meta">
+                            <span><i class="fas fa-user"></i> ${post.author}</span>
+                            <span><i class="fas fa-calendar-alt"></i> ${post.date}</span>
+                        </div>
+                    </div>
+                    <img src="${post.image}" alt="${post.title}" class="post-featured-image">
+                    <div class="post-content">
+                        ${post.content}
+                    </div>
+                    <a href="/blog" class="back-to-blog"><i class="fas fa-arrow-left"></i> 返回網誌列表</a>
+                `;
+                 initAnimatedElements();
+            } else {
+                container.innerHTML = '<p style="text-align: center;">找不到指定的文章。</p>';
+                 document.title = '找不到文章 - 香港城市運輸單車 CTRC HK';
+            }
+        } else {
+            container.innerHTML = '<p style="text-align: center;">文章 ID 無效。</p>';
+             document.title = '文章 ID 無效 - 香港城市運輸單車 CTRC HK';
+        }
+    }
+
+    // =========================================================================
+    // 頁面專屬初始化函式 (你原有的程式碼)
+    // =========================================================================
+
+    function initHomePage() {
+        const container = document.getElementById('routes-preview-container');
+        if (!container) return;
+        const featuredRouteIds = ['900', '960', '966T'];
+        const routesToShow = featuredRouteIds.map(id => routes.find(route => route.id === id));
+        container.innerHTML = '';
+        routesToShow.forEach(route => {
+            if (route) {
+                const card = document.createElement('div');
+                card.className = 'route-card';
+                card.innerHTML = `
+                    <a href="/route_detail.html?id=${route.id}">
+                        <img src="${route.image}" alt="${route.alias || route.id}">
+                        <div class="route-card-title">
+                            <h3>
+                                <span class="route-card-id" style="background-color: ${route.color}; color: ${route.textColor || 'white'}">
+                                    ${route.id}
+                                </span>
+                                ${route.alias || '(無別稱)'}
+                            </h3>
                         </div>
                     </a>
                 `;
-                allRoutesContainer.appendChild(card);
-            });
-        } else {
-            allRoutesContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">找不到符合條件的路線。</p>';
-        }
-        initAnimatedElements();
+                container.appendChild(card);
+            }
+        });
     }
-    
-    // --- 4. 首次載入頁面時，渲染所有路線 ---
-    renderRoutes(routes);
-}
+
+    function initRoutesPage() {
+        const allRoutesContainer = document.getElementById('all-routes-container');
+        const heroSearchInput = document.getElementById('hero-search-input');
+        if (!allRoutesContainer || !heroSearchInput) return;
+
+        const filterCategories = {
+            "路線區域": ["將軍澳", "沙田區"],
+            "路線類別": ["通勤", "旅遊", "單向", "循環", "快速", "特快", "長途"],
+            "路線特色": ["新手必試", "風景優美", "黃昏日落", "挑戰", "運動訓練", "平坦", "少坡", "多坡"],
+            "路線稱號": ["海濱專線", "坑口北專線", "維景灣畔專線", "清水灣半島專線", "康城專線", "寶琳調景嶺線", "學校線", "創新園路線", "南北三寶"],
+            "接駁交通": ["連接地鐵站", "連接巴士總站", "接駁渡輪"]
+        };
+        const tagMap = { "單向": "單向線", "循環": "循環線" };
+        let activeFilters = {};
+        let searchTerm = '';
+
+        const filterControls = document.createElement('div');
+        filterControls.className = 'filter-controls';
+        
+        for (const category in filterCategories) {
+            activeFilters[category] = [];
+            const container = document.createElement('div');
+            container.className = 'filter-dropdown-container';
+            const button = document.createElement('button');
+            button.className = 'filter-category-button';
+            button.textContent = category;
+            const menu = document.createElement('div');
+            menu.className = 'filter-dropdown-menu';
+            filterCategories[category].forEach(tag => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = tag;
+                checkbox.dataset.category = category;
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${tag}`));
+                menu.appendChild(label);
+            });
+            container.appendChild(button);
+            container.appendChild(menu);
+            filterControls.appendChild(container);
+        }
+        
+        const filtersContainer = document.createElement('div');
+        filtersContainer.className = 'filters-container';
+        filtersContainer.appendChild(filterControls);
+        allRoutesContainer.before(filtersContainer);
+
+        heroSearchInput.addEventListener('input', (e) => {
+            searchTerm = e.target.value.toLowerCase();
+            applyFilters();
+        });
+
+        document.querySelectorAll('.filter-category-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const currentMenu = button.nextElementSibling;
+                document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
+                    if (menu !== currentMenu) menu.classList.remove('show');
+                });
+                currentMenu.classList.toggle('show');
+            });
+        });
+
+        window.addEventListener('click', () => {
+            document.querySelectorAll('.filter-dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        });
+
+        document.querySelectorAll('.filter-dropdown-menu input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const category = checkbox.dataset.category;
+                const value = checkbox.value;
+                if (checkbox.checked) {
+                    if (!activeFilters[category].includes(value)) activeFilters[category].push(value);
+                } else {
+                    activeFilters[category] = activeFilters[category].filter(item => item !== value);
+                }
+                applyFilters();
+            });
+        });
+
+        function applyFilters() {
+            let filteredByTags = [...routes];
+            const hasActiveTagFilters = Object.values(activeFilters).some(tags => tags.length > 0);
+
+            if (hasActiveTagFilters) {
+                filteredByTags = filteredByTags.filter(route => {
+                    return Object.entries(activeFilters).every(([category, selectedTags]) => {
+                        if (selectedTags.length === 0) return true;
+                        return selectedTags.some(tag => {
+                            const actualTag = tagMap[tag] || tag;
+                            if ((tag === "通勤" || tag === "旅遊") && route.nature === "混合") return true;
+                            return route.tags.includes(actualTag);
+                        });
+                    });
+                });
+            }
+            
+            let finalFilteredRoutes = filteredByTags;
+            if (searchTerm.trim() !== '') {
+                finalFilteredRoutes = filteredByTags.filter(route => {
+                    const searchFields = [
+                        route.id, route.alias, route.start, route.end || '', route.via || ''
+                    ].join(' ').toLowerCase();
+                    return searchFields.includes(searchTerm);
+                });
+            }
+            renderRoutes(finalFilteredRoutes);
+        }
+
+        function renderRoutes(routesToRender) {
+            allRoutesContainer.innerHTML = '';
+            if (routesToRender.length > 0) {
+                routesToRender.forEach(route => {
+                    const card = document.createElement('div');
+                    card.className = 'route-card-full animated-element';
+                    const link = route.link || `/route_detail.html?id=${route.id}`;
+                    card.innerHTML = `
+                        <a href="${link}" class="${route.id.startsWith('ST') ? 'disabled-link' : ''}">
+                            <div class="route-card-header">
+                                <span class="route-id-code" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">${route.id}</span>
+                                <h3 class="route-alias">${route.alias || '(無別稱)'}</h3>
+                            </div>
+                            <div class="route-card-content">
+                                <p><strong>起點:</strong> ${route.start}</p>
+                                <p><strong>終點:</strong> ${route.end || '(循環線)'}</p>
+                            </div>
+                        </a>
+                    `;
+                    allRoutesContainer.appendChild(card);
+                });
+            } else {
+                allRoutesContainer.innerHTML = '<p style="text-align: center; font-size: 1.2em; color: #555;">找不到符合條件的路線。</p>';
+            }
+            initAnimatedElements();
+        }
+        
+        renderRoutes(routes);
+    }
     
     function initRouteDetailPage() {
         const routeDetailContainer = document.getElementById('route-detail-container');
@@ -529,8 +537,8 @@ function initRoutesPage() {
         }
     }
 
-// =========================================================================
-    // 執行初始化
+    // =========================================================================
+    // 執行初始化 (你原有的程式碼)
     // =========================================================================
     if (document.getElementById('routes-preview-container')) {
         initHomePage();
@@ -541,32 +549,22 @@ function initRoutesPage() {
     if (document.getElementById('route-detail-container')) {
         initRouteDetailPage();
     }
-    // 【新增】判斷是否為 Blog 列表頁
     if (document.getElementById('blog-list-container')) {
         initBlogListPage();
     }
-    // 【新增】判斷是否為 Blog 文章詳情頁
     if (document.getElementById('blog-post-container')) {
         initBlogPostPage();
     }
 
-    // 全域執行，確保所有頁面的靜態 .animated-element 都能被觀察到
-    // 注意：由於 Blog 列表和詳情頁的內容是動態載入的，
-    // 動畫初始化已移至 initBlogListPage 和 initBlogPostPage 內部，
-    // 這裡的全域呼叫主要處理 about.html 等靜態頁面的動畫。
     initAnimatedElements();
 
     // 呼叫載入共用元件的函式
-    loadSharedComponents();
-
-
-// ... 你檔案後續的其他全域腳本 (Dark mode, Modal 等) ...
+    loadSharedComponents(); // 這裡會觸發 updateNavUI
 
     // =========================================================================
-    // 其他全域腳本 (Dark mode, Modal 等)
+    // 其他全域腳本 (Dark mode, Modal 等) (你原有的程式碼)
     // =========================================================================
 
-    // Dark mode support
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark');
     }
@@ -578,11 +576,10 @@ function initRoutesPage() {
         }
     });
 
-    // Modal functionality
     const modal = document.getElementById('notificationModal');
 
     function closeNotification() {
-        if (!modal) return; // 安全檢查
+        if (!modal) return;
         const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
         modalContent.classList.remove('modal-enter');
         modalContent.classList.add('modal-exit');
@@ -592,7 +589,7 @@ function initRoutesPage() {
     }
 
     function showNotification() {
-        if (!modal) return; // 安全檢查
+        if (!modal) return;
         modal.style.display = 'flex';
         const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
         modalContent.classList.remove('modal-exit');
@@ -600,7 +597,7 @@ function initRoutesPage() {
     }
 
     function initializeNotificationModal() {
-        if (!modal) return; // 如果頁面沒有 modal 元素，就直接返回
+        if (!modal) return;
         
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
@@ -629,7 +626,6 @@ function initRoutesPage() {
         isDismissed: function(notificationId) { return false; }
     };
 
-    // Export functions for global access (if needed)
     window.closeNotification = closeNotification;
     window.showNotification = showNotification;
     window.NotificationManager = NotificationManager;
