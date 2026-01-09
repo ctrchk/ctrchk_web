@@ -131,20 +131,44 @@ async function fetchProtectedData(url) {
 // Google 登入處理
 async function handleGoogleLogin() {
     try {
-        // 檢查 Supabase 是否已載入
-        if (!window.supabase) {
-            throw new Error('Supabase 尚未載入完成，請稍後再試');
+        // 等待 Supabase 初始化完成
+        let attempts = 0;
+        const maxAttempts = 50; // 最多等待 5 秒
+        
+        while (!window.supabase && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
         }
+        
+        if (!window.supabase) {
+            throw new Error('Supabase 載入超時，請重新整理頁面後再試');
+        }
+        
+        // 檢查 Supabase auth 是否存在
+        if (!window.supabase.auth || !window.supabase.auth.signInWithOAuth) {
+            throw new Error('Supabase auth 方法不可用');
+        }
+        
+        console.log('開始 Google 登入流程...');
         
         // 使用 Supabase 處理 Google 登入
         const { data, error } = await window.supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth-callback.html`
+                redirectTo: `${window.location.origin}/auth-callback.html`,
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                }
             }
         });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Google OAuth 錯誤:', error);
+            throw error;
+        }
+        
+        console.log('Google OAuth 重定向中...');
         
     } catch (error) {
         console.error('Google login error:', error);

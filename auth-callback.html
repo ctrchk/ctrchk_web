@@ -38,13 +38,22 @@
 
     <script src="/js/supabase-config.js"></script>
     <script>
-
         window.addEventListener('load', async () => {
             try {
-                // 等待 Supabase 載入
-                if (!window.supabase) {
-                    throw new Error('Supabase 尚未載入');
+                // 等待 Supabase 初始化完成
+                let attempts = 0;
+                const maxAttempts = 50;
+                
+                while (!window.supabase && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
                 }
+                
+                if (!window.supabase) {
+                    throw new Error('Supabase 載入超時');
+                }
+                
+                console.log('處理 OAuth 回調...');
                 
                 // 處理 OAuth 回調
                 const { data, error } = await window.supabase.auth.getSession();
@@ -59,6 +68,7 @@
                 if (data.session) {
                     // 用戶成功登入
                     const user = data.session.user;
+                    console.log('用戶登入成功:', user.email);
                     
                     // 檢查是否為新用戶（第一次登入）
                     const isNewUser = !user.user_metadata?.has_registered;
@@ -81,6 +91,7 @@
                     }
                 } else {
                     // 沒有 session，跳轉回登入頁面
+                    console.log('沒有找到 session');
                     window.location.href = '/login.html';
                 }
             } catch (error) {

@@ -3,26 +3,42 @@
 (function() {
     // 等待 Supabase 庫載入
     function loadSupabase() {
+        if (typeof window.supabase !== 'undefined') {
+            console.log('Supabase 已經初始化');
+            return;
+        }
+        
         if (typeof createClient !== 'undefined') {
             window.supabase = createClient(
                 'https://umpxhvqcldmrmkuipmao.supabase.co',
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcHhodnFjbGRtcm1rdWlwbWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NTI0ODUsImV4cCI6MjA4MzUyODQ4NX0.-AOz3fXf-VRRt-OtnjZedknY8xw2IyRSgKRN1XEsCYY',
                 {
                     auth: {
-                        redirectTo: `${window.location.origin}/auth-callback.html`
+                        redirectTo: `${window.location.origin}/auth-callback.html`,
+                        persistSession: true
                     }
                 }
             );
             console.log('Supabase 初始化成功');
+            
+            // 觸發一個自定義事件，通知其他組件 Supabase 已準備就緒
+            window.dispatchEvent(new CustomEvent('supabaseReady'));
         } else {
             // 如果 Supabase 庫還沒載入，等待後再試
-            setTimeout(loadSupabase, 100);
+            console.log('等待 Supabase 庫載入...');
+            setTimeout(loadSupabase, 200);
         }
     }
     
     // 載入 Supabase SDK
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    script.onload = loadSupabase;
+    script.onload = () => {
+        console.log('Supabase SDK 載入完成');
+        loadSupabase();
+    };
+    script.onerror = () => {
+        console.error('Supabase SDK 載入失敗');
+    };
     document.head.appendChild(script);
 })();
