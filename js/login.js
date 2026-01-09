@@ -1,31 +1,19 @@
 // /js/login.js
 
-// 等待 Supabase 配置載入
-let supabase;
+// --- 監聽表單提交 ---
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const googleLoginBtn = document.getElementById('google-login-btn');
 
-// 監聽 Supabase 配置載入完成
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // 動態導入 Supabase
-        const { supabase: sb } = await import('/js/supabase-config.js');
-        supabase = sb;
-        
-        // 設置事件監聽器
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const googleLoginBtn = document.getElementById('google-login-btn');
-
-        if (loginForm) {
-            loginForm.addEventListener('submit', handleLogin);
-        }
-        if (registerForm) {
-            registerForm.addEventListener('submit', handleRegister);
-        }
-        if (googleLoginBtn) {
-            googleLoginBtn.addEventListener('click', handleGoogleLogin);
-        }
-    } catch (error) {
-        console.error('Failed to load Supabase:', error);
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegister);
+    }
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', handleGoogleLogin);
     }
 });
 
@@ -144,12 +132,12 @@ async function fetchProtectedData(url) {
 async function handleGoogleLogin() {
     try {
         // 檢查 Supabase 是否已載入
-        if (!supabase) {
+        if (!window.supabase) {
             throw new Error('Supabase 尚未載入完成，請稍後再試');
         }
         
-        // 這裡我們會使用 Supabase 來處理 Google 登入
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        // 使用 Supabase 處理 Google 登入
+        const { data, error } = await window.supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: `${window.location.origin}/auth-callback.html`
