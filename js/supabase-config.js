@@ -1,8 +1,10 @@
 // Supabase 配置文件
-// 使用傳統方式載入 Supabase
+// 直接使用已載入的 Supabase
 (function() {
+    console.log('初始化 Supabase...');
+    
     // 等待 Supabase 庫載入
-    function loadSupabase() {
+    function initSupabase() {
         if (typeof window.supabase !== 'undefined') {
             console.log('Supabase 已經初始化');
             return;
@@ -20,25 +22,12 @@
                 }
             );
             console.log('Supabase 初始化成功');
-            
-            // 觸發一個自定義事件，通知其他組件 Supabase 已準備就緒
-            window.dispatchEvent(new CustomEvent('supabaseReady'));
         } else {
-            // 如果 Supabase 庫還沒載入，等待後再試
             console.log('等待 Supabase 庫載入...');
-            setTimeout(loadSupabase, 200);
+            setTimeout(initSupabase, 100);
         }
     }
     
-    // 載入 Supabase SDK
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    script.onload = () => {
-        console.log('Supabase SDK 載入完成');
-        loadSupabase();
-    };
-    script.onerror = () => {
-        console.error('Supabase SDK 載入失敗');
-    };
-    document.head.appendChild(script);
+    // 開始初始化
+    initSupabase();
 })();
