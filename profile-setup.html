@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完善個人資料 - CTRC HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .profile-setup-container {
+            max-width: 600px;
+            margin: 2em auto;
+            padding: 2em;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-bottom: 2em;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #BFE340, #04D93C);
+            width: 30%;
+            transition: width 0.3s ease;
+        }
+        .form-section {
+            margin-bottom: 2em;
+        }
+        .form-section h3 {
+            color: #04D93C;
+            margin-bottom: 1em;
+        }
+        .benefits-card {
+            background: #f9f9f9;
+            padding: 1.5em;
+            border-radius: 8px;
+            margin-bottom: 2em;
+            border-left: 4px solid #04D93C;
+        }
+        .benefits-card h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5em;
+        }
+        .required-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1em;
+            border-radius: 4px;
+            margin-bottom: 2em;
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="content animated-element">
+            <div class="profile-setup-container">
+                <h2 style="text-align: center; color: #2c3e50;">完善您的個人資料</h2>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                
+                <div class="required-notice">
+                    <i class="fas fa-info-circle"></i> 
+                    完成以下資料即可升級為<strong>高級用戶</strong>，享受更多功能！
+                </div>
+
+                <div class="benefits-card">
+                    <h4><i class="fas fa-star"></i> 高級用戶權益</h4>
+                    <ul>
+                        <li>查看所有單車路線詳細資訊</li>
+                        <li>下載 GPX 路線文件</li>
+                        <li>個人騎行歷史記錄</li>
+                        <li>參與社群活動</li>
+                    </ul>
+                </div>
+
+                <form id="profile-setup-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-user"></i> 基本資料</h3>
+                        <div class="form-group">
+                            <label for="full-name">姓名 *</label>
+                            <input type="text" id="full-name" name="full_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">聯絡電話 *</label>
+                            <input type="tel" id="phone" name="phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="birthdate">出生日期</label>
+                            <input type="date" id="birthdate" name="birthdate">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-bicycle"></i> 騎行經驗</h3>
+                        <div class="form-group">
+                            <label for="experience">騎行經驗 *</label>
+                            <select id="experience" name="experience" required>
+                                <option value="">請選擇</option>
+                                <option value="beginner">初學者 (1年以下)</option>
+                                <option value="intermediate">中級 (1-3年)</option>
+                                <option value="advanced">高級 (3年以上)</option>
+                                <option value="expert">專家級 (5年以上)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bike-type">主要使用單車類型</label>
+                            <select id="bike-type" name="bike_type">
+                                <option value="">請選擇</option>
+                                <option value="road">公路車</option>
+                                <option value="mountain">山地車</option>
+                                <option value="hybrid">混合車</option>
+                                <option value="electric">電動單車</option>
+                                <option value="folding">摺疊車</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-map-marker-alt"></i> 地區偏好</h3>
+                        <div class="form-group">
+                            <label for="preferred-area">主要騎行地區 *</label>
+                            <select id="preferred-area" name="preferred_area" required>
+                                <option value="">請選擇</option>
+                                <option value="kowloon">九龍區</option>
+                                <option value="hong-kong">香港島</option>
+                                <option value="new-territories">新界區</option>
+                                <option value="all">全港</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="cta-button" style="width: 100%; background-color: #04D93C; color: white;">
+                        <i class="fas fa-check"></i> 完成設定，升級為高級用戶
+                    </button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/supabase-config.js"></script>
+    <script>
+        // 等待所有東西載入完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 更新進度條
+            function updateProgress() {
+                const form = document.getElementById('profile-setup-form');
+                const inputs = form.querySelectorAll('input[required], select[required]');
+                let filledCount = 0;
+                
+                inputs.forEach(input => {
+                    if (input.value.trim()) filledCount++;
+                });
+                
+                const progress = (filledCount / inputs.length) * 100;
+                document.getElementById('progress-fill').style.width = progress + '%';
+            }
+
+            // 監聽表單變化
+            const form = document.getElementById('profile-setup-form');
+            const inputs = form.querySelectorAll('input, select');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', updateProgress);
+                input.addEventListener('change', updateProgress);
+            });
+            
+            // 處理表單提交
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const profileData = {};
+                
+                formData.forEach((value, key) => {
+                    profileData[key] = value;
+                });
+                
+                try {
+                    // 檢查 Supabase 是否已載入
+                    if (!window.supabase) {
+                        throw new Error('Supabase 尚未載入完成，請稍後再試');
+                    }
+                    
+                    // 獲取當前用戶
+                    const { data: { user } } = await window.supabase.auth.getUser();
+                    
+                    if (!user) {
+                        throw new Error('用戶未登入');
+                    }
+                    
+                    // 更新用戶元數據，升級為高級用戶
+                    const { error } = await window.supabase.auth.updateUser({
+                        data: {
+                            ...profileData,
+                            user_role: 'senior', // 升級為高級用戶
+                            profile_completed: true,
+                            profile_completion_date: new Date().toISOString()
+                        }
+                    });
+                    
+                    if (error) throw error;
+                    
+                    alert('恭喜！您已成功升級為高級用戶！');
+                    window.location.href = '/dashboard.html';
+                    
+                } catch (error) {
+                    console.error('Profile setup error:', error);
+                    alert(`資料更新失敗: ${error.message}`);
+                }
+            });
+            
+            // 初始化進度
+            updateProgress();
+        });
+    </script>
+</body>
+</html>

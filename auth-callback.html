@@ -36,13 +36,18 @@
         <p>請稍候，我們正在驗證您的身份</p>
     </div>
 
-    <script type="module">
-        import { supabase } from '/js/supabase-config.js';
+    <script src="/js/supabase-config.js"></script>
+    <script>
 
         window.addEventListener('load', async () => {
             try {
+                // 等待 Supabase 載入
+                if (!window.supabase) {
+                    throw new Error('Supabase 尚未載入');
+                }
+                
                 // 處理 OAuth 回調
-                const { data, error } = await supabase.auth.getSession();
+                const { data, error } = await window.supabase.auth.getSession();
                 
                 if (error) {
                     console.error('Auth callback error:', error);
@@ -60,7 +65,7 @@
                     
                     if (isNewUser) {
                         // 新用戶，設為初級用戶並跳轉到資料補充頁面
-                        await supabase.auth.updateUser({
+                        await window.supabase.auth.updateUser({
                             data: { 
                                 has_registered: true,
                                 user_role: 'junior', // 初級用戶
