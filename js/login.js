@@ -1,19 +1,31 @@
 // /js/login.js
 
-// --- 監聽表單提交 ---
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const googleLoginBtn = document.getElementById('google-login-btn');
+// 等待 Supabase 配置載入
+let supabase;
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-    if (registerForm) {
-        registerForm.addEventListener('submit', handleRegister);
-    }
-    if (googleLoginBtn) {
-        googleLoginBtn.addEventListener('click', handleGoogleLogin);
+// 監聽 Supabase 配置載入完成
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 動態導入 Supabase
+        const { supabase: sb } = await import('/js/supabase-config.js');
+        supabase = sb;
+        
+        // 設置事件監聽器
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+        }
+        if (registerForm) {
+            registerForm.addEventListener('submit', handleRegister);
+        }
+        if (googleLoginBtn) {
+            googleLoginBtn.addEventListener('click', handleGoogleLogin);
+        }
+    } catch (error) {
+        console.error('Failed to load Supabase:', error);
     }
 });
 
@@ -131,6 +143,11 @@ async function fetchProtectedData(url) {
 // Google 登入處理
 async function handleGoogleLogin() {
     try {
+        // 檢查 Supabase 是否已載入
+        if (!supabase) {
+            throw new Error('Supabase 尚未載入完成，請稍後再試');
+        }
+        
         // 這裡我們會使用 Supabase 來處理 Google 登入
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
