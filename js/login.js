@@ -123,3 +123,30 @@ async function fetchProtectedData(url) {
 
     return response.json();
 }
+
+// Google 登入處理
+async function handleGoogleLogin() {
+    try {
+        // 這裡我們會使用 Supabase 來處理 Google 登入
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/dashboard.html`
+            }
+        });
+
+        if (error) throw error;
+        
+    } catch (error) {
+        console.error('Google login error:', error);
+        alert(`Google 登入失敗: ${error.message}`);
+    }
+}
+
+// 監聽 Google 登入按鈕
+document.addEventListener('DOMContentLoaded', () => {
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', handleGoogleLogin);
+    }
+});
