@@ -4,12 +4,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
+    const googleLoginBtn = document.getElementById('google-login-btn');
 
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
     if (registerForm) {
         registerForm.addEventListener('submit', handleRegister);
+    }
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', handleGoogleLogin);
     }
 });
 
@@ -131,7 +135,7 @@ async function handleGoogleLogin() {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/dashboard.html`
+                redirectTo: `${window.location.origin}/auth-callback.html`
             }
         });
 
@@ -143,10 +147,3 @@ async function handleGoogleLogin() {
     }
 }
 
-// 監聽 Google 登入按鈕
-document.addEventListener('DOMContentLoaded', () => {
-    const googleLoginBtn = document.getElementById('google-login-btn');
-    if (googleLoginBtn) {
-        googleLoginBtn.addEventListener('click', handleGoogleLogin);
-    }
-});
