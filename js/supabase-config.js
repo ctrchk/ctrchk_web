@@ -16,7 +16,7 @@
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcHhodnFjbGRtcm1rdWlwbWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NTI0ODUsImV4cCI6MjA4MzUyODQ4NX0.-AOz3fXf-VRRt-OtnjZedknY8xw2IyRSgKRN1XEsCYY',
                 {
                     auth: {
-                        redirectTo: `${window.location.origin}/auth-callback.html`,
+                        redirectTo: 'http://localhost:3000/auth-callback.html',
                         persistSession: true
                     }
                 }

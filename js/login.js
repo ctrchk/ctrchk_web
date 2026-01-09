@@ -155,7 +155,7 @@ async function handleGoogleLogin() {
         const { data, error } = await window.supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth-callback.html`,
+                redirectTo: 'http://localhost:3000/auth-callback.html',
                 queryParams: {
                     access_type: 'offline',
                     prompt: 'consent',

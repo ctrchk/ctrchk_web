@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 連接測試</title>
+</head>
+<body>
+    <h1>Supabase 連接測試</h1>
+    <div id="status">正在測試...</div>
+    <div id="result"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'https://umpxhvqcldmrmkuipmao.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcHhodnFjbGRtcm1rdWlwbWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NTI0ODUsImV4cCI6MjA4MzUyODQ4NX0.-AOz3fXf-VRRt-OtnjZedknY8xw2IyRSgKRN1XEsCYY';
+        
+        try {
+            const supabase = createClient(supabaseUrl, supabaseKey);
+            document.getElementById('status').textContent = 'Supabase 客戶端創建成功';
+            
+            // 測試連接
+            supabase.from('_test_connection').select('*').limit(1).then(result => {
+                document.getElementById('result').innerHTML = `
+                    <h3>連接測試結果:</h3>
+                    <p>錯誤是正常的，因為 _test_connection 表不存在</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                    <p>如果看到錯誤訊息包含 "relation \"_test_connection\" does not exist"，表示連接成功</p>
+                `;
+            }).catch(error => {
+                document.getElementById('result').innerHTML = `
+                    <h3>連接測試結果:</h3>
+                    <pre>${JSON.stringify(error, null, 2)}</pre>
+                    <p>如果錯誤是 "Invalid API key"，則 API Key 有問題</p>
+                    <p>如果錯誤是 "relation does not exist"，則連接成功</p>
+                `;
+            });
+            
+        } catch (error) {
+            document.getElementById('status').textContent = '創建 Supabase 客戶端失敗';
+            document.getElementById('result').innerHTML = `
+                <h3>錯誤:</h3>
+                <pre>${error.message}</pre>
+            `;
+        }
+    </script>
+</body>
+</html>
