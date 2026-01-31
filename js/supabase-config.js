@@ -3,6 +3,9 @@
 (function() {
     console.log('初始化 Supabase...');
     
+    // 獲取當前域名
+    const currentDomain = window.location.origin;
+    
     // 等待 Supabase 庫載入
     function initSupabase() {
         if (typeof window.supabase !== 'undefined') {
@@ -16,12 +19,12 @@
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcHhodnFjbGRtcm1rdWlwbWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5NTI0ODUsImV4cCI6MjA4MzUyODQ4NX0.-AOz3fXf-VRRt-OtnjZedknY8xw2IyRSgKRN1XEsCYY',
                 {
                     auth: {
-                        redirectTo: 'http://localhost:3000/auth-callback.html',
+                        redirectTo: `${currentDomain}/auth-callback.html`,
                         persistSession: true
                     }
                 }
             );
-            console.log('Supabase 初始化成功');
+            console.log('Supabase 初始化成功，回調 URL:', `${currentDomain}/auth-callback.html`);
         } else {
             console.log('等待 Supabase 庫載入...');
             setTimeout(initSupabase, 100);

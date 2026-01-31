@@ -205,17 +205,35 @@
                         throw new Error('用戶未登入');
                     }
                     
-                    // 更新用戶元數據，升級為高級用戶
-                    const { error } = await window.supabase.auth.updateUser({
+                    // 準備更新數據
+                    const updateData = {
+                        google_id: user.id,
+                        email: user.email,
+                        ...profileData
+                    };
+                    
+                    // 調用後端 API 更新數據庫
+                    const response = await fetch('/api/update-profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.message || '更新失敗');
+                    }
+                    
+                    // 同時更新 Supabase 用戶元數據
+                    await window.supabase.auth.updateUser({
                         data: {
                             ...profileData,
-                            user_role: 'senior', // 升級為高級用戶
+                            user_role: 'senior',
                             profile_completed: true,
                             profile_completion_date: new Date().toISOString()
                         }
                     });
-                    
-                    if (error) throw error;
                     
                     alert('恭喜！您已成功升級為高級用戶！');
                     window.location.href = '/dashboard.html';

@@ -17,15 +17,64 @@
                 
                 <form id="register-form">
                     <div class="form-group">
-                        <label for="register-email">電子郵件</label>
+                        <label for="register-email">電子郵件 *</label>
                         <input type="email" id="register-email" name="email" required>
                     </div>
                     <div class="form-group">
-                        <label for="register-password">密碼</label>
+                        <label for="register-password">密碼 *</label>
                         <input type="password" id="register-password" name="password" required minlength="8">
                         <small>（至少 8 個字元）</small>
                     </div>
-                    <button type="submit" class="cta-button">註冊</button>
+                    <div class="form-group">
+                        <label for="register-fullname">姓名 *</label>
+                        <input type="text" id="register-fullname" name="full_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-phone">聯絡電話 *</label>
+                        <input type="tel" id="register-phone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-experience">騎行經驗 *</label>
+                        <select id="register-experience" name="experience" required>
+                            <option value="">請選擇</option>
+                            <option value="beginner">初學者 (1年以下)</option>
+                            <option value="intermediate">中級 (1-3年)</option>
+                            <option value="advanced">高級 (3年以上)</option>
+                            <option value="expert">專家級 (5年以上)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-area">主要騎行地區 *</label>
+                        <select id="register-area" name="preferred_area" required>
+                            <option value="">請選擇</option>
+                            <option value="kowloon">九龍區</option>
+                            <option value="hong-kong">香港島</option>
+                            <option value="new-territories">新界區</option>
+                            <option value="all">全港</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-birthdate">出生日期（選填）</label>
+                        <input type="date" id="register-birthdate" name="birthdate">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-biketype">主要使用單車類型（選填）</label>
+                        <select id="register-biketype" name="bike_type">
+                            <option value="">請選擇</option>
+                            <option value="road">公路車</option>
+                            <option value="mountain">山地車</option>
+                            <option value="hybrid">混合車</option>
+                            <option value="electric">電動單車</option>
+                            <option value="folding">摺疊車</option>
+                        </select>
+                    </div>
+                    <div style="background: #e8f5e9; padding: 1em; border-radius: 4px; margin-bottom: 1em;">
+                        <p style="margin: 0; font-size: 0.9em; color: #2e7d32;">
+                            <i class="fas fa-star" style="color: #ffc107;"></i>
+                            註冊後即刻成為<strong>高級會員</strong>，享受完整功能！
+                        </p>
+                    </div>
+                    <button type="submit" class="cta-button">註冊並成為高級會員</button>
                 </form>
 
                 <p style="margin-top: 1.5em;">
@@ -39,7 +88,9 @@
         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/main.js"></script>
+    <script src="/js/supabase-config.js"></script>
     <script src="/js/login.js"></script> 
 </body>
 </html>
