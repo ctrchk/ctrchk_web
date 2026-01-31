@@ -29,26 +29,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'User identifier required' });
     }
 
-    // Build the WHERE clause based on available identifier
-    let whereClause = '';
-    let whereValue = null;
-    
-    if (user_id) {
-      whereClause = 'id = $1';
-      whereValue = user_id;
-    } else if (google_id) {
-      whereClause = 'google_id = $1';
-      whereValue = google_id;
-    } else {
-      whereClause = 'email = $1';
-      whereValue = email;
-    }
-
     // Check if user exists
-    const checkResult = await sql.query(
-      `SELECT id, email, user_role FROM users WHERE ${whereClause}`,
-      [whereValue]
-    );
+    let checkResult;
+    if (user_id) {
+      checkResult = await sql`SELECT id, email, user_role FROM users WHERE id = ${user_id}`;
+    } else if (google_id) {
+      checkResult = await sql`SELECT id, email, user_role FROM users WHERE google_id = ${google_id}`;
+    } else {
+      checkResult = await sql`SELECT id, email, user_role FROM users WHERE email = ${email}`;
+    }
 
     if (checkResult.rows.length === 0) {
       // User doesn't exist, create a new one (for Google OAuth users)
@@ -94,28 +83,20 @@ export default async function handler(req, res) {
     }
 
     // User exists, update their profile and upgrade to senior
-    await sql.query(
-      `UPDATE users 
-       SET user_role = 'senior',
-           full_name = $2,
-           phone = $3,
-           experience = $4,
-           preferred_area = $5,
-           birthdate = $6,
-           bike_type = $7,
-           profile_completed = true,
-           profile_completion_date = NOW()
-       WHERE ${whereClause}`,
-      [
-        whereValue,
-        full_name,
-        phone,
-        experience,
-        preferred_area,
-        birthdate || null,
-        bike_type || null
-      ]
-    );
+    const userId = checkResult.rows[0].id;
+    await sql`
+      UPDATE users 
+      SET user_role = 'senior',
+          full_name = ${full_name},
+          phone = ${phone},
+          experience = ${experience},
+          preferred_area = ${preferred_area},
+          birthdate = ${birthdate || null},
+          bike_type = ${bike_type || null},
+          profile_completed = true,
+          profile_completion_date = NOW()
+      WHERE id = ${userId}
+    `;
 
     return res.status(200).json({ 
       message: 'Profile updated and upgraded to senior member',

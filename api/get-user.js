@@ -13,21 +13,27 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'User identifier required (google_id, email, or user_id)' });
     }
 
-    let query;
-    let params;
+    let result;
 
     if (google_id) {
-      query = 'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE google_id = $1';
-      params = [google_id];
+      result = await sql`
+        SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at 
+        FROM users 
+        WHERE google_id = ${google_id}
+      `;
     } else if (user_id) {
-      query = 'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE id = $1';
-      params = [user_id];
+      result = await sql`
+        SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at 
+        FROM users 
+        WHERE id = ${user_id}
+      `;
     } else {
-      query = 'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE email = $1';
-      params = [email];
+      result = await sql`
+        SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at 
+        FROM users 
+        WHERE email = ${email}
+      `;
     }
-
-    const result = await sql.query(query, params);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
