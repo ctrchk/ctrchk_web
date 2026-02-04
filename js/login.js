@@ -65,7 +65,7 @@ async function handleRegister(e) {
                 errorMessage = '數據庫尚未設置，請聯絡網站管理員完成資料庫配置。';
             } else if (lowerErrorMsg.includes('password')) {
                 errorMessage = '密碼必須至少 8 個字元';
-            } else if (errorMessage.includes('Email already exists') || errorMessage.includes('already exists')) {
+            } else if (lowerErrorMsg.includes('email already exists') || lowerErrorMsg.includes('already exists')) {
                 errorMessage = '此電子郵件已被註冊，請使用其他郵件或前往登入頁面';
             }
             
