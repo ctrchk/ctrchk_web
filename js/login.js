@@ -51,11 +51,29 @@ async function handleRegister(e) {
             alert('註冊成功！您已成為高級會員。將跳轉至登入頁面。');
             window.location.href = '/login.html';
         } else {
-            throw new Error(data.message || '註冊失敗');
+            // 提供更友善的錯誤訊息
+            let errorMessage = data.message || '註冊失敗';
+            
+            // 檢查是否是數據庫相關錯誤（檢查常見的資料庫錯誤關鍵字）
+            const lowerErrorMsg = errorMessage.toLowerCase();
+            const isDatabaseError = lowerErrorMsg.includes('relation') || 
+                                   lowerErrorMsg.includes('does not exist') ||
+                                   lowerErrorMsg.includes('table') ||
+                                   lowerErrorMsg.includes('pattern');
+            
+            if (isDatabaseError) {
+                errorMessage = '數據庫尚未設置，請聯絡網站管理員完成資料庫配置。';
+            } else if (lowerErrorMsg.includes('password')) {
+                errorMessage = '密碼必須至少 8 個字元';
+            } else if (lowerErrorMsg.includes('email already exists') || lowerErrorMsg.includes('already exists')) {
+                errorMessage = '此電子郵件已被註冊，請使用其他郵件或前往登入頁面';
+            }
+            
+            throw new Error(errorMessage);
         }
     } catch (error) {
         console.error('Register error:', error);
-        alert(`註冊失敗: ${error.message}`);
+        alert(`註冊失敗：\n${error.message}`);
     }
 }
 
@@ -156,12 +174,12 @@ async function handleGoogleLogin() {
         }
         
         if (!window.supabase) {
-            throw new Error('Supabase 載入超時，請重新整理頁面後再試');
+            throw new Error('Supabase 載入失敗。\n\n可能原因：\n1. 網絡連接問題\n2. Supabase 庫未正確載入\n\n請重新整理頁面後再試。');
         }
         
         // 檢查 Supabase auth 是否存在
         if (!window.supabase.auth || !window.supabase.auth.signInWithOAuth) {
-            throw new Error('Supabase auth 方法不可用');
+            throw new Error('Supabase 認證功能不可用。\n\n可能原因：\n1. Supabase 版本不相容\n2. 認證功能未啟用\n\n請聯絡網站管理員檢查 Supabase 配置。');
         }
         
         console.log('開始 Google 登入流程...');
@@ -183,14 +201,22 @@ async function handleGoogleLogin() {
 
         if (error) {
             console.error('Google OAuth 錯誤:', error);
-            throw error;
+            
+            // 提供更友善的錯誤訊息
+            let errorMessage = error.message || 'Google 登入失敗';
+            
+            if (errorMessage.includes('not enabled')) {
+                errorMessage = 'Google 登入功能尚未啟用。\n\n請聯絡網站管理員在 Supabase 後台啟用 Google OAuth 提供商。';
+            }
+            
+            throw new Error(errorMessage);
         }
         
         console.log('Google OAuth 重定向中...');
         
     } catch (error) {
         console.error('Google login error:', error);
-        alert(`Google 登入失敗: ${error.message}`);
+        alert(`Google 登入失敗：\n${error.message}`);
     }
 }
 
