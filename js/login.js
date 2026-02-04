@@ -54,12 +54,17 @@ async function handleRegister(e) {
             // 提供更友善的錯誤訊息
             let errorMessage = data.message || '註冊失敗';
             
-            // 檢查是否是數據庫相關錯誤
-            if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+            // 檢查是否是數據庫相關錯誤（檢查常見的資料庫錯誤關鍵字）
+            const isDatabaseError = errorMessage.toLowerCase().includes('relation') || 
+                                   errorMessage.toLowerCase().includes('does not exist') ||
+                                   errorMessage.toLowerCase().includes('table') ||
+                                   errorMessage.includes('pattern');
+            
+            if (isDatabaseError) {
                 errorMessage = '數據庫尚未設置。請聯絡網站管理員完成數據庫配置。\n\n詳情：資料表尚未建立，需要執行 database-schema.sql';
-            } else if (errorMessage.includes('password')) {
+            } else if (errorMessage.toLowerCase().includes('password')) {
                 errorMessage = '密碼必須至少 8 個字元';
-            } else if (errorMessage.includes('Email already exists')) {
+            } else if (errorMessage.includes('Email already exists') || errorMessage.includes('already exists')) {
                 errorMessage = '此電子郵件已被註冊，請使用其他郵件或前往登入頁面';
             }
             
@@ -168,7 +173,7 @@ async function handleGoogleLogin() {
         }
         
         if (!window.supabase) {
-            throw new Error('Supabase 載入超時。\n\n可能原因：\n1. 網絡連接問題\n2. Supabase 庫未正確載入\n\n請重新整理頁面後再試。');
+            throw new Error('Supabase 載入失敗。\n\n可能原因：\n1. 網絡連接問題\n2. Supabase 庫未正確載入\n\n請重新整理頁面後再試。');
         }
         
         // 檢查 Supabase auth 是否存在
