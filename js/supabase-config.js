@@ -14,9 +14,9 @@
         }
         
         // 檢查 Supabase 庫是否載入
-        if (typeof window.supabase === 'undefined' && typeof supabase !== 'undefined') {
-            // 確保 createClient 方法存在
-            if (typeof supabase.createClient === 'function') {
+        if (typeof window.supabase === 'undefined') {
+            // 檢查全局 supabase 對象是否存在且有 createClient 方法
+            if (typeof supabase !== 'undefined' && typeof supabase.createClient === 'function') {
                 try {
                     window.supabase = supabase.createClient(
                         'https://umpxhvqcldmrmkuipmao.supabase.co',
@@ -29,17 +29,16 @@
                         }
                     );
                     console.log('Supabase 初始化成功，回調 URL:', `${currentDomain}/auth-callback.html`);
-                    return;
                 } catch (error) {
                     console.error('Supabase 初始化失敗:', error);
+                    // 繼續嘗試重新載入
+                    setTimeout(initSupabase, 100);
                 }
+            } else {
+                // 如果 Supabase 庫還沒載入，繼續等待
+                console.log('等待 Supabase 庫載入...');
+                setTimeout(initSupabase, 100);
             }
-        }
-        
-        // 如果還沒載入，繼續等待
-        if (typeof window.supabase === 'undefined') {
-            console.log('等待 Supabase 庫載入...');
-            setTimeout(initSupabase, 100);
         }
     }
     
