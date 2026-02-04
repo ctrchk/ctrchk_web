@@ -75,7 +75,26 @@
                     const isNewUser = !user.user_metadata?.has_registered;
                     
                     if (isNewUser) {
-                        // 新用戶，設為初級用戶並跳轉到資料補充頁面
+                        // 新用戶，創建數據庫記錄並設為初級用戶
+                        try {
+                            const response = await fetch('/api/google-auth', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    google_id: user.id,
+                                    email: user.email,
+                                    full_name: user.user_metadata?.full_name || user.user_metadata?.name || ''
+                                })
+                            });
+                            
+                            if (!response.ok) {
+                                console.error('Failed to create user in database');
+                            }
+                        } catch (error) {
+                            console.error('Error creating user:', error);
+                        }
+                        
+                        // 更新 Supabase 元數據
                         await window.supabase.auth.updateUser({
                             data: { 
                                 has_registered: true,
@@ -84,7 +103,7 @@
                             }
                         });
                         
-                        alert('歡迎加入 CTRC HK！請補充您的資料以獲得完整功能。');
+                        alert('歡迎加入 CTRC HK！請補充您的資料以升級為高級會員獲得完整功能。');
                         window.location.href = '/profile-setup.html'; // 資料補充頁面
                     } else {
                         // 現有用戶，直接跳轉到儀表板

@@ -22,18 +22,33 @@ async function handleRegister(e) {
     e.preventDefault();
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
+    const full_name = document.getElementById('register-fullname').value;
+    const phone = document.getElementById('register-phone').value;
+    const experience = document.getElementById('register-experience').value;
+    const preferred_area = document.getElementById('register-area').value;
+    const birthdate = document.getElementById('register-birthdate').value;
+    const bike_type = document.getElementById('register-biketype').value;
 
     try {
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ 
+                email, 
+                password, 
+                full_name, 
+                phone, 
+                experience, 
+                preferred_area,
+                birthdate,
+                bike_type
+            }),
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            alert('註冊成功！將跳轉至登入頁面。');
+            alert('註冊成功！您已成為高級會員。將跳轉至登入頁面。');
             window.location.href = '/login.html';
         } else {
             throw new Error(data.message || '註冊失敗');
@@ -151,11 +166,14 @@ async function handleGoogleLogin() {
         
         console.log('開始 Google 登入流程...');
         
+        // 獲取當前域名用於回調
+        const currentDomain = window.location.origin;
+        
         // 使用 Supabase 處理 Google 登入
         const { data, error } = await window.supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: 'http://localhost:3000/auth-callback.html',
+                redirectTo: `${currentDomain}/auth-callback.html`,
                 queryParams: {
                     access_type: 'offline',
                     prompt: 'consent',
