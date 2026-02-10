@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
+    "@vercel/postgres": "^0.10.0",
     "@vercel/speed-insights": "^1.2.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2"
@@ -19,7 +20,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/ctrchk/ctrchk/issues"
   },
