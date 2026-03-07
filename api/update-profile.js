@@ -1,5 +1,5 @@
 // /api/update-profile.js
-import { sql } from '@vercel/postgres';
+import { query } from './db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -32,46 +32,25 @@ export default async function handler(req, res) {
     // Check if user exists
     let checkResult;
     if (user_id) {
-      checkResult = await sql`SELECT id, email, user_role FROM users WHERE id = ${user_id}`;
+      checkResult = await query('SELECT id, email, user_role FROM users WHERE id = $1', [user_id]);
     } else if (google_id) {
-      checkResult = await sql`SELECT id, email, user_role FROM users WHERE google_id = ${google_id}`;
+      checkResult = await query('SELECT id, email, user_role FROM users WHERE google_id = $1', [google_id]);
     } else {
-      checkResult = await sql`SELECT id, email, user_role FROM users WHERE email = ${email}`;
+      checkResult = await query('SELECT id, email, user_role FROM users WHERE email = $1', [email]);
     }
 
     if (checkResult.rows.length === 0) {
       // User doesn't exist, create a new one (for Google OAuth users)
       if (google_id && email) {
-        await sql`
-          INSERT INTO users (
-            email,
-            google_id,
-            user_role,
-            full_name,
-            phone,
-            experience,
-            preferred_area,
-            birthdate,
-            bike_type,
-            profile_completed,
-            profile_completion_date,
-            auth_provider
-          )
-          VALUES (
-            ${email},
-            ${google_id},
-            'senior',
-            ${full_name},
-            ${phone},
-            ${experience},
-            ${preferred_area},
-            ${birthdate || null},
-            ${bike_type || null},
-            true,
-            NOW(),
-            'google'
-          )
-        `;
+        await query(
+          `INSERT INTO users (
+            email, google_id, user_role, full_name, phone, experience,
+            preferred_area, birthdate, bike_type, profile_completed,
+            profile_completion_date, auth_provider
+          ) VALUES ($1, $2, 'senior', $3, $4, $5, $6, $7, $8, true, NOW(), 'google')`,
+          [email, google_id, full_name, phone, experience, preferred_area,
+           birthdate || null, bike_type || null]
+        );
         
         return res.status(201).json({ 
           message: 'Profile created and upgraded to senior member',
@@ -84,19 +63,15 @@ export default async function handler(req, res) {
 
     // User exists, update their profile and upgrade to senior
     const userId = checkResult.rows[0].id;
-    await sql`
-      UPDATE users 
-      SET user_role = 'senior',
-          full_name = ${full_name},
-          phone = ${phone},
-          experience = ${experience},
-          preferred_area = ${preferred_area},
-          birthdate = ${birthdate || null},
-          bike_type = ${bike_type || null},
-          profile_completed = true,
-          profile_completion_date = NOW()
-      WHERE id = ${userId}
-    `;
+    await query(
+      `UPDATE users 
+       SET user_role = 'senior', full_name = $1, phone = $2, experience = $3,
+           preferred_area = $4, birthdate = $5, bike_type = $6,
+           profile_completed = true, profile_completion_date = NOW()
+       WHERE id = $7`,
+      [full_name, phone, experience, preferred_area,
+       birthdate || null, bike_type || null, userId]
+    );
 
     return res.status(200).json({ 
       message: 'Profile updated and upgraded to senior member',

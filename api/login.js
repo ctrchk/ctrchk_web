@@ -1,5 +1,5 @@
 // /api/login.js
-import { sql } from '@vercel/postgres';
+import { query } from './db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const { rows } = await sql`SELECT * FROM users WHERE email = ${email}`;
+    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Invalid credentials' }); // 安全起見，不提示用戶不存在
     }

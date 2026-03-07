@@ -1,5 +1,5 @@
 // /api/register.js
-import { sql } from '@vercel/postgres';
+import { query } from './db.js';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
@@ -29,9 +29,10 @@ export default async function handler(req, res) {
     }
 
     // 檢查用戶是否已存在
-    const { rows } = await sql`
-      SELECT * FROM users WHERE email = ${email}
-    `;
+    const { rows } = await query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
+    );
     if (rows.length > 0) {
       return res.status(409).json({ message: 'Email already exists' });
     }
@@ -41,36 +42,17 @@ export default async function handler(req, res) {
     const password_hash = bcrypt.hashSync(password, salt);
 
     // 插入新用戶，直接設為高級會員（senior）
-    await sql`
-      INSERT INTO users (
-        email, 
-        password_hash, 
-        user_role, 
-        full_name, 
-        phone, 
-        experience, 
-        preferred_area,
-        birthdate,
-        bike_type,
-        profile_completed,
-        profile_completion_date,
-        auth_provider
-      )
-      VALUES (
-        ${email}, 
-        ${password_hash}, 
-        'senior',
-        ${full_name},
-        ${phone},
-        ${experience},
-        ${preferred_area},
-        ${birthdate || null},
-        ${bike_type || null},
-        true,
-        NOW(),
-        'email'
-      )
-    `;
+    await query(
+      `INSERT INTO users (
+        email, password_hash, user_role, full_name, phone,
+        experience, preferred_area, birthdate, bike_type,
+        profile_completed, profile_completion_date, auth_provider
+      ) VALUES (
+        $1, $2, 'senior', $3, $4, $5, $6, $7, $8, true, NOW(), 'email'
+      )`,
+      [email, password_hash, full_name, phone, experience, preferred_area,
+       birthdate || null, bike_type || null]
+    );
 
     return res.status(201).json({ 
       message: 'User created successfully as senior member',

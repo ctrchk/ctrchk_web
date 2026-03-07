@@ -67,69 +67,58 @@
     </footer>
 
     <script src="/js/main.js"></script>
-    <script src="/js/supabase-config.js"></script>
     <script src="/js/login.js"></script> 
     
     <script>
         // 等待所有東西載入完畢
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // 優先使用 Supabase 獲取用戶資料
-                let user = null;
+                // 從 localStorage 取得 JWT 登入的用戶資料
+                const user = getUserData();
                 let userRole = 'junior';
-                let profileCompleted = false;
                 
-                if (window.supabase) {
-                    const { data: { user: supabaseUser } } = await window.supabase.auth.getUser();
-                    if (supabaseUser) {
-                        // For Google OAuth users, also check database
-                        try {
-                            const dbResponse = await fetch(`/api/get-user?google_id=${supabaseUser.id}`);
-                            if (dbResponse.ok) {
-                                const dbUser = await dbResponse.json();
-                                userRole = dbUser.user_role || 'junior';
-                                profileCompleted = dbUser.profile_completed || false;
-                            }
-                        } catch (error) {
-                            console.error('Error fetching user from database:', error);
-                            userRole = supabaseUser.user_metadata?.user_role || 'junior';
-                            profileCompleted = supabaseUser.user_metadata?.profile_completed || false;
-                        }
-                        
-                        user = {
-                            id: supabaseUser.id,
-                            email: supabaseUser.email,
-                            role: userRole
-                        };
-                    }
-                }
-                
-                // 如果 Supabase 沒有用戶，回退到傳統方式
                 if (!user) {
-                    user = getUserData();
-                    if (user) {
-                        userRole = user.role || 'junior';
+                    alert('請先登入。');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // 從後端取得最新的用戶角色資訊
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const dbResponse = await fetch(`/api/get-user?user_id=${user.id}`, {
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                    });
+                    if (dbResponse.ok) {
+                        const dbUser = await dbResponse.json();
+                        userRole = dbUser.user_role || user.user_role || 'junior';
+                        // 更新本地快取
+                        user.user_role = userRole;
+                        localStorage.setItem('user', JSON.stringify(user));
+                    } else {
+                        userRole = user.user_role || user.role || 'junior';
                     }
+                } catch (error) {
+                    console.error('Error fetching user from database:', error);
+                    userRole = user.user_role || user.role || 'junior';
                 }
                 
-                if (user) {
-                    document.getElementById('welcome-email').textContent = `你好, ${user.email}`;
-                    
-                    // Display membership status
-                    const statusElement = document.getElementById('membership-status');
-                    if (userRole === 'senior') {
-                        statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffc107;"></i> 高級會員';
-                        statusElement.style.color = '#ffc107';
-                    } else {
-                        statusElement.innerHTML = '<i class="fas fa-user" style="color: #666;"></i> 初級會員';
-                        // Show upgrade notice for junior members
-                        document.getElementById('upgrade-notice').style.display = 'block';
-                    }
-                    
-                    // 檢查是否為管理員
-                    if (user.role === 'admin') {
-                        document.getElementById('admin-section').style.display = 'block';
-                    }
+                document.getElementById('welcome-email').textContent = `你好, ${user.email}`;
+                
+                // Display membership status
+                const statusElement = document.getElementById('membership-status');
+                if (userRole === 'senior') {
+                    statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffc107;"></i> 高級會員';
+                    statusElement.style.color = '#ffc107';
+                } else {
+                    statusElement.innerHTML = '<i class="fas fa-user" style="color: #666;"></i> 初級會員';
+                    // Show upgrade notice for junior members
+                    document.getElementById('upgrade-notice').style.display = 'block';
+                }
+                
+                // 檢查是否為管理員
+                if (userRole === 'admin' || user.role === 'admin') {
+                    document.getElementById('admin-section').style.display = 'block';
                 }
             
             // 載入騎行歷史

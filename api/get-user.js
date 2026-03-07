@@ -1,5 +1,5 @@
 // /api/get-user.js
-import { sql } from '@vercel/postgres';
+import { query } from './db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -16,23 +16,20 @@ export default async function handler(req, res) {
     let result;
 
     if (google_id) {
-      result = await sql`
-        SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at 
-        FROM users 
-        WHERE google_id = ${google_id}
-      `;
+      result = await query(
+        'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE google_id = $1',
+        [google_id]
+      );
     } else if (user_id) {
-      result = await sql`
-        SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at 
-        FROM users 
-        WHERE id = ${user_id}
-      `;
+      result = await query(
+        'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE id = $1',
+        [user_id]
+      );
     } else {
-      result = await sql`
-        SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at 
-        FROM users 
-        WHERE email = ${email}
-      `;
+      result = await query(
+        'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE email = $1',
+        [email]
+      );
     }
 
     if (result.rows.length === 0) {
