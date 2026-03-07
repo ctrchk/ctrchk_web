@@ -1,7 +1,7 @@
 // /api/google-auth.js
 // 接收並驗證 Google Identity Services (GIS) 發出的 ID Token，
 // 然後在資料庫建立或查找對應的用戶。
-import { query } from './db.js';
+import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
 
 /**

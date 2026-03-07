@@ -1,5 +1,5 @@
 // /api/getHistory.js
-import { query } from './db.js';
+import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
 
 // 這是一個通用的中介軟體函數，用於驗證 Token

@@ -1,4 +1,4 @@
-// /api/email.js
+// /api/_email.js
 // 電郵發送工具模組 - 使用 Gmail SMTP (enquiry@ctrchk.com → ctrcz9829@gmail.com)
 
 import nodemailer from 'nodemailer';

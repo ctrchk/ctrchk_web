@@ -1,6 +1,6 @@
 // /api/verify-email.js
-import { query } from './db.js';
-import { sendWelcomeEmail } from './email.js';
+import { query } from './_db.js';
+import { sendWelcomeEmail } from './_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {

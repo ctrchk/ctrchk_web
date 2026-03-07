@@ -23,6 +23,7 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "packageManager": "pnpm@10.30.3",
   "bugs": {
     "url": "https://github.com/ctrchk/ctrchk/issues"
   },
