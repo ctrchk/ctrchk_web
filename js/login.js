@@ -1,10 +1,96 @@
 // /js/login.js
 
+// --- 初始化 Google Identity Services ---
+let googleClientId = '';
+
+async function loadGoogleSignIn() {
+    try {
+        const resp = await fetch('/api/config');
+        const config = await resp.json();
+        googleClientId = config.googleClientId || '';
+    } catch (e) {
+        console.warn('無法載入 Google Client ID:', e);
+    }
+
+    if (!googleClientId) {
+        console.warn('GOOGLE_CLIENT_ID 尚未設置，Google 登入功能將無法使用。');
+        const googleBtn = document.getElementById('google-login-btn-container');
+        if (googleBtn) {
+            googleBtn.innerHTML =
+                '<p style="color:#888;font-size:0.85em;">Google 登入尚未啟用，請聯絡管理員。</p>';
+        }
+        return;
+    }
+
+    // 若 GIS 函式庫已載入則直接初始化，否則等待其 onload 回調
+    if (typeof google !== 'undefined' && google.accounts) {
+        initGoogleButton();
+    } else {
+        // GIS 提供 window.onGoogleLibraryLoad 作為載入完成的標準回調
+        window.onGoogleLibraryLoad = initGoogleButton;
+    }
+}
+
+function initGoogleButton() {
+    if (typeof google === 'undefined' || !google.accounts) {
+        console.error('Google Identity Services 函式庫載入失敗');
+        return;
+    }
+
+    google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+    });
+
+    const container = document.getElementById('google-login-btn-container');
+    if (container) {
+        google.accounts.id.renderButton(container, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            locale: 'zh-TW',
+            width: container.offsetWidth || 300
+        });
+    }
+}
+
+// --- 接收 Google GIS 回調 ---
+async function handleGoogleCredentialResponse(response) {
+    try {
+        const res = await fetch('/api/google-auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem('accessToken', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+
+            if (!data.user.profile_completed) {
+                alert('歡迎加入 CTRC HK！\n請補充您的資料以升級為高級會員，享受完整功能。');
+                window.location.href = '/profile-setup.html';
+            } else {
+                alert('Google 登入成功！');
+                window.location.href = '/dashboard.html';
+            }
+        } else {
+            alert('Google 登入失敗：' + (data.message || '未知錯誤'));
+        }
+    } catch (error) {
+        console.error('Google 登入錯誤:', error);
+        alert('Google 登入失敗：' + error.message);
+    }
+}
+
 // --- 監聽表單提交 ---
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
-    const googleLoginBtn = document.getElementById('google-login-btn');
 
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
@@ -12,9 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (registerForm) {
         registerForm.addEventListener('submit', handleRegister);
     }
-    if (googleLoginBtn) {
-        googleLoginBtn.addEventListener('click', handleGoogleLogin);
-    }
+
+    // 載入 Google 登入
+    loadGoogleSignIn();
 });
 
 // --- 註冊處理 ---
@@ -51,18 +137,20 @@ async function handleRegister(e) {
             alert('註冊成功！您已成為高級會員。將跳轉至登入頁面。');
             window.location.href = '/login.html';
         } else {
-            // 提供更友善的錯誤訊息
             let errorMessage = data.message || '註冊失敗';
             
-            // 檢查是否是數據庫相關錯誤（檢查常見的資料庫錯誤關鍵字）
+            // 提供更友善的錯誤訊息
             const lowerErrorMsg = errorMessage.toLowerCase();
             const isDatabaseError = lowerErrorMsg.includes('relation') || 
                                    lowerErrorMsg.includes('does not exist') ||
                                    lowerErrorMsg.includes('table') ||
-                                   lowerErrorMsg.includes('pattern');
+                                   lowerErrorMsg.includes('pattern') ||
+                                   lowerErrorMsg.includes('connect') ||
+                                   lowerErrorMsg.includes('database_url') ||
+                                   lowerErrorMsg.includes('connection');
             
             if (isDatabaseError) {
-                errorMessage = '數據庫尚未設置，請聯絡網站管理員完成資料庫配置。';
+                errorMessage = '資料庫尚未設置，請聯絡網站管理員完成資料庫配置。';
             } else if (lowerErrorMsg.includes('password')) {
                 errorMessage = '密碼必須至少 8 個字元';
             } else if (lowerErrorMsg.includes('email already exists') || lowerErrorMsg.includes('already exists')) {
@@ -93,12 +181,10 @@ async function handleLogin(e) {
         const data = await response.json();
 
         if (response.ok) {
-            // ** 儲存 Token 和 User data **
             localStorage.setItem('accessToken', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             
             alert('登入成功！');
-            // 跳轉到儀表板
             window.location.href = '/dashboard.html';
         } else {
             throw new Error(data.message || '登入失敗');
@@ -129,11 +215,9 @@ function getUserData() {
 }
 
 // --- 輔助函數：獲取受保護的數據 ---
-// (這會被 dashboard.html 使用)
 async function fetchProtectedData(url) {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-        // 確保在 dashboard.html 的守衛會處理這個
         throw new Error('No token found');
     }
 
@@ -145,7 +229,6 @@ async function fetchProtectedData(url) {
     });
 
     if (response.status === 401) {
-        // Token 過期或無效
         alert('你的登入已過期，請重新登入。');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
@@ -160,63 +243,3 @@ async function fetchProtectedData(url) {
 
     return response.json();
 }
-
-// Google 登入處理
-async function handleGoogleLogin() {
-    try {
-        // 等待 Supabase 初始化完成
-        let attempts = 0;
-        const maxAttempts = 50; // 最多等待 5 秒
-        
-        while (!window.supabase && attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        
-        if (!window.supabase) {
-            throw new Error('Supabase 載入失敗。\n\n可能原因：\n1. 網絡連接問題\n2. Supabase 庫未正確載入\n\n請重新整理頁面後再試。');
-        }
-        
-        // 檢查 Supabase auth 是否存在
-        if (!window.supabase.auth || !window.supabase.auth.signInWithOAuth) {
-            throw new Error('Supabase 認證功能不可用。\n\n可能原因：\n1. Supabase 版本不相容\n2. 認證功能未啟用\n\n請聯絡網站管理員檢查 Supabase 配置。');
-        }
-        
-        console.log('開始 Google 登入流程...');
-        
-        // 獲取當前域名用於回調
-        const currentDomain = window.location.origin;
-        
-        // 使用 Supabase 處理 Google 登入
-        const { data, error } = await window.supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${currentDomain}/auth-callback.html`,
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent',
-                }
-            }
-        });
-
-        if (error) {
-            console.error('Google OAuth 錯誤:', error);
-            
-            // 提供更友善的錯誤訊息
-            let errorMessage = error.message || 'Google 登入失敗';
-            
-            if (errorMessage.includes('not enabled')) {
-                errorMessage = 'Google 登入功能尚未啟用。\n\n請聯絡網站管理員在 Supabase 後台啟用 Google OAuth 提供商。';
-            }
-            
-            throw new Error(errorMessage);
-        }
-        
-        console.log('Google OAuth 重定向中...');
-        
-    } catch (error) {
-        console.error('Google login error:', error);
-        alert(`Google 登入失敗：\n${error.message}`);
-    }
-}
-

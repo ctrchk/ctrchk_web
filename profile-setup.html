@@ -152,9 +152,7 @@
         <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/main.js"></script>
-    <script src="/js/supabase-config.js"></script>
     <script>
         // 等待所有東西載入完成
         document.addEventListener('DOMContentLoaded', function() {
@@ -185,6 +183,16 @@
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
+                // 從 localStorage 取得已登入的用戶資料
+                const storedUser = localStorage.getItem('user');
+                if (!storedUser) {
+                    alert('用戶未登入，請先登入。');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const currentUser = JSON.parse(storedUser);
+                
                 const formData = new FormData(form);
                 const profileData = {};
                 
@@ -193,29 +201,21 @@
                 });
                 
                 try {
-                    // 檢查 Supabase 是否已載入
-                    if (!window.supabase) {
-                        throw new Error('Supabase 尚未載入完成，請稍後再試');
-                    }
-                    
-                    // 獲取當前用戶
-                    const { data: { user } } = await window.supabase.auth.getUser();
-                    
-                    if (!user) {
-                        throw new Error('用戶未登入');
-                    }
-                    
                     // 準備更新數據
                     const updateData = {
-                        google_id: user.id,
-                        email: user.email,
+                        user_id: currentUser.id,
+                        email: currentUser.email,
                         ...profileData
                     };
                     
                     // 調用後端 API 更新數據庫
+                    const token = localStorage.getItem('accessToken');
                     const response = await fetch('/api/update-profile', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        },
                         body: JSON.stringify(updateData)
                     });
                     
@@ -225,15 +225,10 @@
                         throw new Error(result.message || '更新失敗');
                     }
                     
-                    // 同時更新 Supabase 用戶元數據
-                    await window.supabase.auth.updateUser({
-                        data: {
-                            ...profileData,
-                            user_role: 'senior',
-                            profile_completed: true,
-                            profile_completion_date: new Date().toISOString()
-                        }
-                    });
+                    // 更新 localStorage 中的用戶資料
+                    currentUser.user_role = 'senior';
+                    currentUser.profile_completed = true;
+                    localStorage.setItem('user', JSON.stringify(currentUser));
                     
                     alert('恭喜！您已成功升級為高級用戶！');
                     window.location.href = '/dashboard.html';

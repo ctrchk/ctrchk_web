@@ -1,5 +1,5 @@
 // /api/getHistory.js
-import { sql } from '@vercel/postgres';
+import { query } from './db.js';
 import jwt from 'jsonwebtoken';
 
 // 這是一個通用的中介軟體函數，用於驗證 Token
@@ -34,12 +34,10 @@ export default async function handler(req, res) {
   // 2. 驗證通過，userData 包含 { userId, email, role }
   if (req.method === 'GET') {
     try {
-      const { rows } = await sql`
-        SELECT id, ride_date, distance_km 
-        FROM cycling_history 
-        WHERE user_id = ${userData.userId}
-        ORDER BY ride_date DESC
-      `;
+      const { rows } = await query(
+        'SELECT id, ride_date, distance_km FROM cycling_history WHERE user_id = $1 ORDER BY ride_date DESC',
+        [userData.userId]
+      );
       return res.status(200).json(rows);
     } catch (error) {
       console.error(error);

@@ -36,89 +36,13 @@
         <p>請稍候，我們正在驗證您的身份</p>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/js/supabase-config.js"></script>
     <script>
-        window.addEventListener('load', async () => {
-            try {
-                // 等待 Supabase 初始化完成
-                let attempts = 0;
-                const maxAttempts = 50;
-                
-                while (!window.supabase && attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    attempts++;
-                }
-                
-                if (!window.supabase) {
-                    throw new Error('Supabase 載入超時');
-                }
-                
-                console.log('處理 OAuth 回調...');
-                
-                // 處理 OAuth 回調
-                const { data, error } = await window.supabase.auth.getSession();
-                
-                if (error) {
-                    console.error('Auth callback error:', error);
-                    alert('登入失敗，請重試');
-                    window.location.href = '/login.html';
-                    return;
-                }
-
-                if (data.session) {
-                    // 用戶成功登入
-                    const user = data.session.user;
-                    console.log('用戶登入成功:', user.email);
-                    
-                    // 檢查是否為新用戶（第一次登入）
-                    const isNewUser = !user.user_metadata?.has_registered;
-                    
-                    if (isNewUser) {
-                        // 新用戶，創建數據庫記錄並設為初級用戶
-                        try {
-                            const response = await fetch('/api/google-auth', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    google_id: user.id,
-                                    email: user.email,
-                                    full_name: user.user_metadata?.full_name || user.user_metadata?.name || ''
-                                })
-                            });
-                            
-                            if (!response.ok) {
-                                console.error('Failed to create user in database');
-                            }
-                        } catch (error) {
-                            console.error('Error creating user:', error);
-                        }
-                        
-                        // 更新 Supabase 元數據
-                        await window.supabase.auth.updateUser({
-                            data: { 
-                                has_registered: true,
-                                user_role: 'junior', // 初級用戶
-                                registration_date: new Date().toISOString()
-                            }
-                        });
-                        
-                        alert('歡迎加入 CTRC HK！請補充您的資料以升級為高級會員獲得完整功能。');
-                        window.location.href = '/profile-setup.html'; // 資料補充頁面
-                    } else {
-                        // 現有用戶，直接跳轉到儀表板
-                        window.location.href = '/dashboard.html';
-                    }
-                } else {
-                    // 沒有 session，跳轉回登入頁面
-                    console.log('沒有找到 session');
-                    window.location.href = '/login.html';
-                }
-            } catch (error) {
-                console.error('Callback processing error:', error);
-                alert('登入處理失敗，請重試');
-                window.location.href = '/login.html';
-            }
+        // auth-callback.html 現在只用於舊版 Supabase OAuth 重定向的回退
+        // 新版 Google 登入使用 GIS（彈出視窗模式），不需要此頁面
+        // 如果有人訪問此頁面，自動跳轉到登入頁面
+        window.addEventListener('load', function() {
+            console.log('auth-callback: 已跳轉至登入頁面');
+            window.location.href = '/login.html';
         });
     </script>
 </body>
