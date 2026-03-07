@@ -129,14 +129,20 @@
                     <div class="form-section">
                         <h3><i class="fas fa-map-marker-alt"></i> 地區偏好</h3>
                         <div class="form-group">
-                            <label for="preferred-area">主要騎行地區 *</label>
-                            <select id="preferred-area" name="preferred_area" required>
-                                <option value="">請選擇</option>
-                                <option value="kowloon">九龍區</option>
-                                <option value="hong-kong">香港島</option>
-                                <option value="new-territories">新界區</option>
-                                <option value="all">全港</option>
-                            </select>
+                            <label>主要騎行地區（可多選） *</label>
+                            <div class="area-checkboxes" id="preferred-area-checkboxes" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:0.5em; margin-top:0.5em;">
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="港島海濱"> 港島海濱</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="九龍東"> 九龍東</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="將軍澳"> 將軍澳</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="沙田區"> 沙田區</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="大埔區"> 大埔區</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="北區"> 北區</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="元朗/天水圍"> 元朗/天水圍</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="屯門"> 屯門</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="荃灣"> 荃灣</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="離島/其他"> 離島/其他</label>
+                                <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="香港以外"> 香港以外</label>
+                            </div>
                         </div>
                     </div>
 
@@ -149,7 +155,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
 
     <script src="/js/main.js"></script>
@@ -159,15 +165,18 @@
             // 更新進度條
             function updateProgress() {
                 const form = document.getElementById('profile-setup-form');
-                const inputs = form.querySelectorAll('input[required], select[required]');
+                const requiredInputs = form.querySelectorAll('input[required], select[required]');
+                const hasAreaChecked = form.querySelectorAll('input[name="preferred_area"]:checked').length > 0;
                 let filledCount = 0;
                 
-                inputs.forEach(input => {
+                requiredInputs.forEach(input => {
                     if (input.value.trim()) filledCount++;
                 });
-                
-                const progress = (filledCount / inputs.length) * 100;
-                document.getElementById('progress-fill').style.width = progress + '%';
+                if (hasAreaChecked) filledCount++;
+
+                const totalRequired = requiredInputs.length + 1; // +1 for area checkboxes
+                const progress = (filledCount / totalRequired) * 100;
+                document.getElementById('progress-fill').style.width = Math.min(progress, 100) + '%';
             }
 
             // 監聽表單變化
@@ -193,12 +202,24 @@
 
                 const currentUser = JSON.parse(storedUser);
                 
+                // 獲取並驗證所選騎行地區
+                const selectedAreas = Array.from(
+                    form.querySelectorAll('input[name="preferred_area"]:checked')
+                ).map(cb => cb.value);
+                if (selectedAreas.length === 0) {
+                    alert('請至少選擇一個主要騎行地區。');
+                    return;
+                }
+                
                 const formData = new FormData(form);
                 const profileData = {};
                 
                 formData.forEach((value, key) => {
-                    profileData[key] = value;
+                    if (key !== 'preferred_area') {
+                        profileData[key] = value;
+                    }
                 });
+                profileData.preferred_area = selectedAreas.join(',');
                 
                 try {
                     // 準備更新數據

@@ -50,6 +50,22 @@ function updateNavUI() {
         dashboardBtn.style.display = 'inline-block';
         logoutBtn.style.display = 'inline-block';
         
+        // 顯示歡迎用戶名
+        const navWelcome = document.getElementById('nav-welcome-name');
+        if (navWelcome) {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                try {
+                    const user = JSON.parse(userData);
+                    const name = user.full_name || user.email || '';
+                    navWelcome.textContent = name ? `👤 ${name}` : '';
+                    navWelcome.style.display = name ? 'inline' : 'none';
+                } catch (e) {
+                    navWelcome.style.display = 'none';
+                }
+            }
+        }
+        
         // 幫登出按鈕綁定點擊事件
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -60,6 +76,8 @@ function updateNavUI() {
         loginBtn.style.display = 'inline-block';
         dashboardBtn.style.display = 'none';
         logoutBtn.style.display = 'none';
+        const navWelcome = document.getElementById('nav-welcome-name');
+        if (navWelcome) navWelcome.style.display = 'none';
     }
 }
 
@@ -490,15 +508,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.title = `香港城市運輸單車 - ${route.alias || route.id}`;
                 let gpxButtonsHtml = '';
                 if (route.gpx && route.gpx.length > 0) {
-                    gpxButtonsHtml = `
-                        <div class="gpx-download-container">
-                            ${route.gpx.map(gpxFile => `
-                                <a href="gpx/${gpxFile.file}" download="${gpxFile.file}" class="gpx-download-button">
-                                    ${gpxFile.label} <i class="fas fa-download"></i>
-                                </a>
-                            `).join('')}
-                        </div>
-                    `;
+                    // 檢查用戶是否為高級會員
+                    const isSenior = (() => {
+                        try {
+                            const userData = localStorage.getItem('user');
+                            if (!userData) return false;
+                            const user = JSON.parse(userData);
+                            return user.user_role === 'senior' || user.role === 'senior';
+                        } catch (e) { return false; }
+                    })();
+
+                    if (isSenior) {
+                        gpxButtonsHtml = `
+                            <div class="gpx-download-container">
+                                ${route.gpx.map(gpxFile => `
+                                    <a href="gpx/${gpxFile.file}" download="${gpxFile.file}" class="gpx-download-button">
+                                        ${gpxFile.label} <i class="fas fa-download"></i>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        const isLoggedInUser = !!localStorage.getItem('accessToken');
+                        const lockMsg = isLoggedInUser
+                            ? '升級為高級會員以下載 GPX 路線文件'
+                            : '登入並成為高級會員以下載 GPX 路線文件';
+                        gpxButtonsHtml = `
+                            <div class="gpx-download-container">
+                                <div class="gpx-locked-notice" style="background:#f5f5f5; border:1px solid #ddd; border-radius:8px; padding:1em; text-align:center; margin-top:1em;">
+                                    <i class="fas fa-lock" style="color:#999; font-size:1.5em; display:block; margin-bottom:0.5em;"></i>
+                                    <p style="color:#666; margin:0 0 0.8em;">${lockMsg}</p>
+                                    ${isLoggedInUser
+                                        ? `<a href="/profile-setup.html" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">升級高級會員</a>`
+                                        : `<a href="/login.html" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">前往登入</a>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }
                 }
                 routeDetailContainer.innerHTML = `
                     <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">

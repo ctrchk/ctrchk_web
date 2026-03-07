@@ -38,6 +38,15 @@
             <p id="membership-status" style="font-size: 0.9em; color: #666;"></p>
         </section>
 
+        <!-- 電郵未驗證提醒 -->
+        <div id="email-verify-notice" style="display: none; background: #fff3e0; border: 2px solid #ff9800; padding: 1.2em 1.5em; margin: 1em auto; max-width: 800px; border-radius: 8px;">
+            <p style="color: #e65100; margin: 0;">
+                <i class="fas fa-envelope" style="color: #ff9800;"></i>
+                <strong>請驗證你的電子郵件！</strong>
+                我們已向你的電郵發送了驗證連結，請查收並點擊連結以完成驗證。
+            </p>
+        </div>
+
         <div id="upgrade-notice" style="display: none; background: #fff3cd; border: 2px solid #ffc107; padding: 1.5em; margin: 2em auto; max-width: 800px; border-radius: 8px; text-align: center;">
             <h3 style="color: #856404; margin-top: 0;">
                 <i class="fas fa-star" style="color: #ffc107;"></i>
@@ -56,14 +65,14 @@
             
             <div id="admin-section" style="display:none; margin-top: 3em;">
                 <h2>管理員面板</h2>
-                <p>你可以開始管理 Blog 文章了。</p>
-                <a href="/admin/create-post.html" class="cta-button">撰寫新文章</a>
+                <p>你可以管理網站用戶及查看資料。</p>
+                <a href="/admin.html" class="cta-button">前往管理員後台</a>
             </div>
         </section>
     </main>
 
     <footer>
-        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
 
     <script src="/js/main.js"></script>
@@ -103,11 +112,20 @@
                     userRole = user.user_role || user.role || 'junior';
                 }
                 
-                document.getElementById('welcome-email').textContent = `你好, ${user.email}`;
+                const displayName = user.full_name || user.email;
+                document.getElementById('welcome-email').textContent = `你好, ${displayName}`;
+
+                // 顯示電郵未驗證提醒
+                if (user.email_verified === false) {
+                    document.getElementById('email-verify-notice').style.display = 'block';
+                }
                 
                 // Display membership status
                 const statusElement = document.getElementById('membership-status');
-                if (userRole === 'senior') {
+                if (userRole === 'admin') {
+                    statusElement.innerHTML = '<i class="fas fa-shield-alt" style="color: #2c3e50;"></i> 管理員';
+                    statusElement.style.color = '#2c3e50';
+                } else if (userRole === 'senior') {
                     statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffc107;"></i> 高級會員';
                     statusElement.style.color = '#ffc107';
                 } else {
