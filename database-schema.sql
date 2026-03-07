@@ -1,35 +1,17 @@
 -- Database schema for CTRC HK authentication system
--- This script should be run on Vercel Postgres database
+-- This script is idempotent and safe to re-run on an existing database.
+--
+-- Execution order:
+--   1. CREATE TABLE IF NOT EXISTS  — creates tables on a fresh install (no-op if they already exist)
+--   2. ALTER TABLE ADD COLUMN IF NOT EXISTS — adds any columns that are missing from an older schema
+--   3. CREATE INDEX IF NOT EXISTS  — creates any missing indexes
+--
+-- Run this script whenever the schema changes to bring an existing database up to date.
 
--- Update users table to support membership tiers
--- Add columns if they don't exist
-ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role VARCHAR(20) DEFAULT 'junior';
-ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS birthdate DATE;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS experience VARCHAR(20);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS bike_type VARCHAR(20);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_area TEXT; -- 改為 TEXT 支援多選（逗號分隔）
-ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completion_date TIMESTAMP;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
-ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'email'; -- 'email' or 'google'
-ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255); -- Google user ID for OAuth users
-ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;
+-- =========================================================
+-- 1. Create tables (safe to re-run; skipped if tables already exist)
+-- =========================================================
 
--- Add index for better query performance
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(user_role);
-CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
-
--- Add comment to describe user_role values
-COMMENT ON COLUMN users.user_role IS 'User membership tier: junior (initial), senior (completed profile), admin (administrator)';
-COMMENT ON COLUMN users.preferred_area IS 'Comma-separated list of preferred cycling areas';
-
--- If users table doesn''t exist, create it
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -51,7 +33,6 @@ CREATE TABLE IF NOT EXISTS users (
     verification_token_expiry TIMESTAMP
 );
 
--- Ensure cycling_history table exists
 CREATE TABLE IF NOT EXISTS cycling_history (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -61,9 +42,44 @@ CREATE TABLE IF NOT EXISTS cycling_history (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add index for better query performance
+-- =========================================================
+-- 2. Add missing columns to existing tables (migration)
+--    These are no-ops when the column already exists.
+-- =========================================================
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS user_role VARCHAR(20) DEFAULT 'junior';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birthdate DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS experience VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bike_type VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_area TEXT; -- Supports comma-separated list of areas
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completion_date TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'email'; -- 'email' or 'google'
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255); -- Google user ID for OAuth users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;
+
+-- =========================================================
+-- 3. Create indexes (safe to re-run; skipped if they already exist)
+-- =========================================================
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(user_role);
+CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
 CREATE INDEX IF NOT EXISTS idx_cycling_history_user_id ON cycling_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_cycling_history_ride_date ON cycling_history(ride_date);
+
+-- =========================================================
+-- Column descriptions
+-- =========================================================
+
+COMMENT ON COLUMN users.user_role IS 'User membership tier: junior (initial), senior (completed profile), admin (administrator)';
+COMMENT ON COLUMN users.preferred_area IS 'Comma-separated list of preferred cycling areas';
 
 -- =========================================================
 -- 建立管理員帳戶（請修改 email、full_name 和 password_hash）
