@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     // 2. 查詢資料庫是否已有此用戶
     const { rows } = await query(
-      'SELECT id, email, user_role, full_name, profile_completed FROM users WHERE google_id = $1 OR email = $2',
+      'SELECT id, email, user_role, full_name, profile_completed, google_id, email_verified FROM users WHERE google_id = $1 OR email = $2',
       [google_id, email]
     );
 
@@ -62,9 +62,33 @@ export default async function handler(req, res) {
     if (rows.length > 0) {
       user = rows[0];
 
-      // 若用戶原本以 email 方式註冊，補上 google_id
-      if (!rows[0].google_id) {
+      // 若用戶原本以 email 方式註冊，補上 google_id 並標記電郵已驗證
+      // （Google 帳號代表 Google 已驗證此電郵，無需再次驗證）
+      const needsGoogleId    = !rows[0].google_id;
+      const needsVerification = !rows[0].email_verified;
+
+      if (needsGoogleId && needsVerification) {
+        await query(
+          `UPDATE users
+             SET google_id = $1, email_verified = true,
+                 verification_token = NULL, verification_token_expiry = NULL
+           WHERE id = $2`,
+          [google_id, user.id]
+        );
+      } else if (needsGoogleId) {
         await query('UPDATE users SET google_id = $1 WHERE id = $2', [google_id, user.id]);
+      } else if (needsVerification) {
+        await query(
+          `UPDATE users
+             SET email_verified = true,
+                 verification_token = NULL, verification_token_expiry = NULL
+           WHERE id = $1`,
+          [user.id]
+        );
+      }
+
+      if (needsVerification) {
+        user.email_verified = true;
       }
     } else {
       // 3. 新用戶：建立 junior 會員帳號（Google 帳號視為電郵已驗證）

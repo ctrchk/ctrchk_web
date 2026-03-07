@@ -82,10 +82,15 @@ COMMENT ON COLUMN users.user_role IS 'User membership tier: junior (initial), se
 COMMENT ON COLUMN users.preferred_area IS 'Comma-separated list of preferred cycling areas';
 
 -- =========================================================
--- 建立管理員帳戶（請修改 email、full_name 和 password_hash）
--- 使用 bcrypt 加密密碼，salt rounds = 12
--- 請在應用程式啟動後使用管理員後台的「新增管理員」功能建立管理員
--- 或直接執行以下 SQL（先將密碼hash替換為實際hash值）:
--- INSERT INTO users (email, password_hash, user_role, full_name, profile_completed, auth_provider, email_verified)
--- VALUES ('admin@ctrchk.com', '<bcrypt_hash_here>', 'admin', 'CTRC HK 管理員', true, 'email', true);
+-- 管理員帳戶種子資料（使用 Google 登入）
+-- ctrcz9829@gmail.com 預設為管理員，透過 Google OAuth 登入時
+-- google_id 將自動由 api/google-auth.js 補上。
 -- =========================================================
+
+INSERT INTO users (email, user_role, full_name, profile_completed, auth_provider, email_verified)
+VALUES ('ctrcz9829@gmail.com', 'admin', 'CTRC HK 管理員', true, 'google', true)
+ON CONFLICT (email) DO UPDATE
+  SET user_role = 'admin',
+      email_verified = true,
+      profile_completed = true,
+      auth_provider = 'google';
