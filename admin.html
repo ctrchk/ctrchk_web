@@ -331,7 +331,9 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
             document.getElementById(`tab-${tab}`).style.display = 'block';
-            event.target.classList.add('active');
+            // 找到對應的標籤按鈕並標記為活動狀態
+            const btn = document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
+            if (btn) btn.classList.add('active');
         }
 
         async function loadUsers(page = 1) {
@@ -368,13 +370,13 @@
 
         function updateStats(users, total) {
             document.getElementById('stat-total').textContent = total;
+            // 以下統計僅反映當前頁面的用戶，並非全站總計
             const senior = users.filter(u => u.user_role === 'senior').length;
             const junior = users.filter(u => u.user_role === 'junior').length;
             const verified = users.filter(u => u.email_verified).length;
-            // These are just for current page; for accurate totals we'd need separate queries
-            document.getElementById('stat-senior').textContent = senior;
-            document.getElementById('stat-junior').textContent = junior;
-            document.getElementById('stat-verified').textContent = verified;
+            document.getElementById('stat-senior').textContent = `${senior}（本頁）`;
+            document.getElementById('stat-junior').textContent = `${junior}（本頁）`;
+            document.getElementById('stat-verified').textContent = `${verified}（本頁）`;
         }
 
         function renderUsersTable(users) {

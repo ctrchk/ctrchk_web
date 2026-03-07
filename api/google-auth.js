@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     // 2. 查詢資料庫是否已有此用戶
     const { rows } = await query(
-      'SELECT id, email, user_role, profile_completed FROM users WHERE google_id = $1 OR email = $2',
+      'SELECT id, email, user_role, full_name, profile_completed FROM users WHERE google_id = $1 OR email = $2',
       [google_id, email]
     );
 
@@ -67,11 +67,11 @@ export default async function handler(req, res) {
         await query('UPDATE users SET google_id = $1 WHERE id = $2', [google_id, user.id]);
       }
     } else {
-      // 3. 新用戶：建立 junior 會員帳號
+      // 3. 新用戶：建立 junior 會員帳號（Google 帳號視為電郵已驗證）
       const insertResult = await query(
-        `INSERT INTO users (email, google_id, full_name, user_role, auth_provider, profile_completed)
-         VALUES ($1, $2, $3, 'junior', 'google', false)
-         RETURNING id, email, user_role, profile_completed`,
+        `INSERT INTO users (email, google_id, full_name, user_role, auth_provider, profile_completed, email_verified)
+         VALUES ($1, $2, $3, 'junior', 'google', false, true)
+         RETURNING id, email, user_role, full_name, profile_completed`,
         [email, google_id, full_name]
       );
       user = insertResult.rows[0];
@@ -86,8 +86,11 @@ export default async function handler(req, res) {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.user_role },
       JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '7d' }
     );
+
+    // 獲取最新的 full_name
+    const fullNameToReturn = user.full_name || full_name || '';
 
     return res.status(200).json({
       message: rows.length > 0 ? '登入成功' : '已建立新帳號',
@@ -95,8 +98,11 @@ export default async function handler(req, res) {
       user: {
         id: user.id,
         email: user.email,
+        full_name: fullNameToReturn,
         user_role: user.user_role,
-        profile_completed: user.profile_completed
+        role: user.user_role,
+        profile_completed: user.profile_completed,
+        email_verified: true // Google 帳號視為已驗證
       }
     });
 

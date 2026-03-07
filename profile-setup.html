@@ -165,15 +165,18 @@
             // 更新進度條
             function updateProgress() {
                 const form = document.getElementById('profile-setup-form');
-                const inputs = form.querySelectorAll('input[required], select[required]');
+                const requiredInputs = form.querySelectorAll('input[required], select[required]');
+                const hasAreaChecked = form.querySelectorAll('input[name="preferred_area"]:checked').length > 0;
                 let filledCount = 0;
                 
-                inputs.forEach(input => {
+                requiredInputs.forEach(input => {
                     if (input.value.trim()) filledCount++;
                 });
-                
-                const progress = (filledCount / inputs.length) * 100;
-                document.getElementById('progress-fill').style.width = progress + '%';
+                if (hasAreaChecked) filledCount++;
+
+                const totalRequired = requiredInputs.length + 1; // +1 for area checkboxes
+                const progress = (filledCount / totalRequired) * 100;
+                document.getElementById('progress-fill').style.width = Math.min(progress, 100) + '%';
             }
 
             // 監聽表單變化
@@ -199,7 +202,7 @@
 
                 const currentUser = JSON.parse(storedUser);
                 
-                // 驗證至少選擇一個騎行地區
+                // 獲取並驗證所選騎行地區
                 const selectedAreas = Array.from(
                     form.querySelectorAll('input[name="preferred_area"]:checked')
                 ).map(cb => cb.value);
@@ -210,11 +213,6 @@
                 
                 const formData = new FormData(form);
                 const profileData = {};
-                
-                // 處理多選地區
-                const selectedAreas = Array.from(
-                    form.querySelectorAll('input[name="preferred_area"]:checked')
-                ).map(cb => cb.value);
                 
                 formData.forEach((value, key) => {
                     if (key !== 'preferred_area') {

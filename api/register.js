@@ -2,6 +2,7 @@
 import { query } from './db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { sendVerificationEmail } from './email.js';
 
 export default async function handler(req, res) {
@@ -66,7 +67,6 @@ export default async function handler(req, res) {
     const password_hash = bcrypt.hashSync(password, salt);
 
     // 產生電郵驗證 token
-    const crypto = await import('crypto');
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24小時後過期
 

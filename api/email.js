@@ -92,7 +92,7 @@ export async function sendWelcomeEmail(toEmail, name) {
             </ul>
           </div>
           <div style="text-align: center; margin: 2em 0;">
-            <a href="https://ctrchk.com/dashboard" 
+            <a href="${process.env.BASE_URL || 'https://ctrchk.com'}/dashboard" 
                style="background-color: #04D93C; color: white; padding: 0.8em 2em; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-block;">
               前往我的帳戶
             </a>

@@ -122,7 +122,10 @@
                 
                 // Display membership status
                 const statusElement = document.getElementById('membership-status');
-                if (userRole === 'senior') {
+                if (userRole === 'admin') {
+                    statusElement.innerHTML = '<i class="fas fa-shield-alt" style="color: #2c3e50;"></i> 管理員';
+                    statusElement.style.color = '#2c3e50';
+                } else if (userRole === 'senior') {
                     statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffc107;"></i> 高級會員';
                     statusElement.style.color = '#ffc107';
                 } else {
