@@ -5,6 +5,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.1",
     "pg": "^8.13.3"
   },
   "name": "ctrchk",

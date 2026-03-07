@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員後台 - CTRC HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .admin-container {
+            max-width: 1100px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+        .admin-header-bar {
+            background: linear-gradient(to right, #2c3e50, #3d5166);
+            color: white;
+            padding: 1.5em 2em;
+            border-radius: 8px;
+            margin-bottom: 2em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .admin-header-bar h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1em;
+            margin-bottom: 2em;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5em;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .stat-card .stat-num {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #04D93C;
+            display: block;
+        }
+        .stat-card .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .search-bar {
+            display: flex;
+            gap: 1em;
+            margin-bottom: 1.5em;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 0.8em;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .search-bar button {
+            padding: 0.8em 1.5em;
+            background: #04D93C;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .users-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 0.8em 1em;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        .users-table td {
+            padding: 0.8em 1em;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9em;
+            vertical-align: middle;
+        }
+        .users-table tr:hover { background: #f9f9f9; }
+        .role-badge {
+            display: inline-block;
+            padding: 0.25em 0.7em;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .role-admin { background: #2c3e50; color: white; }
+        .role-senior { background: #ffc107; color: #333; }
+        .role-junior { background: #e0e0e0; color: #555; }
+        .verified-badge { color: #04D93C; }
+        .unverified-badge { color: #e74c3c; }
+        .action-btn {
+            padding: 0.3em 0.8em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-right: 0.3em;
+        }
+        .btn-promote { background: #ffc107; color: #333; }
+        .btn-demote { background: #e0e0e0; color: #555; }
+        .btn-admin { background: #2c3e50; color: white; }
+        .btn-delete { background: #e74c3c; color: white; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5em;
+            margin-top: 1.5em;
+        }
+        .pagination button {
+            padding: 0.5em 1em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+        }
+        .pagination button.active {
+            background: #04D93C;
+            color: white;
+            border-color: #04D93C;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5em;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-btn {
+            padding: 0.8em 1.5em;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1em;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-btn.active {
+            color: #04D93C;
+            border-bottom-color: #04D93C;
+            font-weight: bold;
+        }
+        #create-admin-section {
+            background: white;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            max-width: 500px;
+        }
+        #create-admin-section h3 { color: #2c3e50; margin-top: 0; }
+        #create-admin-section .form-group { margin-bottom: 1em; }
+        #create-admin-section label { display: block; margin-bottom: 0.3em; font-weight: bold; }
+        #create-admin-section input {
+            width: 100%;
+            padding: 0.7em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        .loading { text-align: center; padding: 3em; color: #666; }
+        #access-denied {
+            text-align: center;
+            padding: 4em 2em;
+        }
+    </style>
+
+    <script>
+        // 頁面守衛 - 檢查是否為管理員
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert('請先登入管理員帳戶。');
+                window.location.replace('/login.html');
+                throw new Error('Unauthorized');
+            }
+            // JWT decode (不驗證簽名，只讀取 payload)
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.role !== 'admin') {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        document.getElementById('admin-content').style.display = 'none';
+                        document.getElementById('access-denied').style.display = 'block';
+                    });
+                }
+            } catch (e) {
+                alert('Token 無效，請重新登入。');
+                window.location.replace('/login.html');
+                throw new Error('Invalid token');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <div id="access-denied" style="display:none;">
+            <i class="fas fa-ban" style="font-size:4em; color:#e74c3c;"></i>
+            <h2>權限不足</h2>
+            <p>你沒有管理員權限，無法訪問此頁面。</p>
+            <a href="/dashboard.html" class="cta-button">返回儀表板</a>
+        </div>
+
+        <div id="admin-content" class="admin-container">
+            <div class="admin-header-bar">
+                <h1><i class="fas fa-shield-alt"></i> 管理員後台</h1>
+                <span id="admin-user-info" style="font-size:0.9em; opacity:0.8;"></span>
+            </div>
+
+            <!-- 統計卡片 -->
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-total">-</span>
+                    <span class="stat-label">總用戶數</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-senior">-</span>
+                    <span class="stat-label">高級會員</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-junior">-</span>
+                    <span class="stat-label">初級會員</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-verified">-</span>
+                    <span class="stat-label">已驗證電郵</span>
+                </div>
+            </div>
+
+            <!-- 標籤頁 -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="showTab('users')">
+                    <i class="fas fa-users"></i> 用戶管理
+                </button>
+                <button class="tab-btn" onclick="showTab('create-admin')">
+                    <i class="fas fa-user-plus"></i> 新增管理員
+                </button>
+            </div>
+
+            <!-- 用戶管理標籤 -->
+            <div id="tab-users">
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="搜尋電郵或姓名...">
+                    <button onclick="loadUsers(1)"><i class="fas fa-search"></i> 搜尋</button>
+                </div>
+
+                <div id="users-loading" class="loading">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入用戶資料...</p>
+                </div>
+
+                <div id="users-table-container" style="display:none;">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>電郵</th>
+                                <th>姓名</th>
+                                <th>角色</th>
+                                <th>電郵驗證</th>
+                                <th>騎行次數</th>
+                                <th>總里程</th>
+                                <th>登入方式</th>
+                                <th>註冊日期</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody"></tbody>
+                    </table>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+
+            <!-- 新增管理員標籤 -->
+            <div id="tab-create-admin" style="display:none;">
+                <div id="create-admin-section">
+                    <h3><i class="fas fa-user-shield"></i> 新增管理員帳戶</h3>
+                    <p style="color:#666; font-size:0.9em;">管理員帳戶只能通過此頁面創建，不可透過一般註冊頁面創建。</p>
+                    <form id="create-admin-form">
+                        <div class="form-group">
+                            <label>電子郵件 *</label>
+                            <input type="email" id="admin-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label>姓名 *</label>
+                            <input type="text" id="admin-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>密碼 *（至少 12 個字元）</label>
+                            <input type="password" id="admin-password" required minlength="12">
+                        </div>
+                        <div class="form-group">
+                            <label>確認密碼 *</label>
+                            <input type="password" id="admin-confirm-password" required minlength="12">
+                        </div>
+                        <button type="submit" class="cta-button" style="width:100%;">
+                            <i class="fas fa-plus"></i> 建立管理員帳戶
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/login.js"></script>
+    <script>
+        let currentPage = 1;
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+            document.getElementById(`tab-${tab}`).style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        async function loadUsers(page = 1) {
+            currentPage = page;
+            const search = document.getElementById('search-input').value.trim();
+            const token = localStorage.getItem('accessToken');
+
+            document.getElementById('users-loading').style.display = 'block';
+            document.getElementById('users-table-container').style.display = 'none';
+
+            try {
+                const url = `/api/admin-users?page=${page}&limit=20${search ? '&search=' + encodeURIComponent(search) : ''}`;
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || '載入失敗');
+                }
+
+                const data = await response.json();
+                renderUsersTable(data.users);
+                renderPagination(data.pagination);
+                updateStats(data.users, data.pagination.total);
+
+                document.getElementById('users-loading').style.display = 'none';
+                document.getElementById('users-table-container').style.display = 'block';
+
+            } catch (err) {
+                document.getElementById('users-loading').innerHTML = `<p style="color:red;">載入失敗: ${err.message}</p>`;
+            }
+        }
+
+        function updateStats(users, total) {
+            document.getElementById('stat-total').textContent = total;
+            const senior = users.filter(u => u.user_role === 'senior').length;
+            const junior = users.filter(u => u.user_role === 'junior').length;
+            const verified = users.filter(u => u.email_verified).length;
+            // These are just for current page; for accurate totals we'd need separate queries
+            document.getElementById('stat-senior').textContent = senior;
+            document.getElementById('stat-junior').textContent = junior;
+            document.getElementById('stat-verified').textContent = verified;
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = users.map(user => {
+                const roleClass = user.user_role === 'admin' ? 'role-admin' : 
+                                  user.user_role === 'senior' ? 'role-senior' : 'role-junior';
+                const roleLabel = user.user_role === 'admin' ? '管理員' :
+                                  user.user_role === 'senior' ? '高級會員' : '初級會員';
+                const verifiedHtml = user.email_verified 
+                    ? '<i class="fas fa-check-circle verified-badge" title="已驗證"></i>'
+                    : '<i class="fas fa-times-circle unverified-badge" title="未驗證"></i>';
+                const date = user.created_at ? new Date(user.created_at).toLocaleDateString('zh-HK') : '-';
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${escapeHtml(user.email)}</td>
+                        <td>${escapeHtml(user.full_name || '-')}</td>
+                        <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
+                        <td>${verifiedHtml}</td>
+                        <td>${user.ride_count || 0}</td>
+                        <td>${parseFloat(user.total_distance || 0).toFixed(1)} km</td>
+                        <td>${user.auth_provider || 'email'}</td>
+                        <td>${date}</td>
+                        <td>
+                            ${user.user_role !== 'senior' && user.user_role !== 'admin' 
+                                ? `<button class="action-btn btn-promote" onclick="setRole(${user.id}, 'senior')">升級</button>` 
+                                : ''}
+                            ${user.user_role === 'senior' 
+                                ? `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">降級</button>` 
+                                : ''}
+                            ${user.user_role !== 'admin' 
+                                ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'admin')">設管理員</button>` 
+                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'senior')">移除管理員</button>`}
+                            <button class="action-btn btn-delete" onclick="deleteUser(${user.id}, '${escapeHtml(user.email)}')">刪除</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPagination(pagination) {
+            const container = document.getElementById('pagination');
+            const { page, totalPages } = pagination;
+            let html = '';
+            
+            if (page > 1) html += `<button onclick="loadUsers(${page - 1})">上一頁</button>`;
+            for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+                html += `<button class="${i === page ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
+            }
+            if (page < totalPages) html += `<button onclick="loadUsers(${page + 1})">下一頁</button>`;
+            
+            container.innerHTML = html;
+        }
+
+        async function setRole(userId, newRole) {
+            const roleLabel = newRole === 'admin' ? '管理員' : newRole === 'senior' ? '高級會員' : '初級會員';
+            if (!confirm(`確定要將此用戶設為「${roleLabel}」嗎？`)) return;
+
+            const token = localStorage.getItem('accessToken');
+            try {
+                const response = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'set_role', user_id: userId, new_role: newRole })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    loadUsers(currentPage);
+                } else {
+                    alert('操作失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
+            }
+        }
+
+        async function deleteUser(userId, email) {
+            if (!confirm(`確定要永久刪除用戶「${email}」嗎？此操作無法復原！`)) return;
+
+            const token = localStorage.getItem('accessToken');
+            try {
+                const response = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'delete_user', user_id: userId })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    loadUsers(currentPage);
+                } else {
+                    alert('刪除失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // 建立管理員帳戶
+        document.addEventListener('DOMContentLoaded', function() {
+            // 顯示管理員資訊
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                document.getElementById('admin-user-info').textContent = 
+                    `管理員: ${user.full_name || user.email}`;
+            }
+
+            // 載入用戶列表
+            loadUsers(1);
+
+            // 建立管理員表單
+            document.getElementById('create-admin-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('admin-email').value;
+                const name = document.getElementById('admin-name').value;
+                const password = document.getElementById('admin-password').value;
+                const confirmPw = document.getElementById('admin-confirm-password').value;
+
+                if (password !== confirmPw) {
+                    alert('兩次輸入的密碼不一致。');
+                    return;
+                }
+
+                const token = localStorage.getItem('accessToken');
+                try {
+                    const response = await fetch('/api/admin-create', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, full_name: name, password, role: 'admin' })
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        alert(`管理員帳戶「${email}」已成功建立！`);
+                        document.getElementById('create-admin-form').reset();
+                        loadUsers(1);
+                    } else {
+                        alert('建立失敗: ' + data.message);
+                    }
+                } catch (err) {
+                    alert('錯誤: ' + err.message);
+                }
+            });
+        });
+
+        // 搜尋按 Enter 鍵
+        document.addEventListener('keyup', function(e) {
+            if (e.target.id === 'search-input' && e.key === 'Enter') {
+                loadUsers(1);
+            }
+        });
+    </script>
+</body>
+</html>

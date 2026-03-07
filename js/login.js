@@ -106,14 +106,32 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- 註冊處理 ---
 async function handleRegister(e) {
     e.preventDefault();
-    const email = document.getElementById('register-email').value;
+    const email = document.getElementById('register-email').value.trim();
     const password = document.getElementById('register-password').value;
-    const full_name = document.getElementById('register-fullname').value;
-    const phone = document.getElementById('register-phone').value;
-    const experience = document.getElementById('register-experience').value;
-    const preferred_area = document.getElementById('register-area').value;
-    const birthdate = document.getElementById('register-birthdate').value;
-    const bike_type = document.getElementById('register-biketype').value;
+    const confirmPassword = document.getElementById('register-confirm-password').value;
+    const full_name = document.getElementById('register-fullname').value.trim();
+    const phone = document.getElementById('register-phone')?.value.trim() || '';
+    const experience = document.getElementById('register-experience')?.value || '';
+    const birthdate = document.getElementById('register-birthdate')?.value || '';
+    const bike_type = document.getElementById('register-biketype')?.value || '';
+
+    // 驗證密碼一致
+    if (password !== confirmPassword) {
+        alert('兩次輸入的密碼不一致，請重新輸入。');
+        return;
+    }
+
+    // 獲取多選地區
+    const areaCheckboxes = document.querySelectorAll('input[name="preferred_area"]:checked');
+    const preferred_area = Array.from(areaCheckboxes).map(cb => cb.value).join(',');
+
+    // 檢查高級會員欄位是否部分填寫
+    const premiumValues = [phone, experience, preferred_area];
+    const premiumFilled = premiumValues.filter(v => v.trim() !== '');
+    if (premiumFilled.length > 0 && premiumFilled.length < 3) {
+        alert('如需升級為高級會員，請填齊所有高級會員資料（電話、騎行經驗、騎行地區）。\n\n若暫時不升級，請清空所有高級會員欄位。');
+        return;
+    }
 
     try {
         const response = await fetch('/api/register', {
@@ -123,19 +141,26 @@ async function handleRegister(e) {
                 email, 
                 password, 
                 full_name, 
-                phone, 
-                experience, 
-                preferred_area,
-                birthdate,
-                bike_type
+                phone: phone || undefined, 
+                experience: experience || undefined, 
+                preferred_area: preferred_area || undefined,
+                birthdate: birthdate || undefined,
+                bike_type: bike_type || undefined
             }),
         });
 
         const data = await response.json();
 
         if (response.ok) {
-            alert('註冊成功！您已成為高級會員。將跳轉至登入頁面。');
-            window.location.href = '/login.html';
+            // 自動登入
+            if (data.token && data.user) {
+                localStorage.setItem('accessToken', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
+
+            const successMsg = data.message || '註冊成功！';
+            alert(successMsg + '\n\n正在跳轉至你的帳戶...');
+            window.location.href = '/dashboard.html';
         } else {
             let errorMessage = data.message || '註冊失敗';
             
@@ -184,7 +209,8 @@ async function handleLogin(e) {
             localStorage.setItem('accessToken', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             
-            alert('登入成功！');
+            const name = data.user?.full_name || data.user?.email || '用戶';
+            alert(`歡迎回來，${name}！`);
             window.location.href = '/dashboard.html';
         } else {
             throw new Error(data.message || '登入失敗');

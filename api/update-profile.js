@@ -20,8 +20,18 @@ export default async function handler(req, res) {
     } = req.body;
 
     // Validate required fields
-    if (!full_name || !phone || !experience || !preferred_area) {
-      return res.status(400).json({ message: 'All required profile fields must be filled' });
+    if (!full_name || !experience || !preferred_area) {
+      return res.status(400).json({ message: 'All required profile fields must be filled (name, experience, area)' });
+    }
+
+    // 處理多選地區（可能是陣列或逗號分隔字串）
+    let preferredAreaStr = '';
+    if (preferred_area) {
+      if (Array.isArray(preferred_area)) {
+        preferredAreaStr = preferred_area.join(',');
+      } else {
+        preferredAreaStr = String(preferred_area).trim();
+      }
     }
 
     // Need either user_id, google_id, or email to identify the user
@@ -48,7 +58,7 @@ export default async function handler(req, res) {
             preferred_area, birthdate, bike_type, profile_completed,
             profile_completion_date, auth_provider
           ) VALUES ($1, $2, 'senior', $3, $4, $5, $6, $7, $8, true, NOW(), 'google')`,
-          [email, google_id, full_name, phone, experience, preferred_area,
+          [email, google_id, full_name, phone || null, experience, preferredAreaStr,
            birthdate || null, bike_type || null]
         );
         
@@ -69,7 +79,7 @@ export default async function handler(req, res) {
            preferred_area = $4, birthdate = $5, bike_type = $6,
            profile_completed = true, profile_completion_date = NOW()
        WHERE id = $7`,
-      [full_name, phone, experience, preferred_area,
+      [full_name, phone || null, experience, preferredAreaStr,
        birthdate || null, bike_type || null, userId]
     );
 

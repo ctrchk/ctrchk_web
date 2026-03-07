@@ -36,10 +36,10 @@ export default async function handler(req, res) {
       { 
         userId: user.id, 
         email: user.email,
-        role: user.role 
+        role: user.user_role || user.role
       },
       JWT_SECRET,
-      { expiresIn: '1d' } // Token 有效期 1 天
+      { expiresIn: '7d' } // Token 有效期 7 天
     );
 
     return res.status(200).json({
@@ -48,7 +48,11 @@ export default async function handler(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        full_name: user.full_name || '',
+        user_role: user.user_role || 'junior',
+        role: user.user_role || user.role,
+        profile_completed: user.profile_completed || false,
+        email_verified: user.email_verified || false
       }
     });
 

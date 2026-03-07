@@ -6,75 +6,216 @@
     <title>註冊 - CTRC HK</title>
     <link rel="stylesheet" href="/css/main.css"> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .premium-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            color: #ffc107;
+            margin-left: 0.4em;
+        }
+        .premium-tooltip .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #2c3e50;
+            color: #fff;
+            text-align: left;
+            padding: 0.8em 1em;
+            border-radius: 8px;
+            position: absolute;
+            z-index: 9999;
+            width: 240px;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 130%;
+            font-size: 0.85em;
+            line-height: 1.6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .premium-tooltip .tooltip-content::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: #2c3e50;
+        }
+        .premium-tooltip:hover .tooltip-content,
+        .premium-tooltip:focus .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+        .form-section-box {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5em;
+            margin-bottom: 1.5em;
+        }
+        .form-section-box h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 0.4em;
+        }
+        .area-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.5em;
+            margin-top: 0.5em;
+        }
+        .area-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 0.4em;
+            font-weight: normal;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+        .area-checkboxes input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+        .form-group input[type="password"],
+        .form-group input[type="email"],
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group input[type="date"],
+        .form-group select {
+            width: 100%;
+            padding: 0.8em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        .optional-badge {
+            font-size: 0.75em;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 0.2em 0.6em;
+            border-radius: 20px;
+            margin-left: 0.5em;
+            font-weight: normal;
+        }
+        .premium-section-notice {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 1em;
+            padding: 0.8em;
+            background: #fffde7;
+            border-left: 3px solid #ffc107;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
 
     <main>
         <section class="content animated-element">
-            <div class="contact-form-container" style="max-width: 500px; margin: 2em auto;">
+            <div class="contact-form-container" style="max-width: 550px; margin: 2em auto;">
                 <h2 style="text-align: left;">建立新帳戶</h2>
                 
                 <form id="register-form">
-                    <div class="form-group">
-                        <label for="register-email">電子郵件 *</label>
-                        <input type="email" id="register-email" name="email" required>
+                    <!-- 基本資料（必填） -->
+                    <div class="form-section-box">
+                        <h3><i class="fas fa-user" style="color:#04D93C;"></i> 基本資料 <span style="color:#e74c3c; font-size:0.85em;">（必填）</span></h3>
+                        <div class="form-group">
+                            <label for="register-email">電子郵件 *</label>
+                            <input type="email" id="register-email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">密碼 *</label>
+                            <input type="password" id="register-password" name="password" required minlength="8">
+                            <small>（至少 8 個字元）</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-confirm-password">確認密碼 *</label>
+                            <input type="password" id="register-confirm-password" name="confirm_password" required minlength="8">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-fullname">姓名 *</label>
+                            <input type="text" id="register-fullname" name="full_name" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="register-password">密碼 *</label>
-                        <input type="password" id="register-password" name="password" required minlength="8">
-                        <small>（至少 8 個字元）</small>
+
+                    <!-- 高級會員資料（選填） -->
+                    <div class="form-section-box">
+                        <h3>
+                            <i class="fas fa-star" style="color:#ffc107;"></i>
+                            高級會員資料
+                            <span class="optional-badge">選填</span>
+                            <span class="premium-tooltip" tabindex="0" aria-label="高級會員特權說明">
+                                <i class="fas fa-question-circle"></i>
+                                <span class="tooltip-content">
+                                    <strong>🌟 高級會員特權：</strong><br>
+                                    ✅ 下載 GPX 路線文件<br>
+                                    ✅ 查看完整路線詳情<br>
+                                    ✅ 個人騎行歷史紀錄<br>
+                                    ✅ 參與社群專屬活動<br>
+                                    ✅ 優先收到新路線通知
+                                </span>
+                            </span>
+                        </h3>
+                        <div class="premium-section-notice">
+                            <i class="fas fa-info-circle"></i>
+                            此部分為<strong>選填</strong>。若填寫其中一項，則需填齊所有項目。亦可在註冊後登入「我的帳戶」補填以升級。
+                        </div>
+                        <div class="form-group">
+                            <label for="register-phone">聯絡電話</label>
+                            <input type="tel" id="register-phone" name="phone">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-experience">騎行經驗</label>
+                            <select id="register-experience" name="experience">
+                                <option value="">請選擇</option>
+                                <option value="beginner">初學者 (1年以下)</option>
+                                <option value="intermediate">中級 (1-3年)</option>
+                                <option value="advanced">高級 (3-5年)</option>
+                                <option value="expert">專家級 (5年以上)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>主要騎行地區（可多選）</label>
+                            <div class="area-checkboxes" id="register-area-checkboxes">
+                                <label><input type="checkbox" name="preferred_area" value="港島海濱"> 港島海濱</label>
+                                <label><input type="checkbox" name="preferred_area" value="九龍東"> 九龍東</label>
+                                <label><input type="checkbox" name="preferred_area" value="將軍澳"> 將軍澳</label>
+                                <label><input type="checkbox" name="preferred_area" value="沙田區"> 沙田區</label>
+                                <label><input type="checkbox" name="preferred_area" value="大埔區"> 大埔區</label>
+                                <label><input type="checkbox" name="preferred_area" value="北區"> 北區</label>
+                                <label><input type="checkbox" name="preferred_area" value="元朗/天水圍"> 元朗/天水圍</label>
+                                <label><input type="checkbox" name="preferred_area" value="屯門"> 屯門</label>
+                                <label><input type="checkbox" name="preferred_area" value="荃灣"> 荃灣</label>
+                                <label><input type="checkbox" name="preferred_area" value="離島/其他"> 離島/其他</label>
+                                <label><input type="checkbox" name="preferred_area" value="香港以外"> 香港以外</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-birthdate">出生日期</label>
+                            <input type="date" id="register-birthdate" name="birthdate">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-biketype">主要使用單車類型</label>
+                            <select id="register-biketype" name="bike_type">
+                                <option value="">請選擇</option>
+                                <option value="road">公路車</option>
+                                <option value="mountain">山地車</option>
+                                <option value="hybrid">混合車</option>
+                                <option value="electric">電動單車</option>
+                                <option value="folding">摺疊車</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="register-fullname">姓名 *</label>
-                        <input type="text" id="register-fullname" name="full_name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-phone">聯絡電話 *</label>
-                        <input type="tel" id="register-phone" name="phone" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-experience">騎行經驗 *</label>
-                        <select id="register-experience" name="experience" required>
-                            <option value="">請選擇</option>
-                            <option value="beginner">初學者 (1年以下)</option>
-                            <option value="intermediate">中級 (1-3年)</option>
-                            <option value="advanced">高級 (3年以上)</option>
-                            <option value="expert">專家級 (5年以上)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-area">主要騎行地區 *</label>
-                        <select id="register-area" name="preferred_area" required>
-                            <option value="">請選擇</option>
-                            <option value="kowloon">九龍區</option>
-                            <option value="hong-kong">香港島</option>
-                            <option value="new-territories">新界區</option>
-                            <option value="all">全港</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-birthdate">出生日期（選填）</label>
-                        <input type="date" id="register-birthdate" name="birthdate">
-                    </div>
-                    <div class="form-group">
-                        <label for="register-biketype">主要使用單車類型（選填）</label>
-                        <select id="register-biketype" name="bike_type">
-                            <option value="">請選擇</option>
-                            <option value="road">公路車</option>
-                            <option value="mountain">山地車</option>
-                            <option value="hybrid">混合車</option>
-                            <option value="electric">電動單車</option>
-                            <option value="folding">摺疊車</option>
-                        </select>
-                    </div>
-                    <div style="background: #e8f5e9; padding: 1em; border-radius: 4px; margin-bottom: 1em;">
-                        <p style="margin: 0; font-size: 0.9em; color: #2e7d32;">
-                            <i class="fas fa-star" style="color: #ffc107;"></i>
-                            註冊後即刻成為<strong>高級會員</strong>，享受完整功能！
-                        </p>
-                    </div>
-                    <button type="submit" class="cta-button">註冊並成為高級會員</button>
+
+                    <button type="submit" class="cta-button" style="width:100%;">立即註冊</button>
                 </form>
 
                 <p style="margin-top: 1.5em;">
@@ -85,7 +226,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
     </footer>
 
     <script src="/js/main.js"></script>

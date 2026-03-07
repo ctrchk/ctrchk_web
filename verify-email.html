@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電郵驗證 - CTRC HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="content animated-element">
+            <div class="contact-form-container" style="max-width: 500px; margin: 3em auto; text-align: center;">
+                <div id="verify-loading">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 3em; color: #04D93C;"></i>
+                    <h2>正在驗證您的電郵...</h2>
+                </div>
+                <div id="verify-success" style="display:none;">
+                    <i class="fas fa-check-circle" style="font-size: 4em; color: #04D93C; margin-bottom: 0.5em;"></i>
+                    <h2 style="color: #2c3e50;">電郵驗證成功！</h2>
+                    <p style="color: #555;">您的電子郵件已成功驗證。歡迎加入 CTRC HK！</p>
+                    <a href="/dashboard.html" class="cta-button" style="display: inline-block; margin-top: 1.5em;">
+                        前往我的帳戶
+                    </a>
+                </div>
+                <div id="verify-error" style="display:none;">
+                    <i class="fas fa-times-circle" style="font-size: 4em; color: #e74c3c; margin-bottom: 0.5em;"></i>
+                    <h2 style="color: #2c3e50;">驗證失敗</h2>
+                    <p id="verify-error-msg" style="color: #555;"></p>
+                    <a href="/dashboard.html" class="cta-button" style="display: inline-block; margin-top: 1.5em;">
+                        前往我的帳戶
+                    </a>
+                    <br>
+                    <a href="/resend-verification.html" style="color: #04D93C; margin-top: 1em; display: inline-block;">
+                        重新發送驗證郵件
+                    </a>
+                </div>
+                <div id="verify-already" style="display:none;">
+                    <i class="fas fa-check-circle" style="font-size: 4em; color: #ffc107; margin-bottom: 0.5em;"></i>
+                    <h2 style="color: #2c3e50;">電郵已驗證</h2>
+                    <p style="color: #555;">您的電郵已成功驗證，無需重複驗證。</p>
+                    <a href="/dashboard.html" class="cta-button" style="display: inline-block; margin-top: 1.5em;">
+                        前往我的帳戶
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+
+            const loadingEl = document.getElementById('verify-loading');
+            const successEl = document.getElementById('verify-success');
+            const errorEl = document.getElementById('verify-error');
+            const alreadyEl = document.getElementById('verify-already');
+
+            if (!token) {
+                loadingEl.style.display = 'none';
+                document.getElementById('verify-error-msg').textContent = '缺少驗證 token，請使用電郵中的驗證連結。';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/verify-email?token=${encodeURIComponent(token)}`);
+                const data = await response.json();
+                loadingEl.style.display = 'none';
+
+                if (response.ok) {
+                    if (data.message && data.message.includes('無需重複')) {
+                        alreadyEl.style.display = 'block';
+                    } else {
+                        successEl.style.display = 'block';
+                        // 更新本地用戶資料
+                        const userData = localStorage.getItem('user');
+                        if (userData) {
+                            try {
+                                const user = JSON.parse(userData);
+                                user.email_verified = true;
+                                localStorage.setItem('user', JSON.stringify(user));
+                            } catch (e) {}
+                        }
+                    }
+                } else {
+                    document.getElementById('verify-error-msg').textContent = data.message || '驗證失敗，請稍後再試。';
+                    errorEl.style.display = 'block';
+                }
+            } catch (err) {
+                loadingEl.style.display = 'none';
+                document.getElementById('verify-error-msg').textContent = '網路錯誤，請稍後再試。';
+                errorEl.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
