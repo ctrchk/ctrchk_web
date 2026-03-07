@@ -168,7 +168,7 @@
             try {
                 updateDebugInfo(`🔄 Fetching ${dataType}...`);
                 
-                const response = await fetch(`/api/${dataType}?lang=en`);
+                const response = await fetch(`/api/weather/${dataType}?lang=en`);
                 
                 if (!response.ok) {
                     throw new Error(`API error! status: ${response.status}`);

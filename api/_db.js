@@ -1,4 +1,4 @@
-// /api/db.js
+// /api/_db.js
 // 資料庫連接工具 — 支援 Vercel Postgres 或直接 Neon 連接字串
 //
 // 環境變數優先順序：

@@ -1,6 +1,6 @@
 // /api/admin-users.js
 // 管理員 API - 查看用戶列表
-import { query } from './db.js';
+import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
 
 /**

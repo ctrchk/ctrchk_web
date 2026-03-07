@@ -1,6 +1,6 @@
 // /api/admin-create.js
 // 創建管理員帳戶（僅管理員可操作）
-import { query } from './db.js';
+import { query } from './_db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 

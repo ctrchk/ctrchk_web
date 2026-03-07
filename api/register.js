@@ -1,9 +1,9 @@
 // /api/register.js
-import { query } from './db.js';
+import { query } from './_db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendVerificationEmail } from './email.js';
+import { sendVerificationEmail } from './_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
