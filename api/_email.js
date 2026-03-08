@@ -108,3 +108,46 @@ export async function sendWelcomeEmail(toEmail, name) {
 
   return transporter.sendMail(mailOptions);
 }
+
+/**
+ * 發送密碼重設郵件
+ * @param {string} toEmail - 收件人電郵
+ * @param {string} name - 收件人姓名
+ * @param {string} token - 密碼重設 token
+ */
+export async function sendPasswordResetEmail(toEmail, name, token) {
+  const transporter = createTransporter();
+  const baseUrl = process.env.BASE_URL || 'https://ctrchk.com';
+  const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+
+  const mailOptions = {
+    from: `"CTRC HK" <${process.env.SMTP_USER || process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: '【CTRC HK】密碼重設請求',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 2em; background: #f9f9f9;">
+        <div style="background: linear-gradient(to right, #BFE340, #04D93C); padding: 1.5em; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 1.5em;">香港城市運輸單車 CTRC HK</h1>
+        </div>
+        <div style="background: white; padding: 2em; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h2 style="color: #2c3e50;">你好，${name || toEmail}！</h2>
+          <p>我們收到了重設您帳戶密碼的請求。請點擊以下按鈕設置新密碼：</p>
+          <div style="text-align: center; margin: 2em 0;">
+            <a href="${resetUrl}"
+               style="background-color: #04D93C; color: white; padding: 0.8em 2em; border-radius: 50px; text-decoration: none; font-weight: bold; display: inline-block;">
+              🔑 重設我的密碼
+            </a>
+          </div>
+          <p style="color: #666; font-size: 0.9em;">此連結將於 1 小時後失效。</p>
+          <p style="color: #666; font-size: 0.9em;">如果您沒有申請重設密碼，請忽略此郵件，您的帳戶密碼將保持不變。</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 1.5em 0;">
+          <p style="color: #999; font-size: 0.8em; text-align: center;">
+            &copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.
+          </p>
+        </div>
+      </div>
+    `
+  };
+
+  return transporter.sendMail(mailOptions);
+}

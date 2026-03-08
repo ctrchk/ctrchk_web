@@ -21,6 +21,11 @@ export default async function handler(req, res) {
 
     const user = rows[0];
 
+    // 若帳號沒有設定密碼（例如純 Google 帳號），拒絕密碼登入
+    if (!user.password_hash) {
+      return res.status(401).json({ message: '此帳號使用 Google 登入，請改用 Google 登入按鈕。' });
+    }
+
     const isPasswordMatch = bcrypt.compareSync(password, user.password_hash);
     if (!isPasswordMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
