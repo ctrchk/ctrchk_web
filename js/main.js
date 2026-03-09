@@ -818,12 +818,8 @@ document.addEventListener('DOMContentLoaded', function() {
             initRouteDetailPage();
         }
     }
-    if (document.getElementById('blog-list-container')) {
-        initBlogListPage();
-    }
-    if (document.getElementById('blog-post-container')) {
-        initBlogPostPage();
-    }
+    // 網誌頁面現已改為從 /api/blog 動態載入，不再使用硬編碼資料
+    // blog.html 和 blog_post.html 包含自己的 API 載入邏輯
 
     initAnimatedElements();
 

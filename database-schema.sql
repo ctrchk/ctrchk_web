@@ -281,8 +281,6 @@ CREATE TABLE IF NOT EXISTS forum_reactions (
   UNIQUE(reply_id, user_id)
 );
 
-ALTER TABLE forum_topics ADD COLUMN IF NOT EXISTS tag VARCHAR(20);
-
 CREATE INDEX IF NOT EXISTS idx_forum_topics_tag     ON forum_topics(tag);
 CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
 CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
