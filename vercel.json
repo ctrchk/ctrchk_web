@@ -10,6 +10,26 @@
       "source": "/(.*)\\.html$",
       "destination": "/$1",
       "permanent": true
+    },
+    {
+      "source": "/en/about",
+      "destination": "/en#about",
+      "permanent": false
+    },
+    {
+      "source": "/en/routes",
+      "destination": "/en#routes",
+      "permanent": false
+    },
+    {
+      "source": "/en/membership",
+      "destination": "/en#membership",
+      "permanent": false
+    },
+    {
+      "source": "/en/contact",
+      "destination": "/contact",
+      "permanent": false
     }
   ]
 }

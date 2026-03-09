@@ -59,6 +59,9 @@ export default async function handler(req, res) {
 
     let user;
 
+    // 已知管理員電郵清單（與 database-schema.sql 種子資料同步）
+    const ADMIN_EMAILS = ['ctrcz9829@gmail.com'];
+
     if (rows.length > 0) {
       user = rows[0];
 
@@ -66,6 +69,8 @@ export default async function handler(req, res) {
       // （Google 帳號代表 Google 已驗證此電郵，無需再次驗證）
       const needsGoogleId    = !rows[0].google_id;
       const needsVerification = !rows[0].email_verified;
+      // 若該電郵屬於已知管理員但資料庫角色尚未設為 admin，自動修正
+      const needsAdminRole   = ADMIN_EMAILS.includes(email.toLowerCase()) && rows[0].user_role !== 'admin';
 
       if (needsGoogleId && needsVerification) {
         await query(
@@ -87,16 +92,22 @@ export default async function handler(req, res) {
         );
       }
 
+      if (needsAdminRole) {
+        await query('UPDATE users SET user_role = $1 WHERE id = $2', ['admin', user.id]);
+        user.user_role = 'admin';
+      }
+
       if (needsVerification) {
         user.email_verified = true;
       }
     } else {
-      // 3. 新用戶：建立 junior 會員帳號（Google 帳號視為電郵已驗證）
+      // 3. 新用戶：建立帳號，管理員電郵直接設為 admin，其餘為 junior
+      const newRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'junior';
       const insertResult = await query(
         `INSERT INTO users (email, google_id, full_name, user_role, auth_provider, profile_completed, email_verified)
-         VALUES ($1, $2, $3, 'junior', 'google', false, true)
+         VALUES ($1, $2, $3, $4, 'google', false, true)
          RETURNING id, email, user_role, full_name, profile_completed`,
-        [email, google_id, full_name]
+        [email, google_id, full_name, newRole]
       );
       user = insertResult.rows[0];
     }
