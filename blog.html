@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港城市運輸單車 CTRC HK - 網誌</title>
+    <title>香港城市運輸單車 - 網誌</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -108,14 +108,59 @@
     </main>
 
     <footer>
-         <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
      </footer>
 
     <script src="/js/main.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             if (typeof loadSharedComponents === 'function') {
                 loadSharedComponents();
+            }
+
+            const container = document.getElementById('blog-list-container');
+
+            try {
+                const resp = await fetch('/api/blog');
+                if (!resp.ok) throw new Error('載入失敗');
+                const data = await resp.json();
+                const posts = data.posts || [];
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p style="text-align:center;">目前還沒有文章。</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                posts.forEach(post => {
+                    const postElement = document.createElement('article');
+                    postElement.className = 'blog-post-summary animated-element';
+                    const imgHtml = post.image_url
+                        ? `<div class="post-summary-image"><a href="/blog_post?id=${post.id}"><img src="${escHtml(post.image_url)}" alt="${escHtml(post.title)}"></a></div>`
+                        : '';
+                    postElement.innerHTML = `
+                        ${imgHtml}
+                        <div class="post-summary-content">
+                            <h2><a href="/blog_post?id=${post.id}">${escHtml(post.title)}</a></h2>
+                            <div class="post-meta-summary">
+                                <span><i class="fas fa-user"></i> ${escHtml(post.author_name || '管理員')}</span>
+                                <span><i class="fas fa-calendar-alt"></i> ${new Date(post.created_at).toLocaleDateString('zh-HK')}</span>
+                            </div>
+                            <p class="post-excerpt">${escHtml(post.summary || '')}</p>
+                            <a href="/blog_post?id=${post.id}" class="read-more-link">閱讀更多 &rarr;</a>
+                        </div>
+                    `;
+                    container.appendChild(postElement);
+                });
+
+                if (typeof initAnimatedElements === 'function') initAnimatedElements();
+            } catch (err) {
+                container.innerHTML = `<p style="text-align:center; color:#e74c3c;">載入文章失敗：${err.message}</p>`;
+            }
+
+            function escHtml(str) {
+                if (!str) return '';
+                return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
             }
         });
     </script>

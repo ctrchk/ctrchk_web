@@ -1,6 +1,6 @@
 {
-  "name": "香港城市運輸單車 CTRC HK",
-  "short_name": "CTRC HK",
+  "name": "香港城市運輸單車",
+  "short_name": "城市運輸單車",
   "description": "香港城市運輸單車路線資訊、GPX 導航及騎行記錄平台",
   "start_url": "/",
   "scope": "/",
@@ -28,7 +28,7 @@
       "src": "/images/900.jpg",
       "sizes": "400x300",
       "type": "image/jpeg",
-      "label": "CTRC HK 路線地圖"
+      "label": "城市運輸單車路線地圖"
     }
   ],
   "categories": ["sports", "navigation", "travel"],

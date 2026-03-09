@@ -229,3 +229,60 @@ ON CONFLICT (email) DO UPDATE
   SET user_role = 'admin',
       email_verified = true,
       profile_completed = true;
+
+-- =========================================================
+-- 網誌文章（管理員可透過後台編寫）
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id         SERIAL PRIMARY KEY,
+  title      VARCHAR(255) NOT NULL,
+  summary    TEXT,
+  content    TEXT,
+  image_url  TEXT,
+  author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  published  BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(published);
+
+-- =========================================================
+-- 討論區（論壇）
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS forum_topics (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  title      VARCHAR(100) NOT NULL,
+  content    TEXT NOT NULL,
+  tag        VARCHAR(20),   -- '路線討論' | '車站討論' | '地點討論' | NULL
+  view_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS forum_replies (
+  id         SERIAL PRIMARY KEY,
+  topic_id   INTEGER REFERENCES forum_topics(id) ON DELETE CASCADE,
+  user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  content    TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS forum_reactions (
+  id            SERIAL PRIMARY KEY,
+  reply_id      INTEGER REFERENCES forum_replies(id) ON DELETE CASCADE,
+  user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  reaction_type VARCHAR(20) DEFAULT 'like',
+  created_at    TIMESTAMP DEFAULT NOW(),
+  UNIQUE(reply_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_forum_topics_tag     ON forum_topics(tag);
+CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
+CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
+
+COMMENT ON COLUMN forum_topics.tag IS 'Discussion category: 路線討論 | 車站討論 | 地點討論 | NULL (no tag)';

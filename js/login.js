@@ -72,7 +72,7 @@ async function handleGoogleCredentialResponse(response) {
             localStorage.setItem('user', JSON.stringify(data.user));
 
             if (!data.user.profile_completed) {
-                alert('歡迎加入 CTRC HK！\n請補充您的資料以升級為高級會員，享受完整功能。');
+                alert('歡迎加入城市運輸單車！\n請補充您的資料以升級為高級會員，享受完整功能。');
                 window.location.href = '/profile-setup.html';
             } else {
                 alert('Google 登入成功！');

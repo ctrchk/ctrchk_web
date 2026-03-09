@@ -97,11 +97,51 @@ const schemaReady = pool.query(`
     title_zh VARCHAR(50),
     title_en VARCHAR(50)
   );
+  CREATE TABLE IF NOT EXISTS blog_posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    summary TEXT,
+    content TEXT,
+    image_url TEXT,
+    author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    published BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS forum_topics (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    tag VARCHAR(20),
+    view_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS forum_replies (
+    id SERIAL PRIMARY KEY,
+    topic_id INTEGER REFERENCES forum_topics(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS forum_reactions (
+    id SERIAL PRIMARY KEY,
+    reply_id INTEGER REFERENCES forum_replies(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    reaction_type VARCHAR(20) DEFAULT 'like',
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(reply_id, user_id)
+  );
   CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
   CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
   CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token);
   CREATE INDEX IF NOT EXISTS idx_cycling_history_user_id ON cycling_history(user_id);
   CREATE INDEX IF NOT EXISTS idx_cycling_history_route_id ON cycling_history(route_id);
+  CREATE INDEX IF NOT EXISTS idx_forum_topics_tag ON forum_topics(tag);
+  CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
+  CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
+  CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
 `).catch(err => {
   // 記錄遷移錯誤但不阻斷後續查詢：
   // 若 production 資料庫已手動套用過 schema，後續查詢仍可正常執行。
