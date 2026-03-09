@@ -31,12 +31,21 @@
     // 避免重複顯示（已安裝或用戶已關閉）
     if (localStorage.getItem('pwa-install-dismissed')) return;
 
+    // URL path is the primary signal; HTML lang attribute is a fallback
+    const isEn = window.location.pathname.startsWith('/en') ||
+                 document.documentElement.lang === 'en';
+    const bannerText = isEn
+      ? '📱 Add CTRC HK to your home screen for an app experience!'
+      : '📱 將 CTRC HK 加至主屏幕，享受 App 體驗！';
+    const installLabel = isEn ? 'Install' : '安裝';
+    const dismissLabel = isEn ? 'Close' : '關閉';
+
     const banner = document.createElement('div');
     banner.id = 'pwa-install-banner';
     banner.innerHTML = `
-      <span>📱 將 CTRC HK 加至主屏幕，享受 App 體驗！</span>
-      <button id="pwa-install-btn" style="margin-left:1em;padding:0.3em 1em;background:#BFE340;color:#2c3e50;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">安裝</button>
-      <button id="pwa-install-dismiss" style="margin-left:0.5em;background:transparent;border:none;cursor:pointer;color:#ccc;font-size:1.2em;" aria-label="關閉">✕</button>
+      <span>${bannerText}</span>
+      <button id="pwa-install-btn" style="margin-left:1em;padding:0.3em 1em;background:#BFE340;color:#2c3e50;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${installLabel}</button>
+      <button id="pwa-install-dismiss" style="margin-left:0.5em;background:transparent;border:none;cursor:pointer;color:#ccc;font-size:1.2em;" aria-label="${dismissLabel}">✕</button>
     `;
     Object.assign(banner.style, {
       position: 'fixed',
