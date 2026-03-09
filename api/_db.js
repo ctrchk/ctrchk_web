@@ -67,9 +67,41 @@ const schemaReady = pool.query(`
     route_name VARCHAR(255),
     created_at TIMESTAMP DEFAULT NOW()
   );
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS route_id VARCHAR(20);
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS start_time TIMESTAMP;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS end_time TIMESTAMP;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS avg_speed_kmh DECIMAL(5,2);
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_reached JSONB;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS xp_earned INTEGER DEFAULT 0;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS gpx_track TEXT;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web';
+  CREATE TABLE IF NOT EXISTS user_game_profile (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    level INTEGER NOT NULL DEFAULT 1,
+    xp INTEGER NOT NULL DEFAULT 0,
+    coins INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS routes_config (
+    route_id VARCHAR(20) PRIMARY KEY,
+    unlock_level INTEGER NOT NULL DEFAULT 1,
+    unlock_cost INTEGER,
+    xp_reward INTEGER NOT NULL DEFAULT 100,
+    is_special BOOLEAN DEFAULT FALSE
+  );
+  CREATE TABLE IF NOT EXISTS level_config (
+    level INTEGER PRIMARY KEY,
+    xp_required INTEGER NOT NULL,
+    coins_reward INTEGER DEFAULT 0,
+    title_zh VARCHAR(50),
+    title_en VARCHAR(50)
+  );
   CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
   CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
   CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token);
+  CREATE INDEX IF NOT EXISTS idx_cycling_history_user_id ON cycling_history(user_id);
+  CREATE INDEX IF NOT EXISTS idx_cycling_history_route_id ON cycling_history(route_id);
 `).catch(err => {
   // 記錄遷移錯誤但不阻斷後續查詢：
   // 若 production 資料庫已手動套用過 schema，後續查詢仍可正常執行。

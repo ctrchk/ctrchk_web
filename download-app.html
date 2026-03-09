@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CTRC HK">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下載 CTRC HK App - 加至主屏幕教學</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .app-card {
+            max-width: 720px;
+            margin: 1.5em auto;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+            padding: 2em;
+        }
+        .app-card h3 {
+            color: #2c3e50;
+            border-left: 4px solid #BFE340;
+            padding-left: 0.6em;
+            margin-top: 0;
+        }
+        .step-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .step-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1em;
+            padding: 0.8em 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .step-list li:last-child { border-bottom: none; }
+        .step-num {
+            min-width: 2em;
+            height: 2em;
+            border-radius: 50%;
+            background: #2c3e50;
+            color: #BFE340;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .step-text strong { display: block; margin-bottom: 0.2em; color: #2c3e50; }
+        .step-text p { margin: 0; color: #555; font-size: 0.93em; }
+        .platform-tabs {
+            display: flex;
+            gap: 0.8em;
+            margin-bottom: 1.2em;
+            flex-wrap: wrap;
+        }
+        .platform-tab {
+            padding: 0.5em 1.2em;
+            border-radius: 20px;
+            border: 2px solid #2c3e50;
+            cursor: pointer;
+            font-weight: bold;
+            background: #fff;
+            color: #2c3e50;
+            transition: background 0.2s, color 0.2s;
+        }
+        .platform-tab.active {
+            background: #2c3e50;
+            color: #BFE340;
+        }
+        .platform-content { display: none; }
+        .platform-content.active { display: block; }
+        .highlight-box {
+            background: linear-gradient(135deg, #2c3e50, #3d5166);
+            color: #fff;
+            border-radius: 12px;
+            padding: 1.5em 2em;
+            text-align: center;
+            margin-bottom: 1.5em;
+        }
+        .highlight-box img {
+            width: 80px; height: 80px; border-radius: 18px; margin-bottom: 0.6em;
+        }
+        .highlight-box h2 { margin: 0.2em 0; color: #BFE340; }
+        .highlight-box p { margin: 0.4em 0 0; opacity: 0.85; }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1em;
+            margin-top: 1em;
+        }
+        .feature-item {
+            background: #f8f8f8;
+            border-radius: 10px;
+            padding: 1em;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .feature-item i { font-size: 1.8em; color: #2c3e50; margin-bottom: 0.4em; display: block; }
+        .install-btn {
+            display: inline-block;
+            background: #BFE340;
+            color: #2c3e50;
+            font-weight: bold;
+            padding: 0.8em 2em;
+            border-radius: 8px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 0.5em;
+        }
+        .install-btn:hover { background: #aad020; }
+        #install-btn-wrap { display: none; }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="hero">
+            <h1>📱 下載 CTRC HK App</h1>
+            <p>無需應用商店，直接安裝到手機主屏幕</p>
+        </section>
+
+        <section class="content animated-element">
+
+            <!-- App 介紹 -->
+            <div class="highlight-box" style="max-width: 720px; margin: 0 auto 1.5em;">
+                <img src="/images/icon-192.png" alt="CTRC HK App 圖標">
+                <h2>CTRC HK</h2>
+                <p>香港城市運輸單車 · 路線導航 · 騎行記錄 · 遊戲化挑戰</p>
+            </div>
+
+            <!-- 一鍵安裝按鈕（瀏覽器支援時顯示） -->
+            <div id="install-btn-wrap" style="text-align: center; margin-bottom: 1.5em;">
+                <button id="install-btn" class="install-btn">
+                    <i class="fas fa-download"></i> 立即安裝 App
+                </button>
+            </div>
+
+            <!-- App 功能 -->
+            <div class="app-card">
+                <h3><i class="fas fa-star" style="color:#BFE340;"></i> App 功能特色</h3>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <i class="fas fa-route"></i>
+                        路線導航
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        GPS 定位
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-history"></i>
+                        騎行記錄
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-trophy"></i>
+                        遊戲化升級
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-wifi"></i>
+                        離線支援
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-bell"></i>
+                        報站提示
+                    </div>
+                </div>
+            </div>
+
+            <!-- 安裝教學 -->
+            <div class="app-card">
+                <h3><i class="fas fa-book-open" style="color:#BFE340;"></i> 安裝教學</h3>
+                <p style="color:#555; font-size:0.95em; margin-top:0;">CTRC HK 是 <strong>PWA（漸進式 Web App）</strong>，不需要 App Store，直接從瀏覽器安裝到主屏幕即可使用！</p>
+
+                <div class="platform-tabs">
+                    <button class="platform-tab active" onclick="switchTab('ios', event)">
+                        <i class="fab fa-apple"></i> iPhone / iPad
+                    </button>
+                    <button class="platform-tab" onclick="switchTab('android', event)">
+                        <i class="fab fa-android"></i> Android
+                    </button>
+                </div>
+
+                <!-- iOS 教學 -->
+                <div id="tab-ios" class="platform-content active">
+                    <ul class="step-list">
+                        <li>
+                            <span class="step-num">1</span>
+                            <div class="step-text">
+                                <strong>使用 Safari 瀏覽器開啟本網站</strong>
+                                <p>請確保你使用的是 <strong>Safari</strong>（其他瀏覽器如 Chrome 在 iOS 上不支援安裝 PWA）。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">2</span>
+                            <div class="step-text">
+                                <strong>點擊底部分享按鈕</strong>
+                                <p>點擊 Safari 底部工具欄中間的 <strong>分享 <i class="fas fa-share-square"></i></strong> 按鈕（方形加箭頭圖示）。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">3</span>
+                            <div class="step-text">
+                                <strong>選擇「加入主畫面」</strong>
+                                <p>在彈出的分享選單中，向下滑找到並點擊 <strong>「加入主畫面」</strong>（Add to Home Screen）。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">4</span>
+                            <div class="step-text">
+                                <strong>確認名稱並點擊「加入」</strong>
+                                <p>確認 App 名稱為「CTRC HK」，然後點擊右上角 <strong>「加入」</strong> 按鈕。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">5</span>
+                            <div class="step-text">
+                                <strong>完成！從主屏幕啟動 App</strong>
+                                <p>主屏幕上會出現 CTRC HK 圖示，點擊即可以 App 模式全螢幕運行。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Android 教學 -->
+                <div id="tab-android" class="platform-content">
+                    <ul class="step-list">
+                        <li>
+                            <span class="step-num">1</span>
+                            <div class="step-text">
+                                <strong>使用 Chrome 瀏覽器開啟本網站</strong>
+                                <p>Android 建議使用 <strong>Google Chrome</strong> 以獲得最佳 PWA 安裝體驗。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">2</span>
+                            <div class="step-text">
+                                <strong>等待安裝提示或點擊選單</strong>
+                                <p>Chrome 通常會自動彈出「將 CTRC HK 加至主屏幕」的安裝橫幅。若沒有，請點擊右上角 <strong>⋮ 選單</strong>。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">3</span>
+                            <div class="step-text">
+                                <strong>選擇「加至主屏幕」或「安裝應用程式」</strong>
+                                <p>在選單中找到 <strong>「加至主屏幕」</strong> 或 <strong>「安裝應用程式」</strong>（Install app）並點擊。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">4</span>
+                            <div class="step-text">
+                                <strong>點擊「安裝」確認</strong>
+                                <p>在彈出的對話框中點擊 <strong>「安裝」</strong>（Install）確認安裝。</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="step-num">5</span>
+                            <div class="step-text">
+                                <strong>完成！從主屏幕啟動 App</strong>
+                                <p>主屏幕上會出現 CTRC HK 圖示，點擊即可以 App 模式全螢幕運行。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 常見問題 -->
+            <div class="app-card">
+                <h3><i class="fas fa-question-circle" style="color:#BFE340;"></i> 常見問題</h3>
+                <ul class="step-list">
+                    <li>
+                        <span class="step-num"><i class="fas fa-question" style="font-size:0.85em;"></i></span>
+                        <div class="step-text">
+                            <strong>App 需要付費嗎？</strong>
+                            <p>完全免費！CTRC HK PWA App 無需任何費用。</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num"><i class="fas fa-question" style="font-size:0.85em;"></i></span>
+                        <div class="step-text">
+                            <strong>網頁和 App 有什麼分別？</strong>
+                            <p>網頁版和 App 版使用相同的功能。App 版以全螢幕顯示，並有底部導航欄，另外支援部分離線功能。</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num"><i class="fas fa-question" style="font-size:0.85em;"></i></span>
+                        <div class="step-text">
+                            <strong>安裝後需要更新嗎？</strong>
+                            <p>不需要手動更新！每次開啟 App 時會自動同步最新版本。</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num"><i class="fas fa-question" style="font-size:0.85em;"></i></span>
+                        <div class="step-text">
+                            <strong>App 會佔用多少儲存空間？</strong>
+                            <p>PWA App 非常輕量，僅佔用少量緩存空間（通常不超過幾 MB）。</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script>
+        function switchTab(platform, event) {
+            document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.platform-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + platform).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // 一鍵安裝按鈕（支援 beforeinstallprompt 的瀏覽器）
+        let installPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            installPrompt = e;
+            document.getElementById('install-btn-wrap').style.display = 'block';
+        });
+        document.getElementById('install-btn').addEventListener('click', async () => {
+            if (!installPrompt) return;
+            installPrompt.prompt();
+            const { outcome } = await installPrompt.userChoice;
+            installPrompt = null;
+            if (outcome === 'accepted') {
+                document.getElementById('install-btn-wrap').style.display = 'none';
+            }
+        });
+    </script>
+    <script src="/js/pwa.js"></script>
+</body>
+</html>
