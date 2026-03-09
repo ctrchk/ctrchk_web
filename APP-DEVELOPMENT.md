@@ -53,6 +53,16 @@ PWA 就是把現有網頁「升級」為可安裝的 App，不需要從零開始
 - **豐富騎行歷史顯示** — 顯示路線名稱、距離、時間、速度、XP
 - **資料庫架構** — 新增遊戲進度表、路線解鎖表、等級配置表
 
+#### ✅ 已完成（第二階段 PWA 優化）
+
+- **App Logo 修正** — `header.html`、`en/header.html` 及 `manifest.json` 的 Logo 改為使用 `icon-192.png`，不再使用 `bike-commute.jpg`
+- **App 模式隱藏頂部導航欄** — `header.html` / `en/header.html` 加上 `web-only` CSS 類別，在 App 安裝模式下自動隱藏頂部 Header，避免冗餘佔位
+- **增強底部導航欄** (`js/pwa.js`) — 新增「更多」(More) 第五頁籤，點擊後展開底部浮層，包含：關於我們、會員計劃、部落格、聯絡我們、下載 App 教學、語言切換，以及動態顯示登入／登出按鈕
+- **修復儀表板騎行歷史 Server 500** (`api/_db.js`) — 自動遷移腳本新增 `cycling_history` 擴充欄位（`route_id`、`duration_minutes`、`avg_speed_kmh`、`stops_reached`、`xp_earned`、`source`），以及 `user_game_profile`、`routes_config`、`level_config` 遊戲化資料表，確保 `GET /api/getHistory` 不因缺少欄位而返回 500 錯誤
+- **修復「我的」頁面底部導航消失** (`profile.html`) — 補充缺少的 `<script src="/js/pwa.js"></script>`，確保 App 模式下「我的」頁面正常顯示底部導航欄
+- **新增「下載 App」頁面** (`download-app.html`) — 獨立安裝教學頁面，含 iOS (Safari) 與 Android (Chrome) 分步教學、功能介紹、常見問題，以及支援一鍵安裝按鈕（`beforeinstallprompt` API）
+- **網頁導航新增「下載 App」連結** — `header.html` / `en/header.html` 導航欄加入醒目的「下載 App」／「Get App」連結，方便網頁用戶找到安裝教學
+
 #### 🔜 下一步（第二階段）
 
 - 路線解鎖系統（按等級逐步開放路線）
