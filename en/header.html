@@ -1,7 +1,3 @@
-<div class="lang-bar">
-    <i class="fas fa-globe"></i>
-    <a href="/" id="lang-zh-link">繁體中文</a> | <strong>English</strong>
-</div>
 <header>
     <div class="logo">
         <a href="/en/index" style="color: white; text-decoration: none;"><i class="fas fa-bicycle"></i> City Transport Cycle (CTRC) HK</a>
@@ -18,5 +14,16 @@
         <a id="nav-welcome-name" href="/profile" style="display:none; color:#BFE340; font-weight:bold; margin-left:0.5em; white-space:nowrap; font-size:0.9em; text-decoration:none;"></a>
         <a id="nav-dashboard-btn" href="/dashboard" class="cta-button nav-cta-btn" style="display: none; background-color: #04D93C;">Dashboard</a>
         <a id="nav-logout-btn" href="#" class="cta-button nav-cta-btn" style="display: none; background-color: #e74c3c;">Sign Out</a>
+
+        <div class="lang-switcher" id="lang-switcher">
+            <button class="lang-switcher-btn" id="lang-switcher-btn" aria-label="Select language">
+                <i class="fas fa-globe"></i>
+                <span class="lang-label">EN</span>
+            </button>
+            <div class="lang-dropdown" id="lang-dropdown">
+                <a href="/" id="lang-zh-link"><i class="fas fa-language"></i> 繁體中文</a>
+                <a href="#" class="active-lang"><i class="fas fa-check"></i> English</a>
+            </div>
+        </div>
     </nav>
 </header>

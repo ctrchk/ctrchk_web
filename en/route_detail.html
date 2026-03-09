@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Detail - City Transport Cycle (CTRC) HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .route-hero {
+            padding: 4em 2em;
+            text-align: center;
+        }
+        .route-hero-title {
+            font-size: 2.5em;
+            margin-bottom: 0.5em;
+        }
+        .route-id-text {
+            font-size: 1.2em;
+            margin: 0;
+            font-weight: bold;
+        }
+        .route-detail-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2em;
+            align-items: flex-start;
+            max-width: 1000px;
+            margin: 2em auto;
+            padding: 0 2em;
+        }
+        .route-image-container {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+        .route-detail-image {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .gpx-download-button {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background-color: #2c3e50;
+            color: white;
+            padding: 1em;
+            border-radius: 8px;
+            margin-top: 1em;
+            transition: background-color 0.3s ease;
+        }
+        .gpx-download-button:hover {
+            background-color: #04D93C;
+        }
+        .route-detail-info {
+            flex: 2;
+            min-width: 300px;
+        }
+        .route-description {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 2em;
+        }
+        .route-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1em;
+            margin-bottom: 2em;
+            background-color: #f9f9f9;
+            padding: 1.5em;
+            border-radius: 8px;
+        }
+        .route-stats div {
+            padding: 0.5em;
+            border-bottom: 1px solid #eee;
+        }
+        .route-tags-container {
+            margin-top: 2em;
+        }
+        .route-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5em;
+            margin-top: 1em;
+        }
+        .route-tag {
+            background-color: #BFE340;
+            color: #2c3e50;
+            padding: 0.5em 1em;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .route-detail-grid {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header-placeholder"></div>
+
+    <main class="main-content">
+        <section id="route-detail-container">
+
+            </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 City Transport Cycle (CTRC) HK. All Rights Reserved. | <a href="/terms" style="color:#BFE340;">Terms &amp; Privacy</a></p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

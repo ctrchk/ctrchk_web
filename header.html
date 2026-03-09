@@ -1,7 +1,3 @@
-<div class="lang-bar">
-    <i class="fas fa-globe"></i>
-    <strong>繁體中文</strong> | <a href="/en/index" id="lang-en-link" title="Switch to English">English</a>
-</div>
 <header>
     <div class="logo">
         <a href="/index.html" style="color: white; text-decoration: none;">香港城市運輸單車 CTRC HK</a>
@@ -18,5 +14,16 @@
         <a id="nav-welcome-name" href="/profile" style="display:none; color:#BFE340; font-weight:bold; margin-left:0.5em; white-space:nowrap; font-size:0.9em; text-decoration:none;"></a>
         <a id="nav-dashboard-btn" href="/dashboard.html" class="cta-button nav-cta-btn" style="display: none; background-color: #04D93C;">儀表板</a>
         <a id="nav-logout-btn" href="#" class="cta-button nav-cta-btn" style="display: none; background-color: #e74c3c;">登出</a>
+
+        <div class="lang-switcher" id="lang-switcher">
+            <button class="lang-switcher-btn" id="lang-switcher-btn" aria-label="選擇語言">
+                <i class="fas fa-globe"></i>
+                <span class="lang-label">繁</span>
+            </button>
+            <div class="lang-dropdown" id="lang-dropdown">
+                <a href="#" class="active-lang"><i class="fas fa-check"></i> 繁體中文</a>
+                <a href="/en/index" id="lang-en-link"><i class="fas fa-language"></i> English</a>
+            </div>
+        </div>
     </nav>
 </header>
