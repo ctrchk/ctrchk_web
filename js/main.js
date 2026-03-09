@@ -405,6 +405,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function initEnHomePage() {
+        const container = document.getElementById('en-routes-preview-container');
+        if (!container) return;
+        const featuredRouteIds = ['900', '960', '966T'];
+        const routesToShow = featuredRouteIds.map(id => enRoutes.find(route => route.id === id));
+        container.innerHTML = '';
+        routesToShow.forEach(route => {
+            if (route) {
+                const card = document.createElement('div');
+                card.className = 'route-card';
+                card.innerHTML = `
+                    <a href="/en/route_detail?id=${route.id}">
+                        <img src="/${route.image}" alt="${route.alias || route.id}">
+                        <div class="route-card-title">
+                            <h3>
+                                <span class="route-card-id" style="background-color: ${route.color}; color: ${route.textColor || 'white'}">
+                                    ${route.id}
+                                </span>
+                                ${route.alias || '(No alias)'}
+                            </h3>
+                        </div>
+                    </a>
+                `;
+                container.appendChild(card);
+            }
+        });
+    }
+
     function initRoutesPage() {
         const allRoutesContainer = document.getElementById('all-routes-container');
         const heroSearchInput = document.getElementById('hero-search-input');
@@ -775,6 +803,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // =========================================================================
     if (document.getElementById('routes-preview-container')) {
         initHomePage();
+    }
+    if (document.getElementById('en-routes-preview-container')) {
+        initEnHomePage();
     }
     if (document.getElementById('all-routes-container')) {
         initRoutesPage();
