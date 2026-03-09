@@ -99,7 +99,8 @@ main {
 .lang-dropdown.open {
     display: block;
 }
-.lang-dropdown a {
+.lang-dropdown a,
+.lang-dropdown span.active-lang {
     display: flex;
     align-items: center;
     gap: 0.5em;
@@ -115,11 +116,11 @@ main {
     background: #f0f9f3;
     color: #04D93C !important;
 }
-.lang-dropdown a.active-lang {
+.lang-dropdown a.active-lang,
+.lang-dropdown span.active-lang {
     color: #04D93C !important;
     background: #f0f9f3;
     cursor: default;
-    pointer-events: none;
 }
 header {
     background-color: #2c3e50;

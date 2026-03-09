@@ -732,7 +732,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                     }
                 }
-                const natureLabel = { 'Commute': 'Commute', 'Leisure': 'Leisure', 'Mixed': 'Mixed', 'General': 'General' }[route.nature] || route.nature;
                 const difficultyDisplay = (route.difficulty === 'TBC') ? 'TBC' : `${generateStarRating(route.difficulty)} (${route.difficulty}/5)`;
                 routeDetailContainer.innerHTML = `
                     <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
@@ -750,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div><strong>Start:</strong> ${route.start}</div>
                                 <div><strong>End:</strong> ${route.end || 'Loop Route'}</div>
                                 <div><strong>Via:</strong> ${route.via || '—'}</div>
-                                <div><strong>Type:</strong> ${natureLabel}</div>
+                                <div><strong>Type:</strong> ${route.nature}</div>
                                 <div><strong>Est. Journey Time:</strong> ${route.time} min</div>
                                 <div><strong>Route Length:</strong> ${route.length}</div>
                                 <div><strong>Difficulty:</strong> ${difficultyDisplay}</div>
