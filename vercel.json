@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/weather/[dataType].js": {
-      "maxDuration": 10
-    }
-  },
   "cleanUrls": true,
   "redirects": [
     {
