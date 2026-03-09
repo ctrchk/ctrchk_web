@@ -115,6 +115,13 @@ async function handleRegister(e) {
     const birthdate = document.getElementById('register-birthdate')?.value || '';
     const bike_type = document.getElementById('register-biketype')?.value || '';
 
+    // 驗證條款同意
+    const termsAgreed = document.getElementById('register-terms')?.checked;
+    if (!termsAgreed) {
+        alert('請先閱讀並同意條款及細則、隱私條例及免責聲明，方可完成註冊。');
+        return;
+    }
+
     // 驗證密碼一致
     if (password !== confirmPassword) {
         alert('兩次輸入的密碼不一致，請重新輸入。');
