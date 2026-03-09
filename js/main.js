@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <li><strong>路線故事：</strong> 探索我們精心規劃的路線背後的故事、風景亮點和騎行貼士。</li>
                     <li><strong>單車知識：</strong> 從基礎保養到進階技巧，讓你更懂你的單車夥伴。</li>
                     <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
-                    <li><strong>最新動態：</strong> 關於 CTRC HK 的最新消息、活動預告等。</li>
+                    <li><strong>最新動態：</strong> 關於 城市運輸單車的最新消息、活動預告等。</li>
                 </ul>
                 <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
                 <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const post = blogPosts.find(p => p.id === postId);
 
             if (post) {
-                document.title = `${post.title} - 香港城市運輸單車 CTRC HK`;
+                document.title = `${post.title} - 香港城市運輸單車`;
                 container.innerHTML = `
                     <div class="post-header">
                         <h1>${post.title}</h1>
@@ -365,11 +365,11 @@ document.addEventListener('DOMContentLoaded', function() {
                  initAnimatedElements();
             } else {
                 container.innerHTML = '<p style="text-align: center;">找不到指定的文章。</p>';
-                 document.title = '找不到文章 - 香港城市運輸單車 CTRC HK';
+                 document.title = '找不到文章 - 香港城市運輸單車';
             }
         } else {
             container.innerHTML = '<p style="text-align: center;">文章 ID 無效。</p>';
-             document.title = '文章 ID 無效 - 香港城市運輸單車 CTRC HK';
+             document.title = '文章 ID 無效 - 香港城市運輸單車';
         }
     }
 

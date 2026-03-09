@@ -2,6 +2,7 @@
 // 管理員 API - 查看用戶列表
 import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 /**
  * 驗證管理員身份的中間件
@@ -139,6 +140,43 @@ export default async function handler(req, res) {
       if (action === 'delete_user') {
         await query(`DELETE FROM users WHERE id = $1`, [user_id]);
         return res.status(200).json({ message: `User ${user_id} deleted` });
+      }
+
+      if (action === 'create_admin') {
+        const { email, full_name, password, role = 'admin' } = req.body;
+
+        if (!email || !full_name || !password) {
+          return res.status(400).json({ message: 'Email, name, and password are required' });
+        }
+        if (password.length < 12) {
+          return res.status(400).json({ message: 'Admin password must be at least 12 characters' });
+        }
+        const validRoles = ['admin', 'senior'];
+        if (!validRoles.includes(role)) {
+          return res.status(400).json({ message: 'Invalid role' });
+        }
+
+        const { rows: existing } = await query('SELECT id FROM users WHERE email = $1', [email]);
+        if (existing.length > 0) {
+          return res.status(409).json({ message: 'Email already exists' });
+        }
+
+        const salt = bcrypt.genSaltSync(12);
+        const password_hash = bcrypt.hashSync(password, salt);
+
+        await query(
+          `INSERT INTO users (
+            email, password_hash, user_role, full_name, profile_completed,
+            auth_provider, email_verified
+          ) VALUES ($1, $2, $3, $4, true, 'email', true)`,
+          [email, password_hash, role, full_name]
+        );
+
+        return res.status(201).json({
+          message: `${role === 'admin' ? '管理員' : '高級會員'}帳戶建立成功`,
+          email,
+          role
+        });
       }
 
       return res.status(400).json({ message: `Unknown action: ${action}` });

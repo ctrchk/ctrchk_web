@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="manifest" href="/manifest.json">
+    <title>香港城市運輸單車 - 討論主題</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* === 討論主題頁專屬樣式 === */
+        .topic-container {
+            max-width: 860px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            color: #04D93C;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 1.2em;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #03b832; }
+
+        /* Topic header card */
+        .topic-header-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.07);
+            padding: 1.6em;
+            margin-bottom: 1.5em;
+        }
+        .topic-header-card h1 {
+            margin: 0 0 0.6em;
+            color: #2c3e50;
+            font-size: 1.55em;
+            line-height: 1.35;
+        }
+        .topic-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.8em 1.4em;
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 1.2em;
+        }
+        .topic-meta .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35em;
+        }
+        .topic-content-body {
+            color: #333;
+            line-height: 1.75;
+            font-size: 0.97em;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .topic-admin-actions {
+            margin-top: 1.2em;
+            padding-top: 1em;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 0.8em;
+        }
+
+        /* Tag badges */
+        .tag-badge {
+            display: inline-block;
+            padding: 0.2em 0.65em;
+            border-radius: 10px;
+            font-size: 0.78em;
+            font-weight: bold;
+            color: #fff;
+            white-space: nowrap;
+        }
+        .tag-route   { background: #3498db; }
+        .tag-station { background: #e67e22; }
+        .tag-place   { background: #27ae60; }
+
+        .senior-star {
+            color: #f1c40f;
+            font-size: 0.85em;
+            margin-left: 2px;
+        }
+
+        /* Replies section */
+        .replies-section {
+            margin-bottom: 1.5em;
+        }
+        .replies-section h2 {
+            font-size: 1.1em;
+            color: #2c3e50;
+            margin-bottom: 0.8em;
+            padding-bottom: 0.5em;
+            border-bottom: 2px solid #04D93C;
+            display: inline-block;
+        }
+
+        .reply-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            padding: 1.2em 1.4em;
+            margin-bottom: 1em;
+        }
+        .reply-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 0.4em;
+            margin-bottom: 0.7em;
+        }
+        .reply-author {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 0.92em;
+        }
+        .reply-date {
+            font-size: 0.8em;
+            color: #aaa;
+        }
+        .reply-content {
+            color: #333;
+            line-height: 1.7;
+            font-size: 0.95em;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 0.8em;
+        }
+        .reply-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+        }
+        .react-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3em;
+            padding: 0.3em 0.85em;
+            border: 1.5px solid #ddd;
+            border-radius: 16px;
+            background: #fff;
+            color: #666;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .react-btn:hover {
+            border-color: #04D93C;
+            color: #04D93C;
+        }
+        .react-btn.reacted {
+            background: #eafff0;
+            border-color: #04D93C;
+            color: #04D93C;
+            font-weight: 600;
+        }
+        .delete-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3em;
+            padding: 0.3em 0.85em;
+            border: 1.5px solid #e74c3c;
+            border-radius: 16px;
+            background: #fff;
+            color: #e74c3c;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .delete-btn:hover {
+            background: #fdecea;
+        }
+        .admin-delete-topic-btn {
+            padding: 0.45em 1em;
+            border: 1.5px solid #e74c3c;
+            border-radius: 6px;
+            background: #fff;
+            color: #e74c3c;
+            font-size: 0.88em;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4em;
+            transition: all 0.2s;
+        }
+        .admin-delete-topic-btn:hover {
+            background: #fdecea;
+        }
+
+        /* Reply form */
+        .reply-form-section {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.07);
+            padding: 1.6em;
+            margin-bottom: 2em;
+        }
+        .reply-form-section h2 {
+            margin-top: 0;
+            font-size: 1.05em;
+            color: #2c3e50;
+            margin-bottom: 1em;
+        }
+        .reply-form-section textarea {
+            width: 100%;
+            padding: 0.7em 0.9em;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            color: #333;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 110px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .reply-form-section textarea:focus {
+            outline: none;
+            border-color: #04D93C;
+        }
+        .char-count {
+            font-size: 0.78em;
+            color: #bbb;
+            text-align: right;
+            margin-top: 0.2em;
+            margin-bottom: 0.7em;
+        }
+        .reply-submit-btn {
+            padding: 0.6em 1.6em;
+            background: #04D93C;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .reply-submit-btn:hover { background: #03b832; }
+        .reply-submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+        .form-error {
+            color: #e74c3c;
+            font-size: 0.85em;
+            margin-top: 0.5em;
+        }
+
+        /* Not logged in notice */
+        .not-logged-in-notice {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            padding: 1.4em;
+            text-align: center;
+            color: #888;
+            margin-bottom: 2em;
+        }
+        .not-logged-in-notice a {
+            color: #04D93C;
+            font-weight: bold;
+        }
+
+        /* Loading / error */
+        .page-state-msg {
+            text-align: center;
+            padding: 4em 1em;
+            color: #aaa;
+            font-size: 1em;
+        }
+
+        @media (max-width: 600px) {
+            .topic-header-card h1 { font-size: 1.25em; }
+            .reply-header { flex-direction: column; gap: 0.2em; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <div class="topic-container animated-element">
+            <a href="/forum.html" class="back-link">
+                <i class="fas fa-arrow-left"></i> 返回討論區
+            </a>
+            <div id="pageContent">
+                <div class="page-state-msg">
+                    <i class="fas fa-spinner fa-spin"></i>&nbsp;正在載入…
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof loadSharedComponents === 'function') {
+            loadSharedComponents();
+        }
+
+        const token = localStorage.getItem('accessToken');
+        const pageContent = document.getElementById('pageContent');
+
+        // Decode JWT payload
+        let currentUser = null;
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                currentUser = payload;
+            } catch (e) {
+                // invalid token — treat as logged out
+            }
+        }
+
+        const isAdmin  = currentUser && currentUser.role === 'admin';
+        const isSenior = currentUser && (currentUser.role === 'senior' || isAdmin);
+
+        const topicId = new URLSearchParams(window.location.search).get('id');
+        if (!topicId) {
+            pageContent.innerHTML = '<div class="page-state-msg" style="color:#e74c3c;">找不到討論主題 ID。</div>';
+            return;
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function tagClass(tag) {
+            if (tag === '路線討論') return 'tag-route';
+            if (tag === '車站討論') return 'tag-station';
+            if (tag === '地點討論') return 'tag-place';
+            return '';
+        }
+
+        function formatDate(str) {
+            if (!str) return '';
+            const d = new Date(str);
+            if (isNaN(d)) return str;
+            return d.toLocaleString('zh-Hant', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function authHeaders(extra) {
+            const h = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
+            if (token) h['Authorization'] = 'Bearer ' + token;
+            return h;
+        }
+
+        // === Load topic ===
+        function loadTopic() {
+            pageContent.innerHTML = '<div class="page-state-msg"><i class="fas fa-spinner fa-spin"></i>&nbsp;正在載入…</div>';
+
+            fetch('/api/forum?action=get_topic&id=' + encodeURIComponent(topicId), {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                renderPage(data);
+            })
+            .catch(err => {
+                pageContent.innerHTML = '<div class="page-state-msg" style="color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> 載入失敗：' + escHtml(err.message) + '</div>';
+            });
+        }
+
+        function renderPage(data) {
+            const topic = data.topic || data;
+            const replies = data.replies || [];
+
+            // Update page title
+            document.title = escHtml(topic.title) + ' - 討論區 - 香港城市運輸單車';
+
+            const seniorStarAuthor = topic.is_senior
+                ? '<span class="senior-star" title="資深會員">⭐</span>' : '';
+            const tagHtml = topic.tag
+                ? `<span class="tag-badge ${tagClass(topic.tag)}">${escHtml(topic.tag)}</span>` : '';
+
+            // Admin delete topic button
+            const adminTopicActions = isAdmin ? `
+                <div class="topic-admin-actions">
+                    <button class="admin-delete-topic-btn" id="deleteTopicBtn">
+                        <i class="fas fa-trash-alt"></i> 刪除主題
+                    </button>
+                </div>` : '';
+
+            // Topic header card
+            let html = `
+                <div class="topic-header-card">
+                    <h1>${escHtml(topic.title)}</h1>
+                    <div class="topic-meta">
+                        ${tagHtml ? `<div class="meta-item">${tagHtml}</div>` : ''}
+                        <div class="meta-item">
+                            <i class="fas fa-user"></i>
+                            ${escHtml(topic.author_name || '')}${seniorStarAuthor}
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            ${formatDate(topic.created_at)}
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-eye"></i>
+                            ${Number(topic.view_count) || 0} 次瀏覽
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-comment"></i>
+                            ${replies.length} 則回覆
+                        </div>
+                    </div>
+                    <div class="topic-content-body">${escHtml(topic.content)}</div>
+                    ${adminTopicActions}
+                </div>`;
+
+            // Replies section
+            html += `<div class="replies-section">
+                        <h2><i class="fas fa-comments"></i> 回覆 (${replies.length})</h2>`;
+
+            if (replies.length === 0) {
+                html += '<p style="color:#aaa;font-size:0.9em;">尚未有人回覆，成為第一個回覆的人吧！</p>';
+            } else {
+                replies.forEach(reply => {
+                    const replyAuthorStar = reply.is_senior
+                        ? '<span class="senior-star" title="資深會員">⭐</span>' : '';
+                    const alreadyReacted = reply.user_reaction ? 'reacted' : '';
+
+                    const reactBtnHtml = isSenior
+                        ? `<button class="react-btn ${alreadyReacted}" data-reply-id="${escHtml(String(reply.id))}">
+                                👍 點評 <span class="reaction-count">${Number(reply.reaction_count) || 0}</span>
+                           </button>` : `<span style="font-size:0.85em;color:#aaa;">👍 ${Number(reply.reaction_count) || 0}</span>`;
+
+                    const deleteBtnHtml = isAdmin
+                        ? `<button class="delete-btn" data-reply-id="${escHtml(String(reply.id))}">
+                                <i class="fas fa-trash-alt"></i> 刪除
+                           </button>` : '';
+
+                    html += `
+                        <div class="reply-card" id="reply-${escHtml(String(reply.id))}">
+                            <div class="reply-header">
+                                <div>
+                                    <span class="reply-author">${escHtml(reply.author_name || '')}${replyAuthorStar}</span>
+                                </div>
+                                <span class="reply-date">${formatDate(reply.created_at)}</span>
+                            </div>
+                            <div class="reply-content">${escHtml(reply.content)}</div>
+                            <div class="reply-actions">
+                                ${reactBtnHtml}
+                                ${deleteBtnHtml}
+                            </div>
+                        </div>`;
+                });
+            }
+            html += '</div>'; // end replies-section
+
+            // Reply form or login notice
+            if (currentUser) {
+                html += `
+                    <div class="reply-form-section">
+                        <h2><i class="fas fa-reply"></i> 發表回覆</h2>
+                        <form id="replyForm" novalidate>
+                            <textarea id="replyContent" maxlength="2000" placeholder="請輸入回覆內容…" required></textarea>
+                            <div class="char-count"><span id="replyCount">0</span> / 2000</div>
+                            <div class="form-error" id="replyError"></div>
+                            <button type="submit" class="reply-submit-btn" id="replySubmitBtn">發表回覆</button>
+                        </form>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="not-logged-in-notice">
+                        <p><i class="fas fa-lock"></i> 請先 <a href="/login.html">登入</a> 以發表回覆。</p>
+                    </div>`;
+            }
+
+            pageContent.innerHTML = html;
+
+            // Bind events
+            bindEvents();
+        }
+
+        function bindEvents() {
+            // Delete topic
+            const deleteTopicBtn = document.getElementById('deleteTopicBtn');
+            if (deleteTopicBtn) {
+                deleteTopicBtn.addEventListener('click', function () {
+                    if (!confirm('確定要刪除這個討論主題嗎？此操作無法還原。')) return;
+                    fetch('/api/forum?action=delete_topic&id=' + encodeURIComponent(topicId), {
+                        method: 'DELETE',
+                        headers: authHeaders()
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.error) throw new Error(data.error);
+                        alert('討論主題已刪除。');
+                        window.location.href = '/forum.html';
+                    })
+                    .catch(err => alert('刪除失敗：' + err.message));
+                });
+            }
+
+            // React buttons
+            document.querySelectorAll('.react-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const replyId = this.dataset.replyId;
+                    const countEl = this.querySelector('.reaction-count');
+                    const wasReacted = this.classList.contains('reacted');
+
+                    fetch('/api/forum?action=react', {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify({ reply_id: replyId })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.error) throw new Error(data.error);
+                        if (wasReacted) {
+                            this.classList.remove('reacted');
+                            if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+                        } else {
+                            this.classList.add('reacted');
+                            if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+                        }
+                    })
+                    .catch(err => alert('操作失敗：' + err.message));
+                });
+            });
+
+            // Delete reply buttons
+            document.querySelectorAll('.delete-btn[data-reply-id]').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const replyId = this.dataset.replyId;
+                    if (!confirm('確定要刪除這則回覆嗎？')) return;
+                    fetch('/api/forum?action=delete_reply&id=' + encodeURIComponent(replyId), {
+                        method: 'DELETE',
+                        headers: authHeaders()
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.error) throw new Error(data.error);
+                        const card = document.getElementById('reply-' + replyId);
+                        if (card) card.remove();
+                    })
+                    .catch(err => alert('刪除失敗：' + err.message));
+                });
+            });
+
+            // Reply form
+            const replyForm = document.getElementById('replyForm');
+            if (replyForm) {
+                document.getElementById('replyContent').addEventListener('input', function () {
+                    document.getElementById('replyCount').textContent = this.value.length;
+                });
+
+                replyForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const replyError = document.getElementById('replyError');
+                    const replySubmitBtn = document.getElementById('replySubmitBtn');
+                    const content = document.getElementById('replyContent').value.trim();
+                    replyError.textContent = '';
+
+                    if (!content) { replyError.textContent = '請填寫回覆內容。'; return; }
+
+                    replySubmitBtn.disabled = true;
+                    replySubmitBtn.textContent = '發表中…';
+
+                    fetch('/api/forum?action=create_reply', {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify({ topic_id: topicId, content })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.error) throw new Error(data.error);
+                        loadTopic();
+                    })
+                    .catch(err => {
+                        replyError.textContent = err.message || '發表失敗，請稍後再試。';
+                        replySubmitBtn.disabled = false;
+                        replySubmitBtn.textContent = '發表回覆';
+                    });
+                });
+            }
+        }
+
+        loadTopic();
+    });
+    </script>
+</body>
+</html>

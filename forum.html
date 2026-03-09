@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="manifest" href="/manifest.json">
+    <title>香港城市運輸單車 - 討論區</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* === 討論區專屬樣式 === */
+        .forum-container {
+            max-width: 900px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+
+        /* Filter bar */
+        .forum-filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5em;
+            align-items: center;
+            margin-bottom: 1.5em;
+        }
+        .filter-btn {
+            padding: 0.45em 1.1em;
+            border: 1.5px solid #ccc;
+            border-radius: 20px;
+            background: #fff;
+            color: #555;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            border-color: #04D93C;
+            color: #04D93C;
+        }
+        .filter-btn.active {
+            background: #04D93C;
+            border-color: #04D93C;
+            color: #fff;
+            font-weight: bold;
+        }
+        .new-topic-btn {
+            margin-left: auto;
+            padding: 0.5em 1.2em;
+            background: #04D93C;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.4em;
+            transition: background 0.2s;
+        }
+        .new-topic-btn:hover {
+            background: #03b832;
+        }
+
+        /* Topic list */
+        .topic-list {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .topic-list-header {
+            display: grid;
+            grid-template-columns: 1fr 110px 70px 70px 100px;
+            padding: 0.7em 1.2em;
+            background: #2c3e50;
+            color: #fff;
+            font-size: 0.85em;
+            font-weight: bold;
+            gap: 0.5em;
+        }
+        .topic-row {
+            display: grid;
+            grid-template-columns: 1fr 110px 70px 70px 100px;
+            padding: 0.9em 1.2em;
+            border-bottom: 1px solid #f0f0f0;
+            align-items: center;
+            gap: 0.5em;
+            transition: background 0.15s;
+        }
+        .topic-row:last-child {
+            border-bottom: none;
+        }
+        .topic-row:hover {
+            background: #f8fffe;
+        }
+        .topic-title-cell a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.97em;
+            line-height: 1.4;
+        }
+        .topic-title-cell a:hover {
+            color: #04D93C;
+        }
+        .topic-author {
+            font-size: 0.82em;
+            color: #888;
+            margin-top: 0.2em;
+        }
+        .senior-star {
+            color: #f1c40f;
+            font-size: 0.85em;
+            margin-left: 2px;
+        }
+
+        /* Tag badges */
+        .tag-badge {
+            display: inline-block;
+            padding: 0.2em 0.6em;
+            border-radius: 10px;
+            font-size: 0.75em;
+            font-weight: bold;
+            color: #fff;
+            white-space: nowrap;
+        }
+        .tag-route   { background: #3498db; }
+        .tag-station { background: #e67e22; }
+        .tag-place   { background: #27ae60; }
+        .tag-none    { display: none; }
+
+        .topic-stat {
+            font-size: 0.85em;
+            color: #777;
+            display: flex;
+            align-items: center;
+            gap: 0.3em;
+        }
+        .topic-date {
+            font-size: 0.8em;
+            color: #aaa;
+        }
+
+        /* Empty / loading states */
+        .forum-state-msg {
+            padding: 3em 1em;
+            text-align: center;
+            color: #aaa;
+            font-size: 1em;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 10px;
+            padding: 2em;
+            width: 100%;
+            max-width: 540px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            position: relative;
+        }
+        .modal-box h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.3em;
+            margin-bottom: 1.2em;
+        }
+        .modal-close {
+            position: absolute;
+            top: 1em;
+            right: 1.2em;
+            background: none;
+            border: none;
+            font-size: 1.4em;
+            cursor: pointer;
+            color: #aaa;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #555; }
+        .form-group {
+            margin-bottom: 1.1em;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 0.4em;
+        }
+        .form-group input[type="text"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.55em 0.8em;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            color: #333;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #04D93C;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 140px;
+        }
+        .char-count {
+            font-size: 0.78em;
+            color: #bbb;
+            text-align: right;
+            margin-top: 0.2em;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 0.7em;
+            background: #04D93C;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .submit-btn:hover { background: #03b832; }
+        .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+        .form-error {
+            color: #e74c3c;
+            font-size: 0.85em;
+            margin-top: 0.5em;
+        }
+
+        /* Responsive */
+        @media (max-width: 650px) {
+            .topic-list-header { display: none; }
+            .topic-row {
+                grid-template-columns: 1fr auto;
+                grid-template-rows: auto auto;
+                gap: 0.3em 0.8em;
+            }
+            .topic-title-cell { grid-column: 1 / -1; }
+            .topic-stat-replies,
+            .topic-stat-views { display: none; }
+            .topic-tag-cell { grid-column: 1; }
+            .topic-date { grid-column: 2; justify-self: end; }
+            .forum-filter-bar { flex-direction: column; align-items: flex-start; }
+            .new-topic-btn { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="hero">
+            <h1>討論區</h1>
+            <p>分享路線、車站及地點的討論</p>
+        </section>
+
+        <div class="forum-container animated-element">
+            <!-- Filter bar -->
+            <div class="forum-filter-bar">
+                <button class="filter-btn active" data-tag="">全部</button>
+                <button class="filter-btn" data-tag="路線討論">路線討論</button>
+                <button class="filter-btn" data-tag="車站討論">車站討論</button>
+                <button class="filter-btn" data-tag="地點討論">地點討論</button>
+                <button class="new-topic-btn" id="newTopicBtn" style="display:none;">
+                    <i class="fas fa-plus"></i> 發起新討論
+                </button>
+            </div>
+
+            <!-- Topic list -->
+            <div class="topic-list">
+                <div class="topic-list-header">
+                    <span>主題</span>
+                    <span>標籤</span>
+                    <span><i class="fas fa-comment"></i> 回覆</span>
+                    <span><i class="fas fa-eye"></i> 瀏覽</span>
+                    <span>最後更新</span>
+                </div>
+                <div id="topicListBody">
+                    <div class="forum-state-msg">
+                        <i class="fas fa-spinner fa-spin"></i>&nbsp;正在載入討論主題…
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
+    </footer>
+
+    <!-- New topic modal -->
+    <div class="modal-overlay" id="newTopicModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-box">
+            <button class="modal-close" id="modalCloseBtn" aria-label="關閉">&times;</button>
+            <h2 id="modalTitle"><i class="fas fa-pen"></i> 發起新討論</h2>
+            <form id="newTopicForm" novalidate>
+                <div class="form-group">
+                    <label for="topicTitle">標題 <span style="color:#e74c3c">*</span></label>
+                    <input type="text" id="topicTitle" maxlength="100" placeholder="請輸入討論標題" required>
+                    <div class="char-count"><span id="titleCount">0</span> / 100</div>
+                </div>
+                <div class="form-group">
+                    <label for="topicTag">標籤</label>
+                    <select id="topicTag">
+                        <option value="">不使用標籤</option>
+                        <option value="路線討論">路線討論</option>
+                        <option value="車站討論">車站討論</option>
+                        <option value="地點討論">地點討論</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="topicContent">內容 <span style="color:#e74c3c">*</span></label>
+                    <textarea id="topicContent" maxlength="5000" placeholder="請輸入討論內容…" required></textarea>
+                    <div class="char-count"><span id="contentCount">0</span> / 5000</div>
+                </div>
+                <div class="form-error" id="formError"></div>
+                <button type="submit" class="submit-btn" id="submitTopicBtn">發佈討論</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof loadSharedComponents === 'function') {
+            loadSharedComponents();
+        }
+
+        const token = localStorage.getItem('accessToken');
+        const newTopicBtn = document.getElementById('newTopicBtn');
+        const modal = document.getElementById('newTopicModal');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        const newTopicForm = document.getElementById('newTopicForm');
+        const formError = document.getElementById('formError');
+        const submitBtn = document.getElementById('submitTopicBtn');
+
+        if (token) {
+            newTopicBtn.style.display = 'flex';
+        }
+
+        let currentTag = '';
+
+        // === Filter buttons ===
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentTag = this.dataset.tag;
+                loadTopics(currentTag);
+            });
+        });
+
+        // === Load topics ===
+        function loadTopics(tag) {
+            const body = document.getElementById('topicListBody');
+            body.innerHTML = '<div class="forum-state-msg"><i class="fas fa-spinner fa-spin"></i>&nbsp;正在載入討論主題…</div>';
+
+            let url = '/api/forum?action=list_topics';
+            if (tag) url += '&tag=' + encodeURIComponent(tag);
+
+            const headers = {};
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
+            fetch(url, { headers })
+                .then(r => r.json())
+                .then(data => {
+                    const topics = data.topics || data;
+                    if (!Array.isArray(topics) || topics.length === 0) {
+                        body.innerHTML = '<div class="forum-state-msg">目前還沒有討論主題。</div>';
+                        return;
+                    }
+                    body.innerHTML = topics.map(t => buildTopicRow(t)).join('');
+                })
+                .catch(() => {
+                    body.innerHTML = '<div class="forum-state-msg" style="color:#e74c3c;">載入失敗，請稍後再試。</div>';
+                });
+        }
+
+        function tagClass(tag) {
+            if (tag === '路線討論') return 'tag-route';
+            if (tag === '車站討論') return 'tag-station';
+            if (tag === '地點討論') return 'tag-place';
+            return 'tag-none';
+        }
+
+        function formatDate(str) {
+            if (!str) return '';
+            const d = new Date(str);
+            if (isNaN(d)) return str;
+            return d.toLocaleDateString('zh-Hant', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+
+        function buildTopicRow(t) {
+            const tagHtml = t.tag
+                ? `<span class="tag-badge ${tagClass(t.tag)}">${escHtml(t.tag)}</span>`
+                : '<span></span>';
+            const seniorStar = t.is_senior ? '<span class="senior-star" title="資深會員">⭐</span>' : '';
+            const updatedDate = t.updated_at || t.created_at || '';
+            return `
+                <div class="topic-row">
+                    <div class="topic-title-cell">
+                        <a href="/forum_topic.html?id=${encodeURIComponent(t.id)}">${escHtml(t.title)}</a>
+                        <div class="topic-author">${escHtml(t.author_name || '')}${seniorStar}</div>
+                    </div>
+                    <div class="topic-tag-cell">${tagHtml}</div>
+                    <div class="topic-stat topic-stat-replies">
+                        <i class="fas fa-comment"></i> ${Number(t.reply_count) || 0}
+                    </div>
+                    <div class="topic-stat topic-stat-views">
+                        <i class="fas fa-eye"></i> ${Number(t.view_count) || 0}
+                    </div>
+                    <div class="topic-date">${formatDate(updatedDate)}</div>
+                </div>`;
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // === Modal open/close ===
+        newTopicBtn.addEventListener('click', () => {
+            modal.classList.add('open');
+            document.getElementById('topicTitle').focus();
+        });
+
+        function closeModal() {
+            modal.classList.remove('open');
+            newTopicForm.reset();
+            document.getElementById('titleCount').textContent = '0';
+            document.getElementById('contentCount').textContent = '0';
+            formError.textContent = '';
+            submitBtn.disabled = false;
+        }
+
+        modalCloseBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+        // Char counters
+        document.getElementById('topicTitle').addEventListener('input', function () {
+            document.getElementById('titleCount').textContent = this.value.length;
+        });
+        document.getElementById('topicContent').addEventListener('input', function () {
+            document.getElementById('contentCount').textContent = this.value.length;
+        });
+
+        // === Submit new topic ===
+        newTopicForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            formError.textContent = '';
+            const title = document.getElementById('topicTitle').value.trim();
+            const tag = document.getElementById('topicTag').value;
+            const content = document.getElementById('topicContent').value.trim();
+
+            if (!title) { formError.textContent = '請填寫標題。'; return; }
+            if (!content) { formError.textContent = '請填寫內容。'; return; }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '發佈中…';
+
+            fetch('/api/forum?action=create_topic', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ title, tag, content })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                closeModal();
+                loadTopics(currentTag);
+            })
+            .catch(err => {
+                formError.textContent = err.message || '發佈失敗，請稍後再試。';
+                submitBtn.disabled = false;
+                submitBtn.textContent = '發佈討論';
+            });
+        });
+
+        // Initial load
+        loadTopics('');
+    });
+    </script>
+</body>
+</html>

@@ -141,7 +141,7 @@ self.addEventListener('push', (event) => {
   if (!event.data) return;
 
   const data = event.data.json();
-  const title = data.title || '🚏 CTRC HK';
+  const title = data.title || '🚏 城市運輸單車';
   const options = {
     body: data.body || '',
     icon: '/images/icon-192.png',

@@ -207,8 +207,8 @@
     const isEn = window.location.pathname.startsWith('/en') ||
                  document.documentElement.lang === 'en';
     const bannerText = isEn
-      ? '📱 Add CTRC HK to your home screen for an app experience!'
-      : '📱 將 CTRC HK 加至主屏幕，享受 App 體驗！';
+      ? '📱 Add 城市運輸單車 to your home screen for an app experience!'
+      : '📱 將城市運輸單車加至主屏幕，享受 App 體驗！';
     const installLabel = isEn ? 'Install' : '安裝';
     const dismissLabel = isEn ? 'Close' : '關閉';
 

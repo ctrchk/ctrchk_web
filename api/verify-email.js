@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({ 
-      message: '電郵驗證成功！歡迎加入 CTRC HK。',
+      message: '電郵驗證成功！歡迎加入城市運輸單車。',
       email: user.email
     });
 
