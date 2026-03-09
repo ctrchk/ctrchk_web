@@ -87,6 +87,121 @@ COMMENT ON COLUMN users.user_role IS 'User membership tier: junior (initial), se
 COMMENT ON COLUMN users.preferred_area IS 'Comma-separated list of preferred cycling areas';
 
 -- =========================================================
+-- 騎行歷史擴充欄位（為 PWA 騎行記錄及遊戲化功能準備）
+-- =========================================================
+
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS route_id VARCHAR(20);
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS start_time TIMESTAMP;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS end_time TIMESTAMP;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS avg_speed_kmh DECIMAL(5,2);
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_reached JSONB;        -- 已到達的站點列表（例如 [1,2,3]）
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS xp_earned INTEGER DEFAULT 0; -- 此次騎行獲得的 XP
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS gpx_track TEXT;              -- 可選：實際騎行 GeoJSON
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web'; -- 'web' | 'pwa' | 'app'
+
+CREATE INDEX IF NOT EXISTS idx_cycling_history_route_id ON cycling_history(route_id);
+CREATE INDEX IF NOT EXISTS idx_cycling_history_start_time ON cycling_history(start_time);
+
+-- =========================================================
+-- 遊戲化：用戶遊戲進度資料表
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS user_game_profile (
+  user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  level       INTEGER NOT NULL DEFAULT 1,
+  xp          INTEGER NOT NULL DEFAULT 0,
+  coins       INTEGER NOT NULL DEFAULT 0,
+  updated_at  TIMESTAMP DEFAULT NOW()
+);
+
+-- =========================================================
+-- 遊戲化：用戶已解鎖路線
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS user_unlocked_routes (
+  id            SERIAL PRIMARY KEY,
+  user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  route_id      VARCHAR(20) NOT NULL,
+  unlock_method VARCHAR(20) NOT NULL DEFAULT 'default', -- 'level_up' | 'purchase' | 'default'
+  unlocked_at   TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, route_id)
+);
+
+-- =========================================================
+-- 遊戲化：路線解鎖條件配置
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS routes_config (
+  route_id     VARCHAR(20) PRIMARY KEY,
+  unlock_level INTEGER NOT NULL DEFAULT 1, -- 需要幾級才能騎行解鎖
+  unlock_cost  INTEGER,                    -- NULL = 騎行解鎖；數字 = 里程幣購買
+  xp_reward    INTEGER NOT NULL DEFAULT 100,
+  is_special   BOOLEAN DEFAULT FALSE       -- TRUE = 只能購買，不能騎行解鎖
+);
+
+-- 初始路線配置（與 routes.json 同步）
+INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
+VALUES
+  ('900',   1, NULL, 150, false),
+  ('900A',  1, NULL, 120, false),
+  ('914',   1, NULL,  50, false),
+  ('910',   2, NULL, 100, false),
+  ('914B',  2, NULL,  80, false),
+  ('914H',  2, NULL,  60, false),
+  ('920',   2, NULL, 130, false),
+  ('920X',  3, NULL, 100, false),
+  ('900S',  3, NULL, 130, false),
+  ('901P',  3, NULL, 140, false),
+  ('923',   3, NULL, 160, false),
+  ('928',   3, NULL, 170, false),
+  ('929',   3, NULL, 160, false),
+  ('955',   4, NULL, 110, false),
+  ('955A',  4, NULL,  60, false),
+  ('955H',  4, NULL,  80, false),
+  ('932',   4, NULL, 220, false),
+  ('935',   4, NULL, 250, false),
+  ('939',   4, NULL, 120, false),
+  ('939M',  4, NULL, 120, false),
+  ('961',   4, NULL, 130, false),
+  ('961P',  5, NULL, 100, false),
+  ('962',   5, NULL, 250, false),
+  ('962A',  5, NULL, 250, false),
+  ('962P',  5, NULL, 150, false),
+  ('962X',  5, NULL, 130, false),
+  ('966',   5, NULL, 110, false),
+  ('966A',  5, NULL,  90, false),
+  ('X935',  5, NULL, 210, false),
+  ('960',   5, NULL, 400, false)
+ON CONFLICT (route_id) DO NOTHING;
+
+-- =========================================================
+-- 遊戲化：等級配置
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS level_config (
+  level         INTEGER PRIMARY KEY,
+  xp_required   INTEGER NOT NULL,
+  coins_reward  INTEGER DEFAULT 0,
+  title_zh      VARCHAR(50),
+  title_en      VARCHAR(50)
+);
+
+INSERT INTO level_config (level, xp_required, coins_reward, title_zh, title_en)
+VALUES
+  (1,    0,    0,    '新手騎士',   'Rookie Rider'),
+  (2,    300,  100,  '街坊騎手',   'Neighborhood Cyclist'),
+  (3,    700,  200,  '區域探索者', 'Area Explorer'),
+  (4,    1200, 300,  '城市達人',   'City Enthusiast'),
+  (5,    1800, 500,  '城市騎士',   'City Rider'),
+  (6,    2600, 600,  '路線通',     'Route Master'),
+  (7,    3500, 700,  '將軍澳通',   'TKO Expert'),
+  (8,    4500, 800,  '單車俠',     'Cycling Hero'),
+  (9,    5800, 900,  '海濱傳奇',   'Waterfront Legend'),
+  (10,   7500, 1000, '都市傳奇',   'Urban Legend')
+ON CONFLICT (level) DO NOTHING;
+
+-- =========================================================
 -- 管理員帳戶種子資料（使用 Google 登入）
 -- ctrcz9829@gmail.com 預設為管理員，透過 Google OAuth 登入時
 -- google_id 將自動由 api/google-auth.js 補上。

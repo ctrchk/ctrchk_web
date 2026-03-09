@@ -1,0 +1,51 @@
+{
+  "name": "香港城市運輸單車 CTRC HK",
+  "short_name": "CTRC HK",
+  "description": "香港城市運輸單車路線資訊、GPX 導航及騎行記錄平台",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2c3e50",
+  "theme_color": "#2c3e50",
+  "lang": "zh-Hant",
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/900.jpg",
+      "sizes": "400x300",
+      "type": "image/jpeg",
+      "label": "CTRC HK 路線地圖"
+    }
+  ],
+  "categories": ["sports", "navigation", "travel"],
+  "shortcuts": [
+    {
+      "name": "路線總覽",
+      "short_name": "路線",
+      "description": "查看所有單車路線",
+      "url": "/routes",
+      "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "個人儀表板",
+      "short_name": "儀表板",
+      "description": "查看騎行歷史和遊戲進度",
+      "url": "/dashboard",
+      "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

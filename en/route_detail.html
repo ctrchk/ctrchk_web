@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CTRC HK">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Route Detail - City Transport Cycle (CTRC) HK</title>
     <link rel="stylesheet" href="/css/main.css">
@@ -98,7 +105,31 @@
                 flex-direction: column;
             }
         }
+
+        /* ── Map section ──────────────────────────────── */
+        #route-map-section { max-width: 1000px; margin: 0 auto 2em; padding: 0 2em; }
+        #route-map-section h3 { font-size: 1.3em; margin-bottom: 0.8em; color: #2c3e50; }
+        #route-map { width: 100%; height: 380px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: #e8f0e8; }
+        #map-controls { display: flex; flex-wrap: wrap; gap: 0.75em; margin-top: 0.75em; align-items: center; }
+        .map-btn { padding: 0.5em 1.2em; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: background-color 0.2s; }
+        #btn-gps { background: #2c3e50; color: #fff; }
+        #btn-gps:hover { background: #3d5166; }
+        #btn-gps.active { background: #04D93C; color: #2c3e50; }
+        #btn-notify { background: #BFE340; color: #2c3e50; }
+        #btn-notify:hover { background: #a8cc30; }
+        #gps-status { font-size: 0.85em; color: #666; }
+
+        /* ── Stops list ────────────────────────────────── */
+        #stops-section { max-width: 1000px; margin: 0 auto 2em; padding: 0 2em; }
+        #stops-section h3 { font-size: 1.3em; margin-bottom: 0.8em; color: #2c3e50; }
+        .stops-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4em; }
+        .stop-item { display: flex; align-items: center; gap: 0.8em; padding: 0.6em 1em; background: #f9f9f9; border-radius: 6px; border-left: 4px solid #BFE340; font-size: 0.95em; }
+        .stop-badge { background: #2c3e50; color: #fff; width: 1.8em; height: 1.8em; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; flex-shrink: 0; }
+        .stop-item.reached { border-left-color: #04D93C; background: #f0fff4; }
+        .stop-item.reached .stop-badge { background: #04D93C; color: #2c3e50; }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 
@@ -108,6 +139,23 @@
         <section id="route-detail-container">
 
             </section>
+
+        <!-- Route Map -->
+        <section id="route-map-section" style="display:none;">
+            <h3>🗺️ Route Map</h3>
+            <div id="route-map"></div>
+            <div id="map-controls">
+                <button id="btn-gps" class="map-btn">📍 Start GPS Tracking</button>
+                <button id="btn-notify" class="map-btn" style="display:none;">🔔 Enable Stop Alerts</button>
+                <span id="gps-status"></span>
+            </div>
+        </section>
+
+        <!-- Stops List -->
+        <section id="stops-section" style="display:none;">
+            <h3>🚏 Stops</h3>
+            <ul id="stops-list" class="stops-list"></ul>
+        </section>
     </main>
 
     <footer>
@@ -115,5 +163,116 @@
     </footer>
 
     <script src="/js/main.js"></script>
-</body>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (function () {
+      let map = null, userMarker = null, watchId = null, routeStops = [];
+      const STOP_RADIUS_M = 50;
+      const notifiedKey = 'ctrc_notified_stops_' + (new URLSearchParams(location.search).get('id') || '');
+
+      function getDistanceM(lat1, lon1, lat2, lon2) {
+        const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      }
+
+      function initMap(lat, lon, zoom) {
+        if (map) return;
+        map = L.map('route-map').setView([lat, lon], zoom || 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+      }
+
+      async function loadGpx(file) {
+        if (!map) return;
+        try {
+          const res = await fetch('/gpx/' + file);
+          if (!res.ok) return;
+          const doc = new DOMParser().parseFromString(await res.text(), 'application/xml');
+          const pts = [...doc.querySelectorAll('trkpt')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]).filter(([a,b]) => !isNaN(a) && !isNaN(b));
+          if (pts.length) { const pl = L.polyline(pts, {color:'#990000',weight:4,opacity:0.8}).addTo(map); map.fitBounds(pl.getBounds(), {padding:[20,20]}); }
+        } catch(e) {}
+      }
+
+      function renderStopsOnMap(stops) {
+        stops.forEach(s => {
+          const icon = L.divIcon({ className:'', html:`<div style="background:#2c3e50;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;">${s.order}</div>`, iconSize:[24,24], iconAnchor:[12,12] });
+          L.marker([s.lat,s.lon],{icon}).bindPopup(`<b>Stop ${s.order}</b><br>${s.name}`).addTo(map);
+        });
+      }
+
+      function renderStopsList(stops) {
+        const list = document.getElementById('stops-list');
+        if (!list || !stops.length) return;
+        list.innerHTML = stops.map(s => `<li class="stop-item" id="stop-item-${s.order}"><span class="stop-badge">${s.order}</span><span>${s.name}</span></li>`).join('');
+        document.getElementById('stops-section').style.display = 'block';
+      }
+
+      function markStopReached(order) {
+        const el = document.getElementById('stop-item-' + order);
+        if (el) el.classList.add('reached');
+      }
+
+      function startGps() {
+        if (!('geolocation' in navigator)) { document.getElementById('gps-status').textContent = 'GPS not supported'; return; }
+        document.getElementById('btn-gps').classList.add('active');
+        document.getElementById('btn-gps').textContent = '⏹ Stop GPS';
+        document.getElementById('gps-status').textContent = 'Getting location...';
+        const notified = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
+        watchId = navigator.geolocation.watchPosition(
+          pos => {
+            const {latitude, longitude} = pos.coords;
+            document.getElementById('gps-status').textContent = `📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+            if (!userMarker) {
+              userMarker = L.marker([latitude, longitude], { icon: L.divIcon({ className:'', html:'<div style="background:#04D93C;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.4);"></div>', iconSize:[16,16], iconAnchor:[8,8] }) }).addTo(map);
+            } else { userMarker.setLatLng([latitude, longitude]); }
+            map.panTo([latitude, longitude]);
+            routeStops.forEach(s => {
+              if (getDistanceM(latitude, longitude, s.lat, s.lon) < STOP_RADIUS_M && !notified.includes(s.order)) {
+                notified.push(s.order);
+                localStorage.setItem(notifiedKey, JSON.stringify(notified));
+                markStopReached(s.order);
+                if (window.CTRCHK_PWA) window.CTRCHK_PWA.sendLocalNotification('🚏 Approaching', `Stop ${s.order}: ${s.name}`, 'ctrc-stop-' + s.order);
+              }
+            });
+          },
+          err => { document.getElementById('gps-status').textContent = 'GPS Error: ' + err.message; },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+        );
+      }
+
+      function stopGps() {
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        document.getElementById('btn-gps').classList.remove('active');
+        document.getElementById('btn-gps').textContent = '📍 Start GPS Tracking';
+        document.getElementById('gps-status').textContent = '';
+      }
+
+      async function initRouteMap() {
+        const routeId = new URLSearchParams(location.search).get('id');
+        if (!routeId) return;
+        let routeData = null;
+        try { const r = await fetch('/routes.json'); if (r.ok) { const d = await r.json(); routeData = (d.routes||[]).find(x=>x.id===routeId); } } catch(e){}
+        routeStops = routeData ? (routeData.stops||[]) : [];
+        const center = routeStops.length ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697];
+        document.getElementById('route-map-section').style.display = 'block';
+        initMap(center[0], center[1], 14);
+        if (routeData?.gpx?.length) await loadGpx(routeData.gpx[0].file);
+        renderStopsOnMap(routeStops);
+        renderStopsList(routeStops);
+        if ('Notification' in window) document.getElementById('btn-notify').style.display = 'inline-block';
+        document.getElementById('btn-gps').addEventListener('click', () => watchId !== null ? stopGps() : startGps());
+        document.getElementById('btn-notify').addEventListener('click', async () => {
+          if (window.CTRCHK_PWA) { const ok = await window.CTRCHK_PWA.requestNotificationPermission(); document.getElementById('btn-notify').textContent = ok ? '🔔 Alerts On' : '🔕 Denied'; document.getElementById('btn-notify').disabled = true; }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('route-detail-container');
+        if (!container) return;
+        const obs = new MutationObserver(() => { if (container.children.length > 0) { obs.disconnect(); initRouteMap(); } });
+        obs.observe(container, { childList: true, subtree: true });
+        if (container.children.length > 0) initRouteMap();
+      });
+    })();
+    </script>
 </html>

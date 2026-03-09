@@ -2,6 +2,13 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CTRC HK">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>香港城市運輸單車 CTRC HK - 路線詳情</title>
     <link rel="stylesheet" href="/css/main.css">
@@ -98,7 +105,111 @@
                 flex-direction: column;
             }
         }
+
+        /* ── 地圖區塊 ────────────────────────────────── */
+        #route-map-section {
+            max-width: 1000px;
+            margin: 0 auto 2em;
+            padding: 0 2em;
+        }
+        #route-map-section h3 {
+            font-size: 1.3em;
+            margin-bottom: 0.8em;
+            color: #2c3e50;
+        }
+        #route-map {
+            width: 100%;
+            height: 380px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: #e8f0e8;
+        }
+        #map-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75em;
+            margin-top: 0.75em;
+            align-items: center;
+        }
+        .map-btn {
+            padding: 0.5em 1.2em;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        #btn-gps {
+            background: #2c3e50;
+            color: #fff;
+        }
+        #btn-gps:hover { background: #3d5166; }
+        #btn-gps.active { background: #04D93C; color: #2c3e50; }
+        #btn-notify {
+            background: #BFE340;
+            color: #2c3e50;
+        }
+        #btn-notify:hover { background: #a8cc30; }
+        #gps-status {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        /* ── 站點列表 ────────────────────────────────── */
+        #stops-section {
+            max-width: 1000px;
+            margin: 0 auto 2em;
+            padding: 0 2em;
+        }
+        #stops-section h3 {
+            font-size: 1.3em;
+            margin-bottom: 0.8em;
+            color: #2c3e50;
+        }
+        .stops-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4em;
+        }
+        .stop-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+            padding: 0.6em 1em;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border-left: 4px solid #BFE340;
+            font-size: 0.95em;
+        }
+        .stop-badge {
+            background: #2c3e50;
+            color: #fff;
+            width: 1.8em;
+            height: 1.8em;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .stop-item.reached {
+            border-left-color: #04D93C;
+            background: #f0fff4;
+        }
+        .stop-item.reached .stop-badge {
+            background: #04D93C;
+            color: #2c3e50;
+        }
     </style>
+    <!-- Leaflet.js 地圖庫 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 
@@ -108,6 +219,23 @@
         <section id="route-detail-container">
 
             </section>
+
+        <!-- ── 路線地圖 ─────────────────────────────────────────────────── -->
+        <section id="route-map-section" style="display:none;">
+            <h3>🗺️ 路線地圖</h3>
+            <div id="route-map"></div>
+            <div id="map-controls">
+                <button id="btn-gps" class="map-btn">📍 啟動 GPS 追蹤</button>
+                <button id="btn-notify" class="map-btn" style="display:none;">🔔 開啟報站提示</button>
+                <span id="gps-status"></span>
+            </div>
+        </section>
+
+        <!-- ── 站點列表 ───────────────────────────────────────────────────── -->
+        <section id="stops-section" style="display:none;">
+            <h3>🚏 站點列表</h3>
+            <ul id="stops-list" class="stops-list"></ul>
+        </section>
     </main>
 
     <footer>
@@ -115,5 +243,250 @@
     </footer>
 
     <script src="/js/main.js"></script>
-</body>
+    <script src="/js/pwa.js"></script>
+    <script>
+    // ── 路線地圖、站點及 GPS 追蹤 ────────────────────────────────────────
+    (function () {
+      let map = null;
+      let userMarker = null;
+      let watchId = null;
+      let routeStops = [];
+      // 50 meters: tight enough to confirm arrival at a stop without false positives,
+      // while still reachable given typical GPS accuracy (~5–15m in open areas).
+      // Adjust down to ~30m if stops are very close together on a route.
+      const STOP_RADIUS_M = 50;
+      const notifiedKey = 'ctrc_notified_stops_' + (new URLSearchParams(location.search).get('id') || '');
+
+      // 計算兩點之間的距離（Haversine，返回米）
+      function getDistanceM(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      // 初始化 Leaflet 地圖
+      function initMap(centerLat, centerLon, zoom) {
+        if (map) return;
+        map = L.map('route-map').setView([centerLat, centerLon], zoom || 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19,
+        }).addTo(map);
+      }
+
+      // 在地圖上加載 GPX 路線
+      async function loadGpxOnMap(gpxFile) {
+        if (!map) return;
+        try {
+          const res = await fetch('/gpx/' + gpxFile);
+          if (!res.ok) return;
+          const gpxText = await res.text();
+          const parser = new DOMParser();
+          const gpxDoc = parser.parseFromString(gpxText, 'application/xml');
+
+          // 解析 trkpt 節點
+          const trkpts = gpxDoc.querySelectorAll('trkpt');
+          if (trkpts.length === 0) return;
+
+          const latlngs = [];
+          trkpts.forEach(pt => {
+            const lat = parseFloat(pt.getAttribute('lat'));
+            const lon = parseFloat(pt.getAttribute('lon'));
+            if (!isNaN(lat) && !isNaN(lon)) latlngs.push([lat, lon]);
+          });
+
+          if (latlngs.length > 0) {
+            const polyline = L.polyline(latlngs, { color: '#990000', weight: 4, opacity: 0.8 });
+            polyline.addTo(map);
+            map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+          }
+        } catch (e) {
+          console.warn('[Map] GPX 加載失敗:', e);
+        }
+      }
+
+      // 在地圖上標示站點
+      function renderStopsOnMap(stops) {
+        if (!map || !stops.length) return;
+        stops.forEach(stop => {
+          const icon = L.divIcon({
+            className: '',
+            html: `<div style="background:#2c3e50;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;">${stop.order}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+          });
+          L.marker([stop.lat, stop.lon], { icon })
+            .bindPopup(`<b>站 ${stop.order}</b><br>${stop.name}`)
+            .addTo(map);
+        });
+      }
+
+      // 渲染站點列表 UI
+      function renderStopsList(stops) {
+        const list = document.getElementById('stops-list');
+        if (!list || !stops.length) return;
+        list.innerHTML = '';
+        stops.forEach(stop => {
+          const li = document.createElement('li');
+          li.className = 'stop-item';
+          li.id = 'stop-item-' + stop.order;
+          li.innerHTML = `<span class="stop-badge">${stop.order}</span><span>${stop.name}</span>`;
+          list.appendChild(li);
+        });
+        document.getElementById('stops-section').style.display = 'block';
+      }
+
+      // 更新站點已到達狀態
+      function markStopReached(order) {
+        const el = document.getElementById('stop-item-' + order);
+        if (el) el.classList.add('reached');
+      }
+
+      // GPS 追蹤
+      function startGpsTracking() {
+        if (!('geolocation' in navigator)) {
+          document.getElementById('gps-status').textContent = '此瀏覽器不支援 GPS';
+          return;
+        }
+        document.getElementById('btn-gps').classList.add('active');
+        document.getElementById('btn-gps').textContent = '⏹ 停止 GPS 追蹤';
+        document.getElementById('gps-status').textContent = '正在獲取位置...';
+
+        const notified = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            document.getElementById('gps-status').textContent =
+              `📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+            // 更新用戶位置標記
+            if (!userMarker) {
+              const userIcon = L.divIcon({
+                className: '',
+                html: '<div style="background:#04D93C;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.4);"></div>',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+              });
+              userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
+            } else {
+              userMarker.setLatLng([latitude, longitude]);
+            }
+            map.panTo([latitude, longitude]);
+
+            // 檢查是否接近站點
+            routeStops.forEach(stop => {
+              const dist = getDistanceM(latitude, longitude, stop.lat, stop.lon);
+              if (dist < STOP_RADIUS_M && !notified.includes(stop.order)) {
+                notified.push(stop.order);
+                localStorage.setItem(notifiedKey, JSON.stringify(notified));
+                markStopReached(stop.order);
+                if (window.CTRCHK_PWA) {
+                  window.CTRCHK_PWA.sendLocalNotification(
+                    '🚏 即將到達',
+                    `站 ${stop.order}：${stop.name}`,
+                    'ctrc-stop-' + stop.order
+                  );
+                }
+              }
+            });
+          },
+          (err) => {
+            document.getElementById('gps-status').textContent = 'GPS 錯誤：' + err.message;
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+        );
+      }
+
+      function stopGpsTracking() {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+        document.getElementById('btn-gps').classList.remove('active');
+        document.getElementById('btn-gps').textContent = '📍 啟動 GPS 追蹤';
+        document.getElementById('gps-status').textContent = '';
+      }
+
+      // 主入口：在 main.js 渲染完路線後初始化地圖
+      async function initRouteMap() {
+        const params = new URLSearchParams(location.search);
+        const routeId = params.get('id');
+        if (!routeId) return;
+
+        // 取路線及站點數據
+        let routeData = null;
+        try {
+          const res = await fetch('/routes.json');
+          if (res.ok) {
+            const data = await res.json();
+            routeData = (data.routes || []).find(r => r.id === routeId);
+          }
+        } catch (e) {}
+        routeStops = routeData ? (routeData.stops || []) : [];
+
+        const defaultCenter = routeStops.length > 0
+          ? [routeStops[0].lat, routeStops[0].lon]
+          : [22.3143, 114.2697]; // 將軍澳默認中心
+
+        // 顯示地圖區塊
+        document.getElementById('route-map-section').style.display = 'block';
+        initMap(defaultCenter[0], defaultCenter[1], 14);
+
+        // 加載 GPX（取第一條 GPX 文件）
+        if (routeData && routeData.gpx && routeData.gpx.length > 0) {
+          await loadGpxOnMap(routeData.gpx[0].file);
+        }
+
+        // 標示站點
+        renderStopsOnMap(routeStops);
+        renderStopsList(routeStops);
+
+        // 顯示報站按鈕（若支援）
+        if ('Notification' in window) {
+          document.getElementById('btn-notify').style.display = 'inline-block';
+        }
+
+        // GPS 按鈕
+        document.getElementById('btn-gps').addEventListener('click', () => {
+          if (watchId !== null) {
+            stopGpsTracking();
+          } else {
+            startGpsTracking();
+          }
+        });
+
+        // 報站通知按鈕
+        document.getElementById('btn-notify').addEventListener('click', async () => {
+          if (window.CTRCHK_PWA) {
+            const granted = await window.CTRCHK_PWA.requestNotificationPermission();
+            document.getElementById('btn-notify').textContent = granted ? '🔔 報站提示已開啟' : '🔕 通知被拒絕';
+            document.getElementById('btn-notify').disabled = true;
+          }
+        });
+      }
+
+      // 等待 main.js 渲染完成後初始化
+      document.addEventListener('DOMContentLoaded', () => {
+        // main.js 同步渲染路線，監聽 MutationObserver 確保地圖在內容後初始化
+        const container = document.getElementById('route-detail-container');
+        if (!container) return;
+
+        const observer = new MutationObserver(() => {
+          if (container.children.length > 0) {
+            observer.disconnect();
+            initRouteMap();
+          }
+        });
+        observer.observe(container, { childList: true, subtree: true });
+
+        // 若已有內容（無需等待）
+        if (container.children.length > 0) initRouteMap();
+      });
+    })();
+    </script>
 </html>

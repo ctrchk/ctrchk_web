@@ -17,17 +17,32 @@ export default async function handler(req, res) {
 
     if (google_id) {
       result = await query(
-        'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE google_id = $1',
+        `SELECT u.id, u.email, u.user_role, u.full_name, u.phone, u.profile_completed,
+                u.auth_provider, u.created_at, u.email_verified,
+                gp.level, gp.xp, gp.coins
+         FROM users u
+         LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+         WHERE u.google_id = $1`,
         [google_id]
       );
     } else if (user_id) {
       result = await query(
-        'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE id = $1',
+        `SELECT u.id, u.email, u.user_role, u.full_name, u.phone, u.profile_completed,
+                u.auth_provider, u.created_at, u.email_verified,
+                gp.level, gp.xp, gp.coins
+         FROM users u
+         LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+         WHERE u.id = $1`,
         [user_id]
       );
     } else {
       result = await query(
-        'SELECT id, email, user_role, full_name, phone, profile_completed, auth_provider, created_at FROM users WHERE email = $1',
+        `SELECT u.id, u.email, u.user_role, u.full_name, u.phone, u.profile_completed,
+                u.auth_provider, u.created_at, u.email_verified,
+                gp.level, gp.xp, gp.coins
+         FROM users u
+         LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+         WHERE u.email = $1`,
         [email]
       );
     }
@@ -36,7 +51,15 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    return res.status(200).json(result.rows[0]);
+    const user = result.rows[0];
+    // 為未初始化遊戲進度的用戶設置默認值
+    if (user.level === null || user.level === undefined) {
+      user.level = 1;
+      user.xp = 0;
+      user.coins = 0;
+    }
+
+    return res.status(200).json(user);
 
   } catch (error) {
     console.error('Get user error:', error);
