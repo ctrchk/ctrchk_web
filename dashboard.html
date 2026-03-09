@@ -2,10 +2,106 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CTRC HK">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用戶儀表板 - CTRC HK</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ── 遊戲進度卡片 ──────────────────────────────── */
+        #game-profile-card {
+            display: none;
+            max-width: 800px;
+            margin: 1.5em auto;
+            background: linear-gradient(135deg, #2c3e50 0%, #3d5166 100%);
+            color: #fff;
+            border-radius: 12px;
+            padding: 1.5em 2em;
+            box-shadow: 0 4px 12px rgba(44,62,80,0.3);
+        }
+        .game-card-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+            margin-bottom: 1em;
+            flex-wrap: wrap;
+        }
+        .game-level-badge {
+            background: #BFE340;
+            color: #2c3e50;
+            font-size: 1.4em;
+            font-weight: bold;
+            padding: 0.2em 0.7em;
+            border-radius: 8px;
+        }
+        .game-title {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .game-coins {
+            margin-left: auto;
+            font-size: 1em;
+            background: rgba(255,255,255,0.15);
+            padding: 0.3em 0.8em;
+            border-radius: 6px;
+        }
+        .xp-bar-container {
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            height: 10px;
+            overflow: hidden;
+            margin: 0.4em 0;
+        }
+        .xp-bar-fill {
+            background: #BFE340;
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease;
+        }
+        .xp-label {
+            font-size: 0.8em;
+            opacity: 0.85;
+        }
+
+        /* ── 騎行歷史條目（升級版） ─────────────────────── */
+        .ride-item {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 1em 1.2em;
+            margin-bottom: 0.8em;
+            border-left: 4px solid #BFE340;
+        }
+        .ride-item .ride-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.4em;
+        }
+        .ride-route-name {
+            font-weight: bold;
+            font-size: 1em;
+        }
+        .ride-xp {
+            font-size: 0.85em;
+            color: #2c3e50;
+            background: #BFE340;
+            padding: 0.2em 0.6em;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .ride-details {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 0.3em;
+        }
+    </style>
     
     <script>
         // 這是「頁面守衛」，它會在頁面渲染前執行
@@ -45,6 +141,19 @@
                 <strong>請驗證你的電子郵件！</strong>
                 我們已向你的電郵發送了驗證連結，請查收並點擊連結以完成驗證。
             </p>
+        </div>
+
+        <!-- 遊戲進度卡片 -->
+        <div id="game-profile-card">
+            <div class="game-card-header">
+                <span class="game-level-badge" id="game-level-badge">Lv.1</span>
+                <span class="game-title" id="game-title">新手騎士</span>
+                <span class="game-coins" id="game-coins">💰 0 里程幣</span>
+            </div>
+            <div class="xp-bar-container">
+                <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
+            </div>
+            <div class="xp-label" id="xp-label">XP: 0 / 300</div>
         </div>
 
         <div id="upgrade-notice" style="display: none; background: #fff3cd; border: 2px solid #ffc107; padding: 1.5em; margin: 2em auto; max-width: 800px; border-radius: 8px; text-align: center;">
@@ -92,7 +201,7 @@
                     return;
                 }
 
-                // 從後端取得最新的用戶角色資訊
+                // 從後端取得最新的用戶角色及遊戲進度
                 try {
                     const token = localStorage.getItem('accessToken');
                     const dbResponse = await fetch(`/api/get-user?user_id=${user.id}`, {
@@ -104,6 +213,10 @@
                         // 更新本地快取
                         user.user_role = userRole;
                         localStorage.setItem('user', JSON.stringify(user));
+                        // 顯示遊戲進度卡片
+                        if (dbUser.level !== undefined) {
+                            renderGameProfile(dbUser.level, dbUser.xp, dbUser.coins);
+                        }
                     } else {
                         userRole = user.user_role || user.role || 'junior';
                     }
@@ -147,35 +260,95 @@
             }
         });
 
+        // 等級稱號對照表（與 routes.json / level_config 同步）
+        const LEVEL_TITLES = {
+            1: '新手騎士', 2: '街坊騎手', 3: '區域探索者', 4: '城市達人',
+            5: '城市騎士', 6: '路線通', 7: '將軍澳通', 8: '單車俠',
+            9: '海濱傳奇', 10: '都市傳奇'
+        };
+        const LEVEL_XP = [0, 300, 700, 1200, 1800, 2600, 3500, 4500, 5800, 7500, Infinity];
+
+        function renderGameProfile(level, xp, coins) {
+            const card = document.getElementById('game-profile-card');
+            if (!card) return;
+            const lvl = Math.max(1, Math.min(level || 1, 10));
+            const currentXp = xp || 0;
+            const currentCoins = coins || 0;
+            const xpNeeded = LEVEL_XP[lvl] || 0;
+            const xpNext = LEVEL_XP[lvl] < Infinity ? LEVEL_XP[lvl] : LEVEL_XP[lvl - 1];
+            const xpBar = lvl >= 10 ? 100 : Math.round(Math.max(0, Math.min(100, (currentXp - xpNeeded) / Math.max(1, xpNext - xpNeeded) * 100)));
+
+            document.getElementById('game-level-badge').textContent = `Lv.${lvl}`;
+            document.getElementById('game-title').textContent = LEVEL_TITLES[lvl] || '';
+            document.getElementById('game-coins').textContent = `💰 ${currentCoins.toLocaleString()} 里程幣`;
+            document.getElementById('xp-bar').style.width = xpBar + '%';
+            document.getElementById('xp-label').textContent = lvl >= 10
+                ? `XP: ${currentXp.toLocaleString()}（已達最高等級）`
+                : `XP: ${currentXp.toLocaleString()} / ${xpNext.toLocaleString()}（下一級需 ${(xpNext - currentXp).toLocaleString()} XP）`;
+            card.style.display = 'block';
+        }
+
         async function loadCyclingHistory() {
             const container = document.getElementById('history-container');
             container.textContent = '正在載入歷史紀錄...';
             
             try {
-                // 這是我們在 login.js 中會建立的函數
-                const historyData = await fetchProtectedData('/api/getHistory'); 
-                
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('/api/getHistory', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                if (!response.ok) throw new Error('Server error ' + response.status);
+                const data = await response.json();
+
+                // 同步遊戲進度（若尚未渲染）
+                if (data.gameProfile && document.getElementById('game-profile-card').style.display === 'none') {
+                    renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins);
+                }
+
+                const historyData = Array.isArray(data) ? data : (data.history || []);
+
                 if (historyData.length === 0) {
-                    container.textContent = '你目前沒有任何騎行歷史。';
+                    container.innerHTML = '<p style="color:#999;">你目前沒有任何騎行歷史。<br><a href="/routes" style="color:#2c3e50;">瀏覽路線</a>開始你的第一次騎行吧！</p>';
                     return;
                 }
 
-                // 渲染數據
-                container.innerHTML = ''; // 清空
-                const ul = document.createElement('ul');
+                container.innerHTML = '';
                 historyData.forEach(ride => {
-                    const li = document.createElement('li');
-                    li.textContent = `日期: ${ride.ride_date}, 距離: ${ride.distance_km} km`;
-                    ul.appendChild(li);
+                    const div = document.createElement('div');
+                    div.className = 'ride-item';
+                    const routeLabel = ride.route_name || '未命名路線';
+                    const dateStr = ride.ride_date ? ride.ride_date.slice(0, 10) : '';
+                    const distStr = ride.distance_km ? `${ride.distance_km} km` : '';
+                    const durStr = ride.duration_minutes ? `${ride.duration_minutes} 分鐘` : '';
+                    const speedStr = ride.avg_speed_kmh ? `${ride.avg_speed_kmh} km/h` : '';
+                    const xpStr = ride.xp_earned ? `+${ride.xp_earned} XP` : '';
+                    const sourceIcon = { pwa: '📱', app: '📲', gpx: '📂' }[ride.source] || '🌐';
+
+                    div.innerHTML = `
+                        <div class="ride-main">
+                            <span class="ride-route-name">${sourceIcon} ${routeLabel}</span>
+                            ${xpStr ? `<span class="ride-xp">${xpStr}</span>` : ''}
+                        </div>
+                        <div class="ride-details">
+                            📅 ${dateStr}
+                            ${distStr ? ` &nbsp;|&nbsp; 🚴 ${distStr}` : ''}
+                            ${durStr ? ` &nbsp;|&nbsp; ⏱ ${durStr}` : ''}
+                            ${speedStr ? ` &nbsp;|&nbsp; 💨 平均 ${speedStr}` : ''}
+                        </div>
+                    `;
+                    container.appendChild(div);
                 });
-                container.appendChild(ul);
                 
             } catch (error) {
-                // fetchProtectedData 內部會處理 401 跳轉
                 console.error('載入歷史失敗:', error);
                 container.textContent = `載入失敗: ${error.message}`;
             }
         }
     </script>
+    <script src="/js/pwa.js"></script>
 </body>
 </html>

@@ -1,0 +1,263 @@
+{
+  "version": "1.0",
+  "updated": "2026-03-09",
+  "note": "站點 GPS 坐標為估算值，日後將由實地採集數據更新。",
+  "level_config": [
+    { "level": 1, "xp_required": 0,    "coins_reward": 0,    "title_zh": "新手騎士",   "title_en": "Rookie Rider" },
+    { "level": 2, "xp_required": 300,  "coins_reward": 100,  "title_zh": "街坊騎手",   "title_en": "Neighborhood Cyclist" },
+    { "level": 3, "xp_required": 700,  "coins_reward": 200,  "title_zh": "區域探索者", "title_en": "Area Explorer" },
+    { "level": 4, "xp_required": 1200, "coins_reward": 300,  "title_zh": "城市達人",   "title_en": "City Enthusiast" },
+    { "level": 5, "xp_required": 1800, "coins_reward": 500,  "title_zh": "城市騎士",   "title_en": "City Rider" },
+    { "level": 6, "xp_required": 2600, "coins_reward": 600,  "title_zh": "路線通",     "title_en": "Route Master" },
+    { "level": 7, "xp_required": 3500, "coins_reward": 700,  "title_zh": "將軍澳通",   "title_en": "TKO Expert" },
+    { "level": 8, "xp_required": 4500, "coins_reward": 800,  "title_zh": "單車俠",     "title_en": "Cycling Hero" },
+    { "level": 9, "xp_required": 5800, "coins_reward": 900,  "title_zh": "海濱傳奇",   "title_en": "Waterfront Legend" },
+    { "level": 10, "xp_required": 7500, "coins_reward": 1000, "title_zh": "都市傳奇",   "title_en": "Urban Legend" }
+  ],
+  "routes": [
+    {
+      "id": "900",
+      "alias": "市區海濱線",
+      "start": "寶琳(新都城二期)",
+      "end": "調景嶺彩明",
+      "via": "景林邨、香港單車館、將軍澳海濱、調景嶺站",
+      "nature": "旅遊",
+      "time": 40,
+      "length": "5.5km",
+      "difficulty": 3,
+      "image": "images/900.jpg",
+      "description": "這是專為新手打造的「海濱專線」。全程半個多小時，少坡、風景優美，讓你在寶琳與調景嶺之間輕鬆穿梭，沿途還有補給點可供休息。",
+      "tags": ["將軍澳", "海濱專線", "寶琳調景嶺線", "新手必試", "風景優美", "少坡"],
+      "color": "#990000",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 150,
+      "is_special": false,
+      "gpx": [
+        { "label": "往寶琳",  "file": "900寶琳.gpx" },
+        { "label": "往調景嶺", "file": "900調景嶺.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "寶琳（新都城二期）",   "lat": 22.3231, "lon": 114.2592 },
+        { "order": 2, "name": "景林邨單車駅",          "lat": 22.3185, "lon": 114.2620 },
+        { "order": 3, "name": "香港單車館",            "lat": 22.3143, "lon": 114.2697 },
+        { "order": 4, "name": "將軍澳海濱公園",        "lat": 22.3089, "lon": 114.2728 },
+        { "order": 5, "name": "調景嶺站",              "lat": 22.3078, "lon": 114.2694 },
+        { "order": 6, "name": "調景嶺彩明",            "lat": 22.3042, "lon": 114.2651 }
+      ]
+    },
+    {
+      "id": "900A",
+      "alias": "寶調特快",
+      "start": "寶琳(新都城二期)",
+      "end": "調景嶺總站",
+      "via": "景林邨、寶順路、調景嶺站",
+      "nature": "混合",
+      "time": 20,
+      "length": "4.2km",
+      "difficulty": 1.5,
+      "image": "images/900A.jpg",
+      "description": "一條專為單車新手設計的輕鬆路線。取道寶順路專用單車徑來往寶琳與調景嶺，路況平坦，僅需 20 分鐘即可往返，是假日體驗單車樂的最佳選擇。",
+      "tags": ["將軍澳", "寶琳調景嶺線", "新手必試", "特快", "平坦", "通勤", "旅遊"],
+      "color": "#990000",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 120,
+      "is_special": false,
+      "gpx": [
+        { "label": "往寶琳",  "file": "900A寶琳.gpx" },
+        { "label": "往調景嶺", "file": "900A調景嶺.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "寶琳（新都城二期）", "lat": 22.3231, "lon": 114.2592 },
+        { "order": 2, "name": "景林邨",            "lat": 22.3185, "lon": 114.2620 },
+        { "order": 3, "name": "寶順路單車徑",       "lat": 22.3130, "lon": 114.2655 },
+        { "order": 4, "name": "調景嶺總站",         "lat": 22.3078, "lon": 114.2694 }
+      ]
+    },
+    {
+      "id": "914",
+      "alias": "景林快線",
+      "start": "寶琳(景林單車駅)",
+      "end": "坑口站",
+      "via": "",
+      "nature": "通勤",
+      "time": 4,
+      "length": "0.8km",
+      "difficulty": 0.5,
+      "image": "images/914.jpg",
+      "description": "專為通勤而設的景林專線。全日連接坑口站與景林邨，路況平坦且交通接駁便利，全程僅需 4 分鐘，是節省通勤時間的首選。",
+      "tags": ["將軍澳", "通勤專線", "平坦", "連接地鐵站", "連接巴士總站", "少坡"],
+      "color": "#073763",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 50,
+      "is_special": false,
+      "gpx": [
+        { "label": "往寶琳", "file": "914寶琳.gpx" },
+        { "label": "往坑口", "file": "914坑口.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "景林邨單車駅", "lat": 22.3185, "lon": 114.2620 },
+        { "order": 2, "name": "坑口站",       "lat": 22.3163, "lon": 114.2658 }
+      ]
+    },
+    {
+      "id": "910",
+      "alias": "坑口循環線",
+      "start": "坑口站",
+      "end": "坑口北、煜明苑",
+      "via": "坑口北、煜明苑",
+      "nature": "混合",
+      "time": 15,
+      "length": "3.1km",
+      "difficulty": 2,
+      "image": "images/910.jpg",
+      "description": "繞行坑口站及周邊外圍的雙循環線，適合通勤及旅遊。路線接駁地鐵站及巴士總站，人流較少且少坡，是進行單車訓練的理想選擇。",
+      "tags": ["將軍澳", "循環線", "坑口北專線", "少坡", "運動訓練", "連接地鐵站", "連接巴士總站", "人流較少", "通勤", "旅遊"],
+      "color": "#3c78d8",
+      "unlock_level": 2,
+      "unlock_cost": null,
+      "xp_reward": 100,
+      "is_special": false,
+      "gpx": [
+        { "label": "順時針", "file": "910順時針.gpx" },
+        { "label": "逆時針", "file": "910逆時針.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "坑口站",     "lat": 22.3163, "lon": 114.2658 },
+        { "order": 2, "name": "坑口北巴士站", "lat": 22.3198, "lon": 114.2640 },
+        { "order": 3, "name": "煜明苑",     "lat": 22.3210, "lon": 114.2610 },
+        { "order": 4, "name": "坑口站",     "lat": 22.3163, "lon": 114.2658 }
+      ]
+    },
+    {
+      "id": "920",
+      "alias": "尚德專線",
+      "start": "維景灣畔",
+      "end": "寶琳站",
+      "via": "調景嶺學校區、將軍澳中心、尚德、坑口站、寶琳學校區",
+      "nature": "旅遊",
+      "time": 30,
+      "length": "4.6km",
+      "difficulty": 3,
+      "image": "images/920.jpg",
+      "description": "深入將軍澳各核心區的旅遊路線。同時途經調景嶺、坑口及寶琳站，讓你盡情探索將軍澳。",
+      "tags": ["將軍澳", "旅遊專線", "少坡", "維景灣畔專線", "連接地鐵站", "學校線"],
+      "color": "#660000",
+      "unlock_level": 2,
+      "unlock_cost": null,
+      "xp_reward": 130,
+      "is_special": false,
+      "gpx": [
+        { "label": "往寶琳",  "file": "920寶琳.gpx" },
+        { "label": "往調景嶺", "file": "920調景嶺.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "維景灣畔",   "lat": 22.3088, "lon": 114.2669 },
+        { "order": 2, "name": "調景嶺學校區", "lat": 22.3070, "lon": 114.2645 },
+        { "order": 3, "name": "將軍澳中心", "lat": 22.3060, "lon": 114.2600 },
+        { "order": 4, "name": "尚德",       "lat": 22.3045, "lon": 114.2570 },
+        { "order": 5, "name": "坑口站",     "lat": 22.3163, "lon": 114.2658 },
+        { "order": 6, "name": "寶琳站",     "lat": 22.3231, "lon": 114.2592 }
+      ]
+    },
+    {
+      "id": "923",
+      "alias": "市中心循環線",
+      "start": "調景嶺總站",
+      "end": null,
+      "via": "單車館公園、調景嶺碼頭、將軍澳海濱、天晉、入境事務大樓",
+      "nature": "混合",
+      "time": 40,
+      "length": "5.6km",
+      "difficulty": 3.5,
+      "image": "images/923.jpg",
+      "description": "連接調景嶺、尚德、單車館及將軍澳市中心的平坦循環線。交通接駁便利，適合通勤與休閒的混合用途。",
+      "tags": ["將軍澳", "循環", "平坦", "連接地鐵站", "通勤", "旅遊"],
+      "color": "#ff0000",
+      "unlock_level": 3,
+      "unlock_cost": null,
+      "xp_reward": 160,
+      "is_special": false,
+      "gpx": [
+        { "label": "順時針", "file": "923順時針.gpx" },
+        { "label": "逆時針", "file": "923逆時針.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "調景嶺總站",     "lat": 22.3078, "lon": 114.2694 },
+        { "order": 2, "name": "單車館公園",      "lat": 22.3130, "lon": 114.2700 },
+        { "order": 3, "name": "調景嶺碼頭",      "lat": 22.3060, "lon": 114.2720 },
+        { "order": 4, "name": "將軍澳海濱",      "lat": 22.3050, "lon": 114.2660 },
+        { "order": 5, "name": "天晉",            "lat": 22.3035, "lon": 114.2595 },
+        { "order": 6, "name": "入境事務大樓",    "lat": 22.3040, "lon": 114.2555 }
+      ]
+    },
+    {
+      "id": "932",
+      "alias": "坑康線",
+      "start": "坑口站",
+      "end": "將軍澳創新園",
+      "via": "坑口北、北橋、清水灣半島、康城海濱、日出康城",
+      "nature": "混合",
+      "time": 45,
+      "length": "8.1km",
+      "difficulty": 4,
+      "image": "images/932.jpg",
+      "description": "連接坑口、清水灣半島、康城及創新園的長途特快路線。路況少坡，沿著海濱騎行，是挑戰長途的絕佳選擇。",
+      "tags": ["將軍澳", "長途", "少坡", "清水灣半島專線", "海濱專線", "風景優美", "坑口北專線", "快速", "創新園路線", "通勤", "旅遊"],
+      "color": "#ff00ff",
+      "unlock_level": 4,
+      "unlock_cost": null,
+      "xp_reward": 220,
+      "is_special": false,
+      "gpx": [
+        { "label": "往創新園", "file": "932創新園.gpx" },
+        { "label": "往坑口",   "file": "932坑口.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "坑口站",       "lat": 22.3163, "lon": 114.2658 },
+        { "order": 2, "name": "坑口北",       "lat": 22.3210, "lon": 114.2630 },
+        { "order": 3, "name": "北橋",         "lat": 22.3240, "lon": 114.2580 },
+        { "order": 4, "name": "清水灣半島",   "lat": 22.3280, "lon": 114.2540 },
+        { "order": 5, "name": "康城海濱",     "lat": 22.3000, "lon": 114.2490 },
+        { "order": 6, "name": "日出康城",     "lat": 22.2980, "lon": 114.2510 },
+        { "order": 7, "name": "將軍澳創新園", "lat": 22.2940, "lon": 114.2470 }
+      ]
+    },
+    {
+      "id": "960",
+      "alias": "終極旅遊線",
+      "start": "將軍澳村",
+      "end": "將軍澳創新園",
+      "via": "寶琳北路、寶順路、調景嶺站、將軍澳跨灣大橋、日出康城",
+      "nature": "旅遊",
+      "time": 80,
+      "length": "12.8km",
+      "difficulty": 5,
+      "image": "images/960.jpg",
+      "description": "終極旅遊線，繞經將軍澳大部分地區。由寶琳開出，途經坑口、尚德、調景嶺及將軍澳西後經過將軍澳跨灣大橋直達日出康城，最後前往將軍澳創新園，多坡路段適合專業單車訓練，讓你盡覽整個將軍澳地區風光。",
+      "tags": ["將軍澳", "旅遊專線", "運動訓練", "多坡", "長途", "大橋特快", "南北三寶", "創新園路線", "風景優美", "挑戰"],
+      "color": "#76a5af",
+      "unlock_level": 5,
+      "unlock_cost": null,
+      "xp_reward": 400,
+      "is_special": false,
+      "gpx": [
+        { "label": "往創新園", "file": "960創新園.gpx" },
+        { "label": "往寶琳",   "file": "960寶琳.gpx" }
+      ],
+      "stops": [
+        { "order": 1, "name": "將軍澳村",       "lat": 22.3260, "lon": 114.2565 },
+        { "order": 2, "name": "寶琳站",          "lat": 22.3231, "lon": 114.2592 },
+        { "order": 3, "name": "坑口站",          "lat": 22.3163, "lon": 114.2658 },
+        { "order": 4, "name": "尚德邨",          "lat": 22.3050, "lon": 114.2575 },
+        { "order": 5, "name": "調景嶺站",        "lat": 22.3078, "lon": 114.2694 },
+        { "order": 6, "name": "將軍澳海濱",      "lat": 22.3050, "lon": 114.2660 },
+        { "order": 7, "name": "將軍澳跨灣大橋", "lat": 22.2990, "lon": 114.2560 },
+        { "order": 8, "name": "日出康城",        "lat": 22.2980, "lon": 114.2510 },
+        { "order": 9, "name": "將軍澳創新園",   "lat": 22.2940, "lon": 114.2470 }
+      ]
+    }
+  ]
+}
