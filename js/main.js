@@ -199,7 +199,32 @@ document.addEventListener('DOMContentLoaded', function() {
         // ***** 這是唯一的修改點 *****
         // Header 載入完成後，立即呼叫 updateNavUI 來更新登入狀態
         updateNavUI();
+        // 更新語言切換連結，確保指向當前頁面的對應語言版本
+        updateLangLink();
         // ***************************
+    }
+
+    /**
+     * 更新語言切換連結，使其指向當前頁面的對應語言版本。
+     * - 中文頁面 (#lang-en-link): / → /en/index，/about → /en/about，以此類推
+     * - 英文頁面 (#lang-zh-link): /en/about → /about，/en/index → /
+     */
+    function updateLangLink() {
+        const path = window.location.pathname;
+        const enLink = document.getElementById('lang-en-link');
+        const zhLink = document.getElementById('lang-zh-link');
+
+        if (enLink) {
+            // 中文頁面：根路徑 → /en/index，其餘路徑在前面加 /en
+            enLink.href = (path === '/') ? '/en/index' : '/en' + path;
+        }
+
+        if (zhLink) {
+            // 英文頁面：移除 /en 或 /en/ 前綴
+            // /en/about → /about，/en/index → /，/en → /
+            const stripped = path.replace(/^\/en(\/|$)/, '/');
+            zhLink.href = (stripped === '/index') ? '/' : stripped;
+        }
     }
         
     /**

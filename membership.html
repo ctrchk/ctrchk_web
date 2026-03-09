@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>會員計劃 - 香港城市運輸單車 CTRC HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .membership-hero {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            color: white;
+            text-align: center;
+            padding: 4em 2em;
+        }
+        .membership-hero h1 {
+            font-size: 2.5em;
+            color: #04D93C;
+            margin-bottom: 0.4em;
+        }
+        .membership-hero p {
+            color: #aaa;
+            font-size: 1.1em;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .membership-main {
+            background: #1a1a2e;
+            color: white;
+            padding: 4em 2em;
+        }
+        .membership-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2em;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .membership-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 2em;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .membership-card:hover { transform: translateY(-4px); }
+        .membership-card.highlight {
+            border-color: #04D93C;
+            background: rgba(4, 217, 60, 0.08);
+        }
+        .membership-card h3 {
+            color: #04D93C;
+            font-size: 1.4em;
+            margin-top: 0;
+            margin-bottom: 0.3em;
+        }
+        .membership-card .price {
+            font-size: 2em;
+            font-weight: bold;
+            color: white;
+            margin: 0.5em 0;
+        }
+        .membership-card .price span {
+            font-size: 0.45em;
+            color: #aaa;
+            font-weight: normal;
+        }
+        .membership-card ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            margin: 1em 0;
+        }
+        .membership-card ul li {
+            padding: 0.4em 0;
+            color: #ccc;
+            font-size: 0.95em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .membership-card ul li::before {
+            content: "✓ ";
+            color: #04D93C;
+            font-weight: bold;
+        }
+        .membership-card .card-btn {
+            display: block;
+            text-align: center;
+            background: #04D93C;
+            color: white;
+            padding: 0.75em;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 1.5em;
+            transition: background 0.2s;
+        }
+        .membership-card .card-btn:hover { background: #03c236; }
+
+        .membership-note {
+            text-align: center;
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 2em;
+        }
+
+        .compare-section {
+            background: #16213e;
+            padding: 4em 2em;
+            color: white;
+        }
+        .compare-section h2 {
+            text-align: center;
+            color: #04D93C;
+            font-size: 1.8em;
+            margin-bottom: 1.5em;
+        }
+        .compare-table {
+            max-width: 700px;
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.95em;
+        }
+        .compare-table th {
+            background: rgba(4, 217, 60, 0.15);
+            color: #04D93C;
+            padding: 0.8em 1em;
+            text-align: center;
+        }
+        .compare-table th:first-child { text-align: left; }
+        .compare-table td {
+            padding: 0.7em 1em;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            color: #ccc;
+        }
+        .compare-table td:not(:first-child) { text-align: center; }
+        .compare-table tr:last-child td { border-bottom: none; }
+        .tick { color: #04D93C; font-size: 1.1em; }
+        .cross { color: #e74c3c; font-size: 1.1em; }
+
+        .cta-section {
+            text-align: center;
+            background: linear-gradient(135deg, #04D93C, #BFE340);
+            padding: 4em 2em;
+        }
+        .cta-section h2 { color: #1a1a2e; font-size: 2em; margin-bottom: 0.5em; }
+        .cta-section p { color: #1a1a2e; opacity: 0.8; margin-bottom: 1.5em; }
+        .btn-dark {
+            background: #1a1a2e;
+            color: white;
+            padding: 0.9em 2.5em;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        .btn-dark:hover { background: #0f3460; }
+
+        @media (max-width: 600px) {
+            .membership-hero h1 { font-size: 1.8em; }
+            .compare-table { font-size: 0.82em; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <!-- Hero -->
+    <section class="membership-hero">
+        <h1><i class="fas fa-star"></i> 會員計劃</h1>
+        <p>免費加入，完成個人資料即可升級，解鎖所有功能。</p>
+    </section>
+
+    <!-- Membership Cards -->
+    <section class="membership-main">
+        <div class="membership-grid">
+            <!-- Junior -->
+            <div class="membership-card">
+                <h3><i class="fas fa-user"></i> 初級會員</h3>
+                <div class="price">免費 <span>永久</span></div>
+                <ul>
+                    <li>瀏覽所有單車路線</li>
+                    <li>查看基本路線資訊</li>
+                    <li>獲取天氣預報</li>
+                    <li>建立帳戶</li>
+                </ul>
+                <a href="/register" class="card-btn">
+                    <i class="fas fa-user-plus"></i> 免費註冊
+                </a>
+            </div>
+
+            <!-- Senior -->
+            <div class="membership-card highlight">
+                <h3><i class="fas fa-star"></i> 高級會員</h3>
+                <div class="price">免費 <span>完成個人資料後</span></div>
+                <ul>
+                    <li>包含初級會員所有功能</li>
+                    <li>下載 GPX 路線檔案</li>
+                    <li>查看完整路線詳情</li>
+                    <li>記錄單車歷程</li>
+                    <li>社群活動參與資格</li>
+                    <li>路線更新優先通知</li>
+                </ul>
+                <a href="/register" class="card-btn">
+                    <i class="fas fa-arrow-up"></i> 升級至高級會員
+                </a>
+            </div>
+        </div>
+
+        <p class="membership-note">
+            <i class="fas fa-info-circle"></i>
+            高級會員完全免費 — 只需在註冊時完成你的單車個人資料即可升級。
+        </p>
+    </section>
+
+    <!-- Feature Comparison Table -->
+    <section class="compare-section">
+        <h2>功能比較</h2>
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>功能</th>
+                    <th>初級會員</th>
+                    <th>高級會員</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>瀏覽路線列表</td>
+                    <td><span class="tick">✓</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>基本路線資訊</td>
+                    <td><span class="tick">✓</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>天氣預報</td>
+                    <td><span class="tick">✓</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>建立帳戶</td>
+                    <td><span class="tick">✓</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>完整路線詳情</td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>下載 GPX 檔案</td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>騎行歷程記錄</td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>社群活動資格</td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+                <tr>
+                    <td>路線更新優先通知</td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span class="tick">✓</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <h2>準備好出發了嗎？</h2>
+        <p>立即加入 CTRC HK，開始探索香港城市單車之旅。</p>
+        <a href="/register" class="btn-dark">
+            <i class="fas fa-user-plus"></i> 免費建立帳戶
+        </a>
+        &nbsp;&nbsp;
+        <a href="/login" style="display:inline-block; background:white; color:#1a1a2e; padding:0.9em 2.5em; border-radius:8px; text-decoration:none; font-weight:bold; font-size:1.1em; margin-top:0.5em;">
+            <i class="fas fa-sign-in-alt"></i> 登入
+        </a>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

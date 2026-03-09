@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycling Routes - City Transport Cycle (CTRC) HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .route-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5em;
+            margin-top: 2em;
+        }
+        .route-card-en {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            background: white;
+            transition: box-shadow 0.2s, transform 0.2s;
+            display: block;
+        }
+        .route-card-en:hover {
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            transform: translateY(-3px);
+        }
+        .route-card-en .card-head {
+            padding: 1em;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+        }
+        .route-card-en .route-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.3em 0.7em;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+        .route-card-en .card-body {
+            padding: 1em;
+        }
+        .route-card-en .card-body p {
+            color: #666;
+            font-size: 0.85em;
+            margin: 0.3em 0;
+        }
+        .district-header {
+            margin: 2em 0 0.5em;
+            font-size: 1.3em;
+            color: #2c3e50;
+            border-left: 4px solid #04D93C;
+            padding-left: 0.7em;
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main class="main-content">
+        <section class="hero">
+            <h1>All Cycling Routes</h1>
+            <p>Carefully planned cycling routes across Tseung Kwan O and Sha Tin. More districts coming soon.</p>
+        </section>
+
+        <section class="content">
+            <p style="text-align:center; color:#666; margin-bottom:1em;">
+                <i class="fas fa-info-circle"></i>
+                Routes are currently focused on <strong>Tseung Kwan O (將軍澳)</strong>.
+                Full route details and GPX downloads are available to <a href="/en/membership" style="color:#04D93C; font-weight:bold;">Senior Members</a>.
+            </p>
+
+            <h3 class="district-header"><i class="fas fa-map-marker-alt" style="color:#04D93C;"></i> Tseung Kwan O</h3>
+            <div class="route-grid">
+                <a href="/route_detail?id=900" class="route-card-en">
+                    <div class="card-head" style="background:#990000;">
+                        <span class="route-badge">900</span>
+                        <strong>Coastal Commuter</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Po Lam → Tseung Kwan O</p>
+                        <p><i class="fas fa-clock"></i> ~40 min &nbsp; <i class="fas fa-road"></i> 5.5 km</p>
+                        <p style="color:#04D93C;"><i class="fas fa-star"></i> Scenic coastal route, great for beginners</p>
+                    </div>
+                </a>
+                <a href="/route_detail?id=914" class="route-card-en">
+                    <div class="card-head" style="background:#073763;">
+                        <span class="route-badge">914</span>
+                        <strong>King Lam Express</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Po Lam → Hang Hau MTR</p>
+                        <p><i class="fas fa-clock"></i> ~4 min &nbsp; <i class="fas fa-road"></i> 0.8 km</p>
+                        <p style="color:#04D93C;"><i class="fas fa-subway"></i> MTR connection, daily commuter route</p>
+                    </div>
+                </a>
+                <a href="/route_detail?id=920" class="route-card-en">
+                    <div class="card-head" style="background:#660000;">
+                        <span class="route-badge">920</span>
+                        <strong>Sheung Tak Special</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Baycrest → Po Lam</p>
+                        <p><i class="fas fa-clock"></i> ~30 min &nbsp; <i class="fas fa-road"></i> 4.6 km</p>
+                        <p style="color:#04D93C;"><i class="fas fa-route"></i> Passes through TKO core districts</p>
+                    </div>
+                </a>
+                <a href="/route_detail?id=928" class="route-card-en">
+                    <div class="card-head" style="background:#783f04;">
+                        <span class="route-badge">928</span>
+                        <strong>Waterfront Express</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Po Lam → Tseung Kwan O (Yung Ming)</p>
+                        <p><i class="fas fa-clock"></i> ~40 min &nbsp; <i class="fas fa-road"></i> 6.0 km</p>
+                        <p style="color:#04D93C;"><i class="fas fa-water"></i> Coastal scenic ride, ferry connection</p>
+                    </div>
+                </a>
+                <a href="/route_detail?id=932" class="route-card-en">
+                    <div class="card-head" style="background:#aa00aa;">
+                        <span class="route-badge">932</span>
+                        <strong>Hang Hau–LOHAS Link</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Hang Hau → Innovation Hub</p>
+                        <p><i class="fas fa-clock"></i> ~45 min &nbsp; <i class="fas fa-road"></i> 8.1 km</p>
+                        <p style="color:#04D93C;"><i class="fas fa-mountain"></i> Long-haul coastal route</p>
+                    </div>
+                </a>
+                <a href="/route_detail?id=960" class="route-card-en">
+                    <div class="card-head" style="background:#76a5af;">
+                        <span class="route-badge">960</span>
+                        <strong>Ultimate Tour Route</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Tseung Kwan O Village → Innovation Hub</p>
+                        <p><i class="fas fa-clock"></i> ~80 min &nbsp; <i class="fas fa-road"></i> 12.8 km</p>
+                        <p style="color:#e74c3c;"><i class="fas fa-mountain"></i> Advanced — covers all of Tseung Kwan O</p>
+                    </div>
+                </a>
+                <a href="/route_detail?id=966" class="route-card-en">
+                    <div class="card-head" style="background:#ff9900;">
+                        <span class="route-badge">966</span>
+                        <strong>Cross-Bay Bridge Route</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><i class="fas fa-map-marker-alt"></i> Tseung Kwan O → LOHAS Park</p>
+                        <p><i class="fas fa-clock"></i> ~18 min &nbsp; <i class="fas fa-road"></i> 3.2 km</p>
+                        <p style="color:#04D93C;"><i class="fas fa-bridge"></i> Scenic bridge crossing experience</p>
+                    </div>
+                </a>
+            </div>
+
+            <div style="text-align:center; margin-top:2em;">
+                <p style="color:#888; font-size:0.9em;">
+                    <i class="fas fa-language"></i> More routes are listed on the <a href="/routes" style="color:#04D93C; font-weight:bold;">Chinese routes page</a> with full details.
+                </p>
+                <a href="/routes" class="cta-button" style="margin-top:1em;">View All Routes (Chinese)</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 City Transport Cycle (CTRC) HK. All Rights Reserved. | <a href="/terms" style="color:#BFE340;">Terms &amp; Privacy</a></p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>

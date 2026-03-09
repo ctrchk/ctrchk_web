@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - City Transport Cycle (CTRC) HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .blog-list-container {
+            max-width: 900px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+        .blog-post-summary {
+            display: flex;
+            gap: 1.5em;
+            background-color: #fff;
+            padding: 1.5em;
+            margin-bottom: 2em;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        .blog-post-summary:hover { box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .post-summary-image {
+            flex: 0 0 200px;
+            height: 150px;
+        }
+        .post-summary-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        .post-summary-content { flex: 1; }
+        .post-summary-content h2 { margin-top: 0; margin-bottom: 0.3em; font-size: 1.5em; }
+        .post-summary-content h2 a { color: #2c3e50; text-decoration: none; transition: color 0.3s; }
+        .post-summary-content h2 a:hover { color: #04D93C; }
+        .post-meta-summary { color: #777; font-size: 0.85em; margin-bottom: 0.8em; }
+        .post-excerpt { color: #555; margin-bottom: 1em; line-height: 1.6; }
+        .read-more-link { color: #04D93C; font-weight: bold; text-decoration: none; }
+        .read-more-link:hover { text-decoration: underline; }
+        @media (max-width: 600px) {
+            .blog-post-summary { flex-direction: column; gap: 1em; }
+            .post-summary-image { width: 100%; height: 200px; flex-basis: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="hero">
+            <h1>Blog</h1>
+            <p>Stories, tips, and news about urban cycling in Hong Kong.</p>
+        </section>
+
+        <section class="blog-list-container animated-element">
+            <div class="blog-post-summary">
+                <div class="post-summary-image">
+                    <img src="/images/blog/blog-welcome-banner.jpg" alt="Welcome to CTRC HK Blog" onerror="this.style.display='none'">
+                </div>
+                <div class="post-summary-content">
+                    <h2><a href="/blog_post?id=welcome-post">Welcome to the City Transport Cycle Blog!</a></h2>
+                    <p class="post-meta-summary"><i class="fas fa-user"></i> CTRC HK Team &nbsp; | &nbsp; <i class="fas fa-calendar"></i> 21 October 2025</p>
+                    <p class="post-excerpt">Hello! Welcome to the City Transport Cycle (CTRC HK) blog. We created this platform out of a love for cycling and a desire for a greener, healthier city life. In this blog we share route stories, cycling tips, and the latest news from CTRC HK...</p>
+                    <a href="/blog_post?id=welcome-post" class="read-more-link">Read More &rarr;</a>
+                </div>
+            </div>
+            <p style="text-align:center; color:#888; font-size:0.9em; margin-top:2em;">
+                <i class="fas fa-language"></i> More articles available on the <a href="/blog" style="color:#04D93C; font-weight:bold;">Chinese blog page</a>.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 City Transport Cycle (CTRC) HK. All Rights Reserved. | <a href="/terms" style="color:#BFE340;">Terms &amp; Privacy</a></p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>
