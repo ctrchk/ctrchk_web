@@ -111,8 +111,11 @@ export default async function handler(req, res) {
         );
         if (cfg.length > 0) xpReward = cfg[0].xp_reward;
         else {
-          // 估算 XP：以距離為基準（每公里 20 XP）
-          xpReward = Math.round((parseFloat(distance_km) || 0) * 20);
+          // Fallback: ~20 XP per km. This roughly matches configured rewards
+          // (e.g. route 900 = 5.5 km → ~110 XP, configured at 150), giving a
+          // fair estimate for routes not yet in routes_config.
+          const XP_PER_KM = 20;
+          xpReward = Math.round((parseFloat(distance_km) || 0) * XP_PER_KM);
         }
       } catch (e) { /* routes_config 可能尚未建立 */ }
 
