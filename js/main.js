@@ -201,7 +201,31 @@ document.addEventListener('DOMContentLoaded', function() {
         updateNavUI();
         // 更新語言切換連結，確保指向當前頁面的對應語言版本
         updateLangLink();
+        // 初始化語言切換下拉選單
+        initLangSwitcher();
         // ***************************
+    }
+
+    /**
+     * 初始化語言切換下拉選單（點擊地球圖示展開）
+     */
+    function initLangSwitcher() {
+        const btn = document.getElementById('lang-switcher-btn');
+        const dropdown = document.getElementById('lang-dropdown');
+        if (!btn || !dropdown) return;
+
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+        });
+
+        document.addEventListener('click', function() {
+            dropdown.classList.remove('open');
+        });
+
+        dropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
     }
 
     /**
@@ -211,19 +235,22 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function updateLangLink() {
         const path = window.location.pathname;
+        const search = window.location.search;
         const enLink = document.getElementById('lang-en-link');
         const zhLink = document.getElementById('lang-zh-link');
 
         if (enLink) {
             // 中文頁面：根路徑 → /en/index，其餘路徑在前面加 /en
-            enLink.href = (path === '/') ? '/en/index' : '/en' + path;
+            const enPath = (path === '/') ? '/en/index' : '/en' + path;
+            enLink.href = enPath + search;
         }
 
         if (zhLink) {
             // 英文頁面：移除 /en 或 /en/ 前綴
             // /en/about → /about，/en/index → /，/en → /
             const stripped = path.replace(/^\/en(\/|$)/, '/');
-            zhLink.href = (stripped === '/index') ? '/' : stripped;
+            const zhPath = (stripped === '/index') ? '/' : stripped;
+            zhLink.href = zhPath + search;
         }
     }
         
@@ -610,6 +637,140 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // =========================================================================
+    // 英文路線資料 (English route data)
+    // =========================================================================
+    const enRoutes = [
+        { id: '900', alias: "Coastal Commuter", start: "Po Lam (New Town Plaza II)", end: "Tseung Kwan O (Choi Ming)", via: "King Lam Estate, HK Velodrome, TKO Waterfront, Tseung Kwan O Station", nature: "Leisure", time: 40, length: "5.5 km", difficulty: 3, image: "images/900.jpg", description: "The perfect beginner-friendly waterfront route. The full journey takes under an hour, with minimal inclines and stunning scenery, seamlessly connecting Po Lam and Tseung Kwan O while passing multiple rest stops along the way.", tags: ["Tseung Kwan O", "Waterfront", "Po Lam–TKO Line", "Beginner Friendly", "Scenic", "Few Slopes"], color: "#990000", gpx: [{ label: "To Po Lam", file: "900寶琳.gpx" }, { label: "To Tseung Kwan O", file: "900調景嶺.gpx" }] },
+        { id: '900A', alias: "Po Lam–TKO Express", start: "Po Lam (New Town Plaza II)", end: "Tseung Kwan O Terminal", via: "King Lam Estate, Po Shun Road, Tseung Kwan O Station", nature: "Mixed", time: 20, length: "4.2 km", difficulty: 1.5, image: "images/900A.jpg", description: "A relaxed route designed for cycling beginners. Using the Po Shun Road dedicated cycle track between Po Lam and Tseung Kwan O, the terrain is flat and only takes 20 minutes — perfect for a leisurely weekend ride.", tags: ["Tseung Kwan O", "Po Lam–TKO Line", "Beginner Friendly", "Express", "Flat", "Commute", "Leisure"], color: "#990000", gpx: [{ label: "To Po Lam", file: "900A寶琳.gpx" }, { label: "To Tseung Kwan O", file: "900A調景嶺.gpx" }] },
+        { id: '900S', alias: "Po Lam Sunset Run", start: "Tseung Kwan O Terminal", end: "Po Lam Fire Station", via: "TKO Waterfront, Po Lam North Road", nature: "Leisure", time: 40, length: "5.0 km", difficulty: 3.5, image: "images/900S.jpg", description: "A one-way express route ideal for an evening ride. Head straight from the TKO waterfront to Po Lam East and enjoy beautiful sunset views along the way — the full journey takes just 40 minutes.", tags: ["Tseung Kwan O", "One-way", "Po Lam–TKO Line", "Sunset", "Fast", "Few Slopes", "Scenic"], color: "#990000", gpx: [{ label: "To Po Lam", file: "900S寶琳.gpx" }] },
+        { id: '901P', alias: "Po Lam North Fast Line", start: "Po Lam (TKO Village)", end: "TKO Centre", via: "Po Hong Road, TKO Waterfront, Tseung Kwan O Station", nature: "Mixed", time: 40, length: "5.6 km", difficulty: 3.5, image: "images/901P.jpg", description: "A fast-track route connecting Po Lam North, Po Lam West and Tseung Kwan O City Centre and Tseung Kwan O Station. Suitable for both commuting and leisure.", tags: ["Tseung Kwan O", "Fast", "Po Lam–TKO Line", "Flat", "Commute", "Leisure"], color: "#e06666", gpx: [{ label: "To Po Lam", file: "901P寶琳.gpx" }, { label: "To Tseung Kwan O", file: "901P調景嶺.gpx" }] },
+        { id: '910', alias: "Hang Hau Loop", start: "Hang Hau Station", end: "Hang Hau North, Yuk Ming Court", via: "Hang Hau North, Yuk Ming Court", nature: "Mixed", time: 15, length: "3.1 km", difficulty: 2, image: "images/910.jpg", description: "A dual-loop around Hang Hau Station and its surrounding area, suitable for commuting and leisure. The route connects the MTR station and bus terminal, with less traffic and few slopes — an ideal choice for cycling training.", tags: ["Tseung Kwan O", "Loop", "Hang Hau North", "Few Slopes", "Training", "MTR Connection", "Bus Terminal", "Commute", "Leisure"], color: "#3c78d8", gpx: [{ label: "Clockwise", file: "910順時針.gpx" }, { label: "Anti-clockwise", file: "910逆時針.gpx" }] },
+        { id: '914', alias: "King Lam Express", start: "Po Lam (King Lam Bike Station)", end: "Hang Hau Station", via: "", nature: "Commute", time: 4, length: "0.8 km", difficulty: 0.5, image: "images/914.jpg", description: "The dedicated commuter line for King Lam Estate. All-day service connecting Hang Hau Station and King Lam Estate with flat terrain and convenient transport connections — the full journey takes just 4 minutes, making it the top choice for saving commute time.", tags: ["Tseung Kwan O", "Commuter", "Flat", "MTR Connection", "Bus Terminal", "Few Slopes"], color: "#073763", gpx: [{ label: "To Po Lam", file: "914寶琳.gpx" }, { label: "To Hang Hau", file: "914坑口.gpx" }] },
+        { id: '914B', alias: "Hospital Link", start: "Po Lam (New Town Plaza II)", end: "TKO Hospital", via: "King Lam Estate, Hang Hau Station, Hau Tak Estate", nature: "Leisure", time: 12, length: "3.0 km", difficulty: 2, image: "images/914B.jpg", description: "A leisure route connecting Po Lam New Town Plaza, Hang Hau Station and TKO Hospital. The terrain is flat, with MTR and bus terminal connections along the way, providing a convenient hospital express service.", tags: ["Tseung Kwan O", "Hang Hau North", "Flat", "Hospital", "MTR Connection", "Bus Terminal", "Few Slopes"], color: "#073763", gpx: [{ label: "To Po Lam", file: "914B寶琳.gpx" }, { label: "To Hospital", file: "914B醫院.gpx" }] },
+        { id: '914H', alias: "Hospital Express", start: "Hang Hau Station", end: "TKO Hospital", via: "", nature: "Mixed", time: 6, length: "1.0 km", difficulty: 1, image: "images/914H.jpg", description: "An all-day express connecting Hang Hau Station and TKO Hospital for both commuters and leisure cyclists. Flat terrain with less traffic provides a quick and quiet hospital route.", tags: ["Tseung Kwan O", "Hang Hau North", "Hospital", "MTR Connection", "Few Slopes", "Quiet", "Commute", "Leisure"], color: "#073763", gpx: [{ label: "To Hang Hau", file: "914H坑口.gpx" }, { label: "To Hospital", file: "914H醫院.gpx" }] },
+        { id: '920', alias: "Sheung Tak Special", start: "Baycrest", end: "Po Lam Station", via: "TKO School Belt, TKO Centre, Sheung Tak, Hang Hau Station, Po Lam School Belt", nature: "Leisure", time: 30, length: "4.6 km", difficulty: 3, image: "images/920.jpg", description: "A leisure route deep into the core districts of Tseung Kwan O, passing through Tseung Kwan O, Hang Hau and Po Lam stations so you can fully explore Tseung Kwan O.", tags: ["Tseung Kwan O", "Leisure", "Few Slopes", "Baycrest Line", "MTR Connection", "School Route"], color: "#660000", gpx: [{ label: "To Po Lam", file: "920寶琳.gpx" }, { label: "To Tseung Kwan O", file: "920調景嶺.gpx" }] },
+        { id: '920X', alias: "Baycrest Express", start: "Baycrest", end: "Po Lam Station", via: "Choi Ming Court", nature: "Mixed", time: 20, length: "3.5 km", difficulty: 2.5, image: "images/920X.jpg", description: "A fast-track route from Baycrest and Choi Ming directly to Po Lam Station. Compared to route 920, this route avoids detours around TKO districts, with flat terrain suitable for commuting and cycling training.", tags: ["Tseung Kwan O", "Flat", "Express", "Training", "Beginner Friendly", "Baycrest Line", "MTR Connection", "Commute", "Leisure"], color: "#660000", gpx: [{ label: "To Po Lam", file: "920X寶琳.gpx" }, { label: "To Tseung Kwan O", file: "920X調景嶺.gpx" }] },
+        { id: '923', alias: "City Centre Loop", start: "Tseung Kwan O Terminal", end: null, via: "Velodrome Park, TKO Ferry Pier, TKO Waterfront, Tseung Kwan O Centre, Immigration Tower", nature: "Mixed", time: 40, length: "5.6 km", difficulty: 3.5, image: "images/923.jpg", description: "A flat loop connecting Tseung Kwan O, Sheung Tak, the Velodrome and TKO City Centre. Convenient transport connections make this suitable for commuting and leisure.", tags: ["Tseung Kwan O", "Loop", "Flat", "MTR Connection", "Commute", "Leisure"], color: "#ff0000", gpx: [{ label: "Clockwise", file: "923順時針.gpx" }, { label: "Anti-clockwise", file: "923逆時針.gpx" }] },
+        { id: '928', alias: "Waterfront Express", start: "Po Lam Station", end: "Tseung Kwan O (Yung Ming)", via: "Spirit of Holy, Tseung Kwan O Station, TKO Waterfront", nature: "Mixed", time: "40 (to TKO) / 30 (to Po Lam)", length: "6.0 km (to TKO) / 4.8 km (to Po Lam)", difficulty: 3.5, image: "images/928.jpg", description: "A beginner-friendly waterfront express route. With minimal inclines and stunning scenery, it connects Po Lam City Centre, Tseung Kwan O Station and the TKO Waterfront, with ferry connections along the way for a multi-modal experience.", tags: ["Tseung Kwan O", "Po Lam–TKO Line", "Beginner Friendly", "Few Slopes", "Waterfront", "Express", "Scenic", "MTR Connection", "Ferry", "Commute", "Leisure"], color: "#783f04", gpx: [{ label: "To Po Lam", file: "928寶琳.gpx" }, { label: "To Tseung Kwan O", file: "928將軍澳.gpx" }] },
+        { id: '929', alias: "Hang Hau Rapid", start: "Hang Hau Station", end: "Tseung Kwan O Terminal", via: "Hang Hau North, TKO Waterfront, Tseung Kwan O Station, Tseung Kwan O Station", nature: "Mixed", time: 35, length: "6.2 km", difficulty: 3, image: "images/929.jpg", description: "A Hang Hau North speciality route with flat terrain, connecting Hang Hau districts, TKO City Centre and Tseung Kwan O. This versatile route is great for cycling beginners.", tags: ["Tseung Kwan O", "Beginner Friendly", "Flat", "Hang Hau North", "Fast", "Ferry", "Commute", "Leisure"], color: "#f1c232", gpx: [{ label: "To Hang Hau", file: "929坑口.gpx" }, { label: "To Tseung Kwan O", file: "929調景嶺.gpx" }] },
+        { id: '932', alias: "Hang Hau–LOHAS Link", start: "Hang Hau Station", end: "TKO Innovation Hub", via: "Hang Hau North, North Bridge, Clear Water Bay Peninsula, LOHAS Park Waterfront, LOHAS Park", nature: "Mixed", time: 45, length: "8.1 km", difficulty: 4, image: "images/932.jpg", description: "A long-distance express route connecting Hang Hau, Clear Water Bay Peninsula, LOHAS Park and the Innovation Hub. With few slopes along the waterfront, this is an excellent choice for long-distance cycling challenges.", tags: ["Tseung Kwan O", "Long Distance", "Few Slopes", "CWB Peninsula", "Waterfront", "Scenic", "Hang Hau North", "Fast", "Innovation Hub", "Commute", "Leisure"], color: "#ff00ff", gpx: [{ label: "To Innovation Hub", file: "932創新園.gpx" }, { label: "To Hang Hau", file: "932坑口.gpx" }] },
+        { id: '935', alias: "North–South Route", start: "Po Lam (TKO Village)", end: "TKO Innovation Hub", via: "Po Hong Road, North Bridge, LOHAS Park Waterfront, LOHAS Park", nature: "Leisure", time: 50, length: "9.6 km", difficulty: 4.5, image: "images/935.jpg", description: "A long-distance route for leisure and cycling training. Starting from the southernmost Innovation Hub, head north along the LOHAS Park waterfront and Po Hong Road, through TKO North to TKO Village at the northernmost end, for an open and exhilarating ride.", tags: ["Tseung Kwan O", "Leisure", "Long Distance", "Waterfront", "Training", "N-S Route", "Innovation Hub"], color: "#38761d", gpx: [{ label: "To Po Lam", file: "935寶琳.gpx" }, { label: "To Innovation Hub", file: "935創新園.gpx" }] },
+        { id: 'X935', alias: "N–S Express", start: "Po Lam (TKO Village)", end: "TKO Innovation Hub", via: "Po Lam North Road, LOHAS Park", nature: "Leisure", time: 40, length: "8.0 km", difficulty: 4, image: "images/X935.jpg", description: "The express version of 935, taking a more direct path without the main line's detours. A long-distance leisure route with great conditions, letting you traverse TKO from north to south in less time.", tags: ["Tseung Kwan O", "Leisure", "Express", "Long Distance", "Waterfront", "Innovation Hub", "N-S Route"], color: "#38761d", gpx: [{ label: "To Po Lam", file: "X935寶琳.gpx" }, { label: "To Innovation Hub", file: "X935創新園.gpx" }] },
+        { id: '939', alias: "Innovation Hub Explorer", start: "Tsun Ying", end: "TKO Innovation Hub", via: "Environmental Avenue", nature: "Leisure", time: 30, length: "2.5 km (one way)", difficulty: 3.5, image: "images/939.jpg", description: "A route connecting Tsun Ying and TKO Innovation Hub. Great for beginner cyclists looking for a relaxed experience in the area — with very few other cyclists around.", tags: ["Tseung Kwan O", "Leisure", "Flat", "Beginner Friendly", "Innovation Hub", "Quiet", "Loop"], color: "#741b47", gpx: [{ label: "Return", file: "939循環.gpx" }] },
+        { id: '939M', alias: "LOHAS–Innovation Express", start: "LOHAS Park Station", end: "TKO Innovation Hub", via: "Environmental Avenue", nature: "Commute", time: 35, length: "2.9 km (one way)", difficulty: 3.5, image: "images/939M.jpg", description: "A fast commuter route connecting LOHAS Park Station and the Innovation Hub. Flat terrain designed for commuters, letting you quickly transfer to the MTR from the Innovation Hub.", tags: ["Tseung Kwan O", "Commuter", "Flat", "Fast", "Innovation Hub", "MTR Connection", "Quiet", "Loop"], color: "#741b47", gpx: [{ label: "To LOHAS Park", file: "939M康城.gpx" }, { label: "To Innovation Hub", file: "939M循環.gpx" }] },
+        { id: '955', alias: "Po Lam Loop", start: "Po Lam (New Town Plaza II)", end: null, via: "Po Shun Road, Po Hong Road, Po Lam North Road", nature: "General", time: 20, length: "4.1 km", difficulty: 2, image: "images/955.jpg", description: "A loop connecting New Town Plaza II (Po Lam Station) and various parts of Po Lam. Suitable for both commuting and leisure, and convenient for connecting to other transport.", tags: ["Tseung Kwan O", "Flat", "Loop", "MTR Connection", "Bus Terminal"], color: "#dd7e6b", gpx: [{ label: "Clockwise", file: "955順時針.gpx" }, { label: "Anti-clockwise", file: "955逆時針.gpx" }] },
+        { id: '955A', alias: "TKO Village Line", start: "TKO Village", end: "New Town Plaza II", via: "Po Lam North Road", nature: "Commute", time: 6, length: "1.2 km", difficulty: 1, image: "images/955A.jpg", description: "A fast commuter route from TKO Village directly to New Town Plaza II (Po Lam Station). Few slopes and convenient connections — the full journey takes just 6 minutes.", tags: ["Tseung Kwan O", "Commuter", "Fast", "Few Slopes", "MTR Connection"], color: "#dd7e6b", gpx: [{ label: "One-way", file: "955A將軍澳村.gpx" }] },
+        { id: '955H', alias: "Spirit of Holy Express", start: "Po Lam Station", end: "Spirit of Holy Hospital (KMB Depot)", via: "", nature: "Mixed", time: "20 (return)", length: "3.1 km (return)", difficulty: 1.5, image: "images/955H.jpg", description: "A flat express route connecting Po Lam Station and Spirit of Holy Hospital. Suitable for both commuting and leisure, providing a convenient option for those needing to visit the hospital.", tags: ["Tseung Kwan O", "Flat", "Hospital", "MTR Connection", "Commute", "Leisure"], color: "#dd7e6b", gpx: [{ label: "Return", file: "955H循環.gpx" }] },
+        { id: '960', alias: "Ultimate Tour Route", start: "TKO Village", end: "TKO Innovation Hub", via: "Po Lam North Road, Po Shun Road, Tseung Kwan O Station, Cross-Bay Bridge, LOHAS Park", nature: "Leisure", time: 80, length: "12.8 km", difficulty: 5, image: "images/960.jpg", description: "The ultimate tour route, covering most of Tseung Kwan O. Starting from Po Lam, passing through Hang Hau, Sheung Tak, Tseung Kwan O West and then crossing the Cross-Bay Bridge to LOHAS Park before reaching the Innovation Hub — the hilly sections are ideal for professional cycling training.", tags: ["Tseung Kwan O", "Leisure", "Training", "Hilly", "Long Distance", "Bridge Express", "N-S Route", "Innovation Hub", "Scenic", "Challenge"], color: "#76a5af", gpx: [{ label: "To Innovation Hub", file: "960創新園.gpx" }, { label: "To Po Lam", file: "960寶琳.gpx" }] },
+        { id: '961', alias: "Baycrest–LOHAS Link", start: "Baycrest", end: "LOHAS Park West", via: "Tseung Kwan O Station, Tong Yin Street, Chi Sin Street, Yi Ming Estate, North Bridge, LOHAS Park Waterfront", nature: "Mixed", time: 30, length: "4.7 km", difficulty: 3, image: "images/961.jpg", description: "A fast-track route connecting LOHAS Park and Baycrest in Tseung Kwan O. With few slopes, LOHAS Park residents can conveniently reach TKO's central areas.", tags: ["Tseung Kwan O", "Few Slopes", "Baycrest Line", "Scenic", "Commute", "Leisure"], color: "#93c47d", gpx: [{ label: "To LOHAS Park", file: "961康城.gpx" }, { label: "To Tseung Kwan O", file: "961調景嶺.gpx" }] },
+        { id: '961P', alias: "LOHAS Sunset Ride", start: "LOHAS Park West", end: "TKO Centre", via: "LOHAS Park Waterfront, South Bridge, TKO South Terrace", nature: "Leisure", time: 20, length: "3.0 km", difficulty: 3, image: "images/961P.jpg", description: "A one-way ride available only around sunset. Starting near the bridge in LOHAS Park, pass through the South Bridge and TKO South Terrace to reach TKO Centre — enjoy sunset views along the waterfront, then visit TKO's shopping centres or connect to a ferry.", tags: ["Tseung Kwan O", "Leisure", "Sunset", "One-way", "Waterfront", "Ferry", "Fast"], color: "#93c47d", gpx: [{ label: "One-way", file: "961P將軍澳.gpx" }] },
+        { id: '962', alias: "Innovation Hub–City Centre", start: "TKO Innovation Hub", end: null, via: "Tseung Kwan O Station, TKO (Immigration Tower/MTR Station/Tong Yin Street)", nature: "Mixed", time: 60, length: "9.4 km", difficulty: 4, image: "images/962.jpg", description: "The fastest way to reach TKO Innovation Hub from TKO City Centre. Crossing the Cross-Bay Bridge, this is ideal for commuters who need to get there quickly.", tags: ["Tseung Kwan O", "Hilly", "Express", "Bridge Express", "Innovation Hub", "Quiet", "Commute", "Leisure"], color: "#c27ba0", gpx: [{ label: "Return", file: "962.gpx" }] },
+        { id: '962A', alias: "Bridge Loop", start: "Tsun Ying", end: null, via: "TKO (Immigration Tower/MTR Station/Waterfront)", nature: "Mixed", time: 50, length: "9.4 km", difficulty: 4, image: "images/962A.jpg", description: "A loop between LOHAS Park / Tsun Ying and TKO City Centre or the Waterfront. The route design lets you enjoy both the Cross-Bay Bridge and the TKO Waterfront scenery.", tags: ["Tseung Kwan O", "Loop", "Hilly", "Express", "Waterfront", "Bridge Express", "Ferry", "Scenic", "Commute", "Leisure"], color: "#c27ba0", gpx: [{ label: "Loop", file: "962A循環.gpx" }] },
+        { id: '962P', alias: "Innovation Hub Commuter", start: "TKO Innovation Hub", end: "Tseung Kwan O Station", via: "TKO South", nature: "Commute", time: 30, length: "5.7 km", difficulty: 3.5, image: "images/962P.jpg", description: "A one-way express route for TKO City Centre residents commuting from the Innovation Hub on weekday afternoons. Head directly from the Innovation Hub to TKO City via the bridge, bypassing Tseung Kwan O Station for speed.", tags: ["Tseung Kwan O", "Commuter", "One-way", "Hilly", "Express", "Bridge Express", "Innovation Hub"], color: "#c27ba0", gpx: [{ label: "One-way", file: "962P將軍澳.gpx" }] },
+        { id: '962X', alias: "Immigration Tower Express", start: "Tsun Ying", end: "Tseung Kwan O Station", via: "LOHAS Park, Cross-Bay Bridge, TKO Immigration Tower", nature: "Commute", time: 20, length: "4.3 km", difficulty: 3.5, image: "images/962X.jpg", description: "A fast-track route for LOHAS Park residents commuting to TKO Immigration Tower or TKO City Centre office on weekday mornings. Cross the Cross-Bay Bridge from LOHAS Park to the Immigration Tower and Tseung Kwan O Station — time-efficient.", tags: ["Tseung Kwan O", "Commuter", "LOHAS Park", "One-way", "Hilly", "Express", "Bridge Express"], color: "#c27ba0", gpx: [{ label: "One-way", file: "962X康城.gpx" }] },
+        { id: '966', alias: "Cross-Bay Bridge Route", start: "Baycrest", end: "LOHAS Park Station", via: "Tseung Kwan O Station, Cross-Bay Bridge", nature: "Mixed", time: 18, length: "3.2 km", difficulty: 3.5, image: "images/966.jpg", description: "A fast-track route connecting LOHAS Park Station and Tseung Kwan O Station / Baycrest, crossing the iconic Cross-Bay Bridge for a quick and scenic crossing. Suitable for both commuting and leisure.", tags: ["Tseung Kwan O", "Hilly", "Bridge Express", "LOHAS Park Line", "Baycrest Line", "Commute", "Leisure"], color: "#ff9900", gpx: [{ label: "To LOHAS Park", file: "966康城.gpx" }, { label: "To Tseung Kwan O", file: "966調景嶺.gpx" }] },
+        { id: '966A', alias: "LOHAS Commuter A", start: "LOHAS Park Station", end: "Tseung Kwan O Station", via: "Cross-Bay Bridge", nature: "Commute", time: 15, length: "2.9 km", difficulty: 3, image: "images/966A.jpg", description: "A fast commuter route connecting LOHAS Park Station (LOHAS Park) and Tseung Kwan O Station via the Cross-Bay Bridge, making it easy for LOHAS Park residents to reach Tseung Kwan O or transfer to the MTR.", tags: ["Tseung Kwan O", "Commuter", "Hilly", "Bridge Express", "MTR Connection", "Bus Terminal", "LOHAS Park"], color: "#ff9900", gpx: [{ label: "To LOHAS Park", file: "966A康城.gpx" }, { label: "To Tseung Kwan O", file: "966A調景嶺.gpx" }] },
+        { id: '966B', alias: "LOHAS Commuter B", start: "LOHAS Park Lido", end: "Tseung Kwan O Station", via: "Cross-Bay Bridge", nature: "Commute", time: 18, length: "3.3 km", difficulty: 3.5, image: "images/966B.jpg", description: "A fast commuter route connecting LOHAS Park Lido and Tseung Kwan O Station via the Cross-Bay Bridge, making it easy for LOHAS Park residents to reach Tseung Kwan O or transfer to the MTR.", tags: ["Tseung Kwan O", "Commuter", "Hilly", "Bridge Express", "MTR Connection", "Bus Terminal", "LOHAS Park"], color: "#ff9900", gpx: [{ label: "To LOHAS Park", file: "966B康城.gpx" }, { label: "To Tseung Kwan O", file: "966B調景嶺.gpx" }] },
+        { id: '966C', alias: "LOHAS Commuter C", start: "Tsun Ying", end: "Tseung Kwan O Station", via: "LOHAS Park, Cross-Bay Bridge", nature: "Commute", time: 22, length: "3.8 km", difficulty: 4, image: "images/966C.jpg", description: "A fast commuter route connecting Tsun Ying / LOHAS Park and Tseung Kwan O Station via the Cross-Bay Bridge, making it easy for Tsun Ying and LOHAS Park residents to reach Tseung Kwan O or transfer to the MTR.", tags: ["Tseung Kwan O", "Commuter", "Hilly", "Bridge Express", "MTR Connection", "Bus Terminal", "LOHAS Park"], color: "#ff9900", gpx: [{ label: "To LOHAS Park", file: "966C康城.gpx" }, { label: "To Tseung Kwan O", file: "966C調景嶺.gpx" }] },
+        { id: '966T', alias: "Bridge Tour Route", start: "Tseung Kwan O Station", end: "LOHAS Park Station", via: "Cross-Bay Bridge", nature: "Leisure", time: 16, length: "3.0 km", difficulty: 3, image: "images/966T.jpg", description: "An express bridge route designed for sightseeing. Connecting LOHAS Park Station and Tseung Kwan O Station, this is great for beginner cyclists looking to challenge themselves and enjoy the bridge scenery.", tags: ["Tseung Kwan O", "Leisure", "Hilly", "Bridge Express", "Beginner Friendly", "MTR Connection"], color: "#ff9900", gpx: [{ label: "To LOHAS Park", file: "966T康城.gpx" }, { label: "To Tseung Kwan O", file: "966T調景嶺.gpx" }] },
+        { id: 'S90', alias: "LOHAS Park Waterfront Line", start: "Clear Water Bay Peninsula", end: null, via: "LOHAS Park Waterfront", nature: "Commute", time: 20, length: "3.5 km (return)", difficulty: 2.5, image: "images/S90.jpg", description: "The Clear Water Bay Peninsula dedicated line, connecting Tseung Kwan O Station. Few slopes suitable for commuting, providing residents with a fast MTR connection option.", tags: ["Tseung Kwan O", "Commuter", "Few Slopes", "Express", "CWB Peninsula", "MTR Connection"], color: "#00ff00", textColor: "black", gpx: [{ label: "Return", file: "S90康城循環.gpx" }] },
+        { id: 'S91', alias: "CWB Peninsula Link", start: "Clear Water Bay Peninsula", end: "Tseung Kwan O Station", via: "North Bridge, Yi Ming Estate", nature: "Mixed", time: 6, length: "1.1 km", difficulty: 1, image: "images/S91.jpg", description: "A loop between Clear Water Bay Peninsula and LOHAS Park Station. Ideal for CWB Peninsula residents commuting, or for experiencing the LOHAS Park waterfront — flat terrain for easy cycling.", tags: ["Tseung Kwan O", "Flat", "Loop", "CWB Peninsula", "Commute", "Leisure"], color: "#ffff00", textColor: "black", gpx: [{ label: "To CWB Peninsula", file: "S91清水灣半島.gpx" }, { label: "To Tseung Kwan O", file: "S91調景嶺.gpx" }] },
+        { id: 'ST01', alias: "Sha Tin (Coming Soon)", start: "Sha Tin Station", end: "City One", via: "Shing Mun River Promenade", nature: "Commute", time: "TBC", length: "TBC", difficulty: "TBC", image: "images/st_coming_soon.jpg", description: "A planned Sha Tin route — stay tuned!", tags: ["Sha Tin", "Commute"], color: "#333", link: "/coming_soon.html", gpx: [] }
+    ];
+
+    /**
+     * 英文版路線詳情頁初始化 (English route detail page)
+     */
+    function initEnRouteDetailPage() {
+        const routeDetailContainer = document.getElementById('route-detail-container');
+        if (!routeDetailContainer) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const routeId = urlParams.get('id');
+
+        if (routeId) {
+            const route = enRoutes.find(r => r.id === routeId);
+            if (route) {
+                document.title = `City Transport Cycle - ${route.alias || route.id}`;
+                let gpxButtonsHtml = '';
+                if (route.gpx && route.gpx.length > 0) {
+                    const isSenior = (() => {
+                        try {
+                            const userData = localStorage.getItem('user');
+                            if (!userData) return false;
+                            const user = JSON.parse(userData);
+                            return user.user_role === 'senior' || user.role === 'senior';
+                        } catch (e) { return false; }
+                    })();
+
+                    if (isSenior) {
+                        gpxButtonsHtml = `
+                            <div class="gpx-download-container">
+                                ${route.gpx.map(gpxFile => `
+                                    <a href="/gpx/${gpxFile.file}" download="${gpxFile.file}" class="gpx-download-button">
+                                        ${gpxFile.label} <i class="fas fa-download"></i>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        const isLoggedInUser = !!localStorage.getItem('accessToken');
+                        const lockMsg = isLoggedInUser
+                            ? 'Upgrade to Senior Membership to download GPX route files'
+                            : 'Sign in and become a Senior Member to download GPX route files';
+                        gpxButtonsHtml = `
+                            <div class="gpx-download-container">
+                                <div class="gpx-locked-notice" style="background:#f5f5f5; border:1px solid #ddd; border-radius:8px; padding:1em; text-align:center; margin-top:1em;">
+                                    <i class="fas fa-lock" style="color:#999; font-size:1.5em; display:block; margin-bottom:0.5em;"></i>
+                                    <p style="color:#666; margin:0 0 0.8em;">${lockMsg}</p>
+                                    ${isLoggedInUser
+                                        ? `<a href="/profile-setup.html" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">Upgrade Membership</a>`
+                                        : `<a href="/login" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">Sign In</a>`
+                                    }
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                const difficultyDisplay = (route.difficulty === 'TBC') ? 'TBC' : `${generateStarRating(route.difficulty)} (${route.difficulty}/5)`;
+                routeDetailContainer.innerHTML = `
+                    <div class="route-hero animated-element" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">
+                        <h1 class="route-hero-title">${route.alias || 'Route Detail'}</h1>
+                        <p class="route-id-text">Route Number: ${route.id}</p>
+                    </div>
+                    <div class="route-detail-grid animated-element">
+                        <div class="route-image-container">
+                            <img src="/${route.image}" alt="${route.alias || route.id}" class="route-detail-image">
+                            ${gpxButtonsHtml}
+                        </div>
+                        <div class="route-detail-info">
+                            <p class="route-description">${route.description}</p>
+                            <div class="route-stats">
+                                <div><strong>Start:</strong> ${route.start}</div>
+                                <div><strong>End:</strong> ${route.end || 'Loop Route'}</div>
+                                <div><strong>Via:</strong> ${route.via || '—'}</div>
+                                <div><strong>Type:</strong> ${route.nature}</div>
+                                <div><strong>Est. Journey Time:</strong> ${route.time} min</div>
+                                <div><strong>Route Length:</strong> ${route.length}</div>
+                                <div><strong>Difficulty:</strong> ${difficultyDisplay}</div>
+                            </div>
+                            <div class="route-tags-container">
+                                <strong>Tags:</strong>
+                                <div class="route-tags">
+                                    ${route.tags.map(tag => `<span class="route-tag">${tag}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                initAnimatedElements();
+            } else {
+                routeDetailContainer.innerHTML = '<p>Route not found.</p>';
+            }
+        }
+    }
+
+    // =========================================================================
     // 執行初始化 (你原有的程式碼)
     // =========================================================================
     if (document.getElementById('routes-preview-container')) {
@@ -619,7 +780,12 @@ document.addEventListener('DOMContentLoaded', function() {
         initRoutesPage();
     }
     if (document.getElementById('route-detail-container')) {
-        initRouteDetailPage();
+        // 根據路徑判斷使用中文還是英文版本的路線詳情
+        if (window.location.pathname.startsWith('/en/')) {
+            initEnRouteDetailPage();
+        } else {
+            initRouteDetailPage();
+        }
     }
     if (document.getElementById('blog-list-container')) {
         initBlogListPage();
