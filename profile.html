@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的帳戶 - CTRC HK</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        // 頁面守衛：需要登入
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert('你需要登入才能查看此頁面。');
+                window.location.replace('/login');
+            }
+        })();
+    </script>
+    <style>
+        .profile-container {
+            max-width: 680px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+        .profile-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 2em;
+            margin-bottom: 1.5em;
+        }
+        .profile-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #04D93C;
+            padding-bottom: 0.5em;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 0.25em 0.8em;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .role-admin { background: #fdecea; color: #c62828; }
+        .role-senior { background: #e8f5e9; color: #2e7d32; }
+        .role-junior { background: #e3f2fd; color: #1565c0; }
+        .profile-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6em 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95em;
+        }
+        .profile-info-row:last-child { border-bottom: none; }
+        .profile-info-label { color: #666; min-width: 120px; }
+        .profile-info-value { color: #2c3e50; font-weight: 500; flex: 1; text-align: right; }
+        .form-group { margin-bottom: 1.2em; }
+        .form-group label { display: block; margin-bottom: 0.4em; font-weight: 600; color: #2c3e50; font-size: 0.95em; }
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group input[type="date"],
+        .form-group select {
+            width: 100%;
+            padding: 0.7em 0.9em;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #04D93C;
+        }
+        .area-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.4em;
+            margin-top: 0.4em;
+        }
+        .area-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 0.4em;
+            font-weight: normal;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .area-checkboxes input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+        .btn-save {
+            background: #04D93C;
+            color: white;
+            border: none;
+            padding: 0.8em 2em;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .btn-save:hover { background: #03b831; }
+        .btn-save:disabled { background: #aaa; cursor: not-allowed; }
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            padding: 0.8em 1em;
+            border-radius: 6px;
+            margin-bottom: 1em;
+            display: none;
+        }
+        .alert-error {
+            background: #fdecea;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            padding: 0.8em 1em;
+            border-radius: 6px;
+            margin-bottom: 1em;
+            display: none;
+        }
+        .upgrade-notice {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 1em 1.2em;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 1em;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="content animated-element">
+            <div class="profile-container">
+                <h2 style="color:#2c3e50;"><i class="fas fa-user-circle" style="color:#04D93C;"></i> 我的帳戶</h2>
+
+                <!-- 帳戶概覽 -->
+                <div class="profile-card">
+                    <h3><i class="fas fa-id-card"></i> 帳戶資訊</h3>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">電子郵件</span>
+                        <span class="profile-info-value" id="info-email">—</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">會員等級</span>
+                        <span class="profile-info-value" id="info-role">—</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">電郵驗證</span>
+                        <span class="profile-info-value" id="info-verified">—</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">登入方式</span>
+                        <span class="profile-info-value" id="info-provider">—</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">帳戶建立</span>
+                        <span class="profile-info-value" id="info-created">—</span>
+                    </div>
+                </div>
+
+                <!-- 升級提示（只對 junior 顯示） -->
+                <div id="upgrade-notice" class="upgrade-notice" style="display:none;">
+                    <i class="fas fa-star" style="color:#ffc107;"></i>
+                    <strong>升級為高級會員</strong>：填寫電話、騎行經驗及地區即可解鎖 GPX 下載、完整路線資訊等功能。
+                    <a href="/profile-setup" style="color:#e65100; text-decoration:underline; margin-left:0.5em;">立即升級</a>
+                </div>
+
+                <!-- 修改個人資料 -->
+                <div class="profile-card">
+                    <h3><i class="fas fa-edit"></i> 修改個人資料</h3>
+
+                    <div id="alert-success" class="alert-success"></div>
+                    <div id="alert-error" class="alert-error"></div>
+
+                    <form id="profile-form">
+                        <div class="form-group">
+                            <label for="pf-fullname">姓名 *</label>
+                            <input type="text" id="pf-fullname" name="full_name" required placeholder="請輸入姓名">
+                        </div>
+                        <div class="form-group">
+                            <label for="pf-phone">聯絡電話</label>
+                            <input type="tel" id="pf-phone" name="phone" placeholder="例：9123 4567">
+                        </div>
+                        <div class="form-group">
+                            <label for="pf-experience">騎行經驗</label>
+                            <select id="pf-experience" name="experience">
+                                <option value="">請選擇</option>
+                                <option value="beginner">初學者 (1年以下)</option>
+                                <option value="intermediate">中級 (1-3年)</option>
+                                <option value="advanced">高級 (3-5年)</option>
+                                <option value="expert">專家級 (5年以上)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>主要騎行地區（可多選）</label>
+                            <div class="area-checkboxes" id="pf-area-checkboxes">
+                                <label><input type="checkbox" name="preferred_area" value="港島海濱"> 港島海濱</label>
+                                <label><input type="checkbox" name="preferred_area" value="九龍東"> 九龍東</label>
+                                <label><input type="checkbox" name="preferred_area" value="將軍澳"> 將軍澳</label>
+                                <label><input type="checkbox" name="preferred_area" value="沙田區"> 沙田區</label>
+                                <label><input type="checkbox" name="preferred_area" value="大埔區"> 大埔區</label>
+                                <label><input type="checkbox" name="preferred_area" value="北區"> 北區</label>
+                                <label><input type="checkbox" name="preferred_area" value="元朗/天水圍"> 元朗/天水圍</label>
+                                <label><input type="checkbox" name="preferred_area" value="屯門"> 屯門</label>
+                                <label><input type="checkbox" name="preferred_area" value="荃灣"> 荃灣</label>
+                                <label><input type="checkbox" name="preferred_area" value="離島/其他"> 離島/其他</label>
+                                <label><input type="checkbox" name="preferred_area" value="香港以外"> 香港以外</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="pf-birthdate">出生日期</label>
+                            <input type="date" id="pf-birthdate" name="birthdate">
+                        </div>
+                        <div class="form-group">
+                            <label for="pf-biketype">主要使用單車類型</label>
+                            <select id="pf-biketype" name="bike_type">
+                                <option value="">請選擇</option>
+                                <option value="road">公路車</option>
+                                <option value="mountain">山地車</option>
+                                <option value="hybrid">混合車</option>
+                                <option value="electric">電動單車</option>
+                                <option value="folding">摺疊車</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-save" id="btn-save">
+                            <i class="fas fa-save"></i> 儲存變更
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 帳戶安全 -->
+                <div class="profile-card">
+                    <h3><i class="fas fa-shield-alt"></i> 帳戶安全</h3>
+                    <p style="color:#666; font-size:0.9em;">如需更改密碼，請使用「忘記密碼」功能重設。</p>
+                    <a href="/forgot-password" class="cta-button" style="font-size:0.85em; padding:0.6em 1.5em; display:inline-block; margin-top:0.5em;">
+                        <i class="fas fa-key"></i> 重設密碼
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車 CTRC HK. All Rights Reserved.</p>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userData = localStorage.getItem('user');
+        if (!userData) {
+            window.location.replace('/login');
+            return;
+        }
+        const user = JSON.parse(userData);
+
+        // 填入帳戶資訊
+        document.getElementById('info-email').textContent = user.email || '—';
+
+        const roleMap = { admin: '管理員', senior: '高級會員', junior: '普通會員' };
+        const roleClass = { admin: 'role-admin', senior: 'role-senior', junior: 'role-junior' };
+        const role = user.user_role || user.role || 'junior';
+        const roleBadge = document.getElementById('info-role');
+        roleBadge.innerHTML = `<span class="role-badge ${roleClass[role] || 'role-junior'}">${roleMap[role] || role}</span>`;
+
+        const verifiedEl = document.getElementById('info-verified');
+        verifiedEl.innerHTML = user.email_verified
+            ? '<span style="color:#2e7d32;"><i class="fas fa-check-circle"></i> 已驗證</span>'
+            : '<span style="color:#e65100;"><i class="fas fa-exclamation-circle"></i> 未驗證</span>';
+
+        const providerMap = { email: '電子郵件', google: 'Google' };
+        document.getElementById('info-provider').textContent = providerMap[user.auth_provider] || user.auth_provider || '電子郵件';
+
+        if (user.created_at) {
+            const d = new Date(user.created_at);
+            document.getElementById('info-created').textContent = d.toLocaleDateString('zh-Hant', { year:'numeric', month:'long', day:'numeric' });
+        }
+
+        // 顯示升級提示給 junior 用戶
+        if (role === 'junior') {
+            document.getElementById('upgrade-notice').style.display = 'block';
+        }
+
+        // 預填表單
+        document.getElementById('pf-fullname').value = user.full_name || '';
+        document.getElementById('pf-phone').value = user.phone || '';
+        if (user.experience) {
+            document.getElementById('pf-experience').value = user.experience;
+        }
+        if (user.birthdate) {
+            // 取日期部分 YYYY-MM-DD
+            document.getElementById('pf-birthdate').value = user.birthdate.substring(0, 10);
+        }
+        if (user.bike_type) {
+            document.getElementById('pf-biketype').value = user.bike_type;
+        }
+        // 預設地區勾選
+        if (user.preferred_area) {
+            const areas = user.preferred_area.split(',');
+            document.querySelectorAll('input[name="preferred_area"]').forEach(cb => {
+                if (areas.includes(cb.value)) cb.checked = true;
+            });
+        }
+
+        // 嘗試從後端取得最新資料
+        const token = localStorage.getItem('accessToken');
+        if (token && user.id) {
+            fetch(`/api/get-user?user_id=${user.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(r => r.ok ? r.json() : null).then(freshData => {
+                if (!freshData) return;
+                // 更新 localStorage
+                const merged = { ...user, ...freshData };
+                localStorage.setItem('user', JSON.stringify(merged));
+                // 重新填入表單
+                document.getElementById('pf-fullname').value = freshData.full_name || '';
+                document.getElementById('pf-phone').value = freshData.phone || '';
+            }).catch(() => {});
+        }
+
+        // 表單提交
+        document.getElementById('profile-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true;
+            btn.textContent = '儲存中...';
+            const successEl = document.getElementById('alert-success');
+            const errorEl = document.getElementById('alert-error');
+            successEl.style.display = 'none';
+            errorEl.style.display = 'none';
+
+            const selectedAreas = Array.from(document.querySelectorAll('input[name="preferred_area"]:checked')).map(cb => cb.value);
+            const formData = {
+                user_id: user.id,
+                email: user.email,
+                full_name: document.getElementById('pf-fullname').value.trim(),
+                phone: document.getElementById('pf-phone').value.trim() || null,
+                experience: document.getElementById('pf-experience').value || null,
+                preferred_area: selectedAreas.join(',') || null,
+                birthdate: document.getElementById('pf-birthdate').value || null,
+                bike_type: document.getElementById('pf-biketype').value || null
+            };
+
+            if (!formData.full_name) {
+                errorEl.textContent = '姓名為必填項目。';
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> 儲存變更';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/update-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify(formData)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || '更新失敗');
+
+                // 更新 localStorage
+                const updatedUser = { ...user, ...formData };
+                if (result.user_role) updatedUser.user_role = result.user_role;
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+
+                successEl.innerHTML = '<i class="fas fa-check-circle"></i> 個人資料已成功更新！' +
+                    (result.user_role === 'senior' ? ' 🎉 你已升級為<strong>高級會員</strong>！' : '');
+                successEl.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                errorEl.textContent = '更新失敗：' + err.message;
+                errorEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> 儲存變更';
+            }
+        });
+    });
+    </script>
+</body>
+</html>

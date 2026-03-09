@@ -19,9 +19,9 @@ export default async function handler(req, res) {
       bike_type 
     } = req.body;
 
-    // Validate required fields
-    if (!full_name || !experience || !preferred_area) {
-      return res.status(400).json({ message: 'All required profile fields must be filled (name, experience, area)' });
+    // Validate required field
+    if (!full_name) {
+      return res.status(400).json({ message: 'Full name is required' });
     }
 
     // 處理多選地區（可能是陣列或逗號分隔字串）
@@ -71,25 +71,51 @@ export default async function handler(req, res) {
       }
     }
 
-    // User exists, update their profile and upgrade to senior
+    // User exists — determine if this is a full profile update (senior upgrade) or partial edit
+    const currentRole = checkResult.rows[0].user_role;
     const userId = checkResult.rows[0].id;
-    await query(
-      `UPDATE users 
-       SET user_role = 'senior', full_name = $1, phone = $2, experience = $3,
-           preferred_area = $4, birthdate = $5, bike_type = $6,
-           profile_completed = true, profile_completion_date = NOW()
-       WHERE id = $7`,
-      [full_name, phone || null, experience, preferredAreaStr,
-       birthdate || null, bike_type || null, userId]
-    );
 
-    return res.status(200).json({ 
-      message: 'Profile updated and upgraded to senior member',
-      user_role: 'senior'
-    });
+    const hasFullProfile = experience && preferredAreaStr;
+
+    if (hasFullProfile) {
+      // Full profile update: upgrade to senior if not already admin
+      const newRole = currentRole === 'admin' ? 'admin' : 'senior';
+      const profileCompleted = newRole !== 'admin';
+
+      await query(
+        `UPDATE users 
+         SET user_role = $1, full_name = $2, phone = $3, experience = $4,
+             preferred_area = $5, birthdate = $6, bike_type = $7,
+             profile_completed = $8,
+             profile_completion_date = CASE WHEN $8 AND profile_completion_date IS NULL THEN NOW() ELSE profile_completion_date END
+         WHERE id = $9`,
+        [newRole, full_name, phone || null, experience, preferredAreaStr,
+         birthdate || null, bike_type || null, profileCompleted, userId]
+      );
+
+      return res.status(200).json({ 
+        message: newRole === 'senior' ? 'Profile updated and upgraded to senior member' : 'Profile updated',
+        user_role: newRole
+      });
+    } else {
+      // Partial update: only update the provided basic fields, keep existing role
+      await query(
+        `UPDATE users 
+         SET full_name = $1, phone = $2,
+             birthdate = $3, bike_type = $4
+         WHERE id = $5`,
+        [full_name, phone || null, birthdate || null, bike_type || null, userId]
+      );
+
+      return res.status(200).json({ 
+        message: 'Profile updated',
+        user_role: currentRole
+      });
+    }
 
   } catch (error) {
     console.error('Profile update error:', error);
     return res.status(500).json({ message: error.message });
   }
 }
+
