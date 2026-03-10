@@ -219,31 +219,6 @@
         }
     </script>
 </head>
-            color: #666;
-            margin-top: 0.3em;
-        }
-    </style>
-    
-    <script>
-        // 這是「頁面守衛」，它會在頁面渲染前執行
-        // 檢查是否有 Supabase session 或傳統 token
-        function checkAuth() {
-            const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
-                window.location.replace('/login'); 
-                return false;
-            }
-            return true;
-        }
-        
-        // 立即檢查
-        if (!checkAuth()) {
-            // 如果檢查失敗，停止執行
-            throw new Error('未授權訪問');
-        }
-    </script>
-</head>
 <body>
     <div id="header-placeholder"></div>
 
@@ -251,7 +226,7 @@
         <section class="hero">
             <h1>歡迎回來！</h1>
             <p id="welcome-email">正在載入你的資料...</p>
-            <p id="membership-status" style="font-size: 0.9em; color: #666;"></p>
+            <p id="membership-status" style="font-size: 0.9em;"></p>
         </section>
 
         <!-- 電郵未驗證提醒 -->

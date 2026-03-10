@@ -197,105 +197,6 @@
             display: flex;
             flex-direction: column;
         }
-        .route-stats div {
-            padding: 0.5em;
-            border-bottom: 1px solid #2d4d2d;
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        .route-tags-container {
-            margin-top: 1.5em;
-        }
-        .route-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5em;
-            margin-top: 0.8em;
-        }
-        .route-tag {
-            background-color: rgba(109,186,101,0.15);
-            color: var(--app-accent, #6dba65);
-            border: 1px solid rgba(109,186,101,0.3);
-            padding: 0.4em 0.9em;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-        @media (max-width: 768px) {
-            .route-detail-grid {
-                flex-direction: column;
-            }
-        }
-
-        /* ── 地圖區塊 ────────────────────────────────── */
-        #route-map-section {
-            max-width: 1000px;
-            margin: 0 auto 1.5em;
-            padding: 0 1.2em;
-        }
-        #route-map-section h3 {
-            font-size: 1.1em;
-            margin-bottom: 0.7em;
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        #route-map {
-            width: 100%;
-            height: 360px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-            background: #1a2917;
-        }
-        #map-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.6em;
-            margin-top: 0.6em;
-            align-items: center;
-        }
-        .map-btn {
-            padding: 0.5em 1.1em;
-            border: 1px solid #2d4d2d;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.88em;
-            font-weight: bold;
-            transition: all 0.2s;
-        }
-        #btn-gps {
-            background: var(--app-bg-card, #1e3820);
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        #btn-gps:hover { background: #2d5028; }
-        #btn-gps.active { background: var(--app-accent, #6dba65); color: #121f14; border-color: transparent; }
-        #btn-notify {
-            background: rgba(109,186,101,0.15);
-            color: var(--app-accent, #6dba65);
-            border-color: rgba(109,186,101,0.3);
-        }
-        #btn-notify:hover { background: rgba(109,186,101,0.25); }
-        #gps-status {
-            font-size: 0.82em;
-            color: var(--app-text-secondary, #a8d8a0);
-        }
-
-        /* ── 站點列表 ────────────────────────────────── */
-        #stops-section {
-            max-width: 1000px;
-            margin: 0 auto 1.5em;
-            padding: 0 1.2em;
-        }
-        #stops-section h3 {
-            font-size: 1.1em;
-            margin-bottom: 0.7em;
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        .stops-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 0.4em;
-        }
         .stop-item {
             display: flex;
             align-items: center;
@@ -303,7 +204,6 @@
             padding: 0.6em 1em;
             background: var(--app-bg-card, #1e3820);
             border-radius: 8px;
-            border-left: 3px solid #2d4d2d;
             border: 1px solid #2d4d2d;
             border-left: 3px solid var(--app-accent, #6dba65);
             font-size: 0.92em;
