@@ -316,6 +316,15 @@
     border-radius: 8px;
     white-space: nowrap;
 }
+.app-route-coin-badge {
+    font-size: 0.7em;
+    background: rgba(230,161,23,0.2);
+    color: #e6a817;
+    padding: 0.1em 0.5em;
+    border-radius: 8px;
+    white-space: nowrap;
+    border: 1px solid rgba(230,161,23,0.3);
+}
 .app-route-meta {
     font-size: 0.78em;
     color: var(--app-text-secondary, #a8d8a0);
@@ -405,6 +414,7 @@
             <div class="app-filter-row" id="app-filter-row">
                 <div class="app-filter-chip active" data-filter="all">全部</div>
                 <div class="app-filter-chip" data-filter="unlocked">已解鎖 🔓</div>
+                <div class="app-filter-chip" data-filter="里程幣">🪙 里程幣</div>
                 <div class="app-filter-chip" data-filter="通勤">通勤</div>
                 <div class="app-filter-chip" data-filter="旅遊">旅遊</div>
                 <div class="app-filter-chip" data-filter="循環">循環線</div>
@@ -507,6 +517,23 @@ function isRouteUnlocked(routeId) {
     return userLevel >= needed;
 }
 
+function getUserCoins() {
+    try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        return parseInt(u.coins || u.ride_coins || 0, 10);
+    } catch(e) { return 0; }
+}
+
+// Coin routes are always visible; locked only if user hasn't purchased
+function isCoinRouteUnlocked(route) {
+    if (!isLoggedIn) return false;
+    // Check if user has purchased this route (stored in localStorage under 'unlockedCoinRoutes')
+    try {
+        const unlocked = JSON.parse(localStorage.getItem('unlockedCoinRoutes') || '[]');
+        return unlocked.includes(route.id);
+    } catch(e) { return false; }
+}
+
 // ── Map initialisation ─────────────────────────────────────────────────
 function initMap() {
     map = L.map('app-ride-map', {
@@ -598,8 +625,10 @@ function matchesFilter(route) {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'unlocked') {
         if (!isLoggedIn) return false;
+        if (route.is_special) return isCoinRouteUnlocked(route);
         return isRouteUnlocked(route.id);
     }
+    if (activeFilter === '里程幣') return route.is_special && route.coin_cost > 0;
     if (activeFilter === '循環') return route.tags && route.tags.includes('循環線');
     if (activeFilter === '新手必試') return route.tags && route.tags.includes('新手必試');
     return route.nature === activeFilter || (route.tags && route.tags.includes(activeFilter));
@@ -628,17 +657,29 @@ function renderRoutes() {
     container.innerHTML = '';
     filtered.forEach(route => {
         const needed = ROUTE_UNLOCK[route.id] || 1;
-        const locked = isLoggedIn && userLevel < needed;
-        const xp = ROUTE_XP[route.id] || 0;
+        const isCoinRoute = route.is_special && route.coin_cost > 0;
+        const coinUnlocked = isCoinRoute && isCoinRouteUnlocked(route);
+        const levelLocked = isLoggedIn && !isCoinRoute && userLevel < needed;
+        const coinLocked = isLoggedIn && isCoinRoute && !coinUnlocked;
+        const locked = levelLocked || coinLocked;
+        const xp = ROUTE_XP[route.id] || route.xp_reward || 0;
         const isSelected = route.id === selectedRouteId;
 
         const card = document.createElement('div');
         card.className = 'app-route-card' + (locked ? ' locked' : '') + (isSelected ? ' selected' : '');
+        if (isCoinRoute) card.classList.add('coin-route');
         card.dataset.routeId = route.id;
 
-        const lockBadge = locked
-            ? `<span class="app-route-lock-badge">🔒 Lv.${needed}</span>`
-            : (xp > 0 && isLoggedIn ? `<span class="app-route-xp">+${xp} XP</span>` : '');
+        let lockBadge = '';
+        if (levelLocked) {
+            lockBadge = `<span class="app-route-lock-badge">🔒 Lv.${needed}</span>`;
+        } else if (coinLocked) {
+            lockBadge = `<span class="app-route-coin-badge">🪙 ${route.coin_cost}</span>`;
+        } else if (isCoinRoute) {
+            lockBadge = `<span class="app-route-coin-badge" style="background:rgba(109,186,101,0.15);color:var(--app-accent,#6dba65);border-color:rgba(109,186,101,0.3);">🪙 特別</span>`;
+        } else if (xp > 0 && isLoggedIn) {
+            lockBadge = `<span class="app-route-xp">+${xp} XP</span>`;
+        }
 
         card.innerHTML = `
             <div class="app-route-header">
@@ -648,7 +689,7 @@ function renderRoutes() {
             </div>
             <div class="app-route-meta">
                 <span><i class="fas fa-map-marker-alt" style="font-size:0.9em;"></i> ${route.start || '—'}</span>
-                ${route.end ? `<span>→ ${route.end}</span>` : '<span>循環</span>'}
+                ${route.end && !route.end.includes('循環') ? `<span>→ ${route.end}</span>` : '<span>循環</span>'}
                 ${route.time ? `<span><i class="fas fa-clock" style="font-size:0.9em;"></i> ${route.time}分</span>` : ''}
                 ${route.length ? `<span>${route.length}</span>` : ''}
             </div>
@@ -676,6 +717,14 @@ function renderRoutes() {
 
         if (!locked) {
             card.addEventListener('click', () => selectRoute(route));
+        } else if (coinLocked) {
+            card.addEventListener('click', () => {
+                const userCoins = getUserCoins();
+                const msg = isLoggedIn
+                    ? `此為特別路線，需 🪙${route.coin_cost} 里程幣解鎖。\n你目前有 🪙${userCoins} 里程幣。`
+                    : '請先登入以查看里程幣路線。';
+                alert(msg);
+            });
         }
 
         container.appendChild(card);

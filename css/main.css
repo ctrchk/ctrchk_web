@@ -835,3 +835,119 @@ body.is-pwa .cta-button:hover { background: var(--app-accent); }
     box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
 }
 .app-map-tooltip::before { display: none !important; }
+
+/* ── iOS Liquid Glass UI Support ──────────────────────────────────────────── */
+/* Applied when body.liquid-glass is set (iOS 26+ with Liquid Glass enabled)   */
+/* Detection via JS in pwa.js; uses CSS backdrop-filter for glass morphism      */
+
+body.liquid-glass {
+    --lg-glass-bg: rgba(18, 31, 20, 0.45);
+    --lg-glass-bg-light: rgba(255, 255, 255, 0.12);
+    --lg-glass-border: rgba(255, 255, 255, 0.18);
+    --lg-blur: blur(24px) saturate(180%);
+    --lg-radius: 20px;
+    --lg-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* Bottom navigation: glass effect */
+body.liquid-glass #app-bottom-nav {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: var(--lg-blur) !important;
+    -webkit-backdrop-filter: var(--lg-blur) !important;
+    border-top: 1px solid var(--lg-glass-border) !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* More sheet: glass effect */
+body.liquid-glass #app-more-sheet {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: var(--lg-blur) !important;
+    -webkit-backdrop-filter: var(--lg-blur) !important;
+    border-top: 1px solid var(--lg-glass-border) !important;
+    border-radius: var(--lg-radius) var(--lg-radius) 0 0 !important;
+    box-shadow: var(--lg-shadow) !important;
+}
+
+/* Route cards in ride page: glass effect */
+body.liquid-glass .app-route-card {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+    border: 1px solid var(--lg-glass-border) !important;
+    box-shadow: var(--lg-shadow) !important;
+    border-radius: var(--lg-radius) !important;
+}
+
+body.liquid-glass .app-route-card:active,
+body.liquid-glass .app-route-card.selected {
+    background: rgba(109, 186, 101, 0.25) !important;
+    border-color: var(--app-accent, #6dba65) !important;
+}
+
+/* App home cards: glass effect */
+body.liquid-glass .app-home-card,
+body.liquid-glass .app-stat-card,
+body.liquid-glass .app-recent-ride {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+    border: 1px solid var(--lg-glass-border) !important;
+    box-shadow: var(--lg-shadow) !important;
+    border-radius: var(--lg-radius) !important;
+}
+
+/* Top search bar in ride page: glass */
+body.liquid-glass .app-ride-search-row {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+    border: 1px solid var(--lg-glass-border) !important;
+    border-radius: 16px !important;
+}
+
+/* Top bar area: translucent background behind status bar */
+body.liquid-glass .app-ride-topbar {
+    background: rgba(18, 31, 20, 0.6) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+/* Filter chips: glass look */
+body.liquid-glass .app-filter-chip {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--lg-glass-border) !important;
+}
+
+body.liquid-glass .app-filter-chip.active {
+    background: rgba(109, 186, 101, 0.4) !important;
+    border-color: var(--app-accent, #6dba65) !important;
+}
+
+/* Start ride button: glass with accent glow */
+body.liquid-glass .app-start-ride-btn {
+    background: rgba(76, 175, 80, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    box-shadow: 0 4px 24px rgba(76, 175, 80, 0.5), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+}
+
+/* Dashboard hero: glass */
+body.liquid-glass .hero {
+    background: rgba(18, 31, 20, 0.6) !important;
+    backdrop-filter: var(--lg-blur) !important;
+    -webkit-backdrop-filter: var(--lg-blur) !important;
+}
+
+/* XP / coin cards in dashboard */
+body.liquid-glass .game-card,
+body.liquid-glass .xp-card,
+body.liquid-glass .history-card {
+    background: var(--lg-glass-bg) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+    border: 1px solid var(--lg-glass-border) !important;
+    box-shadow: var(--lg-shadow) !important;
+    border-radius: var(--lg-radius) !important;
+}

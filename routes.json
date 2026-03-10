@@ -1060,6 +1060,1631 @@
           "lon": 114.247
         }
       ]
+    },
+    {
+      "id": "966A",
+      "alias": "康城觀景線",
+      "start": "康城站",
+      "end": "調景嶺總站",
+      "via": "日出康城、將軍澳跨灣大橋、將軍澳海濱",
+      "nature": "旅遊",
+      "time": 35,
+      "length": "5.2km",
+      "difficulty": 3,
+      "image": "images/966.jpg",
+      "description": "由康城出發，沿跨灣大橋欣賞將軍澳灣景色，最後抵達調景嶺。路線平坦，視野開闊，特別適合下午騎行。",
+      "tags": [
+        "將軍澳",
+        "海濱專線",
+        "康城專線",
+        "風景優美",
+        "少坡",
+        "旅遊"
+      ],
+      "color": "#0b5394",
+      "unlock_level": 4,
+      "unlock_cost": null,
+      "xp_reward": 90,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往康城",
+          "file": "966A康城.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "966A調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        },
+        {
+          "order": 2,
+          "name": "日出康城",
+          "lat": 22.298,
+          "lon": 114.251
+        },
+        {
+          "order": 3,
+          "name": "將軍澳跨灣大橋",
+          "lat": 22.299,
+          "lon": 114.256
+        },
+        {
+          "order": 4,
+          "name": "將軍澳海濱公園",
+          "lat": 22.305,
+          "lon": 114.266
+        },
+        {
+          "order": 5,
+          "name": "調景嶺總站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        }
+      ]
+    },
+    {
+      "id": "900S",
+      "alias": "特快海濱線",
+      "start": "寶琳（新都城二期）",
+      "end": "調景嶺彩明",
+      "via": "香港單車館、將軍澳海濱（特快直達）",
+      "nature": "通勤",
+      "time": 25,
+      "length": "5.5km",
+      "difficulty": 3,
+      "image": "images/900.jpg",
+      "description": "900 海濱線的特快版本，取消中途站，直接連接寶琳與調景嶺。適合熟悉路線、追求時效的騎手。屬特別路線，需以里程幣兌換。",
+      "tags": [
+        "將軍澳",
+        "快速",
+        "海濱專線",
+        "通勤",
+        "少坡"
+      ],
+      "color": "#e6a817",
+      "unlock_level": 7,
+      "unlock_cost": 600,
+      "xp_reward": 130,
+      "is_special": true,
+      "coin_cost": 600,
+      "gpx": [
+        {
+          "label": "往寶琳",
+          "file": "900S寶琳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳（新都城二期）",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "香港單車館",
+          "lat": 22.3143,
+          "lon": 114.2697
+        },
+        {
+          "order": 3,
+          "name": "調景嶺彩明",
+          "lat": 22.3042,
+          "lon": 114.2651
+        }
+      ]
+    },
+    {
+      "id": "901P",
+      "alias": "寶琳北路線",
+      "start": "寶琳站",
+      "end": "調景嶺站",
+      "via": "寶林邨、坑口、景林邨、香港單車館",
+      "nature": "通勤",
+      "time": 30,
+      "length": "4.8km",
+      "difficulty": 3,
+      "image": "images/900.jpg",
+      "description": "由寶琳站出發，途經坑口區北部，最終到達調景嶺站。適合平日通勤使用，路線較短但途經居民密集地區。",
+      "tags": [
+        "將軍澳",
+        "通勤",
+        "寶琳調景嶺線",
+        "少坡"
+      ],
+      "color": "#6f2da8",
+      "unlock_level": 7,
+      "unlock_cost": null,
+      "xp_reward": 140,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往寶琳",
+          "file": "901P寶琳.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "901P調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳站",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "寶林邨",
+          "lat": 22.318,
+          "lon": 114.265
+        },
+        {
+          "order": 3,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 4,
+          "name": "景林邨",
+          "lat": 22.3185,
+          "lon": 114.262
+        },
+        {
+          "order": 5,
+          "name": "調景嶺站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        }
+      ]
+    },
+    {
+      "id": "914B",
+      "alias": "坑口北急速線",
+      "start": "坑口北巴士站",
+      "end": "明德醫院",
+      "via": "坑口北、清水灣半島、明德醫院",
+      "nature": "通勤",
+      "time": 35,
+      "length": "6.2km",
+      "difficulty": 4,
+      "image": "images/914B.jpg",
+      "description": "由坑口北急速前往明德醫院，沿清水灣半島行駛，景色優美但有一定坡度。屬特別路線，需以里程幣兌換。",
+      "tags": [
+        "將軍澳",
+        "通勤",
+        "清水灣半島專線",
+        "少坡",
+        "快速"
+      ],
+      "color": "#cc4125",
+      "unlock_level": 7,
+      "unlock_cost": 500,
+      "xp_reward": 80,
+      "is_special": true,
+      "coin_cost": 500,
+      "gpx": [
+        {
+          "label": "往寶琳",
+          "file": "914B寶琳.gpx"
+        },
+        {
+          "label": "往醫院",
+          "file": "914B醫院.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口北巴士站",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 2,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 3,
+          "name": "明德醫院",
+          "lat": 22.334,
+          "lon": 114.255
+        }
+      ]
+    },
+    {
+      "id": "914H",
+      "alias": "醫院連線",
+      "start": "坑口站",
+      "end": "明德醫院",
+      "via": "坑口北、清水灣半島",
+      "nature": "通勤",
+      "time": 40,
+      "length": "7.0km",
+      "difficulty": 3.5,
+      "image": "images/914.jpg",
+      "description": "連接坑口站與明德醫院的實用通勤路線，途經坑口北及清水灣半島。適合前往醫院的市民使用。",
+      "tags": [
+        "將軍澳",
+        "通勤",
+        "清水灣半島專線",
+        "坑口北專線"
+      ],
+      "color": "#85200c",
+      "unlock_level": 10,
+      "unlock_cost": null,
+      "xp_reward": 80,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往坑口",
+          "file": "914H坑口.gpx"
+        },
+        {
+          "label": "往醫院",
+          "file": "914H醫院.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 4,
+          "name": "明德醫院",
+          "lat": 22.334,
+          "lon": 114.255
+        }
+      ]
+    },
+    {
+      "id": "966B",
+      "alias": "康城長線",
+      "start": "調景嶺總站",
+      "end": "康城站",
+      "via": "將軍澳海濱、尚德邨、跨灣大橋、日出康城",
+      "nature": "旅遊",
+      "time": 45,
+      "length": "6.8km",
+      "difficulty": 3,
+      "image": "images/966.jpg",
+      "description": "966 路線的延長版，由調景嶺出發，繞經尚德邨再沿跨灣大橋抵達康城。風景優美，路線較長但坡度平緩。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "海濱專線",
+        "康城專線",
+        "風景優美",
+        "少坡"
+      ],
+      "color": "#0e6b5e",
+      "unlock_level": 10,
+      "unlock_cost": null,
+      "xp_reward": 90,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往康城",
+          "file": "966B康城.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "966B調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "調景嶺總站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        },
+        {
+          "order": 2,
+          "name": "尚德邨",
+          "lat": 22.305,
+          "lon": 114.2575
+        },
+        {
+          "order": 3,
+          "name": "將軍澳海濱公園",
+          "lat": 22.305,
+          "lon": 114.266
+        },
+        {
+          "order": 4,
+          "name": "將軍澳跨灣大橋",
+          "lat": 22.299,
+          "lon": 114.256
+        },
+        {
+          "order": 5,
+          "name": "日出康城",
+          "lat": 22.298,
+          "lon": 114.251
+        },
+        {
+          "order": 6,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        }
+      ]
+    },
+    {
+      "id": "920X",
+      "alias": "尚德特快",
+      "start": "寶琳站",
+      "end": "尚德邨",
+      "via": "坑口南（特快）",
+      "nature": "通勤",
+      "time": 22,
+      "length": "4.2km",
+      "difficulty": 2.5,
+      "image": "images/900.jpg",
+      "description": "由寶琳直達尚德的特快線，省略多個中途站。適合熟悉地區的通勤騎手，節省騎行時間。",
+      "tags": [
+        "將軍澳",
+        "快速",
+        "通勤",
+        "少坡"
+      ],
+      "color": "#e69138",
+      "unlock_level": 13,
+      "unlock_cost": null,
+      "xp_reward": 100,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往寶琳",
+          "file": "920X寶琳.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "920X調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳站",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 3,
+          "name": "尚德邨",
+          "lat": 22.305,
+          "lon": 114.2575
+        }
+      ]
+    },
+    {
+      "id": "966C",
+      "alias": "康城深度遊",
+      "start": "調景嶺總站",
+      "end": "康城站",
+      "via": "坑口南、尚德、將軍澳跨灣大橋",
+      "nature": "旅遊",
+      "time": 55,
+      "length": "8.5km",
+      "difficulty": 3.5,
+      "image": "images/966.jpg",
+      "description": "最長的康城路線，由調景嶺出發途經坑口南、尚德邨，再沿跨灣大橋直達康城。沿途景色多元，適合想深度探索將軍澳的騎手。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "海濱專線",
+        "康城專線",
+        "長途",
+        "風景優美"
+      ],
+      "color": "#4a86e8",
+      "unlock_level": 13,
+      "unlock_cost": null,
+      "xp_reward": 90,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往康城",
+          "file": "966C康城.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "966C調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "調景嶺總站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        },
+        {
+          "order": 2,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 3,
+          "name": "尚德邨",
+          "lat": 22.305,
+          "lon": 114.2575
+        },
+        {
+          "order": 4,
+          "name": "將軍澳跨灣大橋",
+          "lat": 22.299,
+          "lon": 114.256
+        },
+        {
+          "order": 5,
+          "name": "日出康城",
+          "lat": 22.298,
+          "lon": 114.251
+        },
+        {
+          "order": 6,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        }
+      ]
+    },
+    {
+      "id": "928",
+      "alias": "坑口北旅遊線",
+      "start": "寶琳站",
+      "end": "將軍澳站",
+      "via": "坑口北、清水灣半島、將軍澳南",
+      "nature": "旅遊",
+      "time": 50,
+      "length": "8.8km",
+      "difficulty": 3.5,
+      "image": "images/914.jpg",
+      "description": "由寶琳出發，途經坑口北的鄉村道路，再往清水灣半島欣賞海景，最後到達將軍澳站。沿途兼具市區與郊野風光。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "坑口北專線",
+        "清水灣半島專線",
+        "風景優美"
+      ],
+      "color": "#783f04",
+      "unlock_level": 16,
+      "unlock_cost": null,
+      "xp_reward": 170,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往寶琳",
+          "file": "928寶琳.gpx"
+        },
+        {
+          "label": "往將軍澳",
+          "file": "928將軍澳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳站",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島入口",
+          "lat": 22.326,
+          "lon": 114.258
+        },
+        {
+          "order": 4,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 5,
+          "name": "將軍澳南海濱",
+          "lat": 22.302,
+          "lon": 114.262
+        },
+        {
+          "order": 6,
+          "name": "將軍澳站",
+          "lat": 22.3073,
+          "lon": 114.261
+        }
+      ]
+    },
+    {
+      "id": "929",
+      "alias": "坑口彩明線",
+      "start": "坑口站",
+      "end": "調景嶺彩明",
+      "via": "景林邨、香港單車館、調景嶺",
+      "nature": "通勤",
+      "time": 30,
+      "length": "4.5km",
+      "difficulty": 2.5,
+      "image": "images/914.jpg",
+      "description": "連接坑口站與調景嶺彩明的通勤路線，途經景林邨及香港單車館。路線平坦，適合日常通勤。",
+      "tags": [
+        "將軍澳",
+        "通勤",
+        "少坡",
+        "坑口北專線"
+      ],
+      "color": "#b45f06",
+      "unlock_level": 16,
+      "unlock_cost": null,
+      "xp_reward": 160,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往坑口",
+          "file": "929坑口.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "929調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "景林邨",
+          "lat": 22.3185,
+          "lon": 114.262
+        },
+        {
+          "order": 3,
+          "name": "香港單車館",
+          "lat": 22.3143,
+          "lon": 114.2697
+        },
+        {
+          "order": 4,
+          "name": "調景嶺站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        },
+        {
+          "order": 5,
+          "name": "調景嶺彩明",
+          "lat": 22.3042,
+          "lon": 114.2651
+        }
+      ]
+    },
+    {
+      "id": "961",
+      "alias": "清水灣大環線",
+      "start": "調景嶺站",
+      "end": "康城站",
+      "via": "坑口北、清水灣半島、將軍澳西、康城",
+      "nature": "旅遊",
+      "time": 60,
+      "length": "11.2km",
+      "difficulty": 4,
+      "image": "images/914.jpg",
+      "description": "大型環線路線，由調景嶺出發，繞行清水灣半島並途經將軍澳西，最終抵達康城。路線多變，挑戰性較高。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "長途",
+        "清水灣半島專線",
+        "挑戰",
+        "風景優美"
+      ],
+      "color": "#38761d",
+      "unlock_level": 16,
+      "unlock_cost": null,
+      "xp_reward": 130,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往康城",
+          "file": "961康城.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "961調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "調景嶺站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 4,
+          "name": "將軍澳西",
+          "lat": 22.302,
+          "lon": 114.256
+        },
+        {
+          "order": 5,
+          "name": "日出康城",
+          "lat": 22.298,
+          "lon": 114.251
+        },
+        {
+          "order": 6,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        }
+      ]
+    },
+    {
+      "id": "961P",
+      "alias": "清水灣半島特快",
+      "start": "將軍澳站",
+      "end": "清水灣半島",
+      "via": "坑口北、清水灣半島（特快）",
+      "nature": "旅遊",
+      "time": 40,
+      "length": "6.8km",
+      "difficulty": 4,
+      "image": "images/914.jpg",
+      "description": "直達清水灣半島的特快線，省略多個中途站，讓你快速抵達清水灣半島欣賞獨特海岸風光。屬特別路線，需以里程幣兌換。",
+      "tags": [
+        "將軍澳",
+        "快速",
+        "清水灣半島專線",
+        "旅遊",
+        "挑戰"
+      ],
+      "color": "#134f5c",
+      "unlock_level": 16,
+      "unlock_cost": 800,
+      "xp_reward": 100,
+      "is_special": true,
+      "coin_cost": 800,
+      "gpx": [
+        {
+          "label": "往將軍澳",
+          "file": "961P將軍澳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "將軍澳站",
+          "lat": 22.3073,
+          "lon": 114.261
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        }
+      ]
+    },
+    {
+      "id": "935",
+      "alias": "創新園南線",
+      "start": "寶琳站",
+      "end": "將軍澳創新園",
+      "via": "坑口、尚德、康城南、創新園",
+      "nature": "通勤",
+      "time": 55,
+      "length": "9.5km",
+      "difficulty": 4,
+      "image": "images/900.jpg",
+      "description": "由寶琳出發途經坑口、尚德及康城，最終到達將軍澳創新園。適合往返創新園的通勤及旅遊騎手。",
+      "tags": [
+        "將軍澳",
+        "通勤",
+        "旅遊",
+        "創新園路線",
+        "長途"
+      ],
+      "color": "#c90076",
+      "unlock_level": 19,
+      "unlock_cost": null,
+      "xp_reward": 250,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往創新園",
+          "file": "935創新園.gpx"
+        },
+        {
+          "label": "往寶琳",
+          "file": "935寶琳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳站",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 3,
+          "name": "尚德邨",
+          "lat": 22.305,
+          "lon": 114.2575
+        },
+        {
+          "order": 4,
+          "name": "日出康城",
+          "lat": 22.298,
+          "lon": 114.251
+        },
+        {
+          "order": 5,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        },
+        {
+          "order": 6,
+          "name": "將軍澳創新園",
+          "lat": 22.294,
+          "lon": 114.247
+        }
+      ]
+    },
+    {
+      "id": "939",
+      "alias": "坑口大循環",
+      "start": "坑口站",
+      "end": "坑口站（循環）",
+      "via": "坑口北、景林邨、坑口南、坑口站",
+      "nature": "旅遊",
+      "time": 35,
+      "length": "5.8km",
+      "difficulty": 3,
+      "image": "images/910.jpg",
+      "description": "以坑口站為中心的大型循環線，涵蓋坑口北及坑口南主要路段，適合熟悉坑口地區的騎手深度探索。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "坑口北專線"
+      ],
+      "color": "#7f6000",
+      "unlock_level": 19,
+      "unlock_cost": null,
+      "xp_reward": 120,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "循環線",
+          "file": "939循環線.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "景林邨",
+          "lat": 22.3185,
+          "lon": 114.262
+        },
+        {
+          "order": 4,
+          "name": "坑口南",
+          "lat": 22.313,
+          "lon": 114.268
+        },
+        {
+          "order": 5,
+          "name": "坑口站（回程）",
+          "lat": 22.3163,
+          "lon": 114.2658
+        }
+      ]
+    },
+    {
+      "id": "939M",
+      "alias": "迷你坑口環",
+      "start": "坑口站",
+      "end": "坑口站（循環）",
+      "via": "景林邨、坑口南",
+      "nature": "旅遊",
+      "time": 20,
+      "length": "3.2km",
+      "difficulty": 2,
+      "image": "images/910.jpg",
+      "description": "坑口區的短程循環線，適合新手或時間有限的騎手探索坑口南北兩區。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "新手必試"
+      ],
+      "color": "#b6a20a",
+      "unlock_level": 19,
+      "unlock_cost": null,
+      "xp_reward": 120,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "循環線",
+          "file": "939M循環線.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "景林邨",
+          "lat": 22.3185,
+          "lon": 114.262
+        },
+        {
+          "order": 3,
+          "name": "坑口南",
+          "lat": 22.313,
+          "lon": 114.268
+        },
+        {
+          "order": 4,
+          "name": "坑口站（回程）",
+          "lat": 22.3163,
+          "lon": 114.2658
+        }
+      ]
+    },
+    {
+      "id": "962",
+      "alias": "清水灣半島環線",
+      "start": "坑口站",
+      "end": "坑口站（循環）",
+      "via": "坑口北、清水灣半島、坑口北",
+      "nature": "旅遊",
+      "time": 50,
+      "length": "8.0km",
+      "difficulty": 4.5,
+      "image": "images/914.jpg",
+      "description": "以坑口站為起點的清水灣半島循環線，深入探索半島地形，挑戰性較高，適合有一定經驗的騎手。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "清水灣半島專線",
+        "挑戰",
+        "多坡"
+      ],
+      "color": "#7b2d8b",
+      "unlock_level": 19,
+      "unlock_cost": null,
+      "xp_reward": 250,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "循環線",
+          "file": "962A循環線.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 4,
+          "name": "清水灣半島南",
+          "lat": 22.325,
+          "lon": 114.258
+        },
+        {
+          "order": 5,
+          "name": "坑口站（回程）",
+          "lat": 22.3163,
+          "lon": 114.2658
+        }
+      ]
+    },
+    {
+      "id": "962A",
+      "alias": "清水灣半島大環",
+      "start": "坑口站",
+      "end": "坑口站（循環）",
+      "via": "坑口北、清水灣半島全程、坑口南",
+      "nature": "旅遊",
+      "time": 65,
+      "length": "10.5km",
+      "difficulty": 5,
+      "image": "images/914.jpg",
+      "description": "清水灣半島最完整的環形路線，覆蓋整個半島所有主要道路，適合專業騎手挑戰。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "清水灣半島專線",
+        "挑戰",
+        "多坡",
+        "長途",
+        "運動訓練"
+      ],
+      "color": "#4a1942",
+      "unlock_level": 19,
+      "unlock_cost": null,
+      "xp_reward": 250,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "循環線",
+          "file": "962A循環線.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島北",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 4,
+          "name": "清水灣半島南",
+          "lat": 22.325,
+          "lon": 114.258
+        },
+        {
+          "order": 5,
+          "name": "坑口南",
+          "lat": 22.313,
+          "lon": 114.268
+        },
+        {
+          "order": 6,
+          "name": "坑口站（回程）",
+          "lat": 22.3163,
+          "lon": 114.2658
+        }
+      ]
+    },
+    {
+      "id": "955",
+      "alias": "健身旅遊循環線",
+      "start": "寶琳站",
+      "end": "寶琳站（循環）",
+      "via": "坑口北、清水灣半島、坑口南、寶琳南",
+      "nature": "旅遊",
+      "time": 75,
+      "length": "13.0km",
+      "difficulty": 5,
+      "image": "images/900.jpg",
+      "description": "大型循環旅遊線，由寶琳出發，途經清水灣半島、坑口南及寶琳南，最終回到出發點。適合體能充沛、追求挑戰的騎手。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "長途",
+        "清水灣半島專線",
+        "挑戰",
+        "運動訓練",
+        "多坡"
+      ],
+      "color": "#1c4587",
+      "unlock_level": 20,
+      "unlock_cost": null,
+      "xp_reward": 110,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "順時針",
+          "file": "955順時針.gpx"
+        },
+        {
+          "label": "逆時針",
+          "file": "955逆時針.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳站",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 4,
+          "name": "坑口南",
+          "lat": 22.313,
+          "lon": 114.268
+        },
+        {
+          "order": 5,
+          "name": "寶琳南",
+          "lat": 22.318,
+          "lon": 114.26
+        },
+        {
+          "order": 6,
+          "name": "寶琳站（回程）",
+          "lat": 22.3231,
+          "lon": 114.2592
+        }
+      ]
+    },
+    {
+      "id": "955A",
+      "alias": "將軍澳村線",
+      "start": "將軍澳村",
+      "end": "新都城一期",
+      "via": "清水灣半島入口、坑口南、景林邨",
+      "nature": "旅遊",
+      "time": 45,
+      "length": "7.5km",
+      "difficulty": 4,
+      "image": "images/900A.jpg",
+      "description": "由將軍澳村連接新都城的路線，途經清水灣半島入口及坑口南。連接舊區與新區，沿途景觀多元。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "清水灣半島專線",
+        "坑口北專線",
+        "風景優美"
+      ],
+      "color": "#1155cc",
+      "unlock_level": 20,
+      "unlock_cost": null,
+      "xp_reward": 60,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往將軍澳村",
+          "file": "955A將軍澳村.gpx"
+        },
+        {
+          "label": "往新都城",
+          "file": "955A新都城.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "將軍澳村",
+          "lat": 22.326,
+          "lon": 114.2565
+        },
+        {
+          "order": 2,
+          "name": "清水灣半島入口",
+          "lat": 22.326,
+          "lon": 114.258
+        },
+        {
+          "order": 3,
+          "name": "坑口南",
+          "lat": 22.313,
+          "lon": 114.268
+        },
+        {
+          "order": 4,
+          "name": "景林邨",
+          "lat": 22.3185,
+          "lon": 114.262
+        },
+        {
+          "order": 5,
+          "name": "新都城一期",
+          "lat": 22.3219,
+          "lon": 114.2596
+        }
+      ]
+    },
+    {
+      "id": "955H",
+      "alias": "坑口半島環",
+      "start": "坑口站",
+      "end": "坑口站（循環）",
+      "via": "將軍澳村、清水灣半島、坑口北",
+      "nature": "旅遊",
+      "time": 60,
+      "length": "9.8km",
+      "difficulty": 4.5,
+      "image": "images/910.jpg",
+      "description": "以坑口站為中心的大型半島環線，覆蓋清水灣半島及坑口北的主要觀景點，是探索坑口郊野的終極路線。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "清水灣半島專線",
+        "坑口北專線",
+        "挑戰",
+        "長途"
+      ],
+      "color": "#3c78d8",
+      "unlock_level": 20,
+      "unlock_cost": null,
+      "xp_reward": 80,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "循環線",
+          "file": "955H循環線.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "將軍澳村",
+          "lat": 22.326,
+          "lon": 114.2565
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        },
+        {
+          "order": 4,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 5,
+          "name": "坑口站（回程）",
+          "lat": 22.3163,
+          "lon": 114.2658
+        }
+      ]
+    },
+    {
+      "id": "962P",
+      "alias": "半島特快旅遊線",
+      "start": "將軍澳站",
+      "end": "清水灣半島",
+      "via": "坑口北（特快直達）",
+      "nature": "旅遊",
+      "time": 35,
+      "length": "6.5km",
+      "difficulty": 4.5,
+      "image": "images/914.jpg",
+      "description": "最快速抵達清水灣半島的路線，特快直達，感受極致的半島海風。屬特別路線，需以里程幣兌換。",
+      "tags": [
+        "將軍澳",
+        "快速",
+        "清水灣半島專線",
+        "旅遊",
+        "挑戰",
+        "運動訓練"
+      ],
+      "color": "#9900ff",
+      "unlock_level": 20,
+      "unlock_cost": 1000,
+      "xp_reward": 150,
+      "is_special": true,
+      "coin_cost": 1000,
+      "gpx": [
+        {
+          "label": "往將軍澳",
+          "file": "962P將軍澳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "將軍澳站",
+          "lat": 22.3073,
+          "lon": 114.261
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島",
+          "lat": 22.328,
+          "lon": 114.254
+        }
+      ]
+    },
+    {
+      "id": "962X",
+      "alias": "深水灣特快",
+      "start": "將軍澳站",
+      "end": "清水灣半島南",
+      "via": "坑口（特快）",
+      "nature": "旅遊",
+      "time": 45,
+      "length": "7.8km",
+      "difficulty": 5,
+      "image": "images/914.jpg",
+      "description": "終極特快路線，直達清水灣半島南端，挑戰最陡峭的路段，只有最頂尖的騎手才能征服。屬特別路線，需以里程幣兌換。",
+      "tags": [
+        "將軍澳",
+        "快速",
+        "清水灣半島專線",
+        "旅遊",
+        "挑戰",
+        "多坡",
+        "運動訓練"
+      ],
+      "color": "#990000",
+      "unlock_level": 20,
+      "unlock_cost": 1000,
+      "xp_reward": 130,
+      "is_special": true,
+      "coin_cost": 1000,
+      "gpx": [
+        {
+          "label": "往將軍澳",
+          "file": "962X將軍澳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "將軍澳站",
+          "lat": 22.3073,
+          "lon": 114.261
+        },
+        {
+          "order": 2,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島南",
+          "lat": 22.325,
+          "lon": 114.258
+        }
+      ]
+    },
+    {
+      "id": "X935",
+      "alias": "創新園快車",
+      "start": "寶琳站",
+      "end": "將軍澳創新園",
+      "via": "尚德邨、康城、創新園（特快）",
+      "nature": "通勤",
+      "time": 40,
+      "length": "8.0km",
+      "difficulty": 3.5,
+      "image": "images/900.jpg",
+      "description": "特快版創新園路線，省略多個中途站，快速連接寶琳與將軍澳創新園。適合往返創新園的通勤騎手。",
+      "tags": [
+        "將軍澳",
+        "快速",
+        "通勤",
+        "創新園路線",
+        "少坡"
+      ],
+      "color": "#b64e00",
+      "unlock_level": 20,
+      "unlock_cost": null,
+      "xp_reward": 210,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往創新園",
+          "file": "X935創新園.gpx"
+        },
+        {
+          "label": "往寶琳",
+          "file": "X935寶琳.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "寶琳站",
+          "lat": 22.3231,
+          "lon": 114.2592
+        },
+        {
+          "order": 2,
+          "name": "尚德邨",
+          "lat": 22.305,
+          "lon": 114.2575
+        },
+        {
+          "order": 3,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        },
+        {
+          "order": 4,
+          "name": "將軍澳創新園",
+          "lat": 22.294,
+          "lon": 114.247
+        }
+      ]
+    },
+    {
+      "id": "S90",
+      "alias": "康城循環特線",
+      "start": "康城站",
+      "end": "康城站（循環）",
+      "via": "日出康城、康城海濱、創新園",
+      "nature": "旅遊",
+      "time": 30,
+      "length": "5.0km",
+      "difficulty": 2,
+      "image": "images/966.jpg",
+      "description": "以康城為中心的短程循環路線，覆蓋日出康城及周邊海濱，適合在康城居住或訪客悠閒騎行。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "循環線",
+        "康城專線",
+        "少坡",
+        "風景優美"
+      ],
+      "color": "#6aa84f",
+      "unlock_level": 20,
+      "unlock_cost": null,
+      "xp_reward": 200,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "循環線",
+          "file": "S90康城循環.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        },
+        {
+          "order": 2,
+          "name": "日出康城",
+          "lat": 22.298,
+          "lon": 114.251
+        },
+        {
+          "order": 3,
+          "name": "康城海濱",
+          "lat": 22.3,
+          "lon": 114.249
+        },
+        {
+          "order": 4,
+          "name": "將軍澳創新園",
+          "lat": 22.294,
+          "lon": 114.247
+        },
+        {
+          "order": 5,
+          "name": "康城站（回程）",
+          "lat": 22.2961,
+          "lon": 114.249
+        }
+      ]
+    },
+    {
+      "id": "S91",
+      "alias": "清水灣半島南線",
+      "start": "坑口站",
+      "end": "調景嶺站",
+      "via": "清水灣半島、將軍澳南",
+      "nature": "旅遊",
+      "time": 55,
+      "length": "9.2km",
+      "difficulty": 4.5,
+      "image": "images/914.jpg",
+      "description": "深入清水灣半島南部的高難度路線，途經半島最南端再折返將軍澳南，挑戰性極高，風景絕佳。",
+      "tags": [
+        "將軍澳",
+        "旅遊",
+        "清水灣半島專線",
+        "挑戰",
+        "多坡",
+        "長途",
+        "風景優美"
+      ],
+      "color": "#006064",
+      "unlock_level": 20,
+      "unlock_cost": null,
+      "xp_reward": 200,
+      "is_special": false,
+      "coin_cost": 0,
+      "gpx": [
+        {
+          "label": "往清水灣半島",
+          "file": "S91清水灣半島.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "S91調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "坑口站",
+          "lat": 22.3163,
+          "lon": 114.2658
+        },
+        {
+          "order": 2,
+          "name": "坑口北",
+          "lat": 22.321,
+          "lon": 114.263
+        },
+        {
+          "order": 3,
+          "name": "清水灣半島南",
+          "lat": 22.325,
+          "lon": 114.258
+        },
+        {
+          "order": 4,
+          "name": "將軍澳南海濱",
+          "lat": 22.302,
+          "lon": 114.262
+        },
+        {
+          "order": 5,
+          "name": "調景嶺站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        }
+      ]
     }
   ]
 }
