@@ -110,8 +110,7 @@
             const token = localStorage.getItem('accessToken');
             
             if (!token) {
-                alert('你需要登入才能查看此頁面。');
-                window.location.replace('/login.html'); 
+                window.location.replace('/login'); 
                 return false;
             }
             return true;
@@ -196,8 +195,7 @@
                 let userRole = 'junior';
                 
                 if (!user) {
-                    alert('請先登入。');
-                    window.location.href = '/login.html';
+                    window.location.href = '/login';
                     return;
                 }
 
@@ -260,29 +258,54 @@
             }
         });
 
-        // 等級稱號對照表（與 routes.json / level_config 同步）
+        // 等級稱號對照表（與 routes_config / level_config 同步）
+        // 每5級更換一個稱號：Lv1-5 新手騎士，Lv6-10 城市騎手，Lv11-15 路線達人，Lv16-20 都市傳奇
         const LEVEL_TITLES = {
-            1: '新手騎士', 2: '街坊騎手', 3: '區域探索者', 4: '城市達人',
-            5: '城市騎士', 6: '路線通', 7: '將軍澳通', 8: '單車俠',
-            9: '海濱傳奇', 10: '都市傳奇'
+            1: '新手騎士', 2: '新手騎士', 3: '新手騎士', 4: '新手騎士', 5: '新手騎士',
+            6: '城市騎手', 7: '城市騎手', 8: '城市騎手', 9: '城市騎手', 10: '城市騎手',
+            11: '路線達人', 12: '路線達人', 13: '路線達人', 14: '路線達人', 15: '路線達人',
+            16: '都市傳奇', 17: '都市傳奇', 18: '都市傳奇', 19: '都市傳奇', 20: '都市傳奇'
         };
-        const LEVEL_XP = [0, 300, 700, 1200, 1800, 2600, 3500, 4500, 5800, 7500, Infinity];
+        // 累計 XP 以達到對應等級（指數增長，初期升級快，後期需要更多）
+        const LEVEL_XP = [
+            0,      // Lv1
+            80,     // Lv2
+            200,    // Lv3
+            380,    // Lv4
+            620,    // Lv5
+            950,    // Lv6
+            1400,   // Lv7
+            1980,   // Lv8
+            2700,   // Lv9
+            3600,   // Lv10
+            4700,   // Lv11
+            6050,   // Lv12
+            7650,   // Lv13
+            9550,   // Lv14
+            11800,  // Lv15
+            14400,  // Lv16
+            17400,  // Lv17
+            20900,  // Lv18
+            25000,  // Lv19
+            29700,  // Lv20
+            Infinity
+        ];
 
         function renderGameProfile(level, xp, coins) {
             const card = document.getElementById('game-profile-card');
             if (!card) return;
-            const lvl = Math.max(1, Math.min(level || 1, 10));
+            const lvl = Math.max(1, Math.min(level || 1, 20));
             const currentXp = xp || 0;
             const currentCoins = coins || 0;
-            const xpNeeded = LEVEL_XP[lvl] || 0;
-            const xpNext = LEVEL_XP[lvl] < Infinity ? LEVEL_XP[lvl] : LEVEL_XP[lvl - 1];
-            const xpBar = lvl >= 10 ? 100 : Math.round(Math.max(0, Math.min(100, (currentXp - xpNeeded) / Math.max(1, xpNext - xpNeeded) * 100)));
+            const xpCurrent = LEVEL_XP[lvl - 1] || 0;
+            const xpNext = LEVEL_XP[lvl];
+            const xpBar = lvl >= 20 ? 100 : Math.round(Math.max(0, Math.min(100, (currentXp - xpCurrent) / Math.max(1, xpNext - xpCurrent) * 100)));
 
             document.getElementById('game-level-badge').textContent = `Lv.${lvl}`;
             document.getElementById('game-title').textContent = LEVEL_TITLES[lvl] || '';
             document.getElementById('game-coins').textContent = `💰 ${currentCoins.toLocaleString()} 里程幣`;
             document.getElementById('xp-bar').style.width = xpBar + '%';
-            document.getElementById('xp-label').textContent = lvl >= 10
+            document.getElementById('xp-label').textContent = lvl >= 20
                 ? `XP: ${currentXp.toLocaleString()}（已達最高等級）`
                 : `XP: ${currentXp.toLocaleString()} / ${xpNext.toLocaleString()}（下一級需 ${(xpNext - currentXp).toLocaleString()} XP）`;
             card.style.display = 'block';
@@ -298,7 +321,7 @@
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 if (response.status === 401) {
-                    window.location.href = '/login.html';
+                    window.location.href = '/login';
                     return;
                 }
                 if (!response.ok) throw new Error('Server error ' + response.status);

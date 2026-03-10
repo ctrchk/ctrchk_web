@@ -83,6 +83,15 @@ const schemaReady = pool.query(`
     coins INTEGER NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT NOW()
   );
+  CREATE TABLE IF NOT EXISTS user_unlocked_routes (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    route_id VARCHAR(20) NOT NULL,
+    -- unlock_method: 'level_up' = earned by levelling up, 'purchase' = bought with coins, 'default' = starter route
+    unlock_method VARCHAR(20) NOT NULL DEFAULT 'default',
+    unlocked_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, route_id)
+  );
   CREATE TABLE IF NOT EXISTS routes_config (
     route_id VARCHAR(20) PRIMARY KEY,
     unlock_level INTEGER NOT NULL DEFAULT 1,
@@ -142,6 +151,56 @@ const schemaReady = pool.query(`
   CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
   CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
   CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
+
+  -- 路線解鎖配置種子資料（Level 1：900, 900A, 966 僅限新手）
+  INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special) VALUES
+    ('900',   1,  NULL, 150, false),('900A',  1,  NULL, 120, false),('966',   1,  NULL, 110, false),
+    ('914',   4,  NULL,  80, false),('966A',  4,  NULL,  90, false),
+    ('910',   7,  NULL, 100, false),('914B',  7,  NULL,  80, false),
+    ('914H',  10, NULL,  80, false),('920',   10, NULL, 130, false),
+    ('920X',  13, NULL, 100, false),('900S',  13, NULL, 130, false),
+    ('901P',  16, NULL, 140, false),('923',   16, NULL, 160, false),
+    ('928',   19, NULL, 170, false),('929',   19, NULL, 160, false),
+    ('932',   20, NULL, 220, false),('935',   20, NULL, 250, false),
+    ('939',   20, NULL, 120, false),('939M',  20, NULL, 120, false),
+    ('955',   20, NULL, 110, false),('955A',  20, NULL,  60, false),
+    ('955H',  20, NULL,  80, false),('961',   20, NULL, 130, false),
+    ('961P',  20, NULL, 100, false),('962',   20, NULL, 250, false),
+    ('962A',  20, NULL, 250, false),('962P',  20, NULL, 150, false),
+    ('962X',  20, NULL, 130, false),('X935',  20, NULL, 210, false),
+    ('960',   20, NULL, 400, false)
+  ON CONFLICT (route_id) DO UPDATE SET
+    unlock_level = EXCLUDED.unlock_level,
+    xp_reward    = EXCLUDED.xp_reward,
+    is_special   = EXCLUDED.is_special;
+
+  -- 等級配置種子資料（20 級，每5級更換稱號，初期升級快）
+  INSERT INTO level_config (level, xp_required, coins_reward, title_zh, title_en) VALUES
+    (1,      0,    0, '新手騎士', 'Rookie Rider'),
+    (2,     80,   50, '新手騎士', 'Rookie Rider'),
+    (3,    200,   80, '新手騎士', 'Rookie Rider'),
+    (4,    380,  120, '新手騎士', 'Rookie Rider'),
+    (5,    620,  150, '新手騎士', 'Rookie Rider'),
+    (6,    950,  200, '城市騎手', 'City Rider'),
+    (7,   1400,  250, '城市騎手', 'City Rider'),
+    (8,   1980,  300, '城市騎手', 'City Rider'),
+    (9,   2700,  350, '城市騎手', 'City Rider'),
+    (10,  3600,  400, '城市騎手', 'City Rider'),
+    (11,  4700,  500, '路線達人', 'Route Master'),
+    (12,  6050,  600, '路線達人', 'Route Master'),
+    (13,  7650,  700, '路線達人', 'Route Master'),
+    (14,  9550,  800, '路線達人', 'Route Master'),
+    (15, 11800,  900, '路線達人', 'Route Master'),
+    (16, 14400, 1000, '都市傳奇', 'Urban Legend'),
+    (17, 17400, 1200, '都市傳奇', 'Urban Legend'),
+    (18, 20900, 1400, '都市傳奇', 'Urban Legend'),
+    (19, 25000, 1600, '都市傳奇', 'Urban Legend'),
+    (20, 29700, 2000, '都市傳奇', 'Urban Legend')
+  ON CONFLICT (level) DO UPDATE SET
+    xp_required  = EXCLUDED.xp_required,
+    coins_reward = EXCLUDED.coins_reward,
+    title_zh     = EXCLUDED.title_zh,
+    title_en     = EXCLUDED.title_en;
 `).catch(err => {
   // 記錄遷移錯誤但不阻斷後續查詢：
   // 若 production 資料庫已手動套用過 schema，後續查詢仍可正常執行。

@@ -13,6 +13,12 @@
     <title>登入 - 城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        // 若已登入，直接跳轉至儀表板（網頁及 App 均適用）
+        if (localStorage.getItem('accessToken')) {
+            window.location.replace('/dashboard');
+        }
+    </script>
 </head>
 <body>
     <div id="header-placeholder"></div>

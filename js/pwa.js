@@ -43,18 +43,24 @@
     const isEn = window.location.pathname.startsWith('/en') ||
                  document.documentElement.lang === 'en';
 
+    const isLoggedIn = !!localStorage.getItem('accessToken');
+
     const links = isEn
       ? [
           { href: '/en',        icon: 'fa-home',           label: 'Home' },
           { href: '/en/routes', icon: 'fa-route',          label: 'Routes' },
-          { href: '/dashboard', icon: 'fa-tachometer-alt', label: 'Dashboard' },
+          isLoggedIn
+            ? { href: '/dashboard', icon: 'fa-tachometer-alt', label: 'Dashboard' }
+            : { href: '/login',     icon: 'fa-sign-in-alt',    label: 'Sign In' },
           { href: '/profile',   icon: 'fa-user',           label: 'My' },
           { href: '#more',      icon: 'fa-ellipsis-h',     label: 'More', isMore: true },
         ]
       : [
           { href: '/',             icon: 'fa-home',           label: '首頁' },
           { href: '/routes',       icon: 'fa-route',          label: '路線' },
-          { href: '/dashboard',    icon: 'fa-tachometer-alt', label: '儀表板' },
+          isLoggedIn
+            ? { href: '/dashboard',    icon: 'fa-tachometer-alt', label: '儀表板' }
+            : { href: '/login',        icon: 'fa-sign-in-alt',    label: '登入' },
           { href: '/profile',      icon: 'fa-user',           label: '我的' },
           { href: '#more',         icon: 'fa-ellipsis-h',     label: '更多', isMore: true },
         ];
@@ -65,7 +71,6 @@
           { href: '/en/membership', icon: 'fa-star',          label: 'Membership' },
           { href: '/en/blog',       icon: 'fa-newspaper',     label: 'Blog' },
           { href: '/en/contact',    icon: 'fa-envelope',      label: 'Contact' },
-          { href: '/download-app',  icon: 'fa-download',      label: 'Get the App' },
           { href: '/',              icon: 'fa-language',      label: '繁體中文' },
         ]
       : [
@@ -73,7 +78,6 @@
           { href: '/membership',   icon: 'fa-star',          label: '會員計劃' },
           { href: '/blog',         icon: 'fa-newspaper',     label: '部落格' },
           { href: '/contact',      icon: 'fa-envelope',      label: '聯絡我們' },
-          { href: '/download-app', icon: 'fa-download',      label: '下載 App 教學' },
           { href: '/en',           icon: 'fa-language',      label: 'English' },
         ];
 

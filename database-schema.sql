@@ -140,40 +140,44 @@ CREATE TABLE IF NOT EXISTS routes_config (
   is_special   BOOLEAN DEFAULT FALSE       -- TRUE = 只能購買，不能騎行解鎖
 );
 
--- 初始路線配置（與 routes.json 同步）
+-- 初始路線配置（每3-4級解鎖一條新路線）
+-- Level 1 起始路線：900, 900A, 966
 INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
 VALUES
-  ('900',   1, NULL, 150, false),
-  ('900A',  1, NULL, 120, false),
-  ('914',   1, NULL,  50, false),
-  ('910',   2, NULL, 100, false),
-  ('914B',  2, NULL,  80, false),
-  ('914H',  2, NULL,  60, false),
-  ('920',   2, NULL, 130, false),
-  ('920X',  3, NULL, 100, false),
-  ('900S',  3, NULL, 130, false),
-  ('901P',  3, NULL, 140, false),
-  ('923',   3, NULL, 160, false),
-  ('928',   3, NULL, 170, false),
-  ('929',   3, NULL, 160, false),
-  ('955',   4, NULL, 110, false),
-  ('955A',  4, NULL,  60, false),
-  ('955H',  4, NULL,  80, false),
-  ('932',   4, NULL, 220, false),
-  ('935',   4, NULL, 250, false),
-  ('939',   4, NULL, 120, false),
-  ('939M',  4, NULL, 120, false),
-  ('961',   4, NULL, 130, false),
-  ('961P',  5, NULL, 100, false),
-  ('962',   5, NULL, 250, false),
-  ('962A',  5, NULL, 250, false),
-  ('962P',  5, NULL, 150, false),
-  ('962X',  5, NULL, 130, false),
-  ('966',   5, NULL, 110, false),
-  ('966A',  5, NULL,  90, false),
-  ('X935',  5, NULL, 210, false),
-  ('960',   5, NULL, 400, false)
-ON CONFLICT (route_id) DO NOTHING;
+  ('900',   1,  NULL, 150, false),
+  ('900A',  1,  NULL, 120, false),
+  ('966',   1,  NULL, 110, false),
+  ('914',   4,  NULL,  80, false),
+  ('966A',  4,  NULL,  90, false),
+  ('910',   7,  NULL, 100, false),
+  ('914B',  7,  NULL,  80, false),
+  ('914H',  10, NULL,  80, false),
+  ('920',   10, NULL, 130, false),
+  ('920X',  13, NULL, 100, false),
+  ('900S',  13, NULL, 130, false),
+  ('901P',  16, NULL, 140, false),
+  ('923',   16, NULL, 160, false),
+  ('928',   19, NULL, 170, false),
+  ('929',   19, NULL, 160, false),
+  ('932',   20, NULL, 220, false),
+  ('935',   20, NULL, 250, false),
+  ('939',   20, NULL, 120, false),
+  ('939M',  20, NULL, 120, false),
+  ('955',   20, NULL, 110, false),
+  ('955A',  20, NULL,  60, false),
+  ('955H',  20, NULL,  80, false),
+  ('961',   20, NULL, 130, false),
+  ('961P',  20, NULL, 100, false),
+  ('962',   20, NULL, 250, false),
+  ('962A',  20, NULL, 250, false),
+  ('962P',  20, NULL, 150, false),
+  ('962X',  20, NULL, 130, false),
+  ('X935',  20, NULL, 210, false),
+  ('960',   20, NULL, 400, false)
+ON CONFLICT (route_id) DO UPDATE SET
+  unlock_level = EXCLUDED.unlock_level,
+  xp_reward    = EXCLUDED.xp_reward,
+  is_special   = EXCLUDED.is_special;
 
 -- =========================================================
 -- 遊戲化：等級配置
@@ -189,17 +193,35 @@ CREATE TABLE IF NOT EXISTS level_config (
 
 INSERT INTO level_config (level, xp_required, coins_reward, title_zh, title_en)
 VALUES
-  (1,    0,    0,    '新手騎士',   'Rookie Rider'),
-  (2,    300,  100,  '街坊騎手',   'Neighborhood Cyclist'),
-  (3,    700,  200,  '區域探索者', 'Area Explorer'),
-  (4,    1200, 300,  '城市達人',   'City Enthusiast'),
-  (5,    1800, 500,  '城市騎士',   'City Rider'),
-  (6,    2600, 600,  '路線通',     'Route Master'),
-  (7,    3500, 700,  '將軍澳通',   'TKO Expert'),
-  (8,    4500, 800,  '單車俠',     'Cycling Hero'),
-  (9,    5800, 900,  '海濱傳奇',   'Waterfront Legend'),
-  (10,   7500, 1000, '都市傳奇',   'Urban Legend')
-ON CONFLICT (level) DO NOTHING;
+  -- Lv 1-5：新手騎士 / Rookie Rider
+  (1,      0,    0,    '新手騎士', 'Rookie Rider'),
+  (2,     80,   50,    '新手騎士', 'Rookie Rider'),
+  (3,    200,   80,    '新手騎士', 'Rookie Rider'),
+  (4,    380,  120,    '新手騎士', 'Rookie Rider'),
+  (5,    620,  150,    '新手騎士', 'Rookie Rider'),
+  -- Lv 6-10：城市騎手 / City Rider
+  (6,    950,  200,    '城市騎手', 'City Rider'),
+  (7,   1400,  250,    '城市騎手', 'City Rider'),
+  (8,   1980,  300,    '城市騎手', 'City Rider'),
+  (9,   2700,  350,    '城市騎手', 'City Rider'),
+  (10,  3600,  400,    '城市騎手', 'City Rider'),
+  -- Lv 11-15：路線達人 / Route Master
+  (11,  4700,  500,    '路線達人', 'Route Master'),
+  (12,  6050,  600,    '路線達人', 'Route Master'),
+  (13,  7650,  700,    '路線達人', 'Route Master'),
+  (14,  9550,  800,    '路線達人', 'Route Master'),
+  (15, 11800,  900,    '路線達人', 'Route Master'),
+  -- Lv 16-20：都市傳奇 / Urban Legend
+  (16, 14400, 1000,    '都市傳奇', 'Urban Legend'),
+  (17, 17400, 1200,    '都市傳奇', 'Urban Legend'),
+  (18, 20900, 1400,    '都市傳奇', 'Urban Legend'),
+  (19, 25000, 1600,    '都市傳奇', 'Urban Legend'),
+  (20, 29700, 2000,    '都市傳奇', 'Urban Legend')
+ON CONFLICT (level) DO UPDATE SET
+  xp_required  = EXCLUDED.xp_required,
+  coins_reward = EXCLUDED.coins_reward,
+  title_zh     = EXCLUDED.title_zh,
+  title_en     = EXCLUDED.title_en;
 
 -- =========================================================
 -- 管理員帳戶種子資料（使用 Google 登入）

@@ -26,7 +26,7 @@ function handleLogout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     alert('你已成功登出。');
-    window.location.href = '/index.html';
+    window.location.href = '/';
 }
 
 /**
@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const card = document.createElement('div');
                 card.className = 'route-card';
                 card.innerHTML = `
-                    <a href="/route_detail.html?id=${route.id}">
+                    <a href="/route_detail?id=${route.id}">
                         <img src="${route.image}" alt="${route.alias || route.id}">
                         <div class="route-card-title">
                             <h3>
@@ -437,6 +437,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const allRoutesContainer = document.getElementById('all-routes-container');
         const heroSearchInput = document.getElementById('hero-search-input');
         if (!allRoutesContainer || !heroSearchInput) return;
+
+        // ── 解鎖等級對照表（20 級系統）─────────────────────────────────────
+        const ROUTE_UNLOCK = {
+            '900':1,'900A':1,'966':1,'914':4,'966A':4,
+            '900S':7,'901P':7,'910':7,'914B':7,
+            '914H':10,'920':10,'966B':10,'920X':13,'923':13,'966C':13,
+            '928':16,'929':16,'966T':16,'961':16,'961P':16,
+            '932':19,'935':19,'939':19,'939M':19,'962':19,'962A':19,
+            '955':20,'955A':20,'955H':20,'960':20,'962P':20,'962X':20,
+            'X935':20,'S90':20,'S91':20,
+        };
+        const ROUTE_XP = {
+            '900':150,'900A':120,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
+            '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
+            '966C':90,'928':170,'929':160,'966T':90,'961':130,'961P':100,'932':220,
+            '935':250,'939':120,'939M':120,'955':110,'955A':60,'955H':80,'960':400,
+            '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
+        };
+        // 獲取使用者當前等級
+        function getUserLevel() {
+            try {
+                const raw = localStorage.getItem('user');
+                if (!raw) return 0; // 未登入：不顯示鎖定狀態
+                const u = JSON.parse(raw);
+                return Math.max(1, parseInt(u.level || 1, 10));
+            } catch (e) { return 0; }
+        }
 
         const filterCategories = {
             "路線區域": ["將軍澳", "沙田區"],
@@ -547,16 +574,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function renderRoutes(routesToRender) {
             allRoutesContainer.innerHTML = '';
+            const userLvl = getUserLevel();
+            const isLoggedIn = !!localStorage.getItem('accessToken');
             if (routesToRender.length > 0) {
                 routesToRender.forEach(route => {
                     const card = document.createElement('div');
                     card.className = 'route-card-full animated-element';
-                    const link = route.link || `/route_detail.html?id=${route.id}`;
+                    const link = route.link || `/route_detail?id=${route.id}`;
+                    const needed = ROUTE_UNLOCK[route.id] || 1;
+                    const isLocked = isLoggedIn && userLvl > 0 && userLvl < needed;
+                    const xp = ROUTE_XP[route.id] || 0;
+                    const lockBadge = isLocked
+                        ? `<span style="background:#e74c3c;color:#fff;font-size:0.72em;padding:0.2em 0.6em;border-radius:10px;font-weight:bold;">🔒 Lv.${needed}</span>`
+                        : (xp > 0 && isLoggedIn ? `<span style="background:#BFE340;color:#2c3e50;font-size:0.72em;padding:0.2em 0.6em;border-radius:10px;font-weight:bold;">+${xp} XP</span>` : '');
                     card.innerHTML = `
                         <a href="${link}" class="${route.id.startsWith('ST') ? 'disabled-link' : ''}">
                             <div class="route-card-header">
                                 <span class="route-id-code" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">${route.id}</span>
                                 <h3 class="route-alias">${route.alias || '(無別稱)'}</h3>
+                                ${lockBadge}
                             </div>
                             <div class="route-card-content">
                                 <p><strong>起點:</strong> ${route.start}</p>
@@ -619,8 +655,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="fas fa-lock" style="color:#999; font-size:1.5em; display:block; margin-bottom:0.5em;"></i>
                                     <p style="color:#666; margin:0 0 0.8em;">${lockMsg}</p>
                                     ${isLoggedInUser
-                                        ? `<a href="/profile-setup.html" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">升級高級會員</a>`
-                                        : `<a href="/login.html" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">前往登入</a>`
+                                        ? `<a href="/profile-setup" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">升級高級會員</a>`
+                                        : `<a href="/login" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">前往登入</a>`
                                     }
                                 </div>
                             </div>
@@ -752,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="fas fa-lock" style="color:#999; font-size:1.5em; display:block; margin-bottom:0.5em;"></i>
                                     <p style="color:#666; margin:0 0 0.8em;">${lockMsg}</p>
                                     ${isLoggedInUser
-                                        ? `<a href="/profile-setup.html" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">Upgrade Membership</a>`
+                                        ? `<a href="/profile-setup" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">Upgrade Membership</a>`
                                         : `<a href="/login" class="cta-button" style="font-size:0.85em; padding:0.5em 1.2em;">Sign In</a>`
                                     }
                                 </div>
