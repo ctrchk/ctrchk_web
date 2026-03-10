@@ -325,6 +325,11 @@
     white-space: nowrap;
     border: 1px solid rgba(230,161,23,0.3);
 }
+.app-route-coin-badge.unlocked {
+    background: rgba(109,186,101,0.15);
+    color: var(--app-accent, #6dba65);
+    border-color: rgba(109,186,101,0.3);
+}
 .app-route-meta {
     font-size: 0.78em;
     color: var(--app-text-secondary, #a8d8a0);
@@ -520,7 +525,7 @@ function isRouteUnlocked(routeId) {
 function getUserCoins() {
     try {
         const u = JSON.parse(localStorage.getItem('user') || '{}');
-        return parseInt(u.coins || u.ride_coins || 0, 10);
+        return parseInt(u.coins || 0, 10);
     } catch(e) { return 0; }
 }
 
@@ -676,7 +681,7 @@ function renderRoutes() {
         } else if (coinLocked) {
             lockBadge = `<span class="app-route-coin-badge">🪙 ${route.coin_cost}</span>`;
         } else if (isCoinRoute) {
-            lockBadge = `<span class="app-route-coin-badge" style="background:rgba(109,186,101,0.15);color:var(--app-accent,#6dba65);border-color:rgba(109,186,101,0.3);">🪙 特別</span>`;
+            lockBadge = `<span class="app-route-coin-badge unlocked">🪙 特別</span>`;
         } else if (xp > 0 && isLoggedIn) {
             lockBadge = `<span class="app-route-xp">+${xp} XP</span>`;
         }
@@ -689,7 +694,7 @@ function renderRoutes() {
             </div>
             <div class="app-route-meta">
                 <span><i class="fas fa-map-marker-alt" style="font-size:0.9em;"></i> ${route.start || '—'}</span>
-                ${route.end && !route.end.includes('循環') ? `<span>→ ${route.end}</span>` : '<span>循環</span>'}
+                ${(route.tags && route.tags.includes('循環線')) || !route.end ? '<span>循環</span>' : `<span>→ ${route.end}</span>`}
                 ${route.time ? `<span><i class="fas fa-clock" style="font-size:0.9em;"></i> ${route.time}分</span>` : ''}
                 ${route.length ? `<span>${route.length}</span>` : ''}
             </div>
