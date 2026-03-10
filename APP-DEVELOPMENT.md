@@ -63,9 +63,23 @@ PWA 就是把現有網頁「升級」為可安裝的 App，不需要從零開始
 - **新增「下載 App」頁面** (`download-app.html`) — 獨立安裝教學頁面，含 iOS (Safari) 與 Android (Chrome) 分步教學、功能介紹、常見問題，以及支援一鍵安裝按鈕（`beforeinstallprompt` API）
 - **網頁導航新增「下載 App」連結** — `header.html` / `en/header.html` 導航欄加入醒目的「下載 App」／「Get App」連結，方便網頁用戶找到安裝教學
 
-#### 🔜 下一步（第二階段）
+#### ✅ 已完成（第三階段 遊戲化 App 正式開發）
 
-- 路線解鎖系統（按等級逐步開放路線）
+- **移除 App 內「下載 App 教學」** (`js/pwa.js`) — 「更多」浮層移除「下載 App 教學」連結，App 內不再顯示安裝教學
+- **修復部分頁面底部導航消失** (`blog.html`, `blog_post.html`, `forum.html`, `forum_topic.html`, `en/blog.html`, `en/contact.html`, `en/membership.html`) — 補充缺少的 `<script src="/js/pwa.js"></script>`
+- **已登入時自動跳轉至儀表板** (`login.html`) — 若已有 `accessToken` 則直接 `replace('/dashboard')`，網頁及 App 均適用
+- **App 底部導航：未登入顯示「登入」按鈕** (`js/pwa.js`) — 未登入時將「儀表板」Tab 替換為「登入」Tab，登入後恢復顯示「儀表板」
+- **App 預設啟動頁改為儀表板** (`manifest.json`) — `start_url` 改為 `/dashboard`；已登入用戶開啟 App 直接進入儀表板，未登入則自動跳轉至登入頁
+- **改善儀表板跳轉體驗** (`dashboard.html`) — 移除未登入時的 `alert()` 提示，改為直接靜默跳轉至登入頁
+- **全新 20 級積分系統** (`database-schema.sql`, `api/_db.js`, `dashboard.html`):
+  - **Level 1 僅開放路線：900、900A、966**
+  - XP 要求由極低開始，指數增長（Lv1→2 只需 80 XP，Lv19→20 需 4700 XP）
+  - 大約每 3 級解鎖一條新路線（Lv4: 914/966A → Lv7: 910/914B → Lv10: 914H/920 → ...）
+  - **每 5 級更換稱號**：Lv1–5 新手騎士 → Lv6–10 城市騎手 → Lv11–15 路線達人 → Lv16–20 都市傳奇
+
+#### 🔜 下一步（第三階段）
+
+- 路線解鎖系統 UI（在路線頁顯示鎖定狀態、解鎖等級要求）
 - 里程幣購買特別路線
 - 騎行結束動畫（XP 獎勵、升級動畫）
 - 完善各路線站點的實地 GPS 坐標
