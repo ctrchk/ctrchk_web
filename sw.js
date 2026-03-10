@@ -1,9 +1,9 @@
 // CTRC HK Service Worker — PWA 離線緩存
-// Version: 1.0.0
+// Version: 2.0.0
 
-const CACHE_NAME = 'ctrchk-v1';
-const STATIC_CACHE = 'ctrchk-static-v1';
-const DYNAMIC_CACHE = 'ctrchk-dynamic-v1';
+const CACHE_NAME = 'ctrchk-v2';
+const STATIC_CACHE = 'ctrchk-static-v2';
+const DYNAMIC_CACHE = 'ctrchk-dynamic-v2';
 
 // 預緩存的靜態資源（核心 shell）
 const PRECACHE_URLS = [
@@ -11,12 +11,14 @@ const PRECACHE_URLS = [
   '/routes',
   '/dashboard',
   '/login',
+  '/ride',
   '/css/main.css',
   '/js/main.js',
   '/js/login.js',
   '/js/pwa.js',
   '/header.html',
   '/manifest.json',
+  '/routes.json',
   '/images/icon-192.png',
   '/images/icon-512.png',
 ];

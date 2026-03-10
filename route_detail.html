@@ -210,7 +210,50 @@
     <!-- Leaflet.js 地圖庫 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-</head>
+    <style>
+        /* ── 騎行啟動區塊 ────────────────────────────────── */
+        #start-ride-section {
+            display: none;
+            max-width: 1000px;
+            margin: 0 auto 2em;
+            padding: 0 2em;
+        }
+        .start-ride-card {
+            background: linear-gradient(135deg, #2c3e50 0%, #3d5166 100%);
+            border-radius: 12px;
+            padding: 1.5em 2em;
+            color: #fff;
+        }
+        .start-ride-card h3 { margin-bottom: 0.8em; font-size: 1.2em; }
+        .direction-btns {
+            display: flex; gap: 0.7em; flex-wrap: wrap; margin-bottom: 1.2em;
+        }
+        .dir-btn {
+            padding: 0.55em 1.2em; border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px; background: transparent; color: #fff;
+            cursor: pointer; font-size: 0.92em; transition: all 0.2s;
+        }
+        .dir-btn:hover, .dir-btn.selected { background: #BFE340; color: #2c3e50; border-color: #BFE340; font-weight: bold; }
+        #btn-start-ride {
+            display: inline-block; padding: 0.85em 2em;
+            background: #04D93C; color: #1a252f; border: none;
+            border-radius: 10px; font-size: 1.05em; font-weight: bold;
+            cursor: pointer; text-decoration: none; letter-spacing: 0.03em;
+            transition: background 0.2s;
+        }
+        #btn-start-ride:hover { background: #02b832; }
+        #btn-start-ride.locked {
+            background: #ccc; color: #888; cursor: not-allowed;
+        }
+        .ride-locked-notice {
+            background: rgba(255,255,255,0.1); border-radius: 8px;
+            padding: 1em; text-align: center; margin-top: 0.5em;
+            font-size: 0.9em; opacity: 0.85;
+        }
+        .start-ride-xp-hint {
+            font-size: 0.82em; opacity: 0.7; margin-top: 0.8em;
+        }
+    </style>
 <body>
 
     <div id="header-placeholder"></div>
@@ -219,6 +262,17 @@
         <section id="route-detail-container">
 
             </section>
+
+        <!-- ── 騎行啟動 ─────────────────────────────────────────────────── -->
+        <section id="start-ride-section">
+            <div class="start-ride-card">
+                <h3>🚴 開始騎行</h3>
+                <div class="direction-btns" id="direction-btns"></div>
+                <button id="btn-start-ride">立即出發 →</button>
+                <div id="start-ride-locked-msg" class="ride-locked-notice" style="display:none;"></div>
+                <div class="start-ride-xp-hint" id="start-ride-xp-hint"></div>
+            </div>
+        </section>
 
         <!-- ── 路線地圖 ─────────────────────────────────────────────────── -->
         <section id="route-map-section" style="display:none;">
@@ -487,6 +541,93 @@
         // 若已有內容（無需等待）
         if (container.children.length > 0) initRouteMap();
       });
+    })();
+
+    // ── 啟動騎行按鈕 ──────────────────────────────────────────────────────
+    (function () {
+      const ROUTE_UNLOCK = {
+        '900':1,'900A':1,'966':1,'914':4,'966A':4,
+        '900S':7,'901P':7,'910':7,'914B':7,
+        '914H':10,'920':10,'966B':10,'920X':13,'923':13,'966C':13,
+        '928':16,'929':16,'966T':16,'961':16,'961P':16,
+        '932':19,'935':19,'939':19,'939M':19,'962':19,'962A':19,
+        '955':20,'955A':20,'955H':20,'960':20,'962P':20,'962X':20,
+        'X935':20,'S90':20,'S91':20,
+      };
+      const ROUTE_XP = {
+        '900':150,'900A':120,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
+        '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
+        '966C':90,'928':170,'929':160,'966T':90,'961':130,'961P':100,'932':220,
+        '935':250,'939':120,'939M':120,'955':110,'955A':60,'955H':80,'960':400,
+        '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
+      };
+
+      async function initStartRide() {
+        const params = new URLSearchParams(location.search);
+        const routeId = params.get('id');
+        if (!routeId) return;
+
+        let routeDataObj = null;
+        try {
+          const res = await fetch('/routes.json');
+          const data = await res.json();
+          routeDataObj = (data.routes || []).find(r => r.id === routeId);
+        } catch (e) {}
+
+        const section = document.getElementById('start-ride-section');
+        if (!section) return;
+
+        const needed = ROUTE_UNLOCK[routeId] || 1;
+        let userLvl = 1;
+        try {
+          const raw = localStorage.getItem('user');
+          if (raw) { const u = JSON.parse(raw); userLvl = Math.max(1, parseInt(u.level || 1, 10)); }
+        } catch(e) {}
+
+        const isLoggedIn = !!localStorage.getItem('accessToken');
+        const isLocked = isLoggedIn && userLvl < needed;
+        const xp = ROUTE_XP[routeId] || 0;
+        let selectedDir = 0;
+
+        // Direction buttons
+        const dirContainer = document.getElementById('direction-btns');
+        if (routeDataObj && routeDataObj.gpx && routeDataObj.gpx.length > 0) {
+          routeDataObj.gpx.forEach((g, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'dir-btn' + (i === 0 ? ' selected' : '');
+            btn.textContent = g.label || ('方向 ' + (i + 1));
+            btn.addEventListener('click', () => {
+              document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected');
+              selectedDir = i;
+            });
+            dirContainer.appendChild(btn);
+          });
+        }
+
+        if (xp > 0) {
+          document.getElementById('start-ride-xp-hint').textContent =
+            '完成此路線可獲得 +' + xp + ' XP';
+        }
+
+        const startBtn = document.getElementById('btn-start-ride');
+        const lockedMsg = document.getElementById('start-ride-locked-msg');
+
+        if (isLocked) {
+          startBtn.classList.add('locked');
+          startBtn.textContent = '🔒 需要 Lv.' + needed + ' 解鎖';
+          lockedMsg.style.display = 'block';
+          lockedMsg.textContent = '你目前是 Lv.' + userLvl + '，再升 ' + (needed - userLvl) + ' 級即可解鎖此路線';
+        } else {
+          startBtn.addEventListener('click', () => {
+            window.location.href = '/ride?id=' + routeId + '&dir=' + selectedDir;
+          });
+        }
+
+        section.style.display = 'block';
+      }
+
+      document.addEventListener('DOMContentLoaded', initStartRide);
     })();
     </script>
 </html>

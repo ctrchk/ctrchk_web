@@ -20,14 +20,15 @@ async function authenticate(req, res) {
   }
 }
 
-// 根據累計 XP 計算等級（使用 level_config 或內建配置）
+// 根據累計 XP 計算等級（20 級系統，指數型增長）
 function calcLevel(xp) {
-  const thresholds = [0, 300, 700, 1200, 1800, 2600, 3500, 4500, 5800, 7500];
+  const thresholds = [0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+                      4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700];
   let level = 1;
   for (let i = thresholds.length - 1; i >= 0; i--) {
     if (xp >= thresholds[i]) { level = i + 1; break; }
   }
-  return level;
+  return Math.min(level, 20);
 }
 
 // 確保用戶有遊戲進度記錄（若無則初始化）
