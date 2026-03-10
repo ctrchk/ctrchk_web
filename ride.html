@@ -323,6 +323,9 @@
     const routeId = params.get('id') || '';
     const dirIndex = parseInt(params.get('dir') || '0', 10);
 
+    const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
+    const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
+
     let routeData = null;
     let routeStops = [];
     let map = null;
@@ -526,7 +529,7 @@
       // Accumulate distance
       if (lastLat !== null && rideStarted) {
         const d = haversineM(lastLat, lastLon, lat, lon);
-        if (d < 500) totalDistM += d; // ignore GPS jumps >500 m
+        if (d < MAX_GPS_JUMP_M) totalDistM += d;
       }
       lastLat = lat; lastLon = lon;
 
@@ -545,7 +548,7 @@
         document.getElementById('next-stop-dist').textContent =
           dist < 1000 ? `${Math.round(dist)} m` : `${(dist / 1000).toFixed(1)} km`;
 
-        if (dist <= 50) {
+        if (dist <= STOP_DETECTION_RADIUS_M) {
           markStopReached(next);
           if (window.CTRCHK_PWA) {
             window.CTRCHK_PWA.sendLocalNotification(
