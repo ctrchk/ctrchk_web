@@ -48,18 +48,18 @@
     const links = isEn
       ? [
           { href: '/en',        icon: 'fa-home',           label: 'Home' },
-          { href: '/en/routes', icon: 'fa-route',          label: 'Routes' },
+          { href: '/en/routes', icon: 'fa-biking',          label: 'Ride' },
           isLoggedIn
-            ? { href: '/dashboard', icon: 'fa-tachometer-alt', label: 'Dashboard' }
+            ? { href: '/dashboard', icon: 'fa-chart-bar', label: 'Progress' }
             : { href: '/login',     icon: 'fa-sign-in-alt',    label: 'Sign In' },
           { href: '/profile',   icon: 'fa-user',           label: 'My' },
           { href: '#more',      icon: 'fa-ellipsis-h',     label: 'More', isMore: true },
         ]
       : [
           { href: '/',             icon: 'fa-home',           label: '首頁' },
-          { href: '/routes',       icon: 'fa-route',          label: '路線' },
+          { href: '/routes',       icon: 'fa-biking',          label: '騎行' },
           isLoggedIn
-            ? { href: '/dashboard',    icon: 'fa-tachometer-alt', label: '儀表板' }
+            ? { href: '/dashboard',    icon: 'fa-chart-bar', label: '進度' }
             : { href: '/login',        icon: 'fa-sign-in-alt',    label: '登入' },
           { href: '/profile',      icon: 'fa-user',           label: '我的' },
           { href: '#more',         icon: 'fa-ellipsis-h',     label: '更多', isMore: true },
@@ -121,7 +121,7 @@
     sheet.id = 'app-more-sheet';
     Object.assign(sheet.style, {
       position: 'fixed', bottom: '0', left: '0', right: '0',
-      background: '#fff', borderRadius: '16px 16px 0 0',
+      background: '#1a2e1a', borderRadius: '16px 16px 0 0',
       padding: '1.2em 1em', zIndex: '1999', display: 'none',
       paddingBottom: 'calc(5em + env(safe-area-inset-bottom))',
     });
@@ -129,7 +129,7 @@
     const sheetTitle = document.createElement('p');
     sheetTitle.textContent = isEn ? 'More' : '更多';
     Object.assign(sheetTitle.style, {
-      margin: '0 0 0.8em 0.5em', fontWeight: 'bold', color: '#2c3e50', fontSize: '1.1em',
+      margin: '0 0 0.8em 0.5em', fontWeight: 'bold', color: '#a8d8a0', fontSize: '1.1em',
     });
     sheet.appendChild(sheetTitle);
 
@@ -143,10 +143,10 @@
       item.href = href;
       Object.assign(item.style, {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4em',
-        padding: '0.8em 0.5em', borderRadius: '10px', background: '#f5f5f5',
-        color: '#2c3e50', textDecoration: 'none', fontSize: '0.75em', fontWeight: 'bold',
+        padding: '0.8em 0.5em', borderRadius: '10px', background: '#243824',
+        color: '#a8d8a0', textDecoration: 'none', fontSize: '0.75em', fontWeight: 'bold',
       });
-      item.innerHTML = `<i class="fas ${icon}" style="font-size:1.5em; color:#2c3e50;"></i><span>${label}</span>`;
+      item.innerHTML = `<i class="fas ${icon}" style="font-size:1.5em; color:#6dba65;"></i><span>${label}</span>`;
       grid.appendChild(item);
     });
 
@@ -165,12 +165,12 @@
       });
     } else {
       authItem.href = '/login';
-      authItem.innerHTML = `<i class="fas fa-sign-in-alt" style="font-size:1.5em; color:#04D93C;"></i><span>${isEn ? 'Sign In' : '登入'}</span>`;
+      authItem.innerHTML = `<i class="fas fa-sign-in-alt" style="font-size:1.5em; color:#6dba65;"></i><span>${isEn ? 'Sign In' : '登入'}</span>`;
     }
     Object.assign(authItem.style, {
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4em',
-      padding: '0.8em 0.5em', borderRadius: '10px', background: '#f5f5f5',
-      color: '#2c3e50', textDecoration: 'none', fontSize: '0.75em', fontWeight: 'bold',
+      padding: '0.8em 0.5em', borderRadius: '10px', background: '#243824',
+      color: '#a8d8a0', textDecoration: 'none', fontSize: '0.75em', fontWeight: 'bold',
     });
     grid.appendChild(authItem);
 

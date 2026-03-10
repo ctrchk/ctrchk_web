@@ -20,15 +20,32 @@ async function authenticate(req, res) {
   }
 }
 
-// 根據累計 XP 計算等級（20 級系統，指數型增長）
+// 根據累計 XP 計算等級（50 級設計，無硬性上限）
 function calcLevel(xp) {
-  const thresholds = [0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
-                      4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700];
+  const thresholds = [
+    0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+    4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700,
+    35200, 41200, 47900, 55200, 63300, 72200, 81900, 92600, 104400, 117400,
+    131700, 147400, 164700, 183700, 204600, 227600, 252900, 280700, 311300, 344900,
+    381900, 422600, 467300, 516500, 570600, 630200, 695700, 767800, 847100, 934300,
+  ];
+  // For levels beyond the table, continue exponential growth
+  if (xp >= thresholds[thresholds.length - 1]) {
+    let level = thresholds.length;
+    let gap = 87200; // gap at L50
+    let last = thresholds[thresholds.length - 1];
+    while (xp >= last + gap) {
+      last += gap;
+      gap = Math.round(gap * 1.10);
+      level++;
+    }
+    return level;
+  }
   let level = 1;
   for (let i = thresholds.length - 1; i >= 0; i--) {
     if (xp >= thresholds[i]) { level = i + 1; break; }
   }
-  return Math.min(level, 20);
+  return level;
 }
 
 // 確保用戶有遊戲進度記錄（若無則初始化）

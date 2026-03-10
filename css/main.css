@@ -743,27 +743,48 @@ footer {
 /* iOS Safari fallback: JS adds .is-pwa to <body> via navigator.standalone */
 body.is-pwa .web-only { display: none !important; }
 body.is-pwa .app-only { display: revert !important; }
+/* Specific flex containers in app mode */
+body.is-pwa #app-home { display: flex !important; }
+body.is-pwa #app-ride-page { display: flex !important; }
+@media (display-mode: standalone) {
+    #app-home { display: flex !important; }
+    #app-ride-page { display: flex !important; }
+}
 
 /* ── App Bottom Navigation Bar (app-only) ─────────────────────────────────── */
+/* Dark green theme for PWA app */
+:root {
+    --app-bg-primary: #121f14;
+    --app-bg-secondary: #1a2e1a;
+    --app-bg-card: #1e3820;
+    --app-bg-card2: #243824;
+    --app-accent: #6dba65;
+    --app-accent-light: #a8d8a0;
+    --app-accent-bright: #4caf50;
+    --app-text-primary: #e8f5e9;
+    --app-text-secondary: #a8d8a0;
+    --app-border: #2d4d2d;
+}
 #app-bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: #2c3e50;
+    background: var(--app-bg-secondary);
     display: flex;
     justify-content: space-around;
     align-items: center;
     padding: 0.5em 0;
     padding-bottom: max(0.5em, env(safe-area-inset-bottom));
     z-index: 1000;
-    box-shadow: 0 -2px 8px rgba(0,0,0,0.25);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.4);
+    border-top: 1px solid var(--app-border);
 }
 #app-bottom-nav a {
     display: flex;
     flex-direction: column;
     align-items: center;
-    color: #aaa;
+    color: #6a8f6a;
     text-decoration: none;
     font-size: 0.7em;
     gap: 0.2em;
@@ -773,7 +794,7 @@ body.is-pwa .app-only { display: revert !important; }
 }
 #app-bottom-nav a i { font-size: 1.5em; }
 #app-bottom-nav a.active,
-#app-bottom-nav a:hover { color: #BFE340; }
+#app-bottom-nav a:hover { color: var(--app-accent); }
 
 /* When app bottom nav is present, add padding so content isn't obscured */
 body.is-pwa main,
@@ -782,3 +803,35 @@ body.is-pwa footer { padding-bottom: calc(4.5em + env(safe-area-inset-bottom)); 
     main { padding-bottom: calc(4.5em + env(safe-area-inset-bottom)); }
     footer { padding-bottom: calc(4.5em + env(safe-area-inset-bottom)); }
 }
+
+/* ── App-specific page overrides ────────────────────────────────────── */
+body.is-pwa .app-page-header {
+    background: linear-gradient(135deg, var(--app-bg-primary) 0%, var(--app-bg-secondary) 100%);
+    color: var(--app-text-primary);
+    padding: 1em;
+    padding-top: max(1em, env(safe-area-inset-top));
+}
+body.is-pwa .hero {
+    background: linear-gradient(135deg, var(--app-bg-primary) 0%, var(--app-bg-secondary) 100%);
+    color: var(--app-text-primary);
+}
+body.is-pwa .hero h1 { color: var(--app-accent); }
+body.is-pwa .cta-button {
+    background: var(--app-accent-bright);
+    color: #fff;
+    border: none;
+}
+body.is-pwa .cta-button:hover { background: var(--app-accent); }
+
+/* ── Leaflet tooltip styling for dark app theme ── */
+.app-map-tooltip {
+    background: rgba(18,31,20,0.9) !important;
+    border: 1px solid #2d4d2d !important;
+    color: #a8d8a0 !important;
+    font-size: 0.78em !important;
+    font-weight: bold !important;
+    padding: 0.2em 0.6em !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+.app-map-tooltip::before { display: none !important; }

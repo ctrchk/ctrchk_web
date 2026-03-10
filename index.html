@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#121f14">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,22 +13,316 @@
     <title>香港城市運輸單車 - 首頁</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+/* ── App Home Screen Styles ─────────────────────────────────────── */
+#app-home {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--app-bg-primary, #121f14);
+    color: var(--app-text-primary, #e8f5e9);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+}
+.app-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(env(safe-area-inset-top) + 0.8em) 1.2em 0.8em;
+    background: var(--app-bg-primary, #121f14);
+}
+.app-top-bar .app-logo {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--app-accent, #6dba65);
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+}
+.app-top-bar .app-notif-btn {
+    background: var(--app-bg-card, #1e3820);
+    border: none;
+    color: var(--app-text-secondary, #a8d8a0);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1em;
+    text-decoration: none;
+}
+
+/* ── User stats card ── */
+.app-user-card {
+    margin: 0.8em 1em;
+    background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+    border-radius: 16px;
+    padding: 1.2em 1.4em;
+    border: 1px solid #2d5028;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.app-user-greeting {
+    font-size: 0.85em;
+    color: var(--app-text-secondary, #a8d8a0);
+    margin-bottom: 0.2em;
+}
+.app-user-name {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 0.8em;
+}
+.app-level-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    margin-bottom: 0.6em;
+}
+.app-level-badge {
+    background: var(--app-accent, #6dba65);
+    color: #121f14;
+    font-size: 0.85em;
+    font-weight: bold;
+    padding: 0.2em 0.7em;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+.app-title-text {
+    color: var(--app-text-secondary, #a8d8a0);
+    font-size: 0.9em;
+}
+.app-xp-bar-wrap {
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 0.4em;
+}
+.app-xp-bar-fill {
+    background: var(--app-accent, #6dba65);
+    height: 100%;
+    border-radius: 6px;
+    transition: width 1s ease;
+    min-width: 4px;
+}
+.app-xp-label {
+    font-size: 0.75em;
+    color: var(--app-text-secondary, #a8d8a0);
+    margin-bottom: 0.8em;
+}
+.app-stats-row {
+    display: flex;
+    gap: 0.8em;
+    margin-top: 0.4em;
+}
+.app-stat-pill {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 0.5em;
+    text-align: center;
+}
+.app-stat-pill .val {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+    display: block;
+}
+.app-stat-pill .lbl {
+    font-size: 0.65em;
+    color: var(--app-text-secondary, #a8d8a0);
+}
+.app-not-loggedin {
+    margin: 0.8em 1em;
+    background: var(--app-bg-card, #1e3820);
+    border-radius: 16px;
+    padding: 1.4em;
+    text-align: center;
+    border: 1px solid var(--app-border, #2d4d2d);
+}
+.app-not-loggedin h3 {
+    color: var(--app-accent, #6dba65);
+    margin-bottom: 0.5em;
+    font-size: 1.2em;
+}
+.app-not-loggedin p {
+    color: var(--app-text-secondary, #a8d8a0);
+    font-size: 0.9em;
+    margin-bottom: 1em;
+}
+.app-login-btn {
+    display: inline-block;
+    background: var(--app-accent-bright, #4caf50);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.7em 2em;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 1em;
+}
+
+/* ── Start Ride CTA ── */
+.app-ride-cta {
+    margin: 0.8em 1em;
+    background: linear-gradient(135deg, #2d6a2d 0%, #4caf50 100%);
+    border-radius: 16px;
+    padding: 1.4em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
+    box-shadow: 0 4px 16px rgba(76,175,80,0.3);
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    width: calc(100% - 2em);
+}
+.app-ride-cta-text h3 {
+    color: #fff;
+    font-size: 1.3em;
+    margin-bottom: 0.2em;
+}
+.app-ride-cta-text p {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85em;
+}
+.app-ride-cta-icon {
+    width: 56px; height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8em;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+/* ── Quick actions ── */
+.app-section-title {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: var(--app-text-secondary, #a8d8a0);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 1em;
+    margin: 1em 0 0.5em;
+}
+.app-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.8em;
+    padding: 0 1em;
+    margin-bottom: 0.5em;
+}
+.app-quick-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4em;
+    text-decoration: none;
+    padding: 0.8em 0.3em;
+    background: var(--app-bg-card, #1e3820);
+    border-radius: 12px;
+    border: 1px solid var(--app-border, #2d4d2d);
+    transition: background 0.2s;
+}
+.app-quick-item:active { background: var(--app-bg-card2, #243824); }
+.app-quick-item i {
+    font-size: 1.4em;
+    color: var(--app-accent, #6dba65);
+}
+.app-quick-item span {
+    font-size: 0.65em;
+    color: var(--app-text-secondary, #a8d8a0);
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* ── Recent rides ── */
+.app-rides-list {
+    padding: 0 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+}
+.app-ride-item {
+    background: var(--app-bg-card, #1e3820);
+    border-radius: 12px;
+    padding: 0.9em 1em;
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    border: 1px solid var(--app-border, #2d4d2d);
+}
+.app-ride-icon {
+    width: 40px; height: 40px;
+    background: var(--app-bg-card2, #243824);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--app-accent, #6dba65);
+    font-size: 1.2em;
+    flex-shrink: 0;
+}
+.app-ride-info { flex: 1; min-width: 0; }
+.app-ride-name {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: var(--app-text-primary, #e8f5e9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.app-ride-meta {
+    font-size: 0.75em;
+    color: var(--app-text-secondary, #a8d8a0);
+    margin-top: 0.1em;
+}
+.app-ride-xp {
+    font-size: 0.78em;
+    font-weight: bold;
+    color: var(--app-accent, #6dba65);
+    background: rgba(109,186,101,0.15);
+    padding: 0.2em 0.5em;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+.app-no-rides {
+    text-align: center;
+    color: var(--app-text-secondary, #a8d8a0);
+    font-size: 0.9em;
+    padding: 2em 1em;
+}
+.app-no-rides i {
+    font-size: 2.5em;
+    display: block;
+    margin-bottom: 0.5em;
+    opacity: 0.4;
+}
+.app-view-all {
+    display: block;
+    text-align: center;
+    color: var(--app-accent, #6dba65);
+    text-decoration: none;
+    font-size: 0.85em;
+    padding: 0.8em;
+    margin-top: 0.4em;
+}
+</style>
 </head>
 <body>
-    <div id="header-placeholder"></div>
+    <!-- ════════ WEB-ONLY header ════════ -->
+    <div id="header-placeholder" class="web-only"></div>
 
-    <main>
+    <!-- ════════ WEB-ONLY main content ════════ -->
+    <main class="web-only">
         <section class="hero hero-home">
             <h1>香港城市運輸單車</h1>
             <p>探索城市，騎出你的專屬路線，我們是你的單車運輸夥伴。</p>
-            <a href="/routes.html" class="cta-button">探索單車路線</a>
+            <a href="/routes" class="cta-button">探索單車路線</a>
         </section>
 
         <section class="content about-summary animated-element">
             <div class="about-summary-text">
                 <h2>關於城市運輸單車</h2>
                 <p>我們致力於推廣單車作為一種可持續的城市交通方式。透過提供精心策劃的單車路線、專業知識和一個熱情的社群，我們希望讓單車成為你日常生活的一部分，讓城市生活更健康、更環保、更自由。</p>
-                <a href="/about.html" class="cta-button">了解更多</a>
+                <a href="/about" class="cta-button">了解更多</a>
             </div>
             <div class="about-summary-image">
                 <img src="images/bike-commute.jpg" alt="城市單車通勤">
@@ -42,19 +336,19 @@
                     <i class="fas fa-route"></i>
                     <h3>單車路線</h3>
                     <p>發掘精心策劃的城市單車路線，從休閒騎行到專業挑戰，應有盡有。</p>
-                    <a href="/routes.html">查看路線</a>
+                    <a href="/routes">查看路線</a>
                 </div>
                 <div class="feature-card">
                     <i class="fas fa-users"></i>
                     <h3>單車社群</h3>
                     <p>加入熱情的城市單車社群，分享你的騎行經驗，尋找志同道合的夥伴。</p>
-                    <a href="/contact.html">加入社群</a>
+                    <a href="/contact">加入社群</a>
                 </div>
                 <div class="feature-card">
                     <i class="fas fa-tools"></i>
                     <h3>專業知識</h3>
                     <p>提供豐富的單車教學、維修保養技巧，讓你成為單車專家。</p>
-                    <a href="/blog.html">閱讀文章</a>
+                    <a href="/blog">閱讀文章</a>
                 </div>
             </div>
         </section>
@@ -63,11 +357,11 @@
             <h2>精選單車路線</h2>
             <div id="routes-preview-container" class="routes-preview-container">
             </div>
-            <a href="/routes.html" class="cta-button" style="margin-top: 2em;">查看所有路線</a>
+            <a href="/routes" class="cta-button" style="margin-top: 2em;">查看所有路線</a>
         </section>
 
         <!-- Membership Plans Preview -->
-        <section class="membership-preview web-only">
+        <section class="membership-preview">
             <h2>會員計劃</h2>
             <p class="subtitle">免費加入，完成個人資料即可升級，解鎖所有功能。</p>
             <div class="membership-preview-grid">
@@ -103,11 +397,253 @@
         </section>
     </main>
 
-    <footer>
+    <footer class="web-only">
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
 
+    <!-- ════════ APP-ONLY home screen ════════ -->
+    <div id="app-home" class="app-only">
+
+        <!-- Top bar -->
+        <div class="app-top-bar">
+            <div class="app-logo">
+                <i class="fas fa-biking"></i> 城市運輸單車
+            </div>
+            <a href="/profile" class="app-notif-btn" aria-label="個人資料">
+                <i class="fas fa-user"></i>
+            </a>
+        </div>
+
+        <!-- User stats card (shown when logged in) -->
+        <div id="app-user-card" class="app-user-card" style="display:none;">
+            <div class="app-user-greeting">歡迎回來，</div>
+            <div class="app-user-name" id="app-home-name">騎士</div>
+            <div class="app-level-row">
+                <span class="app-level-badge" id="app-home-level">Lv.1</span>
+                <span class="app-title-text" id="app-home-title">新手騎士</span>
+            </div>
+            <div class="app-xp-bar-wrap">
+                <div class="app-xp-bar-fill" id="app-home-xp-bar" style="width:0%"></div>
+            </div>
+            <div class="app-xp-label" id="app-home-xp-label">0 / 80 XP</div>
+            <div class="app-stats-row">
+                <div class="app-stat-pill">
+                    <span class="val" id="app-home-rides">0</span>
+                    <span class="lbl">次騎行</span>
+                </div>
+                <div class="app-stat-pill">
+                    <span class="val" id="app-home-xp-total">0</span>
+                    <span class="lbl">總 XP</span>
+                </div>
+                <div class="app-stat-pill">
+                    <span class="val" id="app-home-coins">0</span>
+                    <span class="lbl">里程幣</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Not logged in card -->
+        <div id="app-not-loggedin" class="app-not-loggedin" style="display:none;">
+            <h3><i class="fas fa-biking"></i> 開始你的騎行之旅</h3>
+            <p>登入即可記錄騎行、賺取 XP、解鎖更多路線</p>
+            <a href="/login" class="app-login-btn">登入 / 註冊</a>
+        </div>
+
+        <!-- Start Ride CTA -->
+        <a href="/routes" class="app-ride-cta">
+            <div class="app-ride-cta-text">
+                <h3>開始騎行</h3>
+                <p>選擇路線，立即出發！</p>
+            </div>
+            <div class="app-ride-cta-icon">
+                <i class="fas fa-play"></i>
+            </div>
+        </a>
+
+        <!-- Quick actions -->
+        <div class="app-section-title">快捷功能</div>
+        <div class="app-quick-grid">
+            <a href="/routes" class="app-quick-item">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>騎行地圖</span>
+            </a>
+            <a href="/dashboard" class="app-quick-item">
+                <i class="fas fa-chart-bar"></i>
+                <span>我的進度</span>
+            </a>
+            <a href="/profile" class="app-quick-item">
+                <i class="fas fa-user-circle"></i>
+                <span>個人資料</span>
+            </a>
+            <a href="/weather" class="app-quick-item">
+                <i class="fas fa-cloud-sun"></i>
+                <span>天氣</span>
+            </a>
+        </div>
+
+        <!-- Recent rides -->
+        <div class="app-section-title">最近騎行</div>
+        <div class="app-rides-list" id="app-recent-rides">
+            <div class="app-no-rides" id="app-rides-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                載入中...
+            </div>
+        </div>
+        <a href="/dashboard" class="app-view-all" id="app-view-all-rides" style="display:none;">
+            查看全部紀錄 <i class="fas fa-chevron-right"></i>
+        </a>
+
+        <!-- Bottom spacer for nav -->
+        <div style="height: 2em;"></div>
+    </div>
+
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
+<script>
+// App home screen logic
+(function() {
+    const THRESHOLDS = [
+        0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+        4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700,
+        35200, 41200, 47900, 55200, 63300, 72200, 81900, 92600, 104400, 117400,
+        131700, 147400, 164700, 183700, 204600, 227600, 252900, 280700, 311300, 344900,
+        381900, 422600, 467300, 516500, 570600, 630200, 695700, 767800, 847100, 934300,
+    ];
+    const TITLES = [
+        '', '新手騎士','新手騎士','新手騎士','新手騎士','新手騎士',
+        '新手騎士','新手騎士','新手騎士','新手騎士','新手騎士',
+        '城市騎手','城市騎手','城市騎手','城市騎手','城市騎手',
+        '城市騎手','城市騎手','城市騎手','城市騎手','城市騎手',
+        '路線達人','路線達人','路線達人','路線達人','路線達人',
+        '路線達人','路線達人','路線達人','路線達人','路線達人',
+        '都市傳奇','都市傳奇','都市傳奇','都市傳奇','都市傳奇',
+        '都市傳奇','都市傳奇','都市傳奇','都市傳奇','都市傳奇',
+        '殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士',
+        '殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士',
+    ];
+
+    function calcLevel(xp) {
+        for (let i = THRESHOLDS.length - 1; i >= 0; i--) {
+            if (xp >= THRESHOLDS[i]) return i + 1;
+        }
+        return 1;
+    }
+    function getTitle(lvl) {
+        return TITLES[Math.min(lvl, TITLES.length - 1)] || '殿堂騎士';
+    }
+    function getNextThreshold(lvl) {
+        if (lvl < THRESHOLDS.length) return THRESHOLDS[lvl];
+        // Extrapolate
+        let gap = 87200;
+        let last = THRESHOLDS[THRESHOLDS.length - 1];
+        for (let i = THRESHOLDS.length; i < lvl; i++) {
+            last += gap; gap = Math.round(gap * 1.10);
+        }
+        return last + gap;
+    }
+
+    function formatNum(n) {
+        if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+        return String(n);
+    }
+
+    function renderAppHome(profile, history) {
+        const card = document.getElementById('app-user-card');
+        card.style.display = '';
+
+        const lvl = profile.level || 1;
+        const xp = profile.xp || 0;
+        const coins = profile.coins || 0;
+        const nextXp = getNextThreshold(lvl);
+        const prevXp = THRESHOLDS[lvl - 1] || 0;
+        const pct = nextXp > prevXp ? Math.min(100, Math.round((xp - prevXp) / (nextXp - prevXp) * 100)) : 100;
+
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        document.getElementById('app-home-name').textContent =
+            userData.full_name || userData.username || '騎士';
+        document.getElementById('app-home-level').textContent = 'Lv.' + lvl;
+        document.getElementById('app-home-title').textContent = getTitle(lvl);
+        document.getElementById('app-home-xp-bar').style.width = pct + '%';
+        document.getElementById('app-home-xp-label').textContent =
+            xp.toLocaleString() + ' / ' + nextXp.toLocaleString() + ' XP';
+        document.getElementById('app-home-xp-total').textContent = formatNum(xp);
+        document.getElementById('app-home-rides').textContent = history.length;
+        document.getElementById('app-home-coins').textContent = formatNum(coins);
+
+        // Recent rides
+        const container = document.getElementById('app-recent-rides');
+        if (history.length === 0) {
+            container.innerHTML = '<div class="app-no-rides"><i class="fas fa-biking"></i>尚無騎行記錄<br><small>快去選一條路線出發吧！</small></div>';
+        } else {
+            container.innerHTML = '';
+            history.slice(0, 5).forEach(ride => {
+                const date = new Date(ride.ride_date).toLocaleDateString('zh-Hant', { month: 'short', day: 'numeric' });
+                const el = document.createElement('div');
+                el.className = 'app-ride-item';
+                el.innerHTML = `
+                    <div class="app-ride-icon"><i class="fas fa-biking"></i></div>
+                    <div class="app-ride-info">
+                        <div class="app-ride-name">${ride.route_name || '未知路線'}</div>
+                        <div class="app-ride-meta">${date}${ride.distance_km ? ' · ' + parseFloat(ride.distance_km).toFixed(1) + ' km' : ''}${ride.duration_minutes ? ' · ' + ride.duration_minutes + ' 分鐘' : ''}</div>
+                    </div>
+                    ${ride.xp_earned ? `<div class="app-ride-xp">+${ride.xp_earned} XP</div>` : ''}
+                `;
+                container.appendChild(el);
+            });
+            document.getElementById('app-view-all-rides').style.display = '';
+        }
+    }
+
+    async function initAppHome() {
+        const appHome = document.getElementById('app-home');
+        if (!appHome) return;
+        // Show app home only in PWA mode
+        const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
+                      navigator.standalone === true ||
+                      document.body.classList.contains('is-pwa');
+        if (!isPwa) return;
+
+        const token = localStorage.getItem('accessToken');
+        const loadingEl = document.getElementById('app-rides-loading');
+
+        if (!token) {
+            document.getElementById('app-not-loggedin').style.display = '';
+            if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-lock"></i>請先登入</div>';
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/getHistory', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) throw new Error('API error');
+            const data = await res.json();
+            const profile = data.gameProfile || { level: 1, xp: 0, coins: 0 };
+            const history = data.history || [];
+            renderAppHome(profile, history);
+        } catch (e) {
+            const card = document.getElementById('app-user-card');
+            const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            const localLvl = Math.max(1, parseInt(userData.level || 1));
+            card.style.display = '';
+            document.getElementById('app-home-name').textContent =
+                userData.full_name || userData.username || '騎士';
+            document.getElementById('app-home-level').textContent = 'Lv.' + localLvl;
+            document.getElementById('app-home-title').textContent = getTitle(localLvl);
+            document.getElementById('app-home-xp-bar').style.width = '0%';
+            document.getElementById('app-home-xp-label').textContent = '無法載入進度';
+            if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法載入記錄</div>';
+        }
+    }
+
+    if (document.readyState !== 'loading') initAppHome();
+    else document.addEventListener('DOMContentLoaded', initAppHome);
+
+    // Also re-run after PWA class is set
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initAppHome, 100);
+    });
+})();
+</script>
 </body>
 </html>
