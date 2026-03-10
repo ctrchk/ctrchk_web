@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#121f14">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2c3e50">    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="城市運輸單車">
@@ -15,6 +14,69 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* ── App Route Detail Theme ─────────────────────────────── */
+        /* ── Web/browser mode: restore light theme ── */
+        body:not(.is-pwa) {
+            background: #fff !important;
+            color: #2c3e50 !important;
+        }
+        body:not(.is-pwa) footer {
+            background: #2c3e50 !important;
+            color: #fff !important;
+            border-top: none !important;
+        }
+        body:not(.is-pwa) .route-hero-title,
+        body:not(.is-pwa) .route-description,
+        body:not(.is-pwa) .route-id-text,
+        body:not(.is-pwa) #route-map-section h3,
+        body:not(.is-pwa) #stops-section h3 { color: #2c3e50 !important; }
+        body:not(.is-pwa) .route-stats {
+            background-color: #f9f9f9 !important;
+            border-color: #e0e0e0 !important;
+        }
+        body:not(.is-pwa) .route-stats div { color: #2c3e50 !important; border-bottom-color: #e0e0e0 !important; }
+        body:not(.is-pwa) .gpx-download-button {
+            background-color: #2c3e50 !important;
+            color: #fff !important;
+            border-color: transparent !important;
+        }
+        body:not(.is-pwa) .route-tag {
+            background-color: rgba(4,217,60,0.1) !important;
+            color: #04a020 !important;
+            border-color: rgba(4,217,60,0.3) !important;
+        }
+        body:not(.is-pwa) #route-map { background: #e8f5e9 !important; }
+        body:not(.is-pwa) .map-btn,
+        body:not(.is-pwa) #btn-gps {
+            background: #f4f4f4 !important;
+            color: #2c3e50 !important;
+            border-color: #ddd !important;
+        }
+        body:not(.is-pwa) #btn-notify {
+            background: rgba(4,217,60,0.1) !important;
+            color: #04a020 !important;
+            border-color: rgba(4,217,60,0.3) !important;
+        }
+        body:not(.is-pwa) #gps-status { color: #666 !important; }
+        body:not(.is-pwa) .stop-item {
+            background: #f4f4f4 !important;
+            border-color: #ddd !important;
+            border-left-color: #04D93C !important;
+            color: #2c3e50 !important;
+        }
+        body:not(.is-pwa) .stop-badge { background: #e0f5e0 !important; color: #2c3e50 !important; }
+        body:not(.is-pwa) .start-ride-card {
+            background: linear-gradient(135deg, #f0faf0 0%, #e8f5e8 100%) !important;
+            color: #2c3e50 !important;
+            border-color: #c8e6c9 !important;
+        }
+        body:not(.is-pwa) .start-ride-card h3,
+        body:not(.is-pwa) .ride-locked-notice,
+        body:not(.is-pwa) .start-ride-xp-hint { color: #555 !important; }
+        body:not(.is-pwa) .dir-btn {
+            background: #f4f4f4 !important;
+            color: #2c3e50 !important;
+            border-color: #ddd !important;
+        }
         body {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-primary, #e8f5e9);

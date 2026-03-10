@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#121f14">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2c3e50">    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="城市運輸單車">
@@ -25,16 +24,20 @@
     </script>
     <style>
         /* ── App Profile Theme ─────────────────────────────────── */
-        body {
+        /* Dark theme applied only in app (PWA) mode */
+        body.is-pwa {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-primary, #e8f5e9);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
         }
-        main { padding: 0; }
-        footer {
+        body.is-pwa footer {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-secondary, #a8d8a0);
             border-top: 1px solid #2d4d2d;
+        }
+        @media (display-mode: standalone) {
+            body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); }
+            footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
         }
         .content { padding: 1em 1em 5em; }
         .profile-container {

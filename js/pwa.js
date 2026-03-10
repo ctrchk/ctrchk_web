@@ -189,6 +189,26 @@
     overlay.style.display = open ? 'block' : 'none';
   }
 
+  // ── iOS Liquid Glass detection ──────────────────────────────────────────
+  // iOS 26+ introduces "Liquid Glass" as the system design language.
+  // We detect iOS 26+ by parsing the user agent, then apply glass morphism
+  // styles via the `liquid-glass` body class when running as an installed PWA.
+  function detectLiquidGlass() {
+    if (!isStandalone) return; // only apply in installed PWA mode
+    const ua = navigator.userAgent || '';
+    // iOS version detection: "iPhone OS 26_x" or "CPU OS 26_x" in UA string
+    const iosMatch = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+)[_ ]/i) ||
+                     ua.match(/CPU OS (\d+)[_ ]/i);
+    const iosVersion = iosMatch ? parseInt(iosMatch[1], 10) : 0;
+    if (iosVersion >= 26) {
+      document.body.classList.add('liquid-glass');
+      localStorage.setItem('liquid-glass-enabled', '1');
+    } else if (localStorage.getItem('liquid-glass-enabled') === '1') {
+      // Honour preference set in a previous session on the same device
+      document.body.classList.add('liquid-glass');
+    }
+  }
+
   // ── 「加至主屏幕」安裝提示（web browser only） ────────────────────────────
   let deferredPrompt = null;
 
@@ -269,6 +289,11 @@
     if (isStandalone) {
       document.body.classList.add('is-pwa');
       injectAppBottomNav();
+      // Update theme-color meta tag to dark app theme
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) themeColorMeta.setAttribute('content', '#121f14');
+      // Apply iOS Liquid Glass if applicable
+      detectLiquidGlass();
     }
   });
 
@@ -298,5 +323,17 @@
     isStandalone,
     requestNotificationPermission,
     sendLocalNotification,
+    // Manually enable/disable Liquid Glass (for settings UI)
+    enableLiquidGlass() {
+      document.body.classList.add('liquid-glass');
+      localStorage.setItem('liquid-glass-enabled', '1');
+    },
+    disableLiquidGlass() {
+      document.body.classList.remove('liquid-glass');
+      localStorage.removeItem('liquid-glass-enabled');
+    },
+    get isLiquidGlass() {
+      return document.body.classList.contains('liquid-glass');
+    },
   };
 })();
