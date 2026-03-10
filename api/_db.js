@@ -152,29 +152,40 @@ const schemaReady = pool.query(`
   CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
   CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
 
-  -- 路線解鎖配置種子資料（Level 1：900, 900A, 966 僅限新手）
+  -- 路線解鎖配置種子資料（Level 1 起始路線：900, 900A, 966T）
   INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special) VALUES
-    ('900',   1,  NULL, 150, false),('900A',  1,  NULL, 120, false),('966',   1,  NULL, 110, false),
-    ('914',   4,  NULL,  80, false),('966A',  4,  NULL,  90, false),
-    ('910',   7,  NULL, 100, false),('914B',  7,  NULL,  80, false),
-    ('914H',  10, NULL,  80, false),('920',   10, NULL, 130, false),
-    ('920X',  13, NULL, 100, false),('900S',  13, NULL, 130, false),
+    ('900',   1,  NULL, 150, false),('900A',  1,  NULL, 120, false),('966T',  1,  NULL,  90, false),
+    ('914',   4,  NULL,  80, false),('966A',  4,  NULL,  90, false),('966',   4,  NULL, 110, false),
+    ('910',   7,  NULL, 100, false),
+    -- 914B 需要里程幣解鎖（暫定 500 幣，待確認）
+    ('914B',  7,   500,  80, true),
+    ('914H',  10, NULL,  80, false),
+    -- 920 需要里程幣解鎖（暫定 800 幣，待確認）
+    ('920',   10,  800, 130, true),
+    ('920X',  13, NULL, 100, false),
+    -- 900S 需要里程幣解鎖（暫定 600 幣，待確認）
+    ('900S',  13,  600, 130, true),
     ('901P',  16, NULL, 140, false),('923',   16, NULL, 160, false),
     ('928',   19, NULL, 170, false),('929',   19, NULL, 160, false),
     ('932',   20, NULL, 220, false),('935',   20, NULL, 250, false),
     ('939',   20, NULL, 120, false),('939M',  20, NULL, 120, false),
     ('955',   20, NULL, 110, false),('955A',  20, NULL,  60, false),
     ('955H',  20, NULL,  80, false),('961',   20, NULL, 130, false),
-    ('961P',  20, NULL, 100, false),('962',   20, NULL, 250, false),
-    ('962A',  20, NULL, 250, false),('962P',  20, NULL, 150, false),
-    ('962X',  20, NULL, 130, false),('X935',  20, NULL, 210, false),
-    ('960',   20, NULL, 400, false)
+    -- 961P 需要里程幣解鎖（暫定 800 幣，待確認）
+    ('961P',  20,  800, 100, true),
+    ('962',   20, NULL, 250, false),('962A',  20, NULL, 250, false),
+    -- 962P 需要里程幣解鎖（暫定 1000 幣，待確認）
+    ('962P',  20, 1000, 150, true),
+    -- 962X 需要里程幣解鎖（暫定 1000 幣，待確認）
+    ('962X',  20, 1000, 130, true),
+    ('X935',  20, NULL, 210, false),('960',   20, NULL, 400, false)
   ON CONFLICT (route_id) DO UPDATE SET
     unlock_level = EXCLUDED.unlock_level,
+    unlock_cost  = EXCLUDED.unlock_cost,
     xp_reward    = EXCLUDED.xp_reward,
     is_special   = EXCLUDED.is_special;
 
-  -- 等級配置種子資料（20 級，每5級更換稱號，初期升級快）
+  -- 等級配置種子資料（20 級，每5級更換稱號，後期升級要求已適當降低）
   INSERT INTO level_config (level, xp_required, coins_reward, title_zh, title_en) VALUES
     (1,      0,    0, '新手騎士', 'Rookie Rider'),
     (2,     80,   50, '新手騎士', 'Rookie Rider'),
@@ -186,16 +197,16 @@ const schemaReady = pool.query(`
     (8,   1980,  300, '城市騎手', 'City Rider'),
     (9,   2700,  350, '城市騎手', 'City Rider'),
     (10,  3600,  400, '城市騎手', 'City Rider'),
-    (11,  4700,  500, '路線達人', 'Route Master'),
-    (12,  6050,  600, '路線達人', 'Route Master'),
-    (13,  7650,  700, '路線達人', 'Route Master'),
-    (14,  9550,  800, '路線達人', 'Route Master'),
-    (15, 11800,  900, '路線達人', 'Route Master'),
-    (16, 14400, 1000, '都市傳奇', 'Urban Legend'),
-    (17, 17400, 1200, '都市傳奇', 'Urban Legend'),
-    (18, 20900, 1400, '都市傳奇', 'Urban Legend'),
-    (19, 25000, 1600, '都市傳奇', 'Urban Legend'),
-    (20, 29700, 2000, '都市傳奇', 'Urban Legend')
+    (11,  4000,  500, '路線達人', 'Route Master'),
+    (12,  5100,  600, '路線達人', 'Route Master'),
+    (13,  6500,  700, '路線達人', 'Route Master'),
+    (14,  8100,  800, '路線達人', 'Route Master'),
+    (15, 10000,  900, '路線達人', 'Route Master'),
+    (16, 12200, 1000, '都市傳奇', 'Urban Legend'),
+    (17, 14800, 1200, '都市傳奇', 'Urban Legend'),
+    (18, 17800, 1400, '都市傳奇', 'Urban Legend'),
+    (19, 21200, 1600, '都市傳奇', 'Urban Legend'),
+    (20, 25200, 2000, '都市傳奇', 'Urban Legend')
   ON CONFLICT (level) DO UPDATE SET
     xp_required  = EXCLUDED.xp_required,
     coins_reward = EXCLUDED.coins_reward,

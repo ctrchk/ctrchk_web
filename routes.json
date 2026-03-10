@@ -493,6 +493,62 @@
       ]
     },
     {
+      "id": "966T",
+      "alias": "大橋旅遊線",
+      "start": "調景嶺站",
+      "end": "康城站",
+      "via": "將軍澳跨灣大橋",
+      "nature": "旅遊",
+      "time": 16,
+      "length": "3.0km",
+      "difficulty": 3,
+      "image": "images/966T.jpg",
+      "description": "專為遊覽觀光設計的大橋特快路線。連接調景嶺站與康城站，途經將軍澳跨灣大橋，適合單車新手挑戰自我，欣賞大橋景色。",
+      "tags": [
+        "將軍澳",
+        "旅遊專線",
+        "多坡",
+        "大橋特快",
+        "新手必試",
+        "連接地鐵站"
+      ],
+      "color": "#ff9900",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 90,
+      "is_special": false,
+      "gpx": [
+        {
+          "label": "往康城",
+          "file": "966T康城.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "966T調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "調景嶺站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        },
+        {
+          "order": 2,
+          "name": "將軍澳跨灣大橋",
+          "lat": 22.299,
+          "lon": 114.256
+        },
+        {
+          "order": 3,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        }
+      ]
+    },
+    {
       "id": "966",
       "alias": "康城快線",
       "start": "調景嶺總站",
@@ -513,7 +569,7 @@
         "少坡"
       ],
       "color": "#0b5394",
-      "unlock_level": 1,
+      "unlock_level": 4,
       "unlock_cost": null,
       "xp_reward": 110,
       "is_special": false,
