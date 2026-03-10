@@ -294,28 +294,38 @@
   (function () {
     'use strict';
 
-    // ── Level config (20 levels, exponential XP) ──────────────────────────
+    // ── Level config (50 levels, no hard cap) ─────────────────────────────
     const LEVEL_XP = [
       0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
-      4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700, Infinity
+      4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
+      28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
+      98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
+      267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
+      Infinity
     ];
     const LEVEL_TITLES = {
       1:'新手騎士',2:'新手騎士',3:'新手騎士',4:'新手騎士',5:'新手騎士',
-      6:'城市騎手',7:'城市騎手',8:'城市騎手',9:'城市騎手',10:'城市騎手',
-      11:'路線達人',12:'路線達人',13:'路線達人',14:'路線達人',15:'路線達人',
-      16:'都市傳奇',17:'都市傳奇',18:'都市傳奇',19:'都市傳奇',20:'都市傳奇',
+      6:'新手騎士',7:'新手騎士',8:'新手騎士',9:'新手騎士',10:'新手騎士',
+      11:'城市騎手',12:'城市騎手',13:'城市騎手',14:'城市騎手',15:'城市騎手',
+      16:'城市騎手',17:'城市騎手',18:'城市騎手',19:'城市騎手',20:'城市騎手',
+      21:'路線達人',22:'路線達人',23:'路線達人',24:'路線達人',25:'路線達人',
+      26:'路線達人',27:'路線達人',28:'路線達人',29:'路線達人',30:'路線達人',
+      31:'都市傳奇',32:'都市傳奇',33:'都市傳奇',34:'都市傳奇',35:'都市傳奇',
+      36:'都市傳奇',37:'都市傳奇',38:'都市傳奇',39:'都市傳奇',40:'都市傳奇',
+      41:'殿堂騎士',42:'殿堂騎士',43:'殿堂騎士',44:'殿堂騎士',45:'殿堂騎士',
+      46:'殿堂騎士',47:'殿堂騎士',48:'殿堂騎士',49:'殿堂騎士',50:'殿堂騎士',
     };
     // Unlock levels per route
     const ROUTE_UNLOCK = {
-      '900':1,'900A':1,'966':1,
-      '914':4,'966A':4,
-      '900S':7,'901P':7,'910':7,'914B':7,
-      '914H':10,'920':10,'966B':10,
-      '920X':13,'923':13,'966C':13,
-      '928':16,'929':16,'966T':16,'961':16,'961P':16,
-      '932':19,'935':19,'939':19,'939M':19,'962':19,'962A':19,
-      '955':20,'955A':20,'955H':20,'960':20,'962P':20,'962X':20,
-      'X935':20,'S90':20,'S91':20,
+      '900':1,'900A':1,'966T':1,
+      '914':8,'966A':8,'966':8,
+      '900S':15,'901P':15,'910':15,'914B':15,
+      '914H':22,'920':22,'966B':22,
+      '920X':30,'923':30,'966C':30,
+      '928':38,'929':38,'961':38,'961P':38,
+      '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,
+      '955':50,'955A':50,'955H':50,'960':50,'962P':50,'962X':50,
+      'X935':50,'S90':50,'S91':50,
     };
 
     // ── State ─────────────────────────────────────────────────────────────
@@ -483,14 +493,33 @@
     }
 
     // ── GPS ───────────────────────────────────────────────────────────────
+    const GPS_OPTIONS = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+
     function startGPS() {
       if (!('geolocation' in navigator)) {
         document.getElementById('gps-status-text').textContent = '此裝置不支援 GPS';
         return;
       }
-      watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, {
-        enableHighAccuracy: true, timeout: 12000, maximumAge: 4000
-      });
+      document.getElementById('gps-status-text').textContent = '正在開啟 GPS...';
+      // First call getCurrentPosition to trigger permission dialog immediately,
+      // then start watchPosition for continuous tracking.
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          // Permission granted — start continuous watch
+          onPosition(pos);
+          if (watchId === null) {
+            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, GPS_OPTIONS);
+          }
+        },
+        (err) => {
+          // Still start watch even if getCurrentPosition failed (covers retry)
+          onGpsError(err);
+          if (watchId === null) {
+            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, GPS_OPTIONS);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
     }
 
     function onPosition(pos) {

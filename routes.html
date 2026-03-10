@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#121f14">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,138 +12,365 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>香港城市運輸單車 - 單車路線</title>
     <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-    /* === 全新篩選器樣式 === */
-    .filters-container {
-        max-width: 1200px;
-        margin: 0 auto 2em auto;
-        padding: 1em;
-    }
-    .filter-controls {
+/* ════════ WEB-ONLY route list styles ════════ */
+.filters-container {
+    max-width: 1200px;
+    margin: 0 auto 2em auto;
+    padding: 1em;
+}
+.filter-controls {
     display: flex;
     flex-wrap: wrap;
     gap: 1em;
     padding: 1em;
-    align-items: center; 
+    align-items: center;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    position: relative; /* 新增：為了讓 z-index 生效 */
-    z-index: 2;         /* 新增：提升層級，數字只要大於 1 即可 */
+    position: relative;
+    z-index: 2;
 }
-    .filter-dropdown-container {
-        position: relative;
-    }
-    .filter-category-button {
-        background-color: #2c3e50;
-        color: #fff;
-        border: none;
-        padding: 0.8em 1.5em;
-        border-radius: 50px;
-        cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.3s ease;
-        font-size: 1em;
-        font-weight: bold;
-    }
-    .filter-category-button:hover, .filter-category-button.active {
-        background-color: #04D93C;
-        transform: translateY(-3px);
-    }
-    .filter-dropdown-menu {
-        display: none; /* 預設隱藏 */
-        position: absolute;
-        top: 110%;
-        left: 0;
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-        padding: 1em;
-        z-index: 100;
-        min-width: 220px;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-    .filter-dropdown-menu.show {
-        display: block; /* 顯示下拉選單 */
-    }
-    .filter-dropdown-menu label {
-        display: block;
-        padding: 0.5em 0.8em;
-        cursor: pointer;
-        border-radius: 5px;
-        transition: background-color 0.2s ease;
-    }
-    .filter-dropdown-menu label:hover {
-        background-color: #f4f4f4;
-    }
-    .filter-dropdown-menu input[type="checkbox"] {
-        margin-right: 0.8em;
-    }
-
-    /* === 路線卡片樣式 (與之前相同) === */
-    .all-routes-section .route-cards-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 2em;
-    }
-    .route-card-full {
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease;
-        overflow: hidden;
-    }
-    .route-card-full:hover { transform: translateY(-5px); }
-    .route-card-full a { padding: 1.5em; display: block; color: inherit; }
-    .route-card-full a.disabled-link { pointer-events: none; cursor: default; }
-    .route-card-header { display: flex; align-items: center; margin-bottom: 1em; border-bottom: 1px solid #eee; padding-bottom: 1em; }
-    .route-id-code { font-size: 1.2em; font-weight: bold; padding: 0.5em 1em; border-radius: 5px; margin-right: 1em; white-space: nowrap; }
-    .route-alias { margin: 0; font-size: 1.3em; font-weight: bold; }
-    .route-card-content p { margin: 0.5em 0; }
-
-
-/* --- Hero 區塊內的搜尋欄樣式 --- */
+.filter-dropdown-container { position: relative; }
+.filter-category-button {
+    background-color: #2c3e50;
+    color: #fff;
+    border: none;
+    padding: 0.8em 1.5em;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    font-size: 1em;
+    font-weight: bold;
+}
+.filter-category-button:hover, .filter-category-button.active {
+    background-color: #04D93C;
+    transform: translateY(-3px);
+}
+.filter-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 110%;
+    left: 0;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    padding: 1em;
+    z-index: 100;
+    min-width: 220px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.filter-dropdown-menu.show { display: block; }
+.filter-dropdown-menu label {
+    display: block;
+    padding: 0.5em 0.8em;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+.filter-dropdown-menu label:hover { background-color: #f4f4f4; }
+.filter-dropdown-menu input[type="checkbox"] { margin-right: 0.8em; }
+.all-routes-section .route-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2em;
+}
+.route-card-full {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+.route-card-full:hover { transform: translateY(-5px); }
+.route-card-full a { padding: 1.5em; display: block; color: inherit; }
+.route-card-full a.disabled-link { pointer-events: none; cursor: default; }
+.route-card-header { display: flex; align-items: center; margin-bottom: 1em; border-bottom: 1px solid #eee; padding-bottom: 1em; }
+.route-id-code { font-size: 1.2em; font-weight: bold; padding: 0.5em 1em; border-radius: 5px; margin-right: 1em; white-space: nowrap; }
+.route-alias { margin: 0; font-size: 1.3em; font-weight: bold; }
+.route-card-content p { margin: 0.5em 0; }
 .hero-search-container {
-    max-width: 600px; /* 設定搜尋欄最大寬度 */
-    margin: 2em auto 0 auto; /* 上方間距、水平置中 */
+    max-width: 600px;
+    margin: 2em auto 0 auto;
 }
-
 .search-input {
     width: 100%;
     padding: 1em 1.5em;
-    border: none; /* 移除邊框 */
-    border-radius: 50px; /* 圓角膠囊形狀 */
+    border: none;
+    border-radius: 50px;
     font-size: 1.1em;
     font-family: inherit;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* 加上陰影增加立體感 */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     transition: box-shadow 0.3s ease;
 }
-
 .search-input:focus {
     outline: none;
     box-shadow: 0 5px 20px rgba(0,0,0,0.2);
 }
+@media (max-width: 1100px) {
+    .filter-controls { justify-content: center; }
+    .search-container { flex-basis: 100%; max-width: none; }
+}
 
-    /* --- 請將這整段程式碼，複製並貼到 <style> 標籤的最末尾 --- */
-    /* 【關鍵修正】針對平板、筆電等中等寬度螢幕的響應式佈局 */
-    @media (max-width: 1100px) {
-        .filter-controls {
-            justify-content: center;
-        }
+/* ════════ APP-ONLY ride page styles ════════ */
+#app-ride-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--app-bg-primary, #121f14);
+    color: var(--app-text-primary, #e8f5e9);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+    overflow: hidden;
+}
+/* Search + filter bar */
+.app-ride-topbar {
+    padding: calc(env(safe-area-inset-top) + 0.6em) 0.8em 0.6em;
+    background: var(--app-bg-primary, #121f14);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+}
+.app-ride-search-row {
+    display: flex;
+    align-items: center;
+    background: var(--app-bg-card, #1e3820);
+    border-radius: 12px;
+    padding: 0 0.8em;
+    border: 1px solid var(--app-border, #2d4d2d);
+    gap: 0.5em;
+}
+.app-ride-search-row i { color: var(--app-text-secondary, #a8d8a0); font-size: 1em; }
+.app-ride-search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--app-text-primary, #e8f5e9);
+    font-size: 0.95em;
+    padding: 0.7em 0;
+    font-family: inherit;
+}
+.app-ride-search-input::placeholder { color: #5a7a5a; }
 
-        .search-container {
-            flex-basis: 100%;
-            max-width: none; 
-        }
-    }
+/* Filter chips */
+.app-filter-row {
+    display: flex;
+    gap: 0.5em;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+}
+.app-filter-row::-webkit-scrollbar { display: none; }
+.app-filter-chip {
+    flex-shrink: 0;
+    padding: 0.35em 0.9em;
+    border-radius: 20px;
+    font-size: 0.78em;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1.5px solid var(--app-border, #2d4d2d);
+    background: var(--app-bg-card, #1e3820);
+    color: var(--app-text-secondary, #a8d8a0);
+    transition: all 0.2s;
+    white-space: nowrap;
+    user-select: none;
+}
+.app-filter-chip.active {
+    background: var(--app-accent, #6dba65);
+    color: #121f14;
+    border-color: var(--app-accent, #6dba65);
+}
+.app-filter-chip.random-btn {
+    background: #2d4a3a;
+    border-color: #4a7a5a;
+    color: #a8d8a0;
+}
+.app-filter-chip.random-btn:active { background: var(--app-accent, #6dba65); color: #121f14; }
+
+/* Map + start button area */
+.app-map-section {
+    flex-shrink: 0;
+    position: relative;
+    height: 42vh;
+    min-height: 200px;
+}
+#app-ride-map {
+    position: absolute;
+    inset: 0;
+    border-radius: 0;
+    z-index: 0;
+}
+.app-start-ride-btn {
+    position: absolute;
+    bottom: 0.7em;
+    right: 0.8em;
+    z-index: 400;
+    background: var(--app-accent-bright, #4caf50);
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    padding: 0.7em 1.4em;
+    font-size: 0.95em;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(76,175,80,0.4);
+    display: none;
+    align-items: center;
+    gap: 0.4em;
+    transition: background 0.2s;
+}
+.app-start-ride-btn.visible { display: flex; }
+.app-map-terminal-hint {
+    position: absolute;
+    bottom: 0.7em;
+    left: 0.8em;
+    z-index: 400;
+    background: rgba(18,31,20,0.85);
+    color: var(--app-text-secondary, #a8d8a0);
+    padding: 0.4em 0.8em;
+    border-radius: 8px;
+    font-size: 0.75em;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+#app-terminal-badge {
+    position: absolute;
+    top: 0.6em;
+    left: 0.8em;
+    z-index: 400;
+    background: var(--app-accent, #6dba65);
+    color: #121f14;
+    padding: 0.3em 0.8em;
+    border-radius: 20px;
+    font-size: 0.78em;
+    font-weight: bold;
+    display: none;
+    align-items: center;
+    gap: 0.4em;
+    cursor: pointer;
+}
+#app-terminal-badge.visible { display: flex; }
+
+/* Route list */
+.app-routes-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5em 0.8em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    scrollbar-width: thin;
+    scrollbar-color: #2d4d2d transparent;
+    padding-bottom: calc(4.5em + env(safe-area-inset-bottom));
+}
+.app-route-card {
+    background: var(--app-bg-card, #1e3820);
+    border-radius: 12px;
+    padding: 0.9em 1em;
+    border: 1.5px solid var(--app-border, #2d4d2d);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+.app-route-card:active,
+.app-route-card.selected {
+    border-color: var(--app-accent, #6dba65);
+    background: var(--app-bg-card2, #243824);
+    box-shadow: 0 0 0 1px var(--app-accent, #6dba65);
+}
+.app-route-card.locked {
+    opacity: 0.55;
+    cursor: default;
+}
+.app-route-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    margin-bottom: 0.4em;
+}
+.app-route-id {
+    font-size: 0.9em;
+    font-weight: bold;
+    padding: 0.2em 0.6em;
+    border-radius: 6px;
+    white-space: nowrap;
+    color: #fff;
+    min-width: 40px;
+    text-align: center;
+}
+.app-route-alias {
+    font-weight: bold;
+    font-size: 0.95em;
+    color: var(--app-text-primary, #e8f5e9);
+    flex: 1;
+}
+.app-route-lock-badge {
+    font-size: 0.7em;
+    background: rgba(231,76,60,0.2);
+    color: #e74c3c;
+    padding: 0.1em 0.5em;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+.app-route-meta {
+    font-size: 0.78em;
+    color: var(--app-text-secondary, #a8d8a0);
+    display: flex;
+    gap: 0.8em;
+    flex-wrap: wrap;
+}
+.app-route-xp {
+    font-size: 0.7em;
+    background: rgba(109,186,101,0.15);
+    color: var(--app-accent, #6dba65);
+    padding: 0.1em 0.5em;
+    border-radius: 8px;
+    font-weight: bold;
+}
+/* Direction selector (shown when route is selected) */
+.app-dir-row {
+    display: flex;
+    gap: 0.5em;
+    margin-top: 0.6em;
+    flex-wrap: wrap;
+}
+.app-dir-btn {
+    flex: 1;
+    min-width: 90px;
+    padding: 0.5em 0.6em;
+    border-radius: 8px;
+    border: 1.5px solid var(--app-accent, #6dba65);
+    background: transparent;
+    color: var(--app-accent, #6dba65);
+    font-size: 0.8em;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+.app-dir-btn.chosen {
+    background: var(--app-accent, #6dba65);
+    color: #121f14;
+}
+/* No routes found */
+.app-no-routes {
+    text-align: center;
+    padding: 3em 1em;
+    color: var(--app-text-secondary, #a8d8a0);
+}
+.app-no-routes i { font-size: 2em; display: block; margin-bottom: 0.5em; opacity: 0.4; }
 </style>
 </head>
 <body>
 
-    <div id="header-placeholder"></div>
+    <!-- ════════ WEB-ONLY route list ════════ -->
+    <div id="header-placeholder" class="web-only"></div>
 
-    <main class="main-content">
+    <main class="main-content web-only">
         <section class="hero">
             <h1>所有單車路線</h1>
             <p>在這裡找到所有為你精心規劃的將軍澳和沙田區單車路線。</p>
@@ -154,15 +381,453 @@
 
         <section class="content all-routes-section">
             <div class="route-cards-container" id="all-routes-container">
-                </div>
+            </div>
         </section>
     </main>
 
-    <footer class="footer">
+    <footer class="footer web-only">
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
 
+    <!-- ════════ APP-ONLY ride / cycling page ════════ -->
+    <div id="app-ride-page" class="app-only">
+
+        <!-- Search + filter bar -->
+        <div class="app-ride-topbar">
+            <div class="app-ride-search-row">
+                <i class="fas fa-search"></i>
+                <input type="text" id="app-search-input" class="app-ride-search-input"
+                       placeholder="搜尋路線、別稱、總站...">
+                <button id="app-search-clear" style="background:none;border:none;color:#5a7a5a;cursor:pointer;padding:0.3em;display:none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="app-filter-row" id="app-filter-row">
+                <div class="app-filter-chip active" data-filter="all">全部</div>
+                <div class="app-filter-chip" data-filter="unlocked">已解鎖 🔓</div>
+                <div class="app-filter-chip" data-filter="通勤">通勤</div>
+                <div class="app-filter-chip" data-filter="旅遊">旅遊</div>
+                <div class="app-filter-chip" data-filter="循環">循環線</div>
+                <div class="app-filter-chip" data-filter="新手必試">新手推薦</div>
+                <div class="app-filter-chip" data-filter="長途">長途</div>
+                <div class="app-filter-chip random-btn" id="app-random-btn">🎲 隨機</div>
+            </div>
+        </div>
+
+        <!-- Map + start button -->
+        <div class="app-map-section">
+            <div id="app-ride-map"></div>
+            <div id="app-terminal-badge" class="app-terminal-badge">
+                <i class="fas fa-map-marker-alt"></i>
+                <span id="app-terminal-name">-</span>
+                <i class="fas fa-times" style="margin-left:0.3em; opacity:0.7;"></i>
+            </div>
+            <div class="app-map-terminal-hint" id="app-map-hint">點擊地圖上的車站 →</div>
+            <button class="app-start-ride-btn" id="app-start-ride-btn">
+                <i class="fas fa-play"></i> 開始騎行
+            </button>
+        </div>
+
+        <!-- Route list -->
+        <div class="app-routes-list" id="app-routes-list">
+            <div class="app-no-routes"><i class="fas fa-spinner fa-spin"></i>載入路線中...</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
+<script>
+// ════════ App Ride Page Logic ════════
+(function() {
+'use strict';
+
+// XP thresholds and unlock table (mirrored from main.js)
+const ROUTE_UNLOCK = {
+    '900':1,'900A':1,'966T':1,
+    '914':8,'966A':8,'966':8,
+    '900S':15,'901P':15,'910':15,'914B':15,
+    '914H':22,'920':22,'966B':22,
+    '920X':30,'923':30,'966C':30,
+    '928':38,'929':38,'961':38,'961P':38,
+    '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,
+    '955':50,'955A':50,'955H':50,'960':50,'962P':50,'962X':50,
+    'X935':50,'S90':50,'S91':50,
+};
+const ROUTE_XP = {
+    '900':150,'900A':120,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
+    '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
+    '966C':90,'928':170,'929':160,'966T':90,'961':130,'961P':100,'932':220,
+    '935':250,'939':120,'939M':120,'955':110,'955A':60,'955H':80,'960':400,
+    '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
+};
+
+// TKO terminal stations (approximate GPS, will be updated with real data)
+const TERMINALS = [
+    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.3227, lng: 114.2594 },
+    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.3187, lng: 114.2565 },
+    { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248, lng: 114.2490 },
+    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.3003, lng: 114.2564 },
+    { id: 'hang_hau',    name: '坑口站',                lat: 22.3124, lng: 114.2655 },
+    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.3075, lng: 114.2617 },
+    { id: 'lohas',       name: '康城站',                lat: 22.2988, lng: 114.2884 },
+    { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857, lng: 114.2724 },
+    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.3030, lng: 114.2618 },
+    { id: 'marina_bay',  name: '維景灣畔',              lat: 22.2900, lng: 114.2649 },
+    { id: 'peak_1',      name: '峻瀅',                  lat: 22.2905, lng: 114.2755 },
+    { id: 'hospital',    name: '將軍澳醫院',            lat: 22.3133, lng: 114.2700 },
+];
+
+// Map of terminal name to terminal ID for route matching
+const TERMINAL_NAMES = {};
+TERMINALS.forEach(t => { TERMINAL_NAMES[t.name] = t.id; });
+
+// State
+let appRoutes = [];
+let map = null;
+let routeLayer = null;
+let selectedRouteId = null;
+let selectedDirIndex = 0;
+let selectedTerminalId = null;
+let activeFilter = 'all';
+let searchTerm = '';
+let userLevel = 1;
+let isLoggedIn = false;
+
+function getUserLevel() {
+    try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        return Math.max(1, parseInt(u.level || 1));
+    } catch(e) { return 1; }
+}
+
+function isRouteUnlocked(routeId) {
+    if (!isLoggedIn) return false; // not logged in, don't show unlock status
+    const needed = ROUTE_UNLOCK[routeId] || 1;
+    return userLevel >= needed;
+}
+
+// ── Map initialisation ─────────────────────────────────────────────────
+function initMap() {
+    map = L.map('app-ride-map', {
+        zoomControl: false,
+        attributionControl: false,
+    }).setView([22.308, 114.262], 13);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap © CartoDB'
+    }).addTo(map);
+
+    // Add zoom control (top-right)
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // Add terminal markers
+    TERMINALS.forEach(terminal => {
+        const icon = L.divIcon({
+            className: '',
+            html: `<div style="background:#4caf50;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px rgba(76,175,80,0.8);cursor:pointer;"></div>`,
+            iconSize: [12, 12], iconAnchor: [6, 6],
+            tooltipAnchor: [8, 0]
+        });
+        const marker = L.marker([terminal.lat, terminal.lng], { icon })
+            .addTo(map)
+            .bindTooltip(terminal.name, { permanent: false, direction: 'right', className: 'app-map-tooltip' });
+        marker.on('click', () => selectTerminal(terminal));
+    });
+}
+
+function selectTerminal(terminal) {
+    selectedTerminalId = terminal.id;
+    const badge = document.getElementById('app-terminal-badge');
+    document.getElementById('app-terminal-name').textContent = terminal.name;
+    badge.classList.add('visible');
+    document.getElementById('app-map-hint').style.display = 'none';
+    map.setView([terminal.lat, terminal.lng], 14, { animate: true });
+    renderRoutes();
+}
+
+function clearTerminal() {
+    selectedTerminalId = null;
+    document.getElementById('app-terminal-badge').classList.remove('visible');
+    document.getElementById('app-map-hint').style.display = '';
+    renderRoutes();
+}
+
+// ── GPX loading & route display ────────────────────────────────────────
+async function showRouteOnMap(route, dirIndex) {
+    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+    const gpxEntry = route.gpx && route.gpx[dirIndex];
+    if (!gpxEntry) return;
+
+    try {
+        const res = await fetch('/gpx/' + gpxEntry.file);
+        if (!res.ok) return;
+        const text = await res.text();
+        const parser = new DOMParser();
+        const gpxDoc = parser.parseFromString(text, 'application/xml');
+        const pts = Array.from(gpxDoc.querySelectorAll('trkpt,rtept,wpt')).map(pt => [
+            parseFloat(pt.getAttribute('lat')),
+            parseFloat(pt.getAttribute('lon')),
+        ]).filter(([la, lo]) => !isNaN(la) && !isNaN(lo));
+        if (pts.length === 0) return;
+
+        routeLayer = L.polyline(pts, {
+            color: route.color || '#6dba65',
+            weight: 4,
+            opacity: 0.9,
+        }).addTo(map);
+        map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
+    } catch(e) {
+        console.warn('[AppRide] GPX load failed:', e);
+    }
+}
+
+// ── Route card rendering ───────────────────────────────────────────────
+function matchesTerminal(route) {
+    if (!selectedTerminalId) return true;
+    const terminal = TERMINALS.find(t => t.id === selectedTerminalId);
+    if (!terminal) return true;
+    const name = terminal.name;
+    return (route.start && route.start.includes(name)) ||
+           (route.end && route.end.includes(name)) ||
+           (route.via && route.via.includes(name));
+}
+
+function matchesFilter(route) {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'unlocked') {
+        if (!isLoggedIn) return false;
+        return isRouteUnlocked(route.id);
+    }
+    if (activeFilter === '循環') return route.tags && route.tags.includes('循環線');
+    if (activeFilter === '新手必試') return route.tags && route.tags.includes('新手必試');
+    return route.nature === activeFilter || (route.tags && route.tags.includes(activeFilter));
+}
+
+function matchesSearch(route) {
+    if (!searchTerm) return true;
+    const haystack = [route.id, route.alias || '', route.start || '', route.end || '', route.via || '']
+        .join(' ').toLowerCase();
+    return haystack.includes(searchTerm);
+}
+
+function renderRoutes() {
+    const container = document.getElementById('app-routes-list');
+    if (!appRoutes.length) {
+        container.innerHTML = '<div class="app-no-routes"><i class="fas fa-spinner fa-spin"></i>載入路線中...</div>';
+        return;
+    }
+    const filtered = appRoutes.filter(r => matchesTerminal(r) && matchesFilter(r) && matchesSearch(r));
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="app-no-routes"><i class="fas fa-search"></i>找不到符合條件的路線</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    filtered.forEach(route => {
+        const needed = ROUTE_UNLOCK[route.id] || 1;
+        const locked = isLoggedIn && userLevel < needed;
+        const xp = ROUTE_XP[route.id] || 0;
+        const isSelected = route.id === selectedRouteId;
+
+        const card = document.createElement('div');
+        card.className = 'app-route-card' + (locked ? ' locked' : '') + (isSelected ? ' selected' : '');
+        card.dataset.routeId = route.id;
+
+        const lockBadge = locked
+            ? `<span class="app-route-lock-badge">🔒 Lv.${needed}</span>`
+            : (xp > 0 && isLoggedIn ? `<span class="app-route-xp">+${xp} XP</span>` : '');
+
+        card.innerHTML = `
+            <div class="app-route-header">
+                <span class="app-route-id" style="background:${route.color||'#4caf50'}">${route.id}</span>
+                <span class="app-route-alias">${route.alias && route.alias.trim() ? route.alias : route.id}</span>
+                ${lockBadge}
+            </div>
+            <div class="app-route-meta">
+                <span><i class="fas fa-map-marker-alt" style="font-size:0.9em;"></i> ${route.start || '—'}</span>
+                ${route.end ? `<span>→ ${route.end}</span>` : '<span>循環</span>'}
+                ${route.time ? `<span><i class="fas fa-clock" style="font-size:0.9em;"></i> ${route.time}分</span>` : ''}
+                ${route.length ? `<span>${route.length}</span>` : ''}
+            </div>
+        `;
+
+        // Direction selector when selected
+        if (isSelected && !locked && route.gpx && route.gpx.length > 0) {
+            const dirRow = document.createElement('div');
+            dirRow.className = 'app-dir-row';
+            route.gpx.forEach((gpxItem, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'app-dir-btn' + (idx === selectedDirIndex ? ' chosen' : '');
+                btn.textContent = gpxItem.label;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectedDirIndex = idx;
+                    document.getElementById('app-start-ride-btn').classList.add('visible');
+                    renderRoutes();
+                    showRouteOnMap(route, idx);
+                });
+                dirRow.appendChild(btn);
+            });
+            card.appendChild(dirRow);
+        }
+
+        if (!locked) {
+            card.addEventListener('click', () => selectRoute(route));
+        }
+
+        container.appendChild(card);
+    });
+}
+
+function selectRoute(route) {
+    if (route.id === selectedRouteId) {
+        // Deselect
+        selectedRouteId = null;
+        selectedDirIndex = 0;
+        if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+        document.getElementById('app-start-ride-btn').classList.remove('visible');
+        renderRoutes();
+        return;
+    }
+    selectedRouteId = route.id;
+    selectedDirIndex = 0;
+    renderRoutes();
+
+    // Auto-select first direction and show on map
+    if (route.gpx && route.gpx.length > 0) {
+        document.getElementById('app-start-ride-btn').classList.add('visible');
+        showRouteOnMap(route, 0);
+    }
+
+    // Scroll the selected card into view
+    const cards = document.querySelectorAll('.app-route-card.selected');
+    if (cards.length) cards[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Start ride button ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const startBtn = document.getElementById('app-start-ride-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            if (!selectedRouteId) return;
+            if (!isLoggedIn) {
+                window.location.href = '/login';
+                return;
+            }
+            window.location.href = `/ride?id=${selectedRouteId}&dir=${selectedDirIndex}`;
+        });
+    }
+
+    // Terminal badge clear button
+    const termBadge = document.getElementById('app-terminal-badge');
+    if (termBadge) {
+        termBadge.addEventListener('click', clearTerminal);
+    }
+});
+
+// ── Search ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('app-search-input');
+    const clearBtn = document.getElementById('app-search-clear');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            searchTerm = searchInput.value.toLowerCase().trim();
+            clearBtn.style.display = searchTerm ? '' : 'none';
+            renderRoutes();
+        });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchTerm = '';
+            clearBtn.style.display = 'none';
+            renderRoutes();
+        });
+    }
+});
+
+// ── Filters ────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.app-filter-chip[data-filter]').forEach(chip => {
+        chip.addEventListener('click', () => {
+            activeFilter = chip.dataset.filter;
+            document.querySelectorAll('.app-filter-chip[data-filter]').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            renderRoutes();
+        });
+    });
+
+    // Random button
+    const randomBtn = document.getElementById('app-random-btn');
+    if (randomBtn) {
+        randomBtn.addEventListener('click', () => {
+            // For non-logged-in users, only pick from freely available routes (no unlock req)
+            // For logged-in users, only pick from unlocked routes
+            const available = appRoutes.filter(r => {
+                if (isLoggedIn) return isRouteUnlocked(r.id);
+                return (ROUTE_UNLOCK[r.id] || 1) === 1; // only starter routes if not logged in
+            });
+            if (available.length === 0) return;
+            const pick = available[Math.floor(Math.random() * available.length)];
+            searchTerm = '';
+            activeFilter = 'all';
+            selectedTerminalId = null;
+            document.getElementById('app-search-input').value = '';
+            document.getElementById('app-search-clear').style.display = 'none';
+            document.getElementById('app-terminal-badge').classList.remove('visible');
+            document.getElementById('app-map-hint').style.display = '';
+            document.querySelectorAll('.app-filter-chip[data-filter]').forEach(c => c.classList.remove('active'));
+            document.querySelector('.app-filter-chip[data-filter="all"]').classList.add('active');
+            renderRoutes();
+            setTimeout(() => selectRoute(pick), 50);
+        });
+    }
+});
+
+// ── Main initialisation ────────────────────────────────────────────────
+let _appRideInited = false;
+async function initAppRidePage() {
+    if (_appRideInited) return;
+    const ridePage = document.getElementById('app-ride-page');
+    if (!ridePage) return;
+
+    const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
+                  navigator.standalone === true ||
+                  document.body.classList.contains('is-pwa');
+    if (!isPwa) return;
+
+    _appRideInited = true;
+
+    isLoggedIn = !!localStorage.getItem('accessToken');
+    userLevel = getUserLevel();
+
+    // Init map
+    initMap();
+
+    // Load routes
+    try {
+        const res = await fetch('/routes.json');
+        const data = await res.json();
+        appRoutes = data.routes || [];
+        renderRoutes();
+    } catch(e) {
+        document.getElementById('app-routes-list').innerHTML =
+            '<div class="app-no-routes"><i class="fas fa-exclamation-circle"></i>無法載入路線資料</div>';
+    }
+}
+
+if (document.readyState !== 'loading') initAppRidePage();
+else document.addEventListener('DOMContentLoaded', initAppRidePage);
+
+// Re-run after PWA class is confirmed (pwa.js sets body.is-pwa on DOMContentLoaded)
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initAppRidePage, 150);
+});
+
+})();
+</script>
 </body>
 </html>

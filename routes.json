@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "updated": "2026-03-10",
-  "note": "站點 GPS 坐標為估算值，日後將由實地採集數據更新。等級系統更新為 20 級。",
+  "note": "站點 GPS 坐標為估算值，日後將由實地採集數據更新。等級系統更新為 50 級（無上限設計）。",
   "level_config": [
     {
       "level": 1,
@@ -42,106 +42,316 @@
       "level": 6,
       "xp_required": 950,
       "coins_reward": 200,
-      "title_zh": "城市騎手",
-      "title_en": "City Rider"
+      "title_zh": "新手騎士",
+      "title_en": "Rookie Rider"
     },
     {
       "level": 7,
       "xp_required": 1400,
       "coins_reward": 250,
-      "title_zh": "城市騎手",
-      "title_en": "City Rider"
+      "title_zh": "新手騎士",
+      "title_en": "Rookie Rider"
     },
     {
       "level": 8,
       "xp_required": 1980,
       "coins_reward": 300,
-      "title_zh": "城市騎手",
-      "title_en": "City Rider"
+      "title_zh": "新手騎士",
+      "title_en": "Rookie Rider"
     },
     {
       "level": 9,
       "xp_required": 2700,
       "coins_reward": 350,
-      "title_zh": "城市騎手",
-      "title_en": "City Rider"
+      "title_zh": "新手騎士",
+      "title_en": "Rookie Rider"
     },
     {
       "level": 10,
       "xp_required": 3600,
       "coins_reward": 400,
-      "title_zh": "城市騎手",
-      "title_en": "City Rider"
+      "title_zh": "新手騎士",
+      "title_en": "Rookie Rider"
     },
     {
       "level": 11,
       "xp_required": 4700,
       "coins_reward": 500,
-      "title_zh": "路線達人",
-      "title_en": "Route Master"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 12,
       "xp_required": 6050,
       "coins_reward": 600,
-      "title_zh": "路線達人",
-      "title_en": "Route Master"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 13,
       "xp_required": 7650,
       "coins_reward": 700,
-      "title_zh": "路線達人",
-      "title_en": "Route Master"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 14,
       "xp_required": 9550,
       "coins_reward": 800,
-      "title_zh": "路線達人",
-      "title_en": "Route Master"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 15,
       "xp_required": 11800,
       "coins_reward": 900,
-      "title_zh": "路線達人",
-      "title_en": "Route Master"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 16,
       "xp_required": 14400,
       "coins_reward": 1000,
-      "title_zh": "都市傳奇",
-      "title_en": "Urban Legend"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 17,
       "xp_required": 17400,
       "coins_reward": 1200,
-      "title_zh": "都市傳奇",
-      "title_en": "Urban Legend"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 18,
       "xp_required": 20900,
       "coins_reward": 1400,
-      "title_zh": "都市傳奇",
-      "title_en": "Urban Legend"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 19,
       "xp_required": 25000,
       "coins_reward": 1600,
-      "title_zh": "都市傳奇",
-      "title_en": "Urban Legend"
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
     },
     {
       "level": 20,
       "xp_required": 29700,
       "coins_reward": 2000,
+      "title_zh": "城市騎手",
+      "title_en": "City Rider"
+    },
+    {
+      "level": 21,
+      "xp_required": 35200,
+      "coins_reward": 2100,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 22,
+      "xp_required": 41200,
+      "coins_reward": 2200,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 23,
+      "xp_required": 47900,
+      "coins_reward": 2300,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 24,
+      "xp_required": 55200,
+      "coins_reward": 2400,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 25,
+      "xp_required": 63300,
+      "coins_reward": 2500,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 26,
+      "xp_required": 72200,
+      "coins_reward": 2600,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 27,
+      "xp_required": 81900,
+      "coins_reward": 2700,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 28,
+      "xp_required": 92600,
+      "coins_reward": 2800,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 29,
+      "xp_required": 104400,
+      "coins_reward": 2900,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 30,
+      "xp_required": 117400,
+      "coins_reward": 3000,
+      "title_zh": "路線達人",
+      "title_en": "Route Master"
+    },
+    {
+      "level": 31,
+      "xp_required": 131700,
+      "coins_reward": 3100,
       "title_zh": "都市傳奇",
       "title_en": "Urban Legend"
+    },
+    {
+      "level": 32,
+      "xp_required": 147400,
+      "coins_reward": 3200,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 33,
+      "xp_required": 164700,
+      "coins_reward": 3300,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 34,
+      "xp_required": 183700,
+      "coins_reward": 3400,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 35,
+      "xp_required": 204600,
+      "coins_reward": 3500,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 36,
+      "xp_required": 227600,
+      "coins_reward": 3600,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 37,
+      "xp_required": 252900,
+      "coins_reward": 3700,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 38,
+      "xp_required": 280700,
+      "coins_reward": 3800,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 39,
+      "xp_required": 311300,
+      "coins_reward": 3900,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 40,
+      "xp_required": 344900,
+      "coins_reward": 4000,
+      "title_zh": "都市傳奇",
+      "title_en": "Urban Legend"
+    },
+    {
+      "level": 41,
+      "xp_required": 381900,
+      "coins_reward": 4100,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 42,
+      "xp_required": 422600,
+      "coins_reward": 4200,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 43,
+      "xp_required": 467300,
+      "coins_reward": 4300,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 44,
+      "xp_required": 516500,
+      "coins_reward": 4400,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 45,
+      "xp_required": 570600,
+      "coins_reward": 4500,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 46,
+      "xp_required": 630200,
+      "coins_reward": 4600,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 47,
+      "xp_required": 695700,
+      "coins_reward": 4700,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 48,
+      "xp_required": 767800,
+      "coins_reward": 4800,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 49,
+      "xp_required": 847100,
+      "coins_reward": 4900,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
+    },
+    {
+      "level": 50,
+      "xp_required": 934300,
+      "coins_reward": 5000,
+      "title_zh": "殿堂騎士",
+      "title_en": "Hall of Fame"
     }
   ],
   "routes": [
@@ -283,6 +493,62 @@
       ]
     },
     {
+      "id": "966T",
+      "alias": "大橋旅遊線",
+      "start": "調景嶺站",
+      "end": "康城站",
+      "via": "將軍澳跨灣大橋",
+      "nature": "旅遊",
+      "time": 16,
+      "length": "3.0km",
+      "difficulty": 3,
+      "image": "images/966T.jpg",
+      "description": "專為遊覽觀光設計的大橋特快路線。連接調景嶺站與康城站，途經將軍澳跨灣大橋，適合單車新手挑戰自我，欣賞大橋景色。",
+      "tags": [
+        "將軍澳",
+        "旅遊專線",
+        "多坡",
+        "大橋特快",
+        "新手必試",
+        "連接地鐵站"
+      ],
+      "color": "#ff9900",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 90,
+      "is_special": false,
+      "gpx": [
+        {
+          "label": "往康城",
+          "file": "966T康城.gpx"
+        },
+        {
+          "label": "往調景嶺",
+          "file": "966T調景嶺.gpx"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "name": "調景嶺站",
+          "lat": 22.3078,
+          "lon": 114.2694
+        },
+        {
+          "order": 2,
+          "name": "將軍澳跨灣大橋",
+          "lat": 22.299,
+          "lon": 114.256
+        },
+        {
+          "order": 3,
+          "name": "康城站",
+          "lat": 22.2961,
+          "lon": 114.249
+        }
+      ]
+    },
+    {
       "id": "966",
       "alias": "康城快線",
       "start": "調景嶺總站",
@@ -303,7 +569,7 @@
         "少坡"
       ],
       "color": "#0b5394",
-      "unlock_level": 1,
+      "unlock_level": 4,
       "unlock_cost": null,
       "xp_reward": 110,
       "is_special": false,

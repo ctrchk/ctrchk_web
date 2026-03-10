@@ -2,6 +2,13 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#121f14">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的帳戶 - 城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
@@ -17,26 +24,46 @@
         })();
     </script>
     <style>
+        /* ── App Profile Theme ─────────────────────────────────── */
+        body {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+        }
+        main { padding: 0; }
+        footer {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-secondary, #a8d8a0);
+            border-top: 1px solid #2d4d2d;
+        }
+        .content { padding: 1em 1em 5em; }
         .profile-container {
-            max-width: 680px;
-            margin: 2em auto;
-            padding: 0 1em;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        .profile-container h2 {
+            color: var(--app-text-primary, #e8f5e9);
+            font-size: 1.3em;
+            margin-bottom: 1em;
         }
         .profile-card {
-            background: white;
+            background: var(--app-bg-card, #1e3820);
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            padding: 2em;
-            margin-bottom: 1.5em;
+            border: 1px solid #2d4d2d;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            padding: 1.4em;
+            margin-bottom: 1em;
         }
         .profile-card h3 {
             margin-top: 0;
-            color: #2c3e50;
-            border-bottom: 2px solid #04D93C;
+            color: var(--app-accent, #6dba65);
+            border-bottom: 1px solid #2d4d2d;
             padding-bottom: 0.5em;
             display: flex;
             align-items: center;
             gap: 0.5em;
+            font-size: 1em;
         }
         .role-badge {
             display: inline-block;
@@ -45,39 +72,48 @@
             font-size: 0.85em;
             font-weight: bold;
         }
-        .role-admin { background: #fdecea; color: #c62828; }
-        .role-senior { background: #e8f5e9; color: #2e7d32; }
-        .role-junior { background: #e3f2fd; color: #1565c0; }
+        .role-admin  { background: #4a1942; color: #f3a0ef; }
+        .role-senior { background: #1a3820; color: #a8d8a0; border: 1px solid #2d4d2d; }
+        .role-junior { background: #1a2d42; color: #90caf9; }
         .profile-info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0.6em 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.95em;
+            border-bottom: 1px solid #2d4d2d;
+            font-size: 0.92em;
         }
         .profile-info-row:last-child { border-bottom: none; }
-        .profile-info-label { color: #666; min-width: 120px; }
-        .profile-info-value { color: #2c3e50; font-weight: 500; flex: 1; text-align: right; }
-        .form-group { margin-bottom: 1.2em; }
-        .form-group label { display: block; margin-bottom: 0.4em; font-weight: 600; color: #2c3e50; font-size: 0.95em; }
+        .profile-info-label { color: var(--app-text-secondary, #a8d8a0); min-width: 110px; }
+        .profile-info-value { color: var(--app-text-primary, #e8f5e9); font-weight: 500; flex: 1; text-align: right; }
+        .form-group { margin-bottom: 1.1em; }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.35em;
+            font-weight: 600;
+            color: var(--app-text-secondary, #a8d8a0);
+            font-size: 0.9em;
+        }
         .form-group input[type="text"],
         .form-group input[type="tel"],
         .form-group input[type="date"],
         .form-group select {
             width: 100%;
             padding: 0.7em 0.9em;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            background: #15291a;
+            border: 1px solid #2d4d2d;
+            border-radius: 8px;
             box-sizing: border-box;
             font-size: 0.95em;
+            color: var(--app-text-primary, #e8f5e9);
             transition: border-color 0.2s;
         }
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #04D93C;
+            border-color: var(--app-accent, #6dba65);
         }
+        .form-group select option { background: #1e3820; color: #e8f5e9; }
         .area-checkboxes {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -91,48 +127,51 @@
             font-weight: normal;
             cursor: pointer;
             font-size: 0.9em;
+            color: var(--app-text-primary, #e8f5e9);
         }
-        .area-checkboxes input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
+        .area-checkboxes input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; accent-color: #6dba65; }
         .btn-save {
-            background: #04D93C;
-            color: white;
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
             border: none;
-            padding: 0.8em 2em;
-            border-radius: 6px;
+            padding: 0.85em 2em;
+            border-radius: 10px;
             font-size: 1em;
             font-weight: bold;
             cursor: pointer;
             width: 100%;
             transition: background 0.2s;
         }
-        .btn-save:hover { background: #03b831; }
-        .btn-save:disabled { background: #aaa; cursor: not-allowed; }
+        .btn-save:hover { background: #5aaa55; }
+        .btn-save:disabled { background: #3a5a3a; color: #6a8a6a; cursor: not-allowed; }
         .alert-success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #a5d6a7;
+            background: #1a3820;
+            color: #a8d8a0;
+            border: 1px solid #2d4d2d;
             padding: 0.8em 1em;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 1em;
             display: none;
         }
         .alert-error {
-            background: #fdecea;
-            color: #c62828;
-            border: 1px solid #ef9a9a;
+            background: #2a1010;
+            color: #ef9a9a;
+            border: 1px solid #6a2a2a;
             padding: 0.8em 1em;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 1em;
             display: none;
         }
         .upgrade-notice {
-            background: #fff8e1;
-            border-left: 4px solid #ffc107;
+            background: #1a2a10;
+            border-left: 3px solid var(--app-accent, #6dba65);
             padding: 1em 1.2em;
-            border-radius: 0 6px 6px 0;
+            border-radius: 0 8px 8px 0;
             margin-bottom: 1em;
             font-size: 0.9em;
+            color: var(--app-text-secondary, #a8d8a0);
         }
+        .upgrade-notice a { color: var(--app-accent, #6dba65); }
     </style>
 </head>
 <body>
@@ -141,7 +180,7 @@
     <main>
         <section class="content animated-element">
             <div class="profile-container">
-                <h2 style="color:#2c3e50;"><i class="fas fa-user-circle" style="color:#04D93C;"></i> 我的帳戶</h2>
+                <h2><i class="fas fa-user-circle" style="color: var(--app-accent, #6dba65);"></i> 我的帳戶</h2>
 
                 <!-- 帳戶概覽 -->
                 <div class="profile-card">
@@ -170,9 +209,9 @@
 
                 <!-- 升級提示（只對 junior 顯示） -->
                 <div id="upgrade-notice" class="upgrade-notice" style="display:none;">
-                    <i class="fas fa-star" style="color:#ffc107;"></i>
+                    <i class="fas fa-star" style="color: var(--app-accent, #6dba65);"></i>
                     <strong>升級為高級會員</strong>：填寫電話、騎行經驗及地區即可解鎖 GPX 下載、完整路線資訊等功能。
-                    <a href="/profile-setup" style="color:#e65100; text-decoration:underline; margin-left:0.5em;">立即升級</a>
+                    <a href="/profile-setup">立即升級</a>
                 </div>
 
                 <!-- 修改個人資料 -->
@@ -242,7 +281,7 @@
                 <!-- 帳戶安全 -->
                 <div class="profile-card">
                     <h3><i class="fas fa-shield-alt"></i> 帳戶安全</h3>
-                    <p style="color:#666; font-size:0.9em;">如需更改密碼，請使用「忘記密碼」功能重設。</p>
+                    <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.9em;">如需更改密碼，請使用「忘記密碼」功能重設。</p>
                     <a href="/forgot-password" class="cta-button" style="font-size:0.85em; padding:0.6em 1.5em; display:inline-block; margin-top:0.5em;">
                         <i class="fas fa-key"></i> 重設密碼
                     </a>
@@ -277,8 +316,8 @@
 
         const verifiedEl = document.getElementById('info-verified');
         verifiedEl.innerHTML = user.email_verified
-            ? '<span style="color:#2e7d32;"><i class="fas fa-check-circle"></i> 已驗證</span>'
-            : '<span style="color:#e65100;"><i class="fas fa-exclamation-circle"></i> 未驗證</span>';
+            ? '<span style="color: var(--app-accent, #6dba65);"><i class="fas fa-check-circle"></i> 已驗證</span>'
+            : '<span style="color:#ef9a9a;"><i class="fas fa-exclamation-circle"></i> 未驗證</span>';
 
         const providerMap = { email: '電子郵件', google: 'Google' };
         document.getElementById('info-provider').textContent = providerMap[user.auth_provider] || user.auth_provider || '電子郵件';

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#121f14">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,68 +14,153 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* ── App Dashboard Theme ──────────────────────────────────── */
+        body {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+        }
+        main {
+            padding: 0;
+            max-width: 100%;
+        }
+        footer {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-secondary, #a8d8a0);
+            border-top: 1px solid #2d4d2d;
+        }
+        .hero {
+            background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+            padding: calc(env(safe-area-inset-top) + 1.5em) 1.4em 1.5em;
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .hero h1 {
+            color: var(--app-text-primary, #e8f5e9);
+            margin: 0 0 0.3em 0;
+            font-size: 1.5em;
+        }
+        #welcome-email {
+            color: var(--app-accent, #6dba65);
+            font-weight: 600;
+            margin: 0;
+        }
+        #membership-status {
+            margin-top: 0.3em;
+            font-size: 0.9em;
+        }
+
+        /* ── 電郵未驗證提醒 ──────────────────────────────── */
+        #email-verify-notice {
+            background: #2a1f0a;
+            border: 1px solid #ff9800;
+            color: #ffcc80;
+            margin: 1em;
+            border-radius: 10px;
+            padding: 1em 1.2em;
+        }
+        #email-verify-notice p { margin: 0; }
+
         /* ── 遊戲進度卡片 ──────────────────────────────── */
         #game-profile-card {
             display: none;
-            max-width: 800px;
-            margin: 1.5em auto;
-            background: linear-gradient(135deg, #2c3e50 0%, #3d5166 100%);
-            color: #fff;
-            border-radius: 12px;
-            padding: 1.5em 2em;
-            box-shadow: 0 4px 12px rgba(44,62,80,0.3);
+            margin: 1em;
+            background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+            color: var(--app-text-primary, #e8f5e9);
+            border-radius: 14px;
+            padding: 1.2em 1.4em;
+            border: 1px solid #2d4d2d;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
         }
         .game-card-header {
             display: flex;
             align-items: center;
-            gap: 1em;
-            margin-bottom: 1em;
+            gap: 0.8em;
+            margin-bottom: 0.9em;
             flex-wrap: wrap;
         }
         .game-level-badge {
-            background: #BFE340;
-            color: #2c3e50;
-            font-size: 1.4em;
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            font-size: 1.2em;
             font-weight: bold;
             padding: 0.2em 0.7em;
             border-radius: 8px;
         }
         .game-title {
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: bold;
+            color: var(--app-text-primary, #e8f5e9);
         }
         .game-coins {
             margin-left: auto;
-            font-size: 1em;
-            background: rgba(255,255,255,0.15);
+            font-size: 0.9em;
+            background: rgba(255,255,255,0.1);
             padding: 0.3em 0.8em;
             border-radius: 6px;
+            color: #ffd54f;
         }
         .xp-bar-container {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
             border-radius: 6px;
-            height: 10px;
+            height: 8px;
             overflow: hidden;
             margin: 0.4em 0;
         }
         .xp-bar-fill {
-            background: #BFE340;
+            background: var(--app-accent, #6dba65);
             height: 100%;
             border-radius: 6px;
             transition: width 0.8s ease;
         }
         .xp-label {
             font-size: 0.8em;
-            opacity: 0.85;
+            color: var(--app-text-secondary, #a8d8a0);
         }
 
-        /* ── 騎行歷史條目（升級版） ─────────────────────── */
-        .ride-item {
-            background: #f9f9f9;
+        /* ── 升級提醒 ─────────────────────────────────── */
+        #upgrade-notice {
+            background: #1a2a0a;
+            border: 1px solid #6dba65;
+            margin: 1em;
+            border-radius: 10px;
+            padding: 1.2em;
+            text-align: center;
+        }
+        #upgrade-notice h3 {
+            color: var(--app-accent, #6dba65);
+            margin-top: 0;
+            font-size: 1em;
+        }
+        #upgrade-notice p {
+            color: var(--app-text-secondary, #a8d8a0);
+            font-size: 0.9em;
+        }
+        #upgrade-notice .cta-button {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            font-weight: bold;
             border-radius: 8px;
-            padding: 1em 1.2em;
+        }
+
+        /* ── 騎行歷史 ────────────────────────────────── */
+        .content {
+            padding: 0.5em 1em 5em;
+        }
+        .content h2 {
+            color: var(--app-text-primary, #e8f5e9);
+            font-size: 1.1em;
             margin-bottom: 0.8em;
-            border-left: 4px solid #BFE340;
+            padding-bottom: 0.4em;
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .ride-item {
+            background: var(--app-bg-card, #1e3820);
+            border-radius: 10px;
+            padding: 0.9em 1em;
+            margin-bottom: 0.7em;
+            border-left: 3px solid var(--app-accent, #6dba65);
+            border: 1px solid #2d4d2d;
+            border-left: 3px solid var(--app-accent, #6dba65);
         }
         .ride-item .ride-main {
             display: flex;
@@ -86,20 +171,31 @@
         }
         .ride-route-name {
             font-weight: bold;
-            font-size: 1em;
+            font-size: 0.95em;
+            color: var(--app-text-primary, #e8f5e9);
         }
         .ride-xp {
-            font-size: 0.85em;
-            color: #2c3e50;
-            background: #BFE340;
+            font-size: 0.82em;
+            color: #121f14;
+            background: var(--app-accent, #6dba65);
             padding: 0.2em 0.6em;
             border-radius: 10px;
             font-weight: bold;
         }
         .ride-details {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 0.3em;
+            font-size: 0.82em;
+            color: var(--app-text-secondary, #a8d8a0);
+            margin-top: 0.25em;
+        }
+
+        /* ── 管理員面板 ─────────────────────────────── */
+        #admin-section h2 {
+            color: var(--app-text-primary, #e8f5e9);
+        }
+        #admin-section .cta-button {
+            background: #4a1942;
+            color: #f3a0ef;
+            border-radius: 8px;
         }
     </style>
     
@@ -130,12 +226,12 @@
         <section class="hero">
             <h1>歡迎回來！</h1>
             <p id="welcome-email">正在載入你的資料...</p>
-            <p id="membership-status" style="font-size: 0.9em; color: #666;"></p>
+            <p id="membership-status" style="font-size: 0.9em;"></p>
         </section>
 
         <!-- 電郵未驗證提醒 -->
-        <div id="email-verify-notice" style="display: none; background: #fff3e0; border: 2px solid #ff9800; padding: 1.2em 1.5em; margin: 1em auto; max-width: 800px; border-radius: 8px;">
-            <p style="color: #e65100; margin: 0;">
+        <div id="email-verify-notice" style="display: none;">
+            <p>
                 <i class="fas fa-envelope" style="color: #ff9800;"></i>
                 <strong>請驗證你的電子郵件！</strong>
                 我們已向你的電郵發送了驗證連結，請查收並點擊連結以完成驗證。
@@ -155,13 +251,13 @@
             <div class="xp-label" id="xp-label">XP: 0 / 300</div>
         </div>
 
-        <div id="upgrade-notice" style="display: none; background: #fff3cd; border: 2px solid #ffc107; padding: 1.5em; margin: 2em auto; max-width: 800px; border-radius: 8px; text-align: center;">
-            <h3 style="color: #856404; margin-top: 0;">
-                <i class="fas fa-star" style="color: #ffc107;"></i>
+        <div id="upgrade-notice" style="display: none;">
+            <h3>
+                <i class="fas fa-star" style="color: #6dba65;"></i>
                 升級為高級會員以享受完整功能
             </h3>
-            <p style="color: #856404;">完善您的個人資料即可升級為高級會員，解鎖所有功能！</p>
-            <a href="/profile-setup.html" class="cta-button" style="display: inline-block; margin-top: 1em; background-color: #ffc107; color: #000;">
+            <p>完善您的個人資料即可升級為高級會員，解鎖所有功能！</p>
+            <a href="/profile-setup.html" class="cta-button" style="display: inline-block; margin-top: 0.8em;">
                 <i class="fas fa-arrow-right"></i> 立即升級
             </a>
         </div>
@@ -234,11 +330,11 @@
                 // Display membership status
                 const statusElement = document.getElementById('membership-status');
                 if (userRole === 'admin') {
-                    statusElement.innerHTML = '<i class="fas fa-shield-alt" style="color: #2c3e50;"></i> 管理員';
-                    statusElement.style.color = '#2c3e50';
+                    statusElement.innerHTML = '<i class="fas fa-shield-alt" style="color: #f3a0ef;"></i> 管理員';
+                    statusElement.style.color = '#f3a0ef';
                 } else if (userRole === 'senior') {
-                    statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffc107;"></i> 高級會員';
-                    statusElement.style.color = '#ffc107';
+                    statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffd54f;"></i> 高級會員';
+                    statusElement.style.color = '#ffd54f';
                 } else {
                     statusElement.innerHTML = '<i class="fas fa-user" style="color: #666;"></i> 初級會員';
                     // Show upgrade notice for junior members
@@ -266,7 +362,7 @@
             11: '路線達人', 12: '路線達人', 13: '路線達人', 14: '路線達人', 15: '路線達人',
             16: '都市傳奇', 17: '都市傳奇', 18: '都市傳奇', 19: '都市傳奇', 20: '都市傳奇'
         };
-        // 累計 XP 以達到對應等級（指數增長，初期升級快，後期需要更多）
+        // 累計 XP 以達到對應等級（後期升級要求已適當降低）
         const LEVEL_XP = [
             0,      // Lv1
             80,     // Lv2
@@ -278,16 +374,16 @@
             1980,   // Lv8
             2700,   // Lv9
             3600,   // Lv10
-            4700,   // Lv11
-            6050,   // Lv12
-            7650,   // Lv13
-            9550,   // Lv14
-            11800,  // Lv15
-            14400,  // Lv16
-            17400,  // Lv17
-            20900,  // Lv18
-            25000,  // Lv19
-            29700,  // Lv20
+            4000,   // Lv11
+            5100,   // Lv12
+            6500,   // Lv13
+            8100,   // Lv14
+            10000,  // Lv15
+            12200,  // Lv16
+            14800,  // Lv17
+            17800,  // Lv18
+            21200,  // Lv19
+            25200,  // Lv20
             Infinity
         ];
 
@@ -335,7 +431,7 @@
                 const historyData = Array.isArray(data) ? data : (data.history || []);
 
                 if (historyData.length === 0) {
-                    container.innerHTML = '<p style="color:#999;">你目前沒有任何騎行歷史。<br><a href="/routes" style="color:#2c3e50;">瀏覽路線</a>開始你的第一次騎行吧！</p>';
+                    container.innerHTML = '<p style="color: var(--app-text-secondary, #a8d8a0);">你目前沒有任何騎行歷史。<br><a href="/routes" style="color: var(--app-accent, #6dba65);">瀏覽路線</a>開始你的第一次騎行吧！</p>';
                     return;
                 }
 

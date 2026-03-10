@@ -20,15 +20,35 @@ async function authenticate(req, res) {
   }
 }
 
-// 根據累計 XP 計算等級（20 級系統，指數型增長）
+// 根據累計 XP 計算等級（50 級設計，無硬性上限）
 function calcLevel(xp) {
-  const thresholds = [0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
-                      4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700];
-  let level = 1;
-  for (let i = thresholds.length - 1; i >= 0; i--) {
-    if (xp >= thresholds[i]) { level = i + 1; break; }
+  const thresholds = [
+    0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+    4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
+    28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
+    98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
+    267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
+  ];
+  const BASE_GAP = 61000;   // gap entering L50→L51
+  const GROWTH   = 1.10;    // 10% growth per level beyond L50
+  const BASE_XP  = 654000;  // XP required for L50
+  const BASE_LVL = 50;
+
+  if (xp < BASE_XP) {
+    // Binary search within the fixed table
+    let lo = 0, hi = thresholds.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (thresholds[mid] <= xp) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1; // 1-indexed
   }
-  return Math.min(level, 20);
+
+  // For levels beyond L50, use the geometric series formula:
+  // threshold(n) = BASE_XP + BASE_GAP * (GROWTH^(n-BASE_LVL) - 1) / (GROWTH - 1)
+  // Solving for n:  n = BASE_LVL + log(1 + (xp - BASE_XP) * (GROWTH-1) / BASE_GAP) / log(GROWTH)
+  const n = BASE_LVL + Math.log(1 + (xp - BASE_XP) * (GROWTH - 1) / BASE_GAP) / Math.log(GROWTH);
+  return Math.floor(n) + 1;
 }
 
 // 確保用戶有遊戲進度記錄（若無則初始化）
