@@ -594,7 +594,9 @@
         }
     }
 
+    let _appHomeInited = false;
     async function initAppHome() {
+        if (_appHomeInited) return;
         const appHome = document.getElementById('app-home');
         if (!appHome) return;
         // Show app home only in PWA mode
@@ -602,6 +604,8 @@
                       navigator.standalone === true ||
                       document.body.classList.contains('is-pwa');
         if (!isPwa) return;
+
+        _appHomeInited = true;
 
         const token = localStorage.getItem('accessToken');
         const loadingEl = document.getElementById('app-rides-loading');
@@ -639,9 +643,9 @@
     if (document.readyState !== 'loading') initAppHome();
     else document.addEventListener('DOMContentLoaded', initAppHome);
 
-    // Also re-run after PWA class is set
+    // Also re-run after PWA class is set (pwa.js sets body.is-pwa on DOMContentLoaded)
     document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(initAppHome, 100);
+        setTimeout(initAppHome, 150);
     });
 })();
 </script>

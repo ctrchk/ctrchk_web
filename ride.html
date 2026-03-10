@@ -493,6 +493,8 @@
     }
 
     // ── GPS ───────────────────────────────────────────────────────────────
+    const GPS_OPTIONS = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+
     function startGPS() {
       if (!('geolocation' in navigator)) {
         document.getElementById('gps-status-text').textContent = '此裝置不支援 GPS';
@@ -506,17 +508,15 @@
           // Permission granted — start continuous watch
           onPosition(pos);
           if (watchId === null) {
-            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, {
-              enableHighAccuracy: true, timeout: 20000, maximumAge: 0
-            });
+            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, GPS_OPTIONS);
           }
         },
         (err) => {
           // Still start watch even if getCurrentPosition failed (covers retry)
           onGpsError(err);
-          watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, {
-            enableHighAccuracy: true, timeout: 20000, maximumAge: 0
-          });
+          if (watchId === null) {
+            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, GPS_OPTIONS);
+          }
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );

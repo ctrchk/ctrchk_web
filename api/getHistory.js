@@ -29,23 +29,26 @@ function calcLevel(xp) {
     131700, 147400, 164700, 183700, 204600, 227600, 252900, 280700, 311300, 344900,
     381900, 422600, 467300, 516500, 570600, 630200, 695700, 767800, 847100, 934300,
   ];
-  // For levels beyond the table, continue exponential growth
-  if (xp >= thresholds[thresholds.length - 1]) {
-    let level = thresholds.length;
-    let gap = 87200; // gap at L50
-    let last = thresholds[thresholds.length - 1];
-    while (xp >= last + gap) {
-      last += gap;
-      gap = Math.round(gap * 1.10);
-      level++;
+  const BASE_GAP = 87200;   // gap entering L50→L51
+  const GROWTH   = 1.10;    // 10% growth per level beyond L50
+  const BASE_XP  = 934300;  // XP required for L50
+  const BASE_LVL = 50;
+
+  if (xp < BASE_XP) {
+    // Binary search within the fixed table
+    let lo = 0, hi = thresholds.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (thresholds[mid] <= xp) lo = mid; else hi = mid - 1;
     }
-    return level;
+    return lo + 1; // 1-indexed
   }
-  let level = 1;
-  for (let i = thresholds.length - 1; i >= 0; i--) {
-    if (xp >= thresholds[i]) { level = i + 1; break; }
-  }
-  return level;
+
+  // For levels beyond L50, use the geometric series formula:
+  // threshold(n) = BASE_XP + BASE_GAP * (GROWTH^(n-BASE_LVL) - 1) / (GROWTH - 1)
+  // Solving for n:  n = BASE_LVL + log(1 + (xp - BASE_XP) * (GROWTH-1) / BASE_GAP) / log(GROWTH)
+  const n = BASE_LVL + Math.log(1 + (xp - BASE_XP) * (GROWTH - 1) / BASE_GAP) / Math.log(GROWTH);
+  return Math.floor(n) + 1;
 }
 
 // 確保用戶有遊戲進度記錄（若無則初始化）

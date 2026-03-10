@@ -764,9 +764,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const randomBtn = document.getElementById('app-random-btn');
     if (randomBtn) {
         randomBtn.addEventListener('click', () => {
-            const unlocked = appRoutes.filter(r => isLoggedIn ? isRouteUnlocked(r.id) : true);
-            if (unlocked.length === 0) return;
-            const pick = unlocked[Math.floor(Math.random() * unlocked.length)];
+            // For non-logged-in users, only pick from freely available routes (no unlock req)
+            // For logged-in users, only pick from unlocked routes
+            const available = appRoutes.filter(r => {
+                if (isLoggedIn) return isRouteUnlocked(r.id);
+                return (ROUTE_UNLOCK[r.id] || 1) === 1; // only starter routes if not logged in
+            });
+            if (available.length === 0) return;
+            const pick = available[Math.floor(Math.random() * available.length)];
             searchTerm = '';
             activeFilter = 'all';
             selectedTerminalId = null;
@@ -783,7 +788,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Main initialisation ────────────────────────────────────────────────
+let _appRideInited = false;
 async function initAppRidePage() {
+    if (_appRideInited) return;
     const ridePage = document.getElementById('app-ride-page');
     if (!ridePage) return;
 
@@ -791,6 +798,8 @@ async function initAppRidePage() {
                   navigator.standalone === true ||
                   document.body.classList.contains('is-pwa');
     if (!isPwa) return;
+
+    _appRideInited = true;
 
     isLoggedIn = !!localStorage.getItem('accessToken');
     userLevel = getUserLevel();
@@ -813,9 +822,9 @@ async function initAppRidePage() {
 if (document.readyState !== 'loading') initAppRidePage();
 else document.addEventListener('DOMContentLoaded', initAppRidePage);
 
-// Re-run after PWA class is confirmed
+// Re-run after PWA class is confirmed (pwa.js sets body.is-pwa on DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(initAppRidePage, 100);
+    setTimeout(initAppRidePage, 150);
 });
 
 })();
