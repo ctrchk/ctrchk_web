@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#121f14">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任務與成就 - 城市運輸單車</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ── Dark app theme ─────────────────────────────────────────── */
+        body {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+            min-height: 100vh;
+        }
+        .tasks-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: calc(env(safe-area-inset-top) + 0.5em) 0 calc(env(safe-area-inset-bottom) + 5em) 0;
+        }
+        /* ── Header ────────────────────────────────────────────────── */
+        .tasks-hero {
+            background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+            padding: calc(env(safe-area-inset-top) + 1em) 1.2em 1.2em;
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .tasks-hero h1 {
+            margin: 0 0 0.2em 0;
+            font-size: 1.4em;
+            color: var(--app-text-primary, #e8f5e9);
+        }
+        .tasks-hero p {
+            margin: 0;
+            font-size: 0.85em;
+            color: var(--app-text-secondary, #a8d8a0);
+        }
+        /* ── Tab bar ───────────────────────────────────────────────── */
+        .tasks-tabs {
+            display: flex;
+            border-bottom: 1px solid #2d4d2d;
+            background: #1a2d1c;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .tasks-tab {
+            flex: 1;
+            padding: 0.75em 0.5em;
+            text-align: center;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--app-text-secondary, #a8d8a0);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tasks-tab.active {
+            color: var(--app-accent, #6dba65);
+            border-bottom-color: var(--app-accent, #6dba65);
+        }
+        /* ── Task cards ────────────────────────────────────────────── */
+        .tasks-section {
+            padding: 1em 1em 0;
+        }
+        .tasks-section-title {
+            font-size: 0.8em;
+            font-weight: 700;
+            color: var(--app-text-secondary, #a8d8a0);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 0.7em 0;
+        }
+        .task-card {
+            background: #1a2d1c;
+            border: 1px solid #2d4d2d;
+            border-radius: 10px;
+            padding: 0.9em 1em;
+            margin-bottom: 0.7em;
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+            transition: opacity 0.3s;
+        }
+        .task-card.completed {
+            opacity: 0.6;
+            border-color: var(--app-accent, #6dba65);
+        }
+        .task-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+            width: 2em;
+            text-align: center;
+        }
+        .task-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .task-name {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--app-text-primary, #e8f5e9);
+            margin-bottom: 0.2em;
+        }
+        .task-desc {
+            font-size: 0.78em;
+            color: var(--app-text-secondary, #a8d8a0);
+        }
+        .task-reward {
+            font-size: 0.78em;
+            font-weight: bold;
+            color: var(--app-accent, #6dba65);
+            background: rgba(109,186,101,0.12);
+            padding: 0.2em 0.6em;
+            border-radius: 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .task-check {
+            font-size: 1.1em;
+            flex-shrink: 0;
+        }
+        .task-progress {
+            margin-top: 0.4em;
+        }
+        .task-progress-bar {
+            height: 4px;
+            background: #2d4d2d;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .task-progress-fill {
+            height: 100%;
+            background: var(--app-accent, #6dba65);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .task-progress-text {
+            font-size: 0.72em;
+            color: var(--app-text-secondary, #a8d8a0);
+            margin-top: 0.2em;
+        }
+        /* ── Reset info ─────────────────────────────────────────────── */
+        .tasks-reset-info {
+            text-align: center;
+            font-size: 0.75em;
+            color: var(--app-text-secondary, #a8d8a0);
+            padding: 0.8em 1em 0;
+        }
+        /* ── Achievement medals ─────────────────────────────────────── */
+        .medals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8em;
+            padding: 1em;
+        }
+        .medal-card {
+            background: #1a2d1c;
+            border: 1px solid #2d4d2d;
+            border-radius: 12px;
+            padding: 1em 0.5em;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4em;
+            transition: opacity 0.3s;
+        }
+        .medal-card.locked {
+            opacity: 0.35;
+            filter: grayscale(0.7);
+        }
+        .medal-card.earned {
+            border-color: var(--app-accent, #6dba65);
+            background: rgba(109,186,101,0.08);
+        }
+        .medal-icon {
+            font-size: 2em;
+        }
+        .medal-name {
+            font-size: 0.72em;
+            font-weight: 600;
+            color: var(--app-text-primary, #e8f5e9);
+            line-height: 1.2;
+        }
+        .medal-desc {
+            font-size: 0.62em;
+            color: var(--app-text-secondary, #a8d8a0);
+        }
+        .medal-date {
+            font-size: 0.60em;
+            color: var(--app-accent, #6dba65);
+        }
+        /* ── Tab content ─────────────────────────────────────────────── */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* ── Login prompt ────────────────────────────────────────────── */
+        .login-prompt {
+            text-align: center;
+            padding: 3em 2em;
+            color: var(--app-text-secondary, #a8d8a0);
+        }
+        .login-prompt i { font-size: 2.5em; display: block; margin-bottom: 0.5em; opacity: 0.4; }
+        .login-prompt a {
+            display: inline-block;
+            margin-top: 1em;
+            padding: 0.6em 1.5em;
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border-radius: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        /* ── Summary bar ─────────────────────────────────────────────── */
+        .tasks-summary {
+            display: flex;
+            justify-content: space-around;
+            padding: 0.8em 1em;
+            background: #1a2d1c;
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .summary-item { text-align: center; }
+        .summary-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--app-accent, #6dba65);
+        }
+        .summary-label {
+            font-size: 0.7em;
+            color: var(--app-text-secondary, #a8d8a0);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header-placeholder" class="web-only"></div>
+
+    <div class="tasks-container">
+        <div class="tasks-hero">
+            <h1>🎯 任務與成就</h1>
+            <p>完成任務獲取 XP 及里程幣，解鎖成就獎牌</p>
+        </div>
+
+        <!-- Summary bar -->
+        <div class="tasks-summary" id="tasks-summary" style="display:none;">
+            <div class="summary-item">
+                <div class="summary-value" id="summary-daily-done">0/0</div>
+                <div class="summary-label">今日任務</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-value" id="summary-weekly-done">0/0</div>
+                <div class="summary-label">本週任務</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-value" id="summary-medals">0</div>
+                <div class="summary-label">成就獎牌</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tasks-tabs">
+            <div class="tasks-tab active" data-tab="daily">📅 每日任務</div>
+            <div class="tasks-tab" data-tab="weekly">📆 每週任務</div>
+            <div class="tasks-tab" data-tab="medals">🏅 成就獎牌</div>
+        </div>
+
+        <!-- Daily tasks -->
+        <div class="tab-content active" id="tab-daily">
+            <div class="tasks-reset-info" id="daily-reset-info"></div>
+            <div class="tasks-section">
+                <div id="daily-tasks-list"></div>
+            </div>
+        </div>
+
+        <!-- Weekly tasks -->
+        <div class="tab-content" id="tab-weekly">
+            <div class="tasks-reset-info" id="weekly-reset-info"></div>
+            <div class="tasks-section">
+                <div id="weekly-tasks-list"></div>
+            </div>
+        </div>
+
+        <!-- Achievement medals -->
+        <div class="tab-content" id="tab-medals">
+            <div class="medals-grid" id="medals-grid"></div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (function() {
+    'use strict';
+
+    // ── Task and achievement definitions ──────────────────────────────
+    const DAILY_TASKS = [
+        {
+            id: 'daily_any_ride',
+            icon: '🚴',
+            name: '出發！',
+            desc: '完成任意一條路線',
+            reward_xp: 50,
+            reward_coins: 0,
+            type: 'rides_completed',
+            target: 1,
+        },
+        {
+            id: 'daily_5_stops',
+            icon: '📍',
+            name: '站點打卡',
+            desc: '到達 5 個站點',
+            reward_xp: 30,
+            reward_coins: 0,
+            type: 'stops_visited',
+            target: 5,
+        },
+        {
+            id: 'daily_ride_20min',
+            icon: '⏱️',
+            name: '持續騎行',
+            desc: '單次騎行超過 20 分鐘',
+            reward_xp: 20,
+            reward_coins: 0,
+            type: 'ride_duration_min',
+            target: 20,
+        },
+        {
+            id: 'daily_route_challenge',
+            icon: '🎯',
+            name: '今日挑戰',
+            desc: '完成每日指定路線（900 線）',
+            reward_xp: 80,
+            reward_coins: 5,
+            type: 'specific_route',
+            route_id: '900',
+        },
+    ];
+
+    const WEEKLY_TASKS = [
+        {
+            id: 'weekly_3_rides',
+            icon: '🏃',
+            name: '週週騎行',
+            desc: '本週完成 3 次騎行',
+            reward_xp: 150,
+            reward_coins: 10,
+            type: 'rides_completed',
+            target: 3,
+        },
+        {
+            id: 'weekly_route_900',
+            icon: '🌊',
+            name: '海濱漫遊',
+            desc: '完成 900 線（市區海濱線）',
+            reward_xp: 100,
+            reward_coins: 8,
+            type: 'specific_route',
+            route_id: '900',
+        },
+        {
+            id: 'weekly_tik_stops',
+            icon: '🗺️',
+            name: '調景嶺探索',
+            desc: '到達所有 TIK 區站點',
+            reward_xp: 100,
+            reward_coins: 8,
+            type: 'district_stops',
+            district: 'TIK',
+            target: 4,
+        },
+        {
+            id: 'weekly_10km',
+            icon: '📏',
+            name: '十公里達人',
+            desc: '本週累計騎行 10 公里',
+            reward_xp: 120,
+            reward_coins: 10,
+            type: 'total_distance_km',
+            target: 10,
+        },
+    ];
+
+    const ACHIEVEMENTS = [
+        {
+            code: 'first_ride',
+            icon: '🚀',
+            name: '首次出發',
+            desc: '完成第一次騎行',
+            type: 'rides_completed',
+            target: 1,
+        },
+        {
+            code: 'explorer',
+            icon: '🗺️',
+            name: '探索者',
+            desc: '完成 5 條不同路線',
+            type: 'unique_routes',
+            target: 5,
+        },
+        {
+            code: 'complete_900',
+            icon: '🌊',
+            name: '海濱達人',
+            desc: '完成路線 900 全程',
+            type: 'specific_route_full',
+            route_id: '900',
+        },
+        {
+            code: 'speed_master',
+            icon: '⚡',
+            name: '速度達人',
+            desc: '45 分鐘內完成 900 線',
+            type: 'fast_route',
+            route_id: '900',
+            max_minutes: 45,
+        },
+        {
+            code: 'all_stops_route',
+            icon: '⭐',
+            name: '全程達成',
+            desc: '在一次騎行中到達所有站點',
+            type: 'all_stops_single_ride',
+        },
+        {
+            code: 'district_cross_3',
+            icon: '🗾',
+            name: '跨區騎士',
+            desc: '單次騎行跨越 3 個或以上分區',
+            type: 'districts_in_ride',
+            target: 3,
+        },
+        {
+            code: 'daily_7',
+            icon: '🗓️',
+            name: '每日打卡',
+            desc: '連續 7 天完成每日任務',
+            type: 'daily_streak',
+            target: 7,
+        },
+        {
+            code: 'endurance',
+            icon: '💪',
+            name: '耐力達人',
+            desc: '累計騎行 50 公里',
+            type: 'total_distance_km',
+            target: 50,
+        },
+        {
+            code: 'station_collector',
+            icon: '📍',
+            name: '集站王者',
+            desc: '到達 50 個不重複站點',
+            type: 'unique_stops',
+            target: 50,
+        },
+        {
+            code: 'tko_expert',
+            icon: '🏅',
+            name: '將軍澳通',
+            desc: '完成所有將軍澳部路線',
+            type: 'dept_routes_complete',
+            dept: 'tko',
+        },
+        {
+            code: 'weekend_rider',
+            icon: '☀️',
+            name: '週末騎手',
+            desc: '連續 4 個週末騎行',
+            type: 'weekend_streak',
+            target: 4,
+        },
+        {
+            code: 'night_rider',
+            icon: '🌙',
+            name: '夜行者',
+            desc: '在晚上 8 點後完成騎行',
+            type: 'night_ride',
+        },
+    ];
+
+    // ── Storage helpers ───────────────────────────────────────────────
+    function getTodayKey() {
+        return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    function getWeekKey() {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        const monday = new Date(now.getFullYear(), now.getMonth(), diff);
+        return monday.toISOString().slice(0, 10);
+    }
+
+    function getTaskProgress() {
+        try {
+            return JSON.parse(localStorage.getItem('taskProgress') || '{}');
+        } catch(e) { return {}; }
+    }
+
+    function getAchievements() {
+        try {
+            return JSON.parse(localStorage.getItem('userAchievements') || '{}');
+        } catch(e) { return {}; }
+    }
+
+    function getRideHistory() {
+        try {
+            return JSON.parse(localStorage.getItem('rideHistory') || '[]');
+        } catch(e) { return []; }
+    }
+
+    // ── Task completion logic (from rideHistory) ──────────────────────
+    function computeDailyProgress(task) {
+        const today = getTodayKey();
+        const history = getRideHistory().filter(r => r.date === today);
+
+        switch (task.type) {
+            case 'rides_completed':
+                return { progress: history.length, done: history.length >= task.target };
+            case 'stops_visited': {
+                const total = history.reduce((s, r) => s + (r.stops_count || 0), 0);
+                return { progress: total, done: total >= task.target };
+            }
+            case 'ride_duration_min': {
+                const maxDur = history.reduce((m, r) => Math.max(m, r.duration_minutes || 0), 0);
+                return { progress: maxDur, done: maxDur >= task.target };
+            }
+            case 'specific_route': {
+                const done = history.some(r => r.route_id === task.route_id);
+                return { progress: done ? 1 : 0, done };
+            }
+            default:
+                return { progress: 0, done: false };
+        }
+    }
+
+    function computeWeeklyProgress(task) {
+        const weekStart = getWeekKey();
+        const history = getRideHistory().filter(r => r.date >= weekStart);
+
+        switch (task.type) {
+            case 'rides_completed':
+                return { progress: history.length, done: history.length >= task.target };
+            case 'specific_route': {
+                const done = history.some(r => r.route_id === task.route_id);
+                return { progress: done ? 1 : 0, done };
+            }
+            case 'district_stops': {
+                const stops = new Set();
+                history.forEach(r => (r.tik_stops || []).forEach(s => stops.add(s)));
+                return { progress: stops.size, done: stops.size >= task.target };
+            }
+            case 'total_distance_km': {
+                const total = history.reduce((s, r) => s + (r.distance_km || 0), 0);
+                const rounded = Math.round(total * 10) / 10;
+                return { progress: rounded, done: rounded >= task.target };
+            }
+            default:
+                return { progress: 0, done: false };
+        }
+    }
+
+    function computeAchievementProgress(ach) {
+        const history = getRideHistory();
+
+        switch (ach.type) {
+            case 'rides_completed':
+                return { progress: history.length, earned: history.length >= ach.target };
+            case 'unique_routes': {
+                const ids = new Set(history.map(r => r.route_id));
+                return { progress: ids.size, earned: ids.size >= ach.target };
+            }
+            case 'specific_route_full': {
+                const earned = history.some(r => r.route_id === ach.route_id && r.all_stops);
+                return { progress: earned ? 1 : 0, earned };
+            }
+            case 'fast_route': {
+                const earned = history.some(r =>
+                    r.route_id === ach.route_id &&
+                    r.all_stops &&
+                    r.duration_minutes > 0 &&
+                    r.duration_minutes <= ach.max_minutes
+                );
+                return { progress: earned ? 1 : 0, earned };
+            }
+            case 'all_stops_single_ride': {
+                const earned = history.some(r => r.all_stops);
+                return { progress: earned ? 1 : 0, earned };
+            }
+            case 'districts_in_ride': {
+                const maxDistricts = history.reduce((m, r) => Math.max(m, r.districts_count || 0), 0);
+                return { progress: maxDistricts, earned: maxDistricts >= ach.target };
+            }
+            case 'total_distance_km': {
+                const total = history.reduce((s, r) => s + (r.distance_km || 0), 0);
+                return { progress: Math.round(total * 10) / 10, earned: total >= ach.target };
+            }
+            case 'unique_stops': {
+                const stops = new Set();
+                history.forEach(r => (r.stops_reached || []).forEach(s => stops.add(s)));
+                return { progress: stops.size, earned: stops.size >= ach.target };
+            }
+            case 'night_ride': {
+                const earned = history.some(r => {
+                    if (!r.start_time) return false;
+                    const h = new Date(r.start_time).getHours();
+                    return h >= 20;
+                });
+                return { progress: earned ? 1 : 0, earned };
+            }
+            default:
+                return { progress: 0, earned: false };
+        }
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────
+    function renderTaskCard(task, progress, isDaily) {
+        const done = progress.done;
+        const card = document.createElement('div');
+        card.className = 'task-card' + (done ? ' completed' : '');
+
+        let progressHtml = '';
+        if (task.target && task.target > 1 && !done) {
+            const pct = Math.min(100, Math.round((progress.progress / task.target) * 100));
+            progressHtml = `
+                <div class="task-progress">
+                    <div class="task-progress-bar">
+                        <div class="task-progress-fill" style="width:${pct}%"></div>
+                    </div>
+                    <div class="task-progress-text">${progress.progress} / ${task.target}</div>
+                </div>`;
+        }
+
+        const rewardParts = [];
+        if (task.reward_xp) rewardParts.push(`+${task.reward_xp} XP`);
+        if (task.reward_coins) rewardParts.push(`+${task.reward_coins} 🪙`);
+
+        card.innerHTML = `
+            <div class="task-icon">${task.icon}</div>
+            <div class="task-info">
+                <div class="task-name">${task.name}</div>
+                <div class="task-desc">${task.desc}</div>
+                ${progressHtml}
+            </div>
+            <div class="task-reward">${rewardParts.join(' ')}</div>
+            <div class="task-check">${done ? '✅' : '⬜'}</div>
+        `;
+        return card;
+    }
+
+    function renderMedalCard(ach, earnedData) {
+        const earned = earnedData.earned;
+        const earnedAt = getAchievements()[ach.code];
+        const card = document.createElement('div');
+        card.className = 'medal-card' + (earned ? ' earned' : ' locked');
+
+        const dateStr = earnedAt ? `<div class="medal-date">${earnedAt.slice(0, 10)}</div>` : '';
+
+        card.innerHTML = `
+            <div class="medal-icon">${ach.icon}</div>
+            <div class="medal-name">${ach.name}</div>
+            <div class="medal-desc">${ach.desc}</div>
+            ${dateStr}
+        `;
+        return card;
+    }
+
+    // ── Main render ───────────────────────────────────────────────────
+    function render() {
+        const isLoggedIn = !!localStorage.getItem('accessToken');
+
+        // Daily tasks
+        const dailyList = document.getElementById('daily-tasks-list');
+        dailyList.innerHTML = '';
+        if (!isLoggedIn) {
+            dailyList.innerHTML = '<div class="login-prompt"><i class="fas fa-lock"></i>請先登入以查看每日任務<br><a href="/login">登入</a></div>';
+        } else {
+            DAILY_TASKS.forEach(task => {
+                const progress = computeDailyProgress(task);
+                dailyList.appendChild(renderTaskCard(task, progress, true));
+            });
+        }
+
+        // Weekly tasks
+        const weeklyList = document.getElementById('weekly-tasks-list');
+        weeklyList.innerHTML = '';
+        if (!isLoggedIn) {
+            weeklyList.innerHTML = '<div class="login-prompt"><i class="fas fa-lock"></i>請先登入以查看每週任務<br><a href="/login">登入</a></div>';
+        } else {
+            WEEKLY_TASKS.forEach(task => {
+                const progress = computeWeeklyProgress(task);
+                weeklyList.appendChild(renderTaskCard(task, progress, false));
+            });
+        }
+
+        // Achievement medals
+        const grid = document.getElementById('medals-grid');
+        grid.innerHTML = '';
+        ACHIEVEMENTS.forEach(ach => {
+            const earnedData = computeAchievementProgress(ach);
+            // Save earned achievement to localStorage if newly earned
+            const saved = getAchievements();
+            if (earnedData.earned && !saved[ach.code]) {
+                saved[ach.code] = new Date().toISOString();
+                localStorage.setItem('userAchievements', JSON.stringify(saved));
+            }
+            grid.appendChild(renderMedalCard(ach, earnedData));
+        });
+
+        // Summary bar
+        if (isLoggedIn) {
+            const dailyDone = DAILY_TASKS.filter(t => computeDailyProgress(t).done).length;
+            const weeklyDone = WEEKLY_TASKS.filter(t => computeWeeklyProgress(t).done).length;
+            const medalCount = ACHIEVEMENTS.filter(a => computeAchievementProgress(a).earned).length;
+            document.getElementById('summary-daily-done').textContent = `${dailyDone}/${DAILY_TASKS.length}`;
+            document.getElementById('summary-weekly-done').textContent = `${weeklyDone}/${WEEKLY_TASKS.length}`;
+            document.getElementById('summary-medals').textContent = medalCount;
+            document.getElementById('tasks-summary').style.display = '';
+        }
+
+        // Reset info
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const dailyMsLeft = tomorrow - now;
+        const dailyHrsLeft = Math.ceil(dailyMsLeft / 3600000);
+
+        document.getElementById('daily-reset-info').textContent =
+            `每日任務每天午夜重置 · 剩餘 ${dailyHrsLeft} 小時`;
+
+        const dayOfWeek = now.getDay(); // 0=Sun
+        const daysToMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
+        document.getElementById('weekly-reset-info').textContent =
+            `每週任務每週一重置 · 剩餘 ${daysToMonday} 天`;
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.tasks-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            document.querySelectorAll('.tasks-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('tab-' + target).classList.add('active');
+        });
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        render();
+    });
+
+    })();
+    </script>
+</body>
+</html>
