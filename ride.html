@@ -753,6 +753,27 @@
         }
       }
 
+      // Save compact ride record to localStorage for tasks/achievements tracking
+      try {
+        const history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
+        const reachedList = routeStops.filter(s => reachedStops.has(s.order));
+        const districts = new Set(reachedList.map(s => s.district).filter(Boolean));
+        history.push({
+          route_id: routeId,
+          date: new Date(startTime).toISOString().slice(0, 10),
+          start_time: new Date(startTime).toISOString(),
+          duration_minutes: durationMins,
+          distance_km: distKm,
+          stops_count: reachedStops.size,
+          stops_reached: [...reachedStops],
+          all_stops: allStopsReached,
+          districts_count: districts.size,
+        });
+        // Keep at most 200 recent rides
+        if (history.length > 200) history.splice(0, history.length - 200); // keep last 200
+        localStorage.setItem('rideHistory', JSON.stringify(history));
+      } catch(e) {}
+
       // Build summary
       pendingSummary = { durationMins, distKm, avgSpeed, apiResult };
 
@@ -869,8 +890,25 @@
         routeData ? `${routeId} ${routeData.alias || ''}` : routeId;
       document.title = `騎行中：${routeId} - 城市運輸單車`;
 
-      // Get stops
+      // Get stops and filter by direction for bidirectional routes
       routeStops = routeData ? (routeData.stops || []) : [];
+
+      if (routeStops.length > 0 && routeData && routeData.gpx && routeData.gpx.length > 1) {
+        const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];
+        const dirFilter = gpxEntry.dir_filter; // 'up', 'down', or undefined
+
+        if (dirFilter === 'up') {
+          // Upbound: exclude ⬇️-only stops, then reverse order
+          routeStops = routeStops
+            .filter(s => s.direction !== '⬇️')
+            .reverse()
+            .map((s, i) => ({ ...s, order: i + 1 }));
+        } else if (dirFilter === 'down') {
+          // Downbound: exclude ⬆️-only stops, keep normal order
+          routeStops = routeStops.filter(s => s.direction !== '⬆️');
+        }
+        // 'cw', 'ccw', or undefined: keep all stops in original order
+      }
 
       // Default map center (TKO area fallback)
       const center = routeStops.length > 0

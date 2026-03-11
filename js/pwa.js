@@ -49,19 +49,19 @@
       ? [
           { href: '/en',        icon: 'fa-home',           label: 'Home' },
           { href: '/en/routes', icon: 'fa-biking',          label: 'Ride' },
+          { href: '/tasks',     icon: 'fa-tasks',           label: 'Tasks' },
           isLoggedIn
             ? { href: '/dashboard', icon: 'fa-chart-bar', label: 'Progress' }
             : { href: '/login',     icon: 'fa-sign-in-alt',    label: 'Sign In' },
-          { href: '/profile',   icon: 'fa-user',           label: 'My' },
           { href: '#more',      icon: 'fa-ellipsis-h',     label: 'More', isMore: true },
         ]
       : [
           { href: '/',             icon: 'fa-home',           label: '首頁' },
           { href: '/routes',       icon: 'fa-biking',          label: '騎行' },
+          { href: '/tasks',        icon: 'fa-tasks',           label: '任務' },
           isLoggedIn
             ? { href: '/dashboard',    icon: 'fa-chart-bar', label: '進度' }
             : { href: '/login',        icon: 'fa-sign-in-alt',    label: '登入' },
-          { href: '/profile',      icon: 'fa-user',           label: '我的' },
           { href: '#more',         icon: 'fa-ellipsis-h',     label: '更多', isMore: true },
         ];
 

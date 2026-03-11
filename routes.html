@@ -491,7 +491,7 @@
         <!-- Search + filter bar -->
         <div class="app-ride-topbar">
             <div class="app-ride-search-row">
-                <button id="app-back-to-dept" title="返回部門選擇" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em 0.4em 0.2em 0;flex-shrink:0;font-size:1em;" onclick="showDeptSelect()">
+                <button id="app-back-to-dept" title="返回部門選擇" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em 0.4em 0.2em 0;flex-shrink:0;font-size:1em;" onclick="showDeptSelect(true)">
                     <i class="fas fa-arrow-left"></i>
                 </button>
                 <span id="app-dept-label" style="font-size:0.8em;color:#a8d8a0;white-space:nowrap;flex-shrink:0;"></span>
@@ -565,18 +565,18 @@ const ROUTE_XP = {
 
 // TKO terminal stations (approximate GPS, will be updated with real data)
 const TERMINALS = [
-    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.3227, lng: 114.2594 },
-    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.3187, lng: 114.2565 },
-    { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248, lng: 114.2490 },
-    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.3003, lng: 114.2564 },
-    { id: 'hang_hau',    name: '坑口站',                lat: 22.3124, lng: 114.2655 },
-    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.3075, lng: 114.2617 },
-    { id: 'lohas',       name: '康城站',                lat: 22.2988, lng: 114.2884 },
-    { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857, lng: 114.2724 },
-    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.3030, lng: 114.2618 },
-    { id: 'marina_bay',  name: '維景灣畔',              lat: 22.2900, lng: 114.2649 },
-    { id: 'peak_1',      name: '峻瀅',                  lat: 22.2905, lng: 114.2755 },
-    { id: 'hospital',    name: '將軍澳醫院',            lat: 22.3133, lng: 114.2700 },
+    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696 }, // verified: POA 01
+    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.3187,  lng: 114.2565  },
+    { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248,  lng: 114.2490  },
+    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607 }, // verified: TIK 06
+    { id: 'hang_hau',    name: '坑口站',                lat: 22.3124,  lng: 114.2655  },
+    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.3075,  lng: 114.2617  },
+    { id: 'lohas',       name: '康城站',                lat: 22.2988,  lng: 114.2884  },
+    { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724  },
+    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331 }, // verified: TIK 04
+    { id: 'marina_bay',  name: '維景灣畔',              lat: 22.2900,  lng: 114.2649  },
+    { id: 'peak_1',      name: '峻瀅',                  lat: 22.2905,  lng: 114.2755  },
+    { id: 'hospital',    name: '將軍澳醫院',            lat: 22.3133,  lng: 114.2700  },
 ];
 
 // Map of terminal name to terminal ID for route matching
@@ -627,6 +627,7 @@ function isCoinRouteUnlocked(route) {
 
 // ── Map initialisation ─────────────────────────────────────────────────
 function initMap() {
+    if (map) return; // already initialized
     map = L.map('app-ride-map', {
         zoomControl: false,
         attributionControl: false,
@@ -957,9 +958,15 @@ const DEPARTMENTS = [
 let selectedDeptId = null;
 
 // Show the department selection screen (app-only)
-function showDeptSelect() {
+// pushState=true adds a history entry so the back button returns here
+function showDeptSelect(pushState) {
     document.getElementById('app-dept-select').style.display = '';
     document.getElementById('app-ride-page').style.display = 'none';
+    selectedDeptId = null;
+
+    if (pushState) {
+        history.pushState({ page: 'dept' }, '', '/routes');
+    }
 
     const list = document.getElementById('app-dept-list');
     list.innerHTML = '';
@@ -982,26 +989,30 @@ function showDeptSelect() {
         `;
 
         if (dept.available) {
-            card.addEventListener('click', () => enterDepartment(dept));
+            card.addEventListener('click', () => enterDepartment(dept, true));
         }
         list.appendChild(card);
     });
 }
 
 // Enter a department: show the map & route list
-function enterDepartment(dept) {
+// pushState=true adds a history entry so the back button returns to dept selection
+function enterDepartment(dept, pushState) {
     selectedDeptId = dept.id;
     document.getElementById('app-dept-select').style.display = 'none';
     document.getElementById('app-ride-page').style.display = '';
+
+    if (pushState) {
+        history.pushState({ page: 'routes', dept: dept.id }, '', '/routes?dept=' + dept.id);
+    }
 
     // Show department label in topbar
     const deptLabel = document.getElementById('app-dept-label');
     if (deptLabel) deptLabel.textContent = dept.name;
 
-    // Recenter map on department
-    if (map) {
-        map.setView(dept.mapCenter, dept.mapZoom, { animate: true });
-    }
+    // Recenter map on department (initMap is idempotent; ensures map exists)
+    initMap();
+    map.setView(dept.mapCenter, dept.mapZoom, { animate: !!pushState });
     renderRoutes();
 }
 
@@ -1041,9 +1052,31 @@ async function initAppRidePage() {
         console.warn('[AppRide] Failed to load routes:', e);
     }
 
-    // Show department selection first
-    showDeptSelect();
+    // Check URL for dept param — restore previous page state
+    const urlParams = new URLSearchParams(window.location.search);
+    const deptParam = urlParams.get('dept');
+    if (deptParam) {
+        const dept = DEPARTMENTS.find(d => d.id === deptParam && d.available);
+        if (dept) {
+            enterDepartment(dept, false); // restore without adding another history entry
+            return;
+        }
+    }
+
+    // Default: show department selection
+    showDeptSelect(false);
 }
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', (e) => {
+    const state = e.state || {};
+    if (state.page === 'routes' && state.dept) {
+        const dept = DEPARTMENTS.find(d => d.id === state.dept);
+        if (dept) { enterDepartment(dept, false); return; }
+    }
+    // Default: show department selection
+    showDeptSelect(false);
+});
 
 if (document.readyState !== 'loading') initAppRidePage();
 else document.addEventListener('DOMContentLoaded', initAppRidePage);
