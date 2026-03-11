@@ -378,7 +378,7 @@
       "color": "#990000",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 150,
+      "xp_reward": 450,
       "is_special": false,
       "gpx": [
         {
@@ -393,41 +393,248 @@
       "stops": [
         {
           "order": 1,
-          "name": "寶琳（新都城二期）",
-          "lat": 22.3231,
-          "lon": 114.2592
+          "code": "POA 01",
+          "name": "新都城二期、寶琳邨",
+          "name_en": "Metro City Plaza II, Po Lam Estate",
+          "road": "寶豐路",
+          "direction": "🔴",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32424,
+          "lon": 114.25696
         },
         {
           "order": 2,
-          "name": "景林邨單車駅",
-          "lat": 22.3185,
-          "lon": 114.262
+          "code": "POA 02",
+          "name": "欣明苑、將軍澳賽馬會診所",
+          "name_en": "Yan Ming Court, Tseung Kwan O Jockey Club Clinic",
+          "road": "寶琳北路",
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32413,
+          "lon": 114.25951
         },
         {
           "order": 3,
-          "name": "香港單車館",
-          "lat": 22.3143,
-          "lon": 114.2697
+          "code": "POA 03",
+          "name": "景林邨轉乘站——景林邨景棉樓",
+          "name_en": "King Lam Estate Interchange - King Min House King Lam Estate",
+          "road": null,
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32197,
+          "lon": 114.26127
         },
         {
           "order": 4,
-          "name": "將軍澳海濱公園",
-          "lat": 22.3089,
-          "lon": 114.2728
+          "code": "POA 04",
+          "name": "景林邨轉乘站——景林邨滑板公園",
+          "name_en": "King Lam Estate Interchange - King Lam Estate Roller Skating Park",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.31961,
+          "lon": 114.26238
         },
         {
           "order": 5,
-          "name": "調景嶺站",
-          "lat": 22.3078,
-          "lon": 114.2694
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31793,
+          "lon": 114.26225
         },
         {
           "order": 6,
-          "name": "調景嶺彩明",
-          "lat": 22.3042,
-          "lon": 114.2651
+          "code": "HAH 10",
+          "name": "常寧遊樂場",
+          "name_en": "Sheung Ning Playground",
+          "road": "環保大道",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3155,
+          "lon": 114.26121
+        },
+        {
+          "order": 7,
+          "code": "HAH 11",
+          "name": "將軍澳極限運動場",
+          "name_en": "Tseung Kwan O Skatepark",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31507,
+          "lon": 114.2609
+        },
+        {
+          "order": 8,
+          "code": "HAH 12",
+          "name": "單車公園露天劇場",
+          "name_en": "Velodrome Park Amphitheater",
+          "road": "寶康路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31406,
+          "lon": 114.2601
+        },
+        {
+          "order": 9,
+          "code": "HAH 13",
+          "name": "香港單車館公園",
+          "name_en": "Hong Kong Velodrome Park",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31325,
+          "lon": 114.26072
+        },
+        {
+          "order": 10,
+          "code": "HAH 14",
+          "name": "將軍澳運動場",
+          "name_en": "Tseung Kwan O Sports Ground",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31017,
+          "lon": 114.26323
+        },
+        {
+          "order": 11,
+          "code": "TKO 01",
+          "name": "調景嶺碼頭",
+          "name_en": "Tiu Keng Leng Pier",
+          "road": "至善街",
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.30806,
+          "lon": 114.26421
+        },
+        {
+          "order": 12,
+          "code": "TKO 02",
+          "name": "雍明商場、雍明苑",
+          "name_en": "Yung Ming Shopping Centre, Yung Ming Court",
+          "road": "海濱長廊(將)",
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.30491,
+          "lon": 114.26515
+        },
+        {
+          "order": 13,
+          "code": "TKO 12",
+          "name": "南橋",
+          "name_en": "South Bridge",
+          "road": null,
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.30145,
+          "lon": 114.26287
+        },
+        {
+          "order": 14,
+          "code": "TKO 13",
+          "name": "將軍澳南梯台",
+          "name_en": "Tseung Kwan O South Landing Steps",
+          "road": null,
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.30153,
+          "lon": 114.26103
+        },
+        {
+          "order": 15,
+          "code": "TKO 03",
+          "name": "將軍澳海濱長廊寵物公園",
+          "name_en": "Tseung Kwan O Waterfront Park Pet Garden",
+          "road": null,
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.30195,
+          "lon": 114.25996
+        },
+        {
+          "order": 16,
+          "code": "TKO 04",
+          "name": "藍塘傲",
+          "name_en": "Alto Residences",
+          "road": null,
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.30146,
+          "lon": 114.25823
+        },
+        {
+          "order": 17,
+          "code": "TIK 06",
+          "name": "調景嶺總站",
+          "name_en": "Tiu Keng Leng Terminus",
+          "road": "單車徑",
+          "direction": "↕️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30096,
+          "lon": 114.25607
+        },
+        {
+          "order": 18,
+          "code": "TIK 01",
+          "name": "調景嶺站-唐賢街",
+          "name_en": "Tiu Keng Leng Station - Tang Yin Street",
+          "road": "唐賢街",
+          "direction": "⬇️",
+          "district": "TIK",
+          "xp": 0,
+          "lat": 22.30415,
+          "lon": 114.25344
+        },
+        {
+          "order": 19,
+          "code": "TIK 12",
+          "name": "調景嶺站-知專設計學院總站",
+          "name_en": "Tiu Keng Leng Station - IVE(Lee Wai Lee) Terminus",
+          "road": null,
+          "direction": "↕️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30494,
+          "lon": 114.25348
+        },
+        {
+          "order": 20,
+          "code": "TIK 04",
+          "name": "彩明苑總站",
+          "name_en": "Choi Ming Court Terminus",
+          "road": "彩明街",
+          "direction": "🟢",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30646,
+          "lon": 114.25331
         }
-      ]
+      ],
+      "district": "POA",
+      "department": "將軍澳部",
+      "region": "西貢區"
     },
     {
       "id": "900A",

@@ -2,6 +2,9 @@
 import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
 
+// Maximum bonus coins a client can claim per ride (prevents abuse)
+const MAX_BONUS_COINS_PER_RIDE = 20;
+
 // 通用 JWT 驗證中介函數
 async function authenticate(req, res) {
   const authHeader = req.headers.authorization;
@@ -117,6 +120,8 @@ export default async function handler(req, res) {
         stops_reached,
         gpx_track,
         source = 'pwa',
+        xp_earned_override,   // per-stop + district-change XP calculated client-side
+        bonus_coins,          // e.g. +5 for finishing within 45 min
       } = req.body || {};
 
       if (!ride_date) {
@@ -125,20 +130,30 @@ export default async function handler(req, res) {
 
       // 1. 取得路線 XP 獎勵
       let xpReward = 0;
+      let maxXpForRoute = Infinity;
       try {
         const { rows: cfg } = await query(
           'SELECT xp_reward FROM routes_config WHERE route_id = $1',
           [route_id]
         );
-        if (cfg.length > 0) xpReward = cfg[0].xp_reward;
-        else {
+        if (cfg.length > 0) {
+          maxXpForRoute = cfg[0].xp_reward;
+          xpReward = cfg[0].xp_reward;
+        } else {
           // Fallback: ~20 XP per km. This roughly matches configured rewards
           // (e.g. route 900 = 5.5 km → ~110 XP, configured at 150), giving a
           // fair estimate for routes not yet in routes_config.
           const XP_PER_KM = 20;
           xpReward = Math.round((parseFloat(distance_km) || 0) * XP_PER_KM);
+          maxXpForRoute = xpReward;
         }
       } catch (e) { /* routes_config 可能尚未建立 */ }
+
+      // If client provides a per-stop computed XP, use it (capped at the route's configured max).
+      // This supports the per-stop (+10 XP) and district-change (+20 XP) bonus system.
+      if (typeof xp_earned_override === 'number' && xp_earned_override >= 0) {
+        xpReward = Math.min(Math.round(xp_earned_override), maxXpForRoute);
+      }
 
       // 2. 插入騎行記錄
       const { rows: newRide } = await query(
@@ -187,6 +202,15 @@ export default async function handler(req, res) {
           newCoins += coinsEarned;
         }
 
+        // 45分鐘內完成路線的額外里程幣獎勵（客戶端傳入）
+        const bonusCoinsEarned = (typeof bonus_coins === 'number' && bonus_coins > 0)
+          ? Math.min(bonus_coins, MAX_BONUS_COINS_PER_RIDE)  // cap to prevent abuse
+          : 0;
+        if (bonusCoinsEarned > 0) {
+          newCoins += bonusCoinsEarned;
+          coinsEarned += bonusCoinsEarned;
+        }
+
         await query(
           `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
            VALUES ($1, $2, $3, $4, NOW())
@@ -202,6 +226,7 @@ export default async function handler(req, res) {
           coins: newCoins,
           level_up: levelUp,
           coins_earned: coinsEarned,
+          bonus_coins_earned: bonusCoinsEarned,
           unlocked_routes: [],
         };
       } catch (e) {
