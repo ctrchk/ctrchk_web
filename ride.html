@@ -340,6 +340,9 @@
 
     const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
     const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
+    const DEFAULT_STOP_XP = 10;          // XP awarded for reaching a stop that has no explicit xp field
+    const ROUTE_COMPLETION_XP = 200;     // bonus XP for completing all stops on a route
+    const DISTRICT_CHANGE_XP = 20;       // bonus XP for crossing into a new district zone
     const FAST_FINISH_MINUTES = 45;      // finish within this time for bonus coins
     const FAST_FINISH_BONUS_COINS = 5;   // bonus coins for finishing within FAST_FINISH_MINUTES
 
@@ -394,15 +397,17 @@
 
     // ── Per-stop XP calculation ────────────────────────────────────────────
     // Returns { stopXp, districtBonusXp, bonusLabel }
+    // Note: a stop's xp field is 0 when the stop is explicitly non-scoring (e.g. TIK 01 on route 900,
+    // which is a downbound-only stop and therefore excluded from XP per the route specification).
     function calcStopXp(stop) {
-      const stopXp = typeof stop.xp === 'number' ? stop.xp : 10; // default 10 XP
+      const stopXp = typeof stop.xp === 'number' ? stop.xp : DEFAULT_STOP_XP;
       let districtBonusXp = 0;
       let bonusLabel = '';
 
-      // District-change bonus: +20 XP when crossing into a new district
+      // District-change bonus when crossing into a new district zone
       if (stop.district && lastReachedDistrict && stop.district !== lastReachedDistrict) {
-        districtBonusXp = 20;
-        bonusLabel = `⬆️ 跨區獎勵 +20 XP`;
+        districtBonusXp = DISTRICT_CHANGE_XP;
+        bonusLabel = `⬆️ 跨區獎勵 +${DISTRICT_CHANGE_XP} XP`;
       }
       return { stopXp, districtBonusXp, bonusLabel };
     }
@@ -693,11 +698,11 @@
       const distKm = parseFloat((totalDistM / 1000).toFixed(2));
       const avgSpeed = durationMins > 0 ? parseFloat((distKm / (durationMins / 60)).toFixed(1)) : 0;
 
-      // Route completion bonus XP: +200 if all stops reached
+      // Route completion bonus XP: awarded when all stops are reached
       const allStopsReached = routeStops.length > 0 &&
         routeStops.every(s => reachedStops.has(s.order));
       if (allStopsReached) {
-        sessionXp += 200;
+        sessionXp += ROUTE_COMPLETION_XP;
         updateSessionXpDisplay();
       }
 

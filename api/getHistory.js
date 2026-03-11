@@ -2,6 +2,9 @@
 import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
 
+// Maximum bonus coins a client can claim per ride (prevents abuse)
+const MAX_BONUS_COINS_PER_RIDE = 20;
+
 // 通用 JWT 驗證中介函數
 async function authenticate(req, res) {
   const authHeader = req.headers.authorization;
@@ -201,7 +204,7 @@ export default async function handler(req, res) {
 
         // 45分鐘內完成路線的額外里程幣獎勵（客戶端傳入）
         const bonusCoinsEarned = (typeof bonus_coins === 'number' && bonus_coins > 0)
-          ? Math.min(bonus_coins, 20)  // cap at 20 to prevent abuse
+          ? Math.min(bonus_coins, MAX_BONUS_COINS_PER_RIDE)  // cap to prevent abuse
           : 0;
         if (bonusCoinsEarned > 0) {
           newCoins += bonusCoinsEarned;
