@@ -248,6 +248,10 @@
         <div class="lbl">站點</div>
       </div>
       <div class="ride-stat">
+        <div class="val" id="stat-xp">0</div>
+        <div class="lbl">XP</div>
+      </div>
+      <div class="ride-stat">
         <div class="val" id="stat-speed">0.0</div>
         <div class="lbl">km/h</div>
       </div>
@@ -261,6 +265,7 @@
     <div id="summary-emoji">🎉</div>
     <div id="summary-title">騎行完成！</div>
     <div id="summary-xp-badge">+0 XP</div>
+    <div id="summary-bonus-coins" style="display:none;font-size:0.9em;color:#BFE340;margin-top:0.3em;font-weight:bold;"></div>
     <div id="summary-stats">
       <div class="summary-stat"><div class="val" id="s-time">--</div><div class="lbl">⏱ 時間</div></div>
       <div class="summary-stat"><div class="val" id="s-dist">--</div><div class="lbl">🚴 距離</div></div>
@@ -335,6 +340,8 @@
 
     const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
     const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
+    const FAST_FINISH_MINUTES = 45;      // finish within this time for bonus coins
+    const FAST_FINISH_BONUS_COINS = 5;   // bonus coins for finishing within FAST_FINISH_MINUTES
 
     let routeData = null;
     let routeStops = [];
@@ -350,6 +357,8 @@
     let lastLat = null, lastLon = null;
     let lastSpeedKmh = 0;
     let pendingSummary = null;   // stored after API response
+    let sessionXp = 0;          // running XP total for this ride session
+    let lastReachedDistrict = null; // for district-change bonus tracking
 
     // ── Helpers ───────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -381,6 +390,46 @@
         const u = JSON.parse(raw);
         return Math.max(1, parseInt(u.level || u.game_level || 1, 10));
       } catch (e) { return 1; }
+    }
+
+    // ── Per-stop XP calculation ────────────────────────────────────────────
+    // Returns { stopXp, districtBonusXp, bonusLabel }
+    function calcStopXp(stop) {
+      const stopXp = typeof stop.xp === 'number' ? stop.xp : 10; // default 10 XP
+      let districtBonusXp = 0;
+      let bonusLabel = '';
+
+      // District-change bonus: +20 XP when crossing into a new district
+      if (stop.district && lastReachedDistrict && stop.district !== lastReachedDistrict) {
+        districtBonusXp = 20;
+        bonusLabel = `⬆️ 跨區獎勵 +20 XP`;
+      }
+      return { stopXp, districtBonusXp, bonusLabel };
+    }
+
+    // Show a brief XP toast near the top of the screen
+    function showXpToast(text) {
+      const existing = document.getElementById('xp-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      toast.id = 'xp-toast';
+      toast.style.cssText = `
+        position:fixed;top:calc(env(safe-area-inset-top) + 8em);left:50%;
+        transform:translateX(-50%);z-index:300;
+        background:rgba(4,217,60,0.92);color:#1a252f;
+        border-radius:20px;padding:0.4em 1.1em;font-size:0.9em;font-weight:bold;
+        pointer-events:none;transition:opacity 0.5s;white-space:nowrap;
+      `;
+      toast.textContent = text;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; }, 1800);
+      setTimeout(() => { toast.remove(); }, 2400);
+    }
+
+    // Update the running XP display in the HUD
+    function updateSessionXpDisplay() {
+      const el = document.getElementById('stat-xp');
+      if (el) el.textContent = sessionXp;
     }
 
     // ── Locked screen ─────────────────────────────────────────────────────
@@ -431,7 +480,7 @@
           iconSize: [26, 26], iconAnchor: [13, 13],
         });
         L.marker([s.lat, s.lon], { icon })
-          .bindPopup(`<b>站 ${s.order}</b><br>${s.name}`)
+          .bindPopup(`<b>${s.code || '站 ' + s.order}</b><br>${s.name}${s.name_en ? '<br><span style="font-size:0.85em;opacity:0.8">' + s.name_en + '</span>' : ''}`)
           .addTo(map);
       });
     }
@@ -444,7 +493,8 @@
         const pill = document.createElement('span');
         pill.className = 'stop-pill';
         pill.id = 'pill-' + s.order;
-        pill.textContent = `${s.order}. ${s.name}`;
+        const label = s.code ? `${s.code} ${s.name}` : `${s.order}. ${s.name}`;
+        pill.textContent = label;
         container.appendChild(pill);
       });
       updateNextStopUI();
@@ -456,7 +506,8 @@
       if (next) {
         const pill = document.getElementById('pill-' + next.order);
         if (pill) pill.classList.add('next');
-        document.getElementById('next-stop-name').textContent = `站 ${next.order}：${next.name}`;
+        const label = next.code ? `${next.code}：${next.name}` : `站 ${next.order}：${next.name}`;
+        document.getElementById('next-stop-name').textContent = label;
       } else {
         document.getElementById('next-stop-name').textContent = '所有站點已到達！';
         document.getElementById('next-stop-dist').textContent = '✅';
@@ -466,6 +517,19 @@
     }
 
     function markStopReached(stop) {
+      // Award per-stop XP and district-change bonus
+      const { stopXp, districtBonusXp, bonusLabel } = calcStopXp(stop);
+      sessionXp += stopXp + districtBonusXp;
+      if (stop.district) lastReachedDistrict = stop.district;
+      updateSessionXpDisplay();
+
+      // Toast notifications
+      if (districtBonusXp > 0) {
+        showXpToast(`${bonusLabel}　✅ 站點 +${stopXp} XP`);
+      } else if (stopXp > 0) {
+        showXpToast(`+${stopXp} XP`);
+      }
+
       reachedStops.add(stop.order);
       const pill = document.getElementById('pill-' + stop.order);
       if (pill) {
@@ -479,7 +543,8 @@
         map.eachLayer(l => {
           if (l instanceof L.Marker) {
             const p = l.getPopup();
-            if (p && p.getContent().includes(`站 ${stop.order}</b>`)) {
+            const codeLabel = stop.code || ('站 ' + stop.order);
+            if (p && p.getContent().includes(`<b>${codeLabel}</b>`)) {
               l.setIcon(L.divIcon({
                 className: '',
                 html: `<div style="background:#04D93C;color:#1a252f;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${stop.order}</div>`,
@@ -570,7 +635,7 @@
       // Distance display
       document.getElementById('stat-dist').textContent = formatDist(totalDistM);
 
-      // Check stop proximity
+      // Check stop proximity (sequential: only check the NEXT unreached stop)
       const next = routeStops.find(s => !reachedStops.has(s.order));
       if (next) {
         const dist = haversineM(lat, lon, next.lat, next.lon);
@@ -579,10 +644,11 @@
 
         if (dist <= STOP_DETECTION_RADIUS_M) {
           markStopReached(next);
+          const stopLabel = next.code ? `${next.code}：${next.name}` : `站 ${next.order}：${next.name}`;
           if (window.CTRCHK_PWA) {
             window.CTRCHK_PWA.sendLocalNotification(
               '🚏 到達站點',
-              `站 ${next.order}：${next.name}`,
+              stopLabel,
               'ctrc-stop-' + next.order
             );
           }
@@ -627,8 +693,20 @@
       const distKm = parseFloat((totalDistM / 1000).toFixed(2));
       const avgSpeed = durationMins > 0 ? parseFloat((distKm / (durationMins / 60)).toFixed(1)) : 0;
 
+      // Route completion bonus XP: +200 if all stops reached
+      const allStopsReached = routeStops.length > 0 &&
+        routeStops.every(s => reachedStops.has(s.order));
+      if (allStopsReached) {
+        sessionXp += 200;
+        updateSessionXpDisplay();
+      }
+
+      // 45-min bonus coins
+      const bonusCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
+        ? FAST_FINISH_BONUS_COINS : 0;
+
       // Submit to API
-      let apiResult = { xp_earned: 0, level: 1, xp: 0, coins: 0, level_up: false, coins_earned: 0 };
+      let apiResult = { xp_earned: 0, level: 1, xp: 0, coins: 0, level_up: false, coins_earned: 0, bonus_coins_earned: 0 };
       const token = localStorage.getItem('accessToken');
       if (token) {
         try {
@@ -643,6 +721,8 @@
             avg_speed_kmh: avgSpeed || null,
             stops_reached: [...reachedStops],
             source: 'pwa',
+            xp_earned_override: sessionXp,
+            bonus_coins: bonusCoins,
           };
           const res = await fetch('/api/getHistory', {
             method: 'POST',
@@ -696,6 +776,17 @@
       const { durationMins, distKm, avgSpeed, apiResult } = data;
       document.getElementById('summary-xp-badge').textContent =
         `+${apiResult.xp_earned || 0} XP`;
+
+      // Show 45-min bonus coins if earned
+      const bonusCoinsEl = document.getElementById('summary-bonus-coins');
+      const bc = apiResult.bonus_coins_earned || 0;
+      if (bc > 0) {
+        bonusCoinsEl.textContent = `⚡ 45分鐘內完成！+${bc} 里程幣獎勵`;
+        bonusCoinsEl.style.display = '';
+      } else {
+        bonusCoinsEl.style.display = 'none';
+      }
+
       document.getElementById('s-time').textContent =
         durationMins > 0 ? `${durationMins} 分鐘` : '--';
       document.getElementById('s-dist').textContent =

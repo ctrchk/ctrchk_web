@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS routes_config (
 -- 里程幣解鎖路線：900S, 914B, 920, 961P, 962P, 962X（unlock_cost 為暫定值，待確認）
 INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
 VALUES
-  ('900',   1,  NULL, 150, false),
+  ('900',   1,  NULL, 450, false),  -- 20 站點系統：19×10 XP + 3 區段×20 XP + 200 完成獎勵
   ('900A',  1,  NULL, 120, false),
   ('966T',  1,  NULL,  90, false),  -- 初始路線（取代 966）
   ('914',   4,  NULL,  80, false),
@@ -311,3 +311,133 @@ CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
 CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
 
 COMMENT ON COLUMN forum_topics.tag IS 'Discussion category: 路線討論 | 車站討論 | 地點討論 | NULL (no tag)';
+
+-- =========================================================
+-- 每日 / 每週任務系統
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS task_definitions (
+  id              SERIAL PRIMARY KEY,
+  task_type       VARCHAR(10)  NOT NULL CHECK (task_type IN ('daily','weekly')),
+  task_key        VARCHAR(50)  NOT NULL UNIQUE,
+  title_zh        VARCHAR(100) NOT NULL,
+  title_en        VARCHAR(100),
+  description_zh  VARCHAR(255),
+  description_en  VARCHAR(255),
+  target_value    INTEGER      NOT NULL DEFAULT 1,  -- e.g. 1 ride, 5 km
+  xp_reward       INTEGER      NOT NULL DEFAULT 0,
+  coin_reward     INTEGER      NOT NULL DEFAULT 0,
+  is_active       BOOLEAN      DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS user_task_progress (
+  id             SERIAL PRIMARY KEY,
+  user_id        INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  task_key       VARCHAR(50) NOT NULL,
+  period_date    DATE        NOT NULL,  -- daily: the day; weekly: the Monday of that week
+  current_value  INTEGER     NOT NULL DEFAULT 0,
+  completed      BOOLEAN     DEFAULT FALSE,
+  completed_at   TIMESTAMP,
+  reward_claimed BOOLEAN     DEFAULT FALSE,
+  UNIQUE(user_id, task_key, period_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_task_progress_user_id    ON user_task_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_task_progress_period     ON user_task_progress(period_date);
+CREATE INDEX IF NOT EXISTS idx_user_task_progress_task_key   ON user_task_progress(task_key);
+
+-- 每日任務定義
+INSERT INTO task_definitions (task_type, task_key, title_zh, title_en, description_zh, description_en, target_value, xp_reward, coin_reward)
+VALUES
+  ('daily', 'daily_ride_once',    '完成一次騎行',        'Complete One Ride',        '今日完成任意一條路線騎行',        'Complete any route ride today',         1, 20,  0),
+  ('daily', 'daily_ride_5km',     '今日騎行達5公里',     'Ride 5 km Today',          '今日累計騎行距離達5公里',         'Accumulate 5 km of riding today',       5, 30,  5),
+  ('daily', 'daily_reach_5stops', '到達5個站點',         'Reach 5 Stops',            '今日累計到達5個不同站點',         'Reach 5 different stops today',         5, 15,  0),
+  ('daily', 'daily_route_900',    '騎行900線',           'Ride Route 900',           '完成900線（市區海濱線）的騎行',   'Complete a ride on Route 900',          1, 30, 10)
+ON CONFLICT (task_key) DO UPDATE SET
+  title_zh       = EXCLUDED.title_zh,
+  title_en       = EXCLUDED.title_en,
+  description_zh = EXCLUDED.description_zh,
+  description_en = EXCLUDED.description_en,
+  target_value   = EXCLUDED.target_value,
+  xp_reward      = EXCLUDED.xp_reward,
+  coin_reward    = EXCLUDED.coin_reward;
+
+-- 每週任務定義
+INSERT INTO task_definitions (task_type, task_key, title_zh, title_en, description_zh, description_en, target_value, xp_reward, coin_reward)
+VALUES
+  ('weekly', 'weekly_ride_3times',  '本週完成3次騎行',     'Complete 3 Rides This Week',   '本週完成任意3次路線騎行',         'Complete any 3 route rides this week',  3, 80,  20),
+  ('weekly', 'weekly_ride_20km',    '本週騎行達20公里',    'Ride 20 km This Week',         '本週累計騎行距離達20公里',        'Accumulate 20 km of riding this week', 20, 100, 30),
+  ('weekly', 'weekly_3routes',      '本週騎行3條不同路線', 'Ride 3 Different Routes',      '本週騎行至少3條不同路線',         'Ride at least 3 different routes',      3, 120, 40),
+  ('weekly', 'weekly_45min_bonus',  '45分鐘內完成路線',    'Finish Route Within 45 Min',   '本週至少一次在45分鐘內完成路線', 'Finish any route within 45 minutes',    1, 50,  15)
+ON CONFLICT (task_key) DO UPDATE SET
+  title_zh       = EXCLUDED.title_zh,
+  title_en       = EXCLUDED.title_en,
+  description_zh = EXCLUDED.description_zh,
+  description_en = EXCLUDED.description_en,
+  target_value   = EXCLUDED.target_value,
+  xp_reward      = EXCLUDED.xp_reward,
+  coin_reward    = EXCLUDED.coin_reward;
+
+-- =========================================================
+-- 成就獎牌系統
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS achievement_definitions (
+  id              SERIAL PRIMARY KEY,
+  ach_key         VARCHAR(50)  NOT NULL UNIQUE,
+  title_zh        VARCHAR(100) NOT NULL,
+  title_en        VARCHAR(100),
+  description_zh  VARCHAR(255),
+  description_en  VARCHAR(255),
+  icon            VARCHAR(10)  DEFAULT '🏅',  -- emoji icon
+  xp_reward       INTEGER      NOT NULL DEFAULT 0,
+  coin_reward     INTEGER      NOT NULL DEFAULT 0,
+  condition_type  VARCHAR(50),   -- 'rides_count' | 'distance_km' | 'level' | 'route_complete' | 'stops_count'
+  condition_value INTEGER,       -- the threshold for the condition
+  is_hidden       BOOLEAN      DEFAULT FALSE  -- hidden until achieved (secret achievements)
+);
+
+CREATE TABLE IF NOT EXISTS user_achievements (
+  id           SERIAL PRIMARY KEY,
+  user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  ach_key      VARCHAR(50) NOT NULL,
+  achieved_at  TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, ach_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON user_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_ach_key ON user_achievements(ach_key);
+
+-- 成就獎牌定義
+INSERT INTO achievement_definitions (ach_key, title_zh, title_en, description_zh, description_en, icon, xp_reward, coin_reward, condition_type, condition_value)
+VALUES
+  -- 騎行次數
+  ('first_ride',      '初次出發',       'First Pedal',         '完成第一次騎行',                     'Complete your very first ride',              '🚲', 50,  10, 'rides_count', 1),
+  ('rides_5',         '常客',           'Regular Rider',       '累計完成5次騎行',                    'Complete 5 rides in total',                  '🥉', 30,  20, 'rides_count', 5),
+  ('rides_20',        '資深騎手',       'Seasoned Cyclist',    '累計完成20次騎行',                   'Complete 20 rides in total',                 '🥈', 80,  50, 'rides_count', 20),
+  ('rides_50',        '鐵腿達人',       'Iron Legs',           '累計完成50次騎行',                   'Complete 50 rides in total',                 '🥇', 200, 100, 'rides_count', 50),
+  -- 里程
+  ('dist_50km',       '半百里程',       '50 km Club',          '累計騎行距離達50公里',               'Accumulate 50 km of riding',                 '📍', 50,  20, 'distance_km', 50),
+  ('dist_200km',      '城市探索者',     'City Explorer',       '累計騎行距離達200公里',              'Accumulate 200 km of riding',                '🗺️', 150, 60, 'distance_km', 200),
+  ('dist_500km',      '將軍澳傳奇',     'TKO Legend',          '累計騎行距離達500公里',              'Accumulate 500 km of riding',                '🏆', 400, 150, 'distance_km', 500),
+  -- 等級
+  ('level_5',         '城市騎手',       'City Rider',          '達到第5級',                          'Reach Level 5',                              '⭐', 0,   30, 'level', 5),
+  ('level_10',        '路線達人',       'Route Master',        '達到第10級',                         'Reach Level 10',                             '🌟', 0,   80, 'level', 10),
+  ('level_20',        '殿堂傳說',       'Hall of Legend',      '達到第20級',                         'Reach Level 20',                             '💫', 0,  200, 'level', 20),
+  -- 路線完成
+  ('route_900',       '海濱漫遊者',     'Coastal Wanderer',    '完成路線900（市區海濱線）',           'Complete Route 900 (Coastal Commuter)',       '🌊', 50,  20, 'route_complete', NULL),
+  ('route_900_fast',  '海濱飛人',       'Coastal Sprinter',    '在45分鐘內完成路線900',              'Complete Route 900 within 45 minutes',       '⚡', 80,  30, 'route_complete', NULL),
+  ('route_900_all',   '全站騎士',       'All Stops Rider',     '完成路線900的所有20個站點',          'Reach all 20 stops on Route 900',            '🗓️', 100, 40, 'stops_count', 20),
+  -- 隱藏成就
+  ('zone_changer',    '跨區達人',       'Zone Hopper',         '在一次騎行中完成所有3次區段切換',    'Cross all 3 zone boundaries in one ride',    '🔀', 60,  25, 'stops_count', NULL),
+  ('night_rider',     '夜間騎手',       'Night Rider',         '在晚上10時至凌晨6時完成一次騎行',   'Complete a ride between 10pm and 6am',       '🌙', 40,  15, 'rides_count', NULL)
+ON CONFLICT (ach_key) DO UPDATE SET
+  title_zh       = EXCLUDED.title_zh,
+  title_en       = EXCLUDED.title_en,
+  description_zh = EXCLUDED.description_zh,
+  description_en = EXCLUDED.description_en,
+  icon           = EXCLUDED.icon,
+  xp_reward      = EXCLUDED.xp_reward,
+  coin_reward    = EXCLUDED.coin_reward,
+  condition_type = EXCLUDED.condition_type,
+  condition_value= EXCLUDED.condition_value;

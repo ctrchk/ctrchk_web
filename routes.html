@@ -116,6 +116,79 @@
 }
 
 /* ════════ APP-ONLY ride page styles ════════ */
+/* Department selection screen */
+#app-dept-select {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--app-bg-primary, #121f14);
+    color: var(--app-text-primary, #e8f5e9);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+    overflow-y: auto;
+    padding: calc(env(safe-area-inset-top) + 1em) 1em 1em;
+}
+.app-dept-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    margin-bottom: 1.2em;
+    flex-shrink: 0;
+}
+.app-dept-header h2 {
+    font-size: 1.1em;
+    font-weight: bold;
+    flex: 1;
+}
+.app-dept-subtitle {
+    font-size: 0.82em;
+    color: var(--app-text-secondary, #a8d8a0);
+    margin-bottom: 1.2em;
+    opacity: 0.85;
+}
+.app-dept-card {
+    background: var(--app-bg-card, #1e3820);
+    border: 1.5px solid var(--app-border, #2d4d2d);
+    border-radius: 14px;
+    padding: 1.2em 1.2em 1em;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 0.8em;
+}
+.app-dept-card:active, .app-dept-card:hover {
+    border-color: var(--app-accent, #6dba65);
+    background: rgba(76,175,80,0.1);
+}
+.app-dept-card-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+}
+.app-dept-card-region {
+    font-size: 0.78em;
+    color: var(--app-text-secondary, #a8d8a0);
+    margin-top: 0.2em;
+}
+.app-dept-card-meta {
+    font-size: 0.78em;
+    color: var(--app-text-secondary, #a8d8a0);
+    margin-top: 0.5em;
+}
+.app-dept-card-arrow {
+    float: right;
+    opacity: 0.6;
+    font-size: 1.1em;
+}
+.app-dept-coming-soon {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.app-dept-coming-soon:active, .app-dept-coming-soon:hover {
+    border-color: var(--app-border, #2d4d2d);
+    background: var(--app-bg-card, #1e3820);
+}
+
 #app-ride-page {
     display: flex;
     flex-direction: column;
@@ -403,13 +476,26 @@
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
 
+    <!-- ════════ APP-ONLY department selection screen ════════ -->
+    <div id="app-dept-select" class="app-only" style="display:none;">
+        <div class="app-dept-header">
+            <h2>🗺️ 選擇騎行部門</h2>
+        </div>
+        <div class="app-dept-subtitle">請先選擇部門，即可查看對應地圖及路線</div>
+        <div id="app-dept-list"></div>
+    </div>
+
     <!-- ════════ APP-ONLY ride / cycling page ════════ -->
-    <div id="app-ride-page" class="app-only">
+    <div id="app-ride-page" class="app-only" style="display:none;">
 
         <!-- Search + filter bar -->
         <div class="app-ride-topbar">
             <div class="app-ride-search-row">
-                <i class="fas fa-search"></i>
+                <button id="app-back-to-dept" title="返回部門選擇" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em 0.4em 0.2em 0;flex-shrink:0;font-size:1em;" onclick="showDeptSelect()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <span id="app-dept-label" style="font-size:0.8em;color:#a8d8a0;white-space:nowrap;flex-shrink:0;"></span>
+                <i class="fas fa-search" style="margin-left:0.3em;"></i>
                 <input type="text" id="app-search-input" class="app-ride-search-input"
                        placeholder="搜尋路線、別稱、總站...">
                 <button id="app-search-clear" style="background:none;border:none;color:#5a7a5a;cursor:pointer;padding:0.3em;display:none;">
@@ -843,10 +929,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Main initialisation ────────────────────────────────────────────────
 let _appRideInited = false;
+
+// Department definitions
+const DEPARTMENTS = [
+    {
+        id: 'tko',
+        name: '將軍澳部',
+        region: '西貢區',
+        description: '將軍澳全區單車路線，包括寶琳、坑口、調景嶺等',
+        routeCount: null,     // will be filled after routes load
+        mapCenter: [22.308, 114.262],
+        mapZoom: 13,
+        available: true,
+    },
+    {
+        id: 'st',
+        name: '沙田部',
+        region: '沙田區',
+        description: '沙田區單車路線（規劃中）',
+        routeCount: 0,
+        mapCenter: [22.382, 114.188],
+        mapZoom: 13,
+        available: false,
+    },
+];
+
+let selectedDeptId = null;
+
+// Show the department selection screen (app-only)
+function showDeptSelect() {
+    document.getElementById('app-dept-select').style.display = '';
+    document.getElementById('app-ride-page').style.display = 'none';
+
+    const list = document.getElementById('app-dept-list');
+    list.innerHTML = '';
+
+    DEPARTMENTS.forEach(dept => {
+        const card = document.createElement('div');
+        card.className = 'app-dept-card' + (dept.available ? '' : ' app-dept-coming-soon');
+
+        const routeCountText = dept.routeCount !== null
+            ? `${dept.routeCount} 條路線`
+            : '載入中...';
+
+        card.innerHTML = `
+            <div class="app-dept-card-title">
+                🚴 ${dept.name}
+                <span class="app-dept-card-arrow">${dept.available ? '›' : '🔒'}</span>
+            </div>
+            <div class="app-dept-card-region">${dept.region}</div>
+            <div class="app-dept-card-meta">${dept.description}${dept.available ? ` ‧ ${routeCountText}` : ' ‧ 即將推出'}</div>
+        `;
+
+        if (dept.available) {
+            card.addEventListener('click', () => enterDepartment(dept));
+        }
+        list.appendChild(card);
+    });
+}
+
+// Enter a department: show the map & route list
+function enterDepartment(dept) {
+    selectedDeptId = dept.id;
+    document.getElementById('app-dept-select').style.display = 'none';
+    document.getElementById('app-ride-page').style.display = '';
+
+    // Show department label in topbar
+    const deptLabel = document.getElementById('app-dept-label');
+    if (deptLabel) deptLabel.textContent = dept.name;
+
+    // Recenter map on department
+    if (map) {
+        map.setView(dept.mapCenter, dept.mapZoom, { animate: true });
+    }
+    renderRoutes();
+}
+
 async function initAppRidePage() {
     if (_appRideInited) return;
     const ridePage = document.getElementById('app-ride-page');
-    if (!ridePage) return;
+    const deptPage = document.getElementById('app-dept-select');
+    if (!ridePage || !deptPage) return;
 
     const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
                   navigator.standalone === true ||
@@ -858,7 +1021,7 @@ async function initAppRidePage() {
     isLoggedIn = !!localStorage.getItem('accessToken');
     userLevel = getUserLevel();
 
-    // Init map
+    // Init map (but keep hidden until department is selected)
     initMap();
 
     // Load routes
@@ -866,11 +1029,20 @@ async function initAppRidePage() {
         const res = await fetch('/routes.json');
         const data = await res.json();
         appRoutes = data.routes || [];
-        renderRoutes();
+
+        // Count routes per department by tag
+        const tkoDept = DEPARTMENTS.find(d => d.id === 'tko');
+        if (tkoDept) {
+            tkoDept.routeCount = appRoutes.filter(r =>
+                r.tags && r.tags.some(t => t.includes('將軍澳'))
+            ).length;
+        }
     } catch(e) {
-        document.getElementById('app-routes-list').innerHTML =
-            '<div class="app-no-routes"><i class="fas fa-exclamation-circle"></i>無法載入路線資料</div>';
+        console.warn('[AppRide] Failed to load routes:', e);
     }
+
+    // Show department selection first
+    showDeptSelect();
 }
 
 if (document.readyState !== 'loading') initAppRidePage();
