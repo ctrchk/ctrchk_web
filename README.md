@@ -590,7 +590,7 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 | 10 | TIK 03 | 彩明苑彩桃閣 | Choi Ming Court Choi To House | — | ⬇️ |
 | 11 | TIK 11 | 將軍澳中心 | Park Central | 單車徑 | ↕️ |
 | 12 | TIK 02 | 調景嶺體育館 | Tiu Keng Leng Sports Centre | 翠嶺路 | ↕️ |
-| 13 | TIK 12 | 調景嶺站-知專設計學院總站 | Tiu Keng Leng Station - IVE (Tuen Mun) Terminus | — | ↕️ |
+| 13 | TIK 12 | 調景嶺站-知專設計學院總站 | Tiu Keng Leng Station - HKDI Terminus | — | ↕️ |
 | 14 | TIK 01 | 調景嶺站、維景灣畔 | Tiu Keng Leng Station, Ocean Shores | 唐賢街 | ⬆️ |
 | 15 | TIK 06 | 調景嶺總站 | Tiu Keng Leng Terminus | 單車徑 | 🟢 |
 
@@ -717,15 +717,15 @@ PWA App 模式下，騎行功能分為兩個獨立頁面：
 | App 主頁移除天氣 | 快捷功能格替換「天氣」→「任務」連結 | `index.html` |
 | 路線任務完成要求 | 每日/每週路線任務改為需要徹底完成全程所有站點（`all_stops = true`）方可計算 | `tasks.html` |
 | 每日簽到功能 | `/tasks` 頁面新增每日簽到卡片（+30 XP + 1 里程幣；連續 7 天額外 +1 里程幣） | `tasks.html` |
+| 騎行前前往起點 | 騎行啟動後先顯示「前往起點」橫幅，用戶進入起點 50m 範圍後才正式計時；提供「略過」按鈕 | `ride.html` |
+| 騎行地圖深色主題 | 騎行地圖由 OpenStreetMap 改用 CartoDB Dark 主題，提升夜間及戶外可讀性 | `ride.html` |
+| 路線選擇頁總站標記更新 | `routes.html` 總站標記座標改用 `routes.json` 已驗證數據（含 966T 調景嶺站出口、康城站等） | `routes.html` |
+| 路線詳情站點資訊豐富化 | `route_detail.html` 及英文版站點列表新增站點代碼、道路名稱、方向符號、英文名、XP 及方向圖例 | `route_detail.html`, `en/route_detail.html` |
 
 #### 🔧 待改進（計劃中）
 
 | 項目 | 說明 |
 |------|------|
-| 騎行開始前須抵達起點 | 開始路線後顯示「前往起點」狀態，待用戶進入起點 50m 範圍後才正式計時 |
-| 騎行地圖觀感優化 | 騎行中地圖改用深色主題（CartoDB Dark）；HUD 樣式整理 |
-| 更多總站地圖標記 | `routes.html` 地圖上的總站標記可由 `routes.json` 設定（待設計） |
-| 網頁路線詳情更新 | `route_detail.html` 各路線站點詳情依已提交資料展示（待逐條更新） |
 | 每日簽到後端整合 | 目前簽到記錄僅在 `localStorage`，待遷移至資料庫以支援多設備同步 |
 
 ### 18.2 路線 XP 系統說明

@@ -127,12 +127,25 @@
 
         /* ── Stops list ────────────────────────────────── */
         #stops-section { max-width: 1000px; margin: 0 auto 2em; padding: 0 2em; }
-        #stops-section h3 { font-size: 1.3em; margin-bottom: 0.8em; color: var(--app-bg-card, #1e3820); }
+        #stops-section h3 { font-size: 1.3em; margin-bottom: 0.5em; color: var(--app-bg-card, #1e3820); }
+        .stops-legend { display: flex; flex-wrap: wrap; gap: 0.5em; margin-bottom: 0.8em; font-size: 0.8em; color: #555; }
+        .stops-legend span { white-space: nowrap; }
         .stops-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4em; }
-        .stop-item { display: flex; align-items: center; gap: 0.8em; padding: 0.6em 1em; background: var(--app-bg-card, #1e3820); border-radius: 6px; border-left: 3px solid var(--app-accent, #6dba65); font-size: 0.95em; }
-        .stop-badge { background: var(--app-bg-card, #1e3820); color: #fff; width: 1.8em; height: 1.8em; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: bold; flex-shrink: 0; }
-        .stop-item.reached { border-left-color: var(--app-accent, #6dba65); background: #f0fff4; }
-        .stop-item.reached .stop-badge { background: var(--app-accent, #6dba65); color: var(--app-bg-card, #1e3820); }
+        .stop-item { display: flex; align-items: flex-start; gap: 0.8em; padding: 0.7em 1em; background: var(--app-bg-card, #1e3820); border-radius: 6px; border-left: 3px solid var(--app-accent, #6dba65); font-size: 0.92em; color: #fff; }
+        .stop-item.terminus-start { border-left-color: #e53935; }
+        .stop-item.terminus-end { border-left-color: #43a047; }
+        .stop-badge { background: rgba(109,186,101,0.15); color: #6dba65; min-width: 2em; height: 2em; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78em; font-weight: bold; flex-shrink: 0; }
+        .stop-body { flex: 1; min-width: 0; }
+        .stop-header { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; margin-bottom: 0.15em; }
+        .stop-code { font-size: 0.74em; font-weight: 700; color: #a8d8a0; background: rgba(109,186,101,0.12); padding: 0.1em 0.45em; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+        .stop-name { font-weight: 600; font-size: 0.92em; color: #fff; }
+        .stop-name-zh { font-size: 0.78em; color: #a8d8a0; margin-top: 0.1em; }
+        .stop-meta { display: flex; gap: 0.6em; margin-top: 0.25em; flex-wrap: wrap; align-items: center; }
+        .stop-road { font-size: 0.75em; color: #7aad7a; }
+        .stop-dir { font-size: 0.9em; flex-shrink: 0; }
+        .stop-xp { font-size: 0.72em; color: #6dba65; font-weight: 600; background: rgba(109,186,101,0.08); padding: 0.1em 0.4em; border-radius: 4px; }
+        .stop-item.reached { border-left-color: var(--app-accent, #6dba65); background: #1a3220; }
+        .stop-item.reached .stop-badge { background: var(--app-accent, #6dba65); color: #1e3820; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -160,6 +173,13 @@
         <!-- Stops List -->
         <section id="stops-section" style="display:none;">
             <h3>🚏 Stops</h3>
+            <div class="stops-legend" id="stops-legend">
+                <span>🔴 Upper Terminus</span>
+                <span>🟢 Lower Terminus</span>
+                <span>↕️ Both Directions</span>
+                <span>⬆️ Upbound Only</span>
+                <span>⬇️ Downbound Only</span>
+            </div>
             <ul id="stops-list" class="stops-list"></ul>
         </section>
     </main>
@@ -201,15 +221,42 @@
 
       function renderStopsOnMap(stops) {
         stops.forEach(s => {
-          const icon = L.divIcon({ className:'', html:`<div style="background:var(--app-bg-card, #1e3820);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;">${s.order}</div>`, iconSize:[24,24], iconAnchor:[12,12] });
-          L.marker([s.lat,s.lon],{icon}).bindPopup(`<b>Stop ${s.order}</b><br>${s.name}`).addTo(map);
+          const isStart = s.direction === '🔴';
+          const isEnd   = s.direction === '🟢';
+          const bg    = isStart ? '#e53935' : isEnd ? '#43a047' : '#1e3820';
+          const color = isStart ? '#fff'     : isEnd ? '#fff'    : '#6dba65';
+          const border = isStart ? '#e53935' : isEnd ? '#43a047' : '#BFE340';
+          const icon = L.divIcon({ className:'', html:`<div style="background:${bg};color:${color};width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid ${border};">${s.order}</div>`, iconSize:[24,24], iconAnchor:[12,12] });
+          const codeLabel = s.code ? `<b>${s.code}</b>` : `<b>Stop ${s.order}</b>`;
+          const roadHtml = s.road ? `<br><span style="font-size:0.85em;opacity:0.75">📍 ${s.road}</span>` : '';
+          const zhHtml = s.name && s.name_en ? `<br><span style="font-size:0.82em;opacity:0.75">${s.name}</span>` : '';
+          const displayName = s.name_en || s.name;
+          L.marker([s.lat,s.lon],{icon}).bindPopup(`${codeLabel}<br>${displayName}${zhHtml}${roadHtml}`).addTo(map);
         });
       }
 
       function renderStopsList(stops) {
         const list = document.getElementById('stops-list');
         if (!list || !stops.length) return;
-        list.innerHTML = stops.map(s => `<li class="stop-item" id="stop-item-${s.order}"><span class="stop-badge">${s.order}</span><span>${s.name}</span></li>`).join('');
+        list.innerHTML = '';
+        stops.forEach(s => {
+          const isStart = s.direction === '🔴';
+          const isEnd   = s.direction === '🟢';
+          const cls = 'stop-item' + (isStart ? ' terminus-start' : isEnd ? ' terminus-end' : '');
+          const codeHtml = s.code ? `<span class="stop-code">${s.code}</span>` : '';
+          const dirHtml  = s.direction ? `<span class="stop-dir">${s.direction}</span>` : '';
+          const displayName = s.name_en || s.name;
+          const zhHtml = s.name_en && s.name ? `<div class="stop-name-zh">${s.name}</div>` : '';
+          const roadHtml = s.road ? `<span class="stop-road">📍 ${s.road}</span>` : '';
+          const xpHtml = typeof s.xp === 'number' && s.xp > 0 ? `<span class="stop-xp">+${s.xp} XP</span>` : '';
+          list.innerHTML += `<li class="${cls}" id="stop-item-${s.order}">
+            <span class="stop-badge">${s.order}</span>
+            <div class="stop-body">
+              <div class="stop-header">${codeHtml}<span class="stop-name">${displayName}</span>${dirHtml}</div>
+              ${zhHtml}
+              <div class="stop-meta">${roadHtml}${xpHtml}</div>
+            </div></li>`;
+        });
         document.getElementById('stops-section').style.display = 'block';
       }
 
