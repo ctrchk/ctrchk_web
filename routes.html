@@ -563,20 +563,20 @@ const ROUTE_XP = {
     '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
 };
 
-// TKO terminal stations (approximate GPS, will be updated with real data)
+// TKO terminal stations — coordinates verified from routes.json stop data
 const TERMINALS = [
-    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696 }, // verified: POA 01
+    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696 }, // POA 01
     { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.3187,  lng: 114.2565  },
     { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248,  lng: 114.2490  },
-    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607 }, // verified: TIK 06
+    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607 }, // TIK 06
+    { id: 'tseung_exit', name: '調景嶺站-出口',         lat: 22.30465, lng: 114.25305 }, // TIK 13 (966T start)
     { id: 'hang_hau',    name: '坑口站',                lat: 22.3124,  lng: 114.2655  },
-    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.3075,  lng: 114.2617  },
-    { id: 'lohas',       name: '康城站',                lat: 22.2988,  lng: 114.2884  },
+    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.30738, lng: 114.25666 }, // TIK 11
+    { id: 'lohas',       name: '康城站',                lat: 22.29626, lng: 114.26692 }, // LHP 06 (966T end)
     { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724  },
-    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331 }, // verified: TIK 04
-    { id: 'marina_bay',  name: '維景灣畔',              lat: 22.2900,  lng: 114.2649  },
-    { id: 'peak_1',      name: '峻瀅',                  lat: 22.2905,  lng: 114.2755  },
-    { id: 'hospital',    name: '將軍澳醫院',            lat: 22.3133,  lng: 114.2700  },
+    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331 }, // TIK 04
+    { id: 'green_field', name: 'Green Field 公園',      lat: 22.31444, lng: 114.25895 }, // TKO 08
+    { id: 'po_shun',     name: '寶順路轉乘站',          lat: 22.31793, lng: 114.26225 }, // HAH 02
 ];
 
 // Map of terminal name to terminal ID for route matching

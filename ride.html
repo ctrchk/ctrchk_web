@@ -19,7 +19,33 @@
     html, body { height: 100%; overflow: hidden; background: #1a252f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif; }
 
     /* ── Full-screen map ── */
-    #ride-map { position: fixed; inset: 0; z-index: 0; }
+    #ride-map { position: fixed; inset: 0; z-index: 0; background: #0d1a24; }
+
+    /* ── Go-to-start banner ── */
+    #go-to-start-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+      background: linear-gradient(135deg, #1a252f, #223040);
+      color: #fff; border-radius: 18px 18px 0 0;
+      padding: 1.2em 1.4em calc(env(safe-area-inset-bottom) + 1.2em);
+      text-align: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    }
+    #go-to-start-banner .gts-icon { font-size: 2.5em; margin-bottom: 0.2em; }
+    #go-to-start-banner h3 {
+      font-size: 1.1em; font-weight: bold; color: #BFE340; margin-bottom: 0.3em;
+    }
+    #go-to-start-banner p {
+      font-size: 0.85em; opacity: 0.75; margin-bottom: 0.8em; line-height: 1.4;
+    }
+    #gts-dist-row {
+      display: flex; align-items: center; justify-content: center; gap: 0.5em;
+      font-size: 1.3em; font-weight: bold; color: #BFE340; margin-bottom: 0.8em;
+    }
+    #gts-dist-val { font-size: 1.4em; }
+    #btn-skip-gts {
+      background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 20px;
+      padding: 0.4em 1.2em; font-size: 0.8em; cursor: pointer;
+    }
 
     /* ── Top HUD ── */
     #ride-top {
@@ -231,6 +257,18 @@
     <div id="next-stop-dist">-- m</div>
   </div>
 
+  <!-- Go-to-start banner (shown before ride begins) -->
+  <div id="go-to-start-banner" style="display:none;">
+    <div class="gts-icon">📍</div>
+    <h3>前往起點</h3>
+    <p id="gts-start-name">請前往路線起點，抵達後將自動開始計時</p>
+    <div id="gts-dist-row">
+      <span>距起點</span>
+      <span id="gts-dist-val">-- m</span>
+    </div>
+    <button class="btn-skip-gts" id="btn-skip-gts" onclick="skipGoToStart()">略過 →</button>
+  </div>
+
   <!-- Bottom sheet -->
   <div id="ride-bottom">
     <div id="gps-status-text">正在連接 GPS...</div>
@@ -341,10 +379,14 @@
     const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
     const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
     const DEFAULT_STOP_XP = 10;          // XP awarded for reaching a stop that has no explicit xp field
-    const ROUTE_COMPLETION_XP = 200;     // bonus XP for completing all stops on a route
+    const DEFAULT_ROUTE_COMPLETION_XP = 200; // fallback bonus XP for completing all stops on a route
     const DISTRICT_CHANGE_XP = 20;       // bonus XP for crossing into a new district zone
-    const FAST_FINISH_MINUTES = 45;      // finish within this time for bonus coins
-    const FAST_FINISH_BONUS_COINS = 5;   // bonus coins for finishing within FAST_FINISH_MINUTES
+    const DEFAULT_FAST_FINISH_MINUTES = 45;  // fallback: finish within this time for bonus coins
+    const FAST_FINISH_BONUS_COINS = 5;   // bonus coins for finishing within fast_finish_minutes
+
+    // Per-route overrides (set after routeData loads)
+    let ROUTE_COMPLETION_XP = DEFAULT_ROUTE_COMPLETION_XP;
+    let FAST_FINISH_MINUTES = DEFAULT_FAST_FINISH_MINUTES;
 
     let routeData = null;
     let routeStops = [];
@@ -353,6 +395,7 @@
     let accuracyCircle = null;
     let watchId = null;
     let rideStarted = false;
+    let goToStartPhase = true;  // true = waiting at start; false = ride in progress
     let startTime = null;
     let timerInterval = null;
     let reachedStops = new Set();
@@ -450,9 +493,10 @@
       if (map) return;
       map = L.map('ride-map', { zoomControl: false, attributionControl: false })
              .setView([lat, lon], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Dark map theme for better ride visibility
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap'
+        attribution: '© OpenStreetMap © CartoDB'
       }).addTo(map);
       L.control.attribution({ position: 'bottomleft', prefix: '' }).addTo(map);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -625,6 +669,32 @@
         map.panTo([lat, lon]);
       }
 
+      // ── Go-to-start phase ─────────────────────────────────────────────
+      if (goToStartPhase && routeStops.length > 0) {
+        const startStop = routeStops[0];
+        const distToStart = haversineM(lat, lon, startStop.lat, startStop.lon);
+        const gtsBanner = document.getElementById('go-to-start-banner');
+        const gtsDistEl = document.getElementById('gts-dist-val');
+        if (gtsDistEl) {
+          gtsDistEl.textContent = distToStart < 1000
+            ? `${Math.round(distToStart)} m`
+            : `${(distToStart / 1000).toFixed(1)} km`;
+        }
+
+        if (distToStart <= STOP_DETECTION_RADIUS_M) {
+          // User reached start — begin ride!
+          beginRide();
+        } else {
+          // Still navigating to start: keep banner visible, hide bottom sheet
+          if (gtsBanner) gtsBanner.style.display = '';
+          document.getElementById('ride-bottom').style.display = 'none';
+          document.getElementById('next-stop-card').style.display = 'none';
+        }
+        lastLat = lat; lastLon = lon;
+        return;
+      }
+
+      // ── Normal ride phase ──────────────────────────────────────────────
       // Accumulate distance
       if (lastLat !== null && rideStarted) {
         const d = haversineM(lastLat, lastLon, lat, lon);
@@ -659,15 +729,34 @@
           }
         }
       }
+    }
 
-      // Mark ride as started after first valid position
-      if (!rideStarted) {
-        rideStarted = true;
-        startTime = Date.now();
-        startTimer();
-        document.getElementById('btn-end-ride').disabled = false;
+    // Called when user enters the start zone (or skips)
+    function beginRide() {
+      if (rideStarted) return;
+      goToStartPhase = false;
+      rideStarted = true;
+      startTime = Date.now();
+      startTimer();
+
+      // Hide go-to-start banner; show ride HUD
+      const gtsBanner = document.getElementById('go-to-start-banner');
+      if (gtsBanner) gtsBanner.style.display = 'none';
+      document.getElementById('ride-bottom').style.display = '';
+      document.getElementById('next-stop-card').style.display = '';
+      document.getElementById('btn-end-ride').disabled = false;
+
+      // Mark first stop reached if user is at start
+      const firstStop = routeStops[0];
+      if (firstStop && lastLat !== null) {
+        const d = haversineM(lastLat, lastLon, firstStop.lat, firstStop.lon);
+        if (d <= STOP_DETECTION_RADIUS_M) markStopReached(firstStop);
       }
     }
+
+    window.skipGoToStart = function () {
+      beginRide();
+    };
 
     function onGpsError(err) {
       document.getElementById('gps-status-text').textContent = 'GPS 錯誤：' + err.message;
@@ -706,7 +795,7 @@
         updateSessionXpDisplay();
       }
 
-      // 45-min bonus coins
+      // Fast-finish bonus coins (per-route time limit)
       const bonusCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
         ? FAST_FINISH_BONUS_COINS : 0;
 
@@ -803,11 +892,11 @@
       document.getElementById('summary-xp-badge').textContent =
         `+${apiResult.xp_earned || 0} XP`;
 
-      // Show 45-min bonus coins if earned
+      // Show bonus coins if earned (within fast_finish_minutes)
       const bonusCoinsEl = document.getElementById('summary-bonus-coins');
       const bc = apiResult.bonus_coins_earned || 0;
       if (bc > 0) {
-        bonusCoinsEl.textContent = `⚡ 45分鐘內完成！+${bc} 里程幣獎勵`;
+        bonusCoinsEl.textContent = `⚡ ${FAST_FINISH_MINUTES}分鐘內完成！+${bc} 里程幣獎勵`;
         bonusCoinsEl.style.display = '';
       } else {
         bonusCoinsEl.style.display = 'none';
@@ -840,7 +929,9 @@
 
     // ── Confirm leave ─────────────────────────────────────────────────────
     window.confirmLeave = function () {
+      // Allow back if ride hasn't started yet (go-to-start phase) or ride summary is showing
       if (!rideStarted || document.getElementById('ride-summary').classList.contains('show')) {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         history.back();
         return;
       }
@@ -875,6 +966,16 @@
         routeData = (data.routes || []).find(r => r.id === routeId);
       } catch (e) {
         console.warn('[Ride] routes.json load failed', e);
+      }
+
+      // Apply per-route XP/timing overrides when available
+      if (routeData) {
+        if (typeof routeData.completion_xp === 'number') {
+          ROUTE_COMPLETION_XP = routeData.completion_xp;
+        }
+        if (typeof routeData.fast_finish_minutes === 'number') {
+          FAST_FINISH_MINUTES = routeData.fast_finish_minutes;
+        }
       }
 
       // Check unlock level
@@ -926,11 +1027,26 @@
       plotStops(routeStops);
       buildStopsUI(routeStops);
 
-      // Update next stop UI (default state)
+      // Set up go-to-start banner or skip if no stops
       if (routeStops.length > 0) {
-        document.getElementById('next-stop-name').textContent =
-          `站 1：${routeStops[0].name}`;
+        goToStartPhase = true;
+        const startStop = routeStops[0];
+        const startLabel = startStop.code
+          ? `${startStop.code}：${startStop.name}`
+          : `站 1：${startStop.name}`;
+        const gtsNameEl = document.getElementById('gts-start-name');
+        if (gtsNameEl) gtsNameEl.textContent = `起點：${startLabel}`;
+
+        // Show go-to-start banner; hide ride HUD until ride begins
+        document.getElementById('go-to-start-banner').style.display = '';
+        document.getElementById('ride-bottom').style.display = 'none';
+        document.getElementById('next-stop-card').style.display = 'none';
+
+        // Update next stop card with start info
+        document.getElementById('next-stop-name').textContent = `前往：${startLabel}`;
       } else {
+        // No stops: skip go-to-start and start immediately
+        goToStartPhase = false;
         document.getElementById('next-stop-card').style.display = 'none';
       }
 

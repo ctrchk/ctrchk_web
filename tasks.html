@@ -198,6 +198,54 @@
             font-size: 0.60em;
             color: var(--app-accent, #6dba65);
         }
+        /* ── Daily check-in card ─────────────────────────────────────── */
+        .checkin-card {
+            background: linear-gradient(135deg, #1a3820, #243824);
+            border: 1px solid var(--app-accent, #6dba65);
+            border-radius: 12px;
+            padding: 1em 1.1em;
+            margin: 1em 1em 0.5em;
+            display: flex;
+            align-items: center;
+            gap: 0.9em;
+        }
+        .checkin-icon { font-size: 2em; flex-shrink: 0; }
+        .checkin-info { flex: 1; min-width: 0; }
+        .checkin-title {
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--app-text-primary, #e8f5e9);
+        }
+        .checkin-subtitle {
+            font-size: 0.78em;
+            color: var(--app-text-secondary, #a8d8a0);
+            margin-top: 0.15em;
+        }
+        .checkin-streak {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #ffd54f;
+            margin-top: 0.2em;
+        }
+        .checkin-btn {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border: none;
+            border-radius: 20px;
+            padding: 0.5em 1.1em;
+            font-size: 0.85em;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: background 0.2s, opacity 0.2s;
+        }
+        .checkin-btn:disabled {
+            background: #2d4d2d;
+            color: var(--app-text-secondary, #a8d8a0);
+            cursor: default;
+            opacity: 0.7;
+        }
         /* ── Tab content ─────────────────────────────────────────────── */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -275,6 +323,16 @@
         <!-- Daily tasks -->
         <div class="tab-content active" id="tab-daily">
             <div class="tasks-reset-info" id="daily-reset-info"></div>
+            <!-- Daily check-in -->
+            <div class="checkin-card" id="checkin-card">
+                <div class="checkin-icon">🗓️</div>
+                <div class="checkin-info">
+                    <div class="checkin-title">每日簽到</div>
+                    <div class="checkin-subtitle">每天簽到獲取 XP 及里程幣獎勵</div>
+                    <div class="checkin-streak" id="checkin-streak"></div>
+                </div>
+                <button class="checkin-btn" id="checkin-btn" onclick="doCheckin()">簽到</button>
+            </div>
             <div class="tasks-section">
                 <div id="daily-tasks-list"></div>
             </div>
@@ -499,6 +557,90 @@
         return monday.toISOString().slice(0, 10);
     }
 
+    // ── Daily check-in ────────────────────────────────────────────────
+    const CHECKIN_XP = 30;
+    const CHECKIN_COINS = 1;
+    const CHECKIN_STREAK_BONUS_COINS = 1; // extra coin every 7-day streak
+
+    function getCheckinData() {
+        try {
+            return JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
+        } catch(e) { return {}; }
+    }
+
+    function saveCheckinData(data) {
+        localStorage.setItem('dailyCheckins', JSON.stringify(data));
+    }
+
+    function getCheckinStreak(data) {
+        const today = getTodayKey();
+        if (!Object.keys(data).length) return 0;
+        let streak = 0;
+        const oneDayMs = 86400000;
+        let check = new Date(today);
+        // Walk backwards from today counting consecutive check-in days
+        for (let i = 0; i <= 365; i++) {
+            const key = check.toISOString().slice(0, 10);
+            if (data[key]) {
+                streak++;
+                check = new Date(check.getTime() - oneDayMs);
+            } else {
+                break;
+            }
+        }
+        return streak;
+    }
+
+    function renderCheckin() {
+        const btn = document.getElementById('checkin-btn');
+        const streakEl = document.getElementById('checkin-streak');
+        if (!btn) return;
+        const data = getCheckinData();
+        const today = getTodayKey();
+        const streak = getCheckinStreak(data);
+        const doneTodayStr = data[today];
+        if (doneTodayStr) {
+            btn.disabled = true;
+            btn.textContent = '已簽到 ✓';
+        } else {
+            btn.disabled = false;
+            btn.textContent = '簽到';
+        }
+        if (streak > 0) {
+            streakEl.textContent = `🔥 連續 ${streak} 天`;
+        } else {
+            streakEl.textContent = '';
+        }
+    }
+
+    window.doCheckin = function() {
+        const today = getTodayKey();
+        const data = getCheckinData();
+        if (data[today]) return; // already checked in
+        data[today] = new Date().toISOString();
+        saveCheckinData(data);
+        renderCheckin();
+        const streak = getCheckinStreak(data);
+        const bonusCoins = (streak > 0 && streak % 7 === 0) ? CHECKIN_STREAK_BONUS_COINS : 0;
+        const coinsMsg = (CHECKIN_COINS + bonusCoins) > 0 ? ` + ${CHECKIN_COINS + bonusCoins} 🪙` : '';
+        const streakMsg = streak > 1 ? `（連續 ${streak} 天）` : '';
+        showCheckinToast(`🗓️ 簽到成功！+${CHECKIN_XP} XP${coinsMsg} ${streakMsg}`);
+    };
+
+    function showCheckinToast(text) {
+        const existing = document.getElementById('checkin-toast');
+        if (existing) existing.remove();
+        const t = document.createElement('div');
+        t.id = 'checkin-toast';
+        t.style.cssText = 'position:fixed;bottom:5em;left:50%;transform:translateX(-50%);z-index:500;' +
+            'background:rgba(109,186,101,0.95);color:#121f14;border-radius:20px;padding:0.6em 1.3em;' +
+            'font-size:0.9em;font-weight:bold;pointer-events:none;transition:opacity 0.5s;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+        t.textContent = text;
+        document.body.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; }, 2500);
+        setTimeout(() => { t.remove(); }, 3100);
+    }
+
     function getTaskProgress() {
         try {
             return JSON.parse(localStorage.getItem('taskProgress') || '{}');
@@ -534,7 +676,7 @@
                 return { progress: maxDur, done: maxDur >= task.target };
             }
             case 'specific_route': {
-                const done = history.some(r => r.route_id === task.route_id);
+                const done = history.some(r => r.route_id === task.route_id && r.all_stops);
                 return { progress: done ? 1 : 0, done };
             }
             default:
@@ -550,7 +692,7 @@
             case 'rides_completed':
                 return { progress: history.length, done: history.length >= task.target };
             case 'specific_route': {
-                const done = history.some(r => r.route_id === task.route_id);
+                const done = history.some(r => r.route_id === task.route_id && r.all_stops);
                 return { progress: done ? 1 : 0, done };
             }
             case 'district_stops': {
@@ -754,6 +896,7 @@
 
     // ── Init ──────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
+        renderCheckin();
         render();
     });
 
