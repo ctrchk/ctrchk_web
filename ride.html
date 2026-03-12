@@ -341,10 +341,14 @@
     const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
     const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
     const DEFAULT_STOP_XP = 10;          // XP awarded for reaching a stop that has no explicit xp field
-    const ROUTE_COMPLETION_XP = 200;     // bonus XP for completing all stops on a route
+    const DEFAULT_ROUTE_COMPLETION_XP = 200; // fallback bonus XP for completing all stops on a route
     const DISTRICT_CHANGE_XP = 20;       // bonus XP for crossing into a new district zone
-    const FAST_FINISH_MINUTES = 45;      // finish within this time for bonus coins
-    const FAST_FINISH_BONUS_COINS = 5;   // bonus coins for finishing within FAST_FINISH_MINUTES
+    const DEFAULT_FAST_FINISH_MINUTES = 45;  // fallback: finish within this time for bonus coins
+    const FAST_FINISH_BONUS_COINS = 5;   // bonus coins for finishing within fast_finish_minutes
+
+    // Per-route overrides (set after routeData loads)
+    let ROUTE_COMPLETION_XP = DEFAULT_ROUTE_COMPLETION_XP;
+    let FAST_FINISH_MINUTES = DEFAULT_FAST_FINISH_MINUTES;
 
     let routeData = null;
     let routeStops = [];
@@ -706,7 +710,7 @@
         updateSessionXpDisplay();
       }
 
-      // 45-min bonus coins
+      // Fast-finish bonus coins (per-route time limit)
       const bonusCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
         ? FAST_FINISH_BONUS_COINS : 0;
 
@@ -803,11 +807,11 @@
       document.getElementById('summary-xp-badge').textContent =
         `+${apiResult.xp_earned || 0} XP`;
 
-      // Show 45-min bonus coins if earned
+      // Show bonus coins if earned (within fast_finish_minutes)
       const bonusCoinsEl = document.getElementById('summary-bonus-coins');
       const bc = apiResult.bonus_coins_earned || 0;
       if (bc > 0) {
-        bonusCoinsEl.textContent = `⚡ 45分鐘內完成！+${bc} 里程幣獎勵`;
+        bonusCoinsEl.textContent = `⚡ ${FAST_FINISH_MINUTES}分鐘內完成！+${bc} 里程幣獎勵`;
         bonusCoinsEl.style.display = '';
       } else {
         bonusCoinsEl.style.display = 'none';
@@ -875,6 +879,16 @@
         routeData = (data.routes || []).find(r => r.id === routeId);
       } catch (e) {
         console.warn('[Ride] routes.json load failed', e);
+      }
+
+      // Apply per-route XP/timing overrides when available
+      if (routeData) {
+        if (typeof routeData.completion_xp === 'number') {
+          ROUTE_COMPLETION_XP = routeData.completion_xp;
+        }
+        if (typeof routeData.fast_finish_minutes === 'number') {
+          FAST_FINISH_MINUTES = routeData.fast_finish_minutes;
+        }
       }
 
       // Check unlock level

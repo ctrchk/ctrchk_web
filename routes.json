@@ -662,19 +662,204 @@
       "color": "#990000",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 120,
+      "xp_reward": 290,
       "is_special": false,
       "gpx": [
         {
           "label": "往寶琳",
-          "file": "900A寶琳.gpx"
+          "file": "900A寶琳.gpx",
+          "dir_filter": "up"
         },
         {
           "label": "往調景嶺",
-          "file": "900A調景嶺.gpx"
+          "file": "900A調景嶺.gpx",
+          "dir_filter": "down"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "POA 01",
+          "name": "新都城二期、寶琳邨",
+          "name_en": "Metro City Plaza II, Po Lam Estate",
+          "road": "寶豐路",
+          "direction": "🔴",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32424,
+          "lon": 114.25696
+        },
+        {
+          "order": 2,
+          "code": "POA 02",
+          "name": "欣明苑、將軍澳賽馬會診所",
+          "name_en": "Yan Ming Court, Tseung Kwan O Jockey Club Clinic",
+          "road": "寶琳北路",
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32413,
+          "lon": 114.25951
+        },
+        {
+          "order": 3,
+          "code": "POA 03",
+          "name": "景林邨轉乘站——景林邨景棉樓",
+          "name_en": "King Lam Estate Interchange - King Min House King Lam Estate",
+          "road": null,
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32197,
+          "lon": 114.26127
+        },
+        {
+          "order": 4,
+          "code": "POA 04",
+          "name": "景林邨轉乘站——景林邨滑板公園",
+          "name_en": "King Lam Estate Interchange - King Lam Estate Roller Skating Park",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.31961,
+          "lon": 114.26238
+        },
+        {
+          "order": 5,
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31793,
+          "lon": 114.26225
+        },
+        {
+          "order": 6,
+          "code": "HAH 10",
+          "name": "常寧遊樂場",
+          "name_en": "Sheung Ning Playground",
+          "road": "環保大道",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3155,
+          "lon": 114.26121
+        },
+        {
+          "order": 7,
+          "code": "HAH 11",
+          "name": "將軍澳極限運動場",
+          "name_en": "Tseung Kwan O Skatepark",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.31507,
+          "lon": 114.2609
+        },
+        {
+          "order": 8,
+          "code": "TKO 08",
+          "name": "Green Field 公園、靈實醫院",
+          "name_en": "Green Field Park, Haven of Hope Hospital",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.31444,
+          "lon": 114.25895
+        },
+        {
+          "order": 9,
+          "code": "TKO 09",
+          "name": "尚德邨停車場",
+          "name_en": "Sheung Tak Estate Carpark",
+          "road": null,
+          "direction": "↕️",
+          "district": "TKO",
+          "xp": 10,
+          "lat": 22.31043,
+          "lon": 114.25613
+        },
+        {
+          "order": 10,
+          "code": "TIK 03",
+          "name": "彩明苑彩桃閣",
+          "name_en": "Choi Ming Court Choi To House",
+          "road": null,
+          "direction": "⬇️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.3073,
+          "lon": 114.2555
+        },
+        {
+          "order": 11,
+          "code": "TIK 11",
+          "name": "將軍澳中心",
+          "name_en": "Park Central",
+          "road": "單車徑",
+          "direction": "↕️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30738,
+          "lon": 114.25666
+        },
+        {
+          "order": 12,
+          "code": "TIK 02",
+          "name": "調景嶺體育館",
+          "name_en": "Tiu Keng Leng Sports Centre",
+          "road": "翠嶺路",
+          "direction": "↕️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30554,
+          "lon": 114.25487
+        },
+        {
+          "order": 13,
+          "code": "TIK 12",
+          "name": "調景嶺站-知專設計學院總站",
+          "name_en": "Tiu Keng Leng Station - IVE (Tuen Mun) Terminus",
+          "road": null,
+          "direction": "↕️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30494,
+          "lon": 114.25348
+        },
+        {
+          "order": 14,
+          "code": "TIK 01",
+          "name": "調景嶺站、維景灣畔",
+          "name_en": "Tiu Keng Leng Station, Ocean Shores",
+          "road": "唐賢街",
+          "direction": "⬆️",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30415,
+          "lon": 114.25344
+        },
+        {
+          "order": 15,
+          "code": "TIK 06",
+          "name": "調景嶺總站",
+          "name_en": "Tiu Keng Leng Terminus",
+          "road": "單車徑",
+          "direction": "🟢",
+          "district": "TIK",
+          "xp": 10,
+          "lat": 22.30096,
+          "lon": 114.25607
+        }
+      ],
+      "completion_xp": 150,
+      "fast_finish_minutes": 30
     },
     {
       "id": "966T",
@@ -699,7 +884,7 @@
       "color": "#ff9900",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 90,
+      "xp_reward": 300,
       "is_special": false,
       "gpx": [
         {
@@ -711,7 +896,34 @@
           "file": "966T調景嶺.gpx"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "TIK 13",
+          "name": "調景嶺站-出口",
+          "name_en": "Tiu Keng Leng Station - Exit",
+          "road": "景嶺路",
+          "direction": "🔴",
+          "district": "TIK",
+          "xp": 0,
+          "lat": 22.30465,
+          "lon": 114.25305
+        },
+        {
+          "order": 2,
+          "code": "LHP 06",
+          "name": "康城站",
+          "name_en": "Lohas Park Station",
+          "road": "康城路",
+          "direction": "🟢",
+          "district": "LHP",
+          "xp": 0,
+          "lat": 22.29626,
+          "lon": 114.26692
+        }
+      ],
+      "completion_xp": 300,
+      "fast_finish_minutes": 15
     },
     {
       "id": "966",
