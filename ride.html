@@ -926,10 +926,13 @@
       const bonusCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
         ? FAST_FINISH_BONUS_COINS : 0;
 
+      // 過短行程（少於2個車站且少於1公里）不計算進歷史
+      const rideTooShort = reachedStops.size < 2 && distKm < 1;
+
       // Submit to API
       let apiResult = { xp_earned: 0, level: 1, xp: 0, coins: 0, level_up: false, coins_earned: 0, bonus_coins_earned: 0 };
       const token = localStorage.getItem('accessToken');
-      if (token) {
+      if (!rideTooShort && token) {
         try {
           const body = {
             route_id: routeId,
@@ -970,6 +973,8 @@
       }
 
       // Save compact ride record to localStorage for tasks/achievements tracking
+      // (only if ride is long enough)
+      if (!rideTooShort) {
       try {
         const history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
         const reachedList = routeStops.filter(s => reachedStops.has(s.order));
@@ -989,9 +994,10 @@
         if (history.length > 200) history.splice(0, history.length - 200); // keep last 200
         localStorage.setItem('rideHistory', JSON.stringify(history));
       } catch(e) {}
+      } // end rideTooShort check
 
       // Build summary
-      pendingSummary = { durationMins, distKm, avgSpeed, apiResult };
+      pendingSummary = { durationMins, distKm, avgSpeed, apiResult, rideTooShort };
 
       // Show level-up first if applicable
       if (apiResult.level_up) {
@@ -1015,18 +1021,25 @@
     };
 
     function showSummary(data) {
-      const { durationMins, distKm, avgSpeed, apiResult } = data;
-      document.getElementById('summary-xp-badge').textContent =
-        `+${apiResult.xp_earned || 0} XP`;
+      const { durationMins, distKm, avgSpeed, apiResult, rideTooShort } = data;
 
-      // Show bonus coins if earned (within fast_finish_minutes)
-      const bonusCoinsEl = document.getElementById('summary-bonus-coins');
-      const bc = apiResult.bonus_coins_earned || 0;
-      if (bc > 0) {
-        bonusCoinsEl.textContent = `⚡ ${FAST_FINISH_MINUTES}分鐘內完成！+${bc} 里程幣獎勵`;
+      if (rideTooShort) {
+        document.getElementById('summary-xp-badge').textContent = '行程未記錄';
+        const bonusCoinsEl = document.getElementById('summary-bonus-coins');
+        bonusCoinsEl.textContent = '⚠️ 行程過短（少於2站且少於1公里），未計入歷史記錄';
         bonusCoinsEl.style.display = '';
       } else {
-        bonusCoinsEl.style.display = 'none';
+        document.getElementById('summary-xp-badge').textContent =
+          `+${apiResult.xp_earned || 0} XP`;
+        // Show bonus coins if earned (within fast_finish_minutes)
+        const bonusCoinsEl = document.getElementById('summary-bonus-coins');
+        const bc = apiResult.bonus_coins_earned || 0;
+        if (bc > 0) {
+          bonusCoinsEl.textContent = `⚡ ${FAST_FINISH_MINUTES}分鐘內完成！+${bc} 里程幣獎勵`;
+          bonusCoinsEl.style.display = '';
+        } else {
+          bonusCoinsEl.style.display = 'none';
+        }
       }
 
       document.getElementById('s-time').textContent =

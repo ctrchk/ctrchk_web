@@ -785,7 +785,9 @@
 
         const isLoggedIn = !!localStorage.getItem('accessToken');
         const isLocked = isLoggedIn && userLvl < needed;
-        const xp = ROUTE_XP[routeId] || 0;
+        // Prefer xp_reward from routes.json; fall back to local table
+        const xp = (routeDataObj && routeDataObj.xp_reward) || ROUTE_XP[routeId] || 0;
+        const completionXp = (routeDataObj && routeDataObj.completion_xp) || 0;
         let selectedDir = 0;
 
         // Direction buttons
@@ -805,8 +807,25 @@
         }
 
         if (xp > 0) {
-          document.getElementById('start-ride-xp-hint').textContent =
-            '完成此路線可獲得 +' + xp + ' XP';
+          const hintEl = document.getElementById('start-ride-xp-hint');
+          if (completionXp > 0) {
+            hintEl.textContent = `完成此路線最高可獲得 +${xp} XP（含完成獎勵 +${completionXp} XP）`;
+          } else {
+            hintEl.textContent = '完成此路線可獲得 +' + xp + ' XP';
+          }
+        }
+
+        // Inject completion reward row into web route stats (visible on both web and app)
+        if (xp > 0) {
+          const statsEl = document.querySelector('#route-detail-container .route-stats');
+          if (statsEl) {
+            const rewardDiv = document.createElement('div');
+            rewardDiv.id = 'route-completion-reward-row';
+            rewardDiv.innerHTML = completionXp > 0
+              ? `<strong>🏆 完成路線獎勵:</strong> 最高 +${xp} XP（完成全程另得 +${completionXp} XP）`
+              : `<strong>🏆 完成路線獎勵:</strong> 最高 +${xp} XP`;
+            statsEl.appendChild(rewardDiv);
+          }
         }
 
         const startBtn = document.getElementById('btn-start-ride');

@@ -118,14 +118,25 @@
 /* ════════ APP-ONLY ride page styles ════════ */
 /* Department selection screen */
 #app-dept-select {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    background: var(--app-bg-primary, #121f14);
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1200;
+    background: var(--app-bg-card, #1e3820);
     color: var(--app-text-primary, #e8f5e9);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+    border-radius: 18px 18px 0 0;
+    padding: 1.2em 1em calc(env(safe-area-inset-bottom) + 1em);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+    max-height: 80vh;
     overflow-y: auto;
-    padding: calc(env(safe-area-inset-top) + 1em) 1em 1em;
+}
+#app-dept-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1199;
+    background: rgba(0,0,0,0.5);
 }
 .app-dept-header {
     display: flex;
@@ -263,6 +274,12 @@
     color: #a8d8a0;
 }
 .app-filter-chip.random-btn:active { background: var(--app-accent, #6dba65); color: #121f14; }
+.app-filter-chip.dept-chip {
+    background: rgba(109,186,101,0.15);
+    border-color: var(--app-accent, #6dba65);
+    color: var(--app-accent, #6dba65);
+    font-weight: 600;
+}
 
 /* Map + start button area */
 .app-map-section {
@@ -477,11 +494,14 @@
     </footer>
 
     <!-- ════════ APP-ONLY department selection screen ════════ -->
-    <div id="app-dept-select" class="app-only" style="display:none;">
+    <!-- ════════ APP-ONLY dept select sheet ════════ -->
+    <div id="app-dept-overlay" class="app-only" onclick="hideDeptSheet()"></div>
+    <div id="app-dept-select" class="app-only">
         <div class="app-dept-header">
             <h2>🗺️ 選擇騎行部門</h2>
+            <button onclick="hideDeptSheet()" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em;font-size:1.1em;margin-left:auto;"><i class="fas fa-times"></i></button>
         </div>
-        <div class="app-dept-subtitle">請先選擇部門，即可查看對應地圖及路線</div>
+        <div class="app-dept-subtitle">選擇部門，即可查看對應地圖及路線</div>
         <div id="app-dept-list"></div>
     </div>
 
@@ -491,10 +511,6 @@
         <!-- Search + filter bar -->
         <div class="app-ride-topbar">
             <div class="app-ride-search-row">
-                <button id="app-back-to-dept" title="返回部門選擇" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em 0.4em 0.2em 0;flex-shrink:0;font-size:1em;" onclick="showDeptSelect(true)">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <span id="app-dept-label" style="font-size:0.8em;color:#a8d8a0;white-space:nowrap;flex-shrink:0;"></span>
                 <i class="fas fa-search" style="margin-left:0.3em;"></i>
                 <input type="text" id="app-search-input" class="app-ride-search-input"
                        placeholder="搜尋路線、別稱、總站...">
@@ -503,6 +519,7 @@
                 </button>
             </div>
             <div class="app-filter-row" id="app-filter-row">
+                <div class="app-filter-chip dept-chip" id="app-dept-chip" title="切換部門">🗺️ <span id="app-dept-label">將軍澳部</span></div>
                 <div class="app-filter-chip active" data-filter="all">全部</div>
                 <div class="app-filter-chip" data-filter="unlocked">已解鎖 🔓</div>
                 <div class="app-filter-chip" data-filter="里程幣">🪙 里程幣</div>
@@ -957,17 +974,8 @@ const DEPARTMENTS = [
 
 let selectedDeptId = null;
 
-// Show the department selection screen (app-only)
-// pushState=true adds a history entry so the back button returns here
-function showDeptSelect(pushState) {
-    document.getElementById('app-dept-select').style.display = '';
-    document.getElementById('app-ride-page').style.display = 'none';
-    selectedDeptId = null;
-
-    if (pushState) {
-        history.pushState({ page: 'dept' }, '', '/routes');
-    }
-
+// Show the department selection sheet (bottom sheet overlay)
+function showDeptSheet() {
     const list = document.getElementById('app-dept-list');
     list.innerHTML = '';
 
@@ -989,24 +997,38 @@ function showDeptSelect(pushState) {
         `;
 
         if (dept.available) {
-            card.addEventListener('click', () => enterDepartment(dept, true));
+            card.addEventListener('click', () => {
+                hideDeptSheet();
+                enterDepartment(dept, true);
+            });
         }
         list.appendChild(card);
     });
+
+    document.getElementById('app-dept-select').style.display = '';
+    document.getElementById('app-dept-overlay').style.display = '';
+}
+
+function hideDeptSheet() {
+    document.getElementById('app-dept-select').style.display = 'none';
+    document.getElementById('app-dept-overlay').style.display = 'none';
+}
+
+// Keep showDeptSelect as an alias for compatibility (no longer switches pages)
+function showDeptSelect(pushState) {
+    showDeptSheet();
 }
 
 // Enter a department: show the map & route list
 // pushState=true adds a history entry so the back button returns to dept selection
 function enterDepartment(dept, pushState) {
     selectedDeptId = dept.id;
-    document.getElementById('app-dept-select').style.display = 'none';
-    document.getElementById('app-ride-page').style.display = '';
 
     if (pushState) {
         history.pushState({ page: 'routes', dept: dept.id }, '', '/routes?dept=' + dept.id);
     }
 
-    // Show department label in topbar
+    // Update department label in filter row
     const deptLabel = document.getElementById('app-dept-label');
     if (deptLabel) deptLabel.textContent = dept.name;
 
@@ -1019,8 +1041,7 @@ function enterDepartment(dept, pushState) {
 async function initAppRidePage() {
     if (_appRideInited) return;
     const ridePage = document.getElementById('app-ride-page');
-    const deptPage = document.getElementById('app-dept-select');
-    if (!ridePage || !deptPage) return;
+    if (!ridePage) return;
 
     const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
                   navigator.standalone === true ||
@@ -1032,7 +1053,7 @@ async function initAppRidePage() {
     isLoggedIn = !!localStorage.getItem('accessToken');
     userLevel = getUserLevel();
 
-    // Init map (but keep hidden until department is selected)
+    // Init map
     initMap();
 
     // Load routes
@@ -1052,19 +1073,21 @@ async function initAppRidePage() {
         console.warn('[AppRide] Failed to load routes:', e);
     }
 
+    // Wire up dept chip to show sheet
+    const deptChip = document.getElementById('app-dept-chip');
+    if (deptChip) deptChip.addEventListener('click', showDeptSheet);
+
+    // Show ride page directly (single-page design)
+    ridePage.style.display = '';
+
     // Check URL for dept param — restore previous page state
     const urlParams = new URLSearchParams(window.location.search);
     const deptParam = urlParams.get('dept');
-    if (deptParam) {
-        const dept = DEPARTMENTS.find(d => d.id === deptParam && d.available);
-        if (dept) {
-            enterDepartment(dept, false); // restore without adding another history entry
-            return;
-        }
+    const restoredDept = deptParam && DEPARTMENTS.find(d => d.id === deptParam && d.available);
+    const activeDept = restoredDept || DEPARTMENTS.find(d => d.available);
+    if (activeDept) {
+        enterDepartment(activeDept, !restoredDept);
     }
-
-    // Default: show department selection
-    showDeptSelect(false);
 }
 
 // Handle browser back/forward navigation
@@ -1074,8 +1097,9 @@ window.addEventListener('popstate', (e) => {
         const dept = DEPARTMENTS.find(d => d.id === state.dept);
         if (dept) { enterDepartment(dept, false); return; }
     }
-    // Default: show department selection
-    showDeptSelect(false);
+    // Default: re-enter first available department
+    const defaultDept = DEPARTMENTS.find(d => d.available);
+    if (defaultDept) enterDepartment(defaultDept, false);
 });
 
 if (document.readyState !== 'loading') initAppRidePage();

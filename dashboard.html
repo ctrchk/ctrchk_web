@@ -13,8 +13,7 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ── App Dashboard Theme ──────────────────────────────────── */
-        /* Dark theme applied only in app (PWA) mode */
+        /* ── App Dashboard Theme (PWA/standalone mode only) ──────────── */
         body.is-pwa {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-primary, #e8f5e9);
@@ -29,18 +28,35 @@
             body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); }
             footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
         }
-        .hero {
+
+        /* ── Hero section ──────────────────────────────────────────── */
+        body.is-pwa .hero {
             background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
             padding: calc(env(safe-area-inset-top) + 1.5em) 1.4em 1.5em;
             border-bottom: 1px solid #2d4d2d;
         }
-        .hero h1 {
+        @media (display-mode: standalone) {
+            .hero {
+                background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+                border-bottom: 1px solid #2d4d2d;
+            }
+        }
+        body.is-pwa .hero h1 {
             color: var(--app-text-primary, #e8f5e9);
             margin: 0 0 0.3em 0;
             font-size: 1.5em;
         }
-        #welcome-email {
+        .hero {
+            padding: 1.5em 1.4em;
+        }
+        .hero h1 {
+            margin: 0 0 0.3em 0;
+            font-size: 1.5em;
+        }
+        body.is-pwa #welcome-email {
             color: var(--app-accent, #6dba65);
+        }
+        #welcome-email {
             font-weight: 600;
             margin: 0;
         }
@@ -51,12 +67,15 @@
 
         /* ── 電郵未驗證提醒 ──────────────────────────────── */
         #email-verify-notice {
-            background: #2a1f0a;
             border: 1px solid #ff9800;
-            color: #ffcc80;
+            color: #7a4000;
             margin: 1em;
             border-radius: 10px;
             padding: 1em 1.2em;
+        }
+        body.is-pwa #email-verify-notice {
+            background: #2a1f0a;
+            color: #ffcc80;
         }
         #email-verify-notice p { margin: 0; }
 
@@ -118,8 +137,11 @@
         }
 
         /* ── 升級提醒 ─────────────────────────────────── */
-        #upgrade-notice {
+        body.is-pwa #upgrade-notice {
             background: #1a2a0a;
+            border: 1px solid #6dba65;
+        }
+        #upgrade-notice {
             border: 1px solid #6dba65;
             margin: 1em;
             border-radius: 10px;
@@ -131,8 +153,10 @@
             margin-top: 0;
             font-size: 1em;
         }
-        #upgrade-notice p {
+        body.is-pwa #upgrade-notice p {
             color: var(--app-text-secondary, #a8d8a0);
+        }
+        #upgrade-notice p {
             font-size: 0.9em;
         }
         #upgrade-notice .cta-button {
@@ -146,21 +170,27 @@
         .content {
             padding: 0.5em 1em 5em;
         }
-        .content h2 {
+        body.is-pwa .content h2 {
             color: var(--app-text-primary, #e8f5e9);
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .content h2 {
             font-size: 1.1em;
             margin-bottom: 0.8em;
             padding-bottom: 0.4em;
-            border-bottom: 1px solid #2d4d2d;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        body.is-pwa .ride-item {
+            background: var(--app-bg-card, #1e3820);
+            border: 1px solid #2d4d2d;
+            border-left: 3px solid var(--app-accent, #6dba65);
         }
         .ride-item {
-            background: var(--app-bg-card, #1e3820);
             border-radius: 10px;
             padding: 0.9em 1em;
             margin-bottom: 0.7em;
-            border-left: 3px solid var(--app-accent, #6dba65);
-            border: 1px solid #2d4d2d;
-            border-left: 3px solid var(--app-accent, #6dba65);
+            border: 1px solid #e0e0e0;
+            border-left: 3px solid #6dba65;
         }
         .ride-item .ride-main {
             display: flex;
@@ -169,10 +199,12 @@
             flex-wrap: wrap;
             gap: 0.4em;
         }
+        body.is-pwa .ride-route-name {
+            color: var(--app-text-primary, #e8f5e9);
+        }
         .ride-route-name {
             font-weight: bold;
             font-size: 0.95em;
-            color: var(--app-text-primary, #e8f5e9);
         }
         .ride-xp {
             font-size: 0.82em;
@@ -182,17 +214,20 @@
             border-radius: 10px;
             font-weight: bold;
         }
+        body.is-pwa .ride-details {
+            color: var(--app-text-secondary, #a8d8a0);
+        }
         .ride-details {
             font-size: 0.82em;
-            color: var(--app-text-secondary, #a8d8a0);
             margin-top: 0.25em;
+            color: #555;
         }
 
         /* ── 管理員面板 ─────────────────────────────── */
-        #admin-section h2 {
+        body.is-pwa #admin-section h2 {
             color: var(--app-text-primary, #e8f5e9);
         }
-        #admin-section .cta-button {
+        body.is-pwa #admin-section .cta-button {
             background: #4a1942;
             color: #f3a0ef;
             border-radius: 8px;

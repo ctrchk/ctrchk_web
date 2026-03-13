@@ -222,6 +222,7 @@
     border-radius: 12px;
     border: 1px solid var(--app-border, #2d4d2d);
     transition: background 0.2s;
+    cursor: pointer;
 }
 .app-quick-item:active { background: var(--app-bg-card2, #243824); }
 .app-quick-item i {
@@ -233,6 +234,10 @@
     color: var(--app-text-secondary, #a8d8a0);
     text-align: center;
     line-height: 1.2;
+}
+button.app-quick-item {
+    width: 100%;
+    font-family: inherit;
 }
 
 /* ── Recent rides ── */
@@ -304,8 +309,84 @@
     padding: 0.8em;
     margin-top: 0.4em;
 }
+/* ── App Tutorial Overlay ──────────────────────────────────────── */
+#app-tutorial-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+}
+#app-tutorial-overlay.show {
+    display: flex;
+}
+.tutorial-sheet {
+    background: var(--app-bg-card, #1e3820);
+    border-radius: 18px;
+    max-width: 380px;
+    width: calc(100% - 2em);
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 1.5em 1.4em 1.2em;
+    color: var(--app-text-primary, #e8f5e9);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    position: relative;
+}
+.tutorial-sheet h2 {
+    margin: 0 0 0.4em 0;
+    font-size: 1.2em;
+    color: var(--app-accent, #6dba65);
+}
+.tutorial-step {
+    border-left: 3px solid var(--app-accent, #6dba65);
+    padding: 0.5em 0.8em;
+    margin-bottom: 0.9em;
+    background: rgba(109,186,101,0.07);
+    border-radius: 0 8px 8px 0;
+}
+.tutorial-step-title {
+    font-weight: bold;
+    font-size: 0.95em;
+    margin-bottom: 0.2em;
+    color: var(--app-accent, #6dba65);
+}
+.tutorial-step-desc {
+    font-size: 0.82em;
+    color: var(--app-text-secondary, #a8d8a0);
+    line-height: 1.45;
+}
+.tutorial-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.2em;
+    flex-wrap: wrap;
+    gap: 0.5em;
+}
+.tutorial-no-show {
+    font-size: 0.78em;
+    color: var(--app-text-secondary, #a8d8a0);
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    cursor: pointer;
+}
+.tutorial-no-show input { accent-color: var(--app-accent, #6dba65); }
+.tutorial-close-btn {
+    background: var(--app-accent, #6dba65);
+    color: #121f14;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55em 1.4em;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+}
 </style>
-</head>
+
 <body>
     <!-- ════════ WEB-ONLY header ════════ -->
     <div id="header-placeholder" class="web-only"></div>
@@ -479,6 +560,10 @@
                 <i class="fas fa-tasks"></i>
                 <span>任務</span>
             </a>
+            <button class="app-quick-item" id="app-tutorial-btn" onclick="showAppTutorial()">
+                <i class="fas fa-question-circle"></i>
+                <span>使用教學</span>
+            </button>
         </div>
 
         <!-- Recent rides -->
@@ -495,6 +580,39 @@
 
         <!-- Bottom spacer for nav -->
         <div style="height: 2em;"></div>
+    </div>
+
+    <!-- ════════ APP TUTORIAL OVERLAY ════════ -->
+    <div id="app-tutorial-overlay" class="app-only">
+        <div class="tutorial-sheet">
+            <h2>🚴 App 使用教學</h2>
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">① 選擇路線</div>
+                <div class="tutorial-step-desc">點擊底部導航的「騎行」，選擇你想騎的路線，按「開始騎行」出發。</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">② 到達車站</div>
+                <div class="tutorial-step-desc">騎行至路線上的車站附近（50 米範圍內），系統會自動偵測並記錄，可獲得 XP。</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">③ 完成路線</div>
+                <div class="tutorial-step-desc">到達全部車站並按「結束騎行」，可獲得完成路線的額外 XP 獎勵！</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">④ 升級解鎖</div>
+                <div class="tutorial-step-desc">累積 XP 提升等級，解鎖更多路線。部分路線需消耗里程幣解鎖。</div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">⑤ 每日任務</div>
+                <div class="tutorial-step-desc">完成每日簽到與任務，可獲得額外 XP 和里程幣獎勵。</div>
+            </div>
+            <div class="tutorial-footer">
+                <label class="tutorial-no-show">
+                    <input type="checkbox" id="tutorial-no-show-chk"> 不再顯示
+                </label>
+                <button class="tutorial-close-btn" onclick="closeAppTutorial()">明白了！</button>
+            </div>
+        </div>
     </div>
 
     <script src="/js/main.js"></script>
@@ -647,6 +765,32 @@
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(initAppHome, 150);
     });
+})();
+
+// ── App Tutorial ───────────────────────────────────────────────────
+function showAppTutorial() {
+    document.getElementById('app-tutorial-overlay').classList.add('show');
+}
+function closeAppTutorial() {
+    document.getElementById('app-tutorial-overlay').classList.remove('show');
+    if (document.getElementById('tutorial-no-show-chk').checked) {
+        localStorage.setItem('appTutorialDone', '1');
+    }
+}
+// Show tutorial on first login (first time the app is opened after login)
+(function() {
+    function maybeShowTutorial() {
+        const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
+                      navigator.standalone === true ||
+                      document.body.classList.contains('is-pwa');
+        if (!isPwa) return;
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        if (localStorage.getItem('appTutorialDone') === '1') return;
+        showAppTutorial();
+    }
+    if (document.readyState !== 'loading') setTimeout(maybeShowTutorial, 400);
+    document.addEventListener('DOMContentLoaded', () => setTimeout(maybeShowTutorial, 600));
 })();
 </script>
 </body>

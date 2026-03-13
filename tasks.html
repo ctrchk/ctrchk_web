@@ -1179,6 +1179,20 @@
             `每日任務每天午夜重置 · 剩餘 ${dailyHrsLeft} 小時`;
     }
 
+    // ── Daily countdown (precise to seconds) ──────────────────────────
+    function updateDailyCountdown() {
+        const el = document.getElementById('daily-reset-info');
+        if (!el) return;
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const ms = tomorrow - now;
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        const pad = n => String(n).padStart(2, '0');
+        el.textContent = `每日任務每天午夜重置 · 剩餘 ${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
     // ── Tabs ──────────────────────────────────────────────────────────
     document.querySelectorAll('.tasks-tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -1195,6 +1209,8 @@
         renderCheckin();
         initNotifToggle();
         render();
+        updateDailyCountdown();
+        setInterval(updateDailyCountdown, 1000);
     });
 
     })();
