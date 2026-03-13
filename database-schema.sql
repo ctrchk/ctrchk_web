@@ -145,9 +145,9 @@ CREATE TABLE IF NOT EXISTS routes_config (
 -- 里程幣解鎖路線：900S, 914B, 920, 961P, 962P, 962X（unlock_cost 為暫定值，待確認）
 INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
 VALUES
-  ('900',   1,  NULL, 450, false),  -- 20 站點系統：19站×10 XP（TIK 01除外不加XP）+ 3區段×20 XP + 200完成獎勵 = 最高450 XP
-  ('900A',  1,  NULL, 290, false),  -- 15站：14站×10 XP（TIK 03/TIK 01方向各異）+ 3區段×20 XP + 150完成獎勵 = 最高290 XP
-  ('966T',  1,  NULL, 300, false),  -- 2站（無中途站）：僅完成獎勵300 XP（初始路線，取代 966）
+  ('900',   1,  NULL, 450, false),  -- 20站：19站×10 XP（TIK 01除外不加XP）+ 3區段×20 XP + 200完成獎勵 = 最高450 XP
+  ('900A',  1,  NULL, 360, false),  -- 15站：15站×10 XP + 3區段×20 XP + 150完成獎勵 = 最高360 XP
+  ('966T',  1,  NULL, 320, false),  -- 2站（無中途站）：1區段×20 XP + 300完成獎勵 = 最高320 XP（初始路線，取代 966）
   ('914',   4,  NULL,  80, false),
   ('966A',  4,  NULL,  90, false),
   ('966',   4,  NULL, 110, false),  -- 已非初始路線，移至第4級

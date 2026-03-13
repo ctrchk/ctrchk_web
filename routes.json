@@ -379,6 +379,7 @@
       "unlock_level": 1,
       "unlock_cost": null,
       "xp_reward": 450,
+      "completion_xp": 200,
       "is_special": false,
       "gpx": [
         {
@@ -662,7 +663,7 @@
       "color": "#990000",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 290,
+      "xp_reward": 360,
       "is_special": false,
       "gpx": [
         {
@@ -884,7 +885,7 @@
       "color": "#ff9900",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 300,
+      "xp_reward": 320,
       "is_special": false,
       "gpx": [
         {
