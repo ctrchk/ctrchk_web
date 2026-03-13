@@ -318,11 +318,62 @@
     });
   }
 
+  // ── 每日簽到提醒 ──────────────────────────────────────────────────────────
+  // Schedules a daily check-in reminder notification using setTimeout.
+  // The reminder fires once per day if the user hasn't checked in yet.
+  // It is only active if the user has enabled it (localStorage key) and
+  // notification permission is granted.
+  function scheduleDailyCheckinReminder() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (localStorage.getItem('checkinReminderEnabled') !== '1') return;
+
+    const now = new Date();
+    const todayKey = now.toISOString().slice(0, 10);
+
+    // Don't remind if already checked in today
+    try {
+      const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
+      if (checkins[todayKey]) return;
+    } catch (_) {}
+
+    // Schedule reminder for 09:00 today; if already past, skip to tomorrow
+    let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
+    if (target <= now) {
+      // Already past 9am — schedule for tomorrow
+      target.setDate(target.getDate() + 1);
+    }
+
+    const delay = target.getTime() - now.getTime();
+    setTimeout(() => {
+      // Re-check: user may have signed in between now and the scheduled time
+      const todayKeyNow = new Date().toISOString().slice(0, 10);
+      try {
+        const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
+        if (checkins[todayKeyNow]) return; // already done
+      } catch (_) {}
+      if (localStorage.getItem('checkinReminderEnabled') !== '1') return;
+      sendLocalNotification(
+        '🗓️ 別忘了今日簽到！',
+        '連續簽到可解鎖豐厚 XP 及里程幣獎勵，快來打卡吧！',
+        'ctrc-checkin-reminder'
+      );
+      // Re-schedule for tomorrow
+      scheduleDailyCheckinReminder();
+    }, delay);
+  }
+
+  // Kick off reminder scheduling when the page loads
+  window.addEventListener('load', () => {
+    scheduleDailyCheckinReminder();
+  });
+
   // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
     isStandalone,
     requestNotificationPermission,
     sendLocalNotification,
+    scheduleDailyCheckinReminder,
     // Manually enable/disable Liquid Glass (for settings UI)
     enableLiquidGlass() {
       document.body.classList.add('liquid-glass');

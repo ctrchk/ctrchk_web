@@ -84,23 +84,61 @@
     #next-stop-name  { font-size: 1.05em; font-weight: bold; margin: 0.15em 0; }
     #next-stop-dist  { font-size: 1.3em; font-weight: bold; color: #BFE340; }
 
-    /* ── Bottom sheet ── */
-    #ride-bottom {
+    /* ── Two-page ride layout ── */
+    /* Page 1 footer: compact GPS status bar */
+    #ride-page-map-footer {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(26,37,47,0.96); color: #fff;
+      background: rgba(26,37,47,0.82);
       border-radius: 18px 18px 0 0;
-      padding: 0.8em 1em calc(env(safe-area-inset-bottom) + 0.8em);
+      padding: 0.5em 1.2em calc(env(safe-area-inset-bottom) + 2.4em);
       backdrop-filter: blur(6px);
+      text-align: center;
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
     }
-    #ride-stats-row {
-      display: flex; justify-content: space-around; margin-bottom: 0.7em;
-      border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7em;
+    #ride-page-map-footer.hidden-below { transform: translateY(100%); }
+
+    /* Page 2: full stats overlay (slides in from right) */
+    #ride-stats-page {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 3.5em);
+      bottom: 0; left: 0; right: 0; z-index: 190;
+      background: #1a252f;
+      color: #fff;
+      overflow-y: auto;
+      padding: 1em 1em calc(env(safe-area-inset-bottom) + 3em);
+      transform: translateX(100vw);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
     }
-    .ride-stat { text-align: center; }
-    .ride-stat .val { font-size: 1.2em; font-weight: bold; }
-    .ride-stat .lbl { font-size: 0.68em; opacity: 0.65; margin-top: 0.1em; }
+    #ride-stats-page.active { transform: translateX(0); }
+    .stats-page-title {
+      font-size: 0.82em; color: #a8d8a0; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 0.8em; font-weight: 600;
+    }
+
+    /* Stats grid on page 2 */
+    #ride-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7em;
+      margin-bottom: 1em;
+    }
+    .ride-stat-card {
+      background: rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 0.85em 0.7em;
+      text-align: center;
+    }
+    .ride-stat-card.wide { grid-column: span 2; }
+    .ride-stat-card .val { font-size: 1.4em; font-weight: bold; color: #BFE340; }
+    .ride-stat-card .lbl { font-size: 0.68em; opacity: 0.65; margin-top: 0.25em; }
+
+    /* Stops progress (on page 2) */
+    .stats-page-stops-label {
+      font-size: 0.8em; color: #a8d8a0; margin-bottom: 0.5em; font-weight: 600;
+      letter-spacing: 0.06em;
+    }
     #stops-progress {
-      display: flex; gap: 0.3em; overflow-x: auto; margin-bottom: 0.8em;
+      display: flex; gap: 0.3em; overflow-x: auto; margin-bottom: 0.9em;
       padding-bottom: 0.2em; scrollbar-width: none;
     }
     #stops-progress::-webkit-scrollbar { display: none; }
@@ -112,13 +150,36 @@
     }
     .stop-pill.reached { background: #04D93C; color: #1a252f; font-weight: bold; }
     .stop-pill.next { background: #BFE340; color: #1a252f; font-weight: bold; box-shadow: 0 0 8px rgba(191,227,64,0.5); }
+
+    /* End-ride button */
     #btn-end-ride {
       width: 100%; padding: 0.9em; border: none; border-radius: 10px;
       background: #e74c3c; color: #fff; font-size: 1em; font-weight: bold;
       cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s;
+      margin-bottom: 0.5em;
     }
     #btn-end-ride:active { background: #c0392b; }
-    #gps-status-text { font-size: 0.72em; opacity: 0.6; text-align: center; margin-bottom: 0.5em; }
+    #gps-status-text { font-size: 0.72em; opacity: 0.65; }
+
+    /* Page navigation dots (always on top, centered) */
+    #ride-page-dots {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom) + 0.7em);
+      left: 50%; transform: translateX(-50%);
+      z-index: 260;
+      display: flex; gap: 0.55em; align-items: center;
+    }
+    .ride-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.32);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border: none; padding: 0;
+    }
+    .ride-dot.active {
+      width: 22px; border-radius: 4px;
+      background: #BFE340;
+    }
 
     /* ── Locked screen ── */
     #ride-locked {
@@ -269,33 +330,45 @@
     <button class="btn-skip-gts" id="btn-skip-gts" onclick="skipGoToStart()">略過 →</button>
   </div>
 
-  <!-- Bottom sheet -->
-  <div id="ride-bottom">
+  <!-- Page 1 footer: compact GPS status bar -->
+  <div id="ride-page-map-footer">
     <div id="gps-status-text">正在連接 GPS...</div>
-    <div id="ride-stats-row">
-      <div class="ride-stat">
+  </div>
+
+  <!-- Page 2: Stats panel (slides in from right) -->
+  <div id="ride-stats-page">
+    <div class="stats-page-title">📊 騎行數據</div>
+    <div id="ride-stats-grid">
+      <div class="ride-stat-card">
         <div class="val" id="stat-time">00:00</div>
-        <div class="lbl">時間</div>
+        <div class="lbl">⏱ 時間</div>
       </div>
-      <div class="ride-stat">
+      <div class="ride-stat-card">
         <div class="val" id="stat-dist">0 m</div>
-        <div class="lbl">距離</div>
+        <div class="lbl">🚴 距離</div>
       </div>
-      <div class="ride-stat">
+      <div class="ride-stat-card">
         <div class="val" id="stat-stops">0/0</div>
-        <div class="lbl">站點</div>
+        <div class="lbl">🚏 站點</div>
       </div>
-      <div class="ride-stat">
+      <div class="ride-stat-card">
         <div class="val" id="stat-xp">0</div>
-        <div class="lbl">XP</div>
+        <div class="lbl">⭐ XP</div>
       </div>
-      <div class="ride-stat">
+      <div class="ride-stat-card wide">
         <div class="val" id="stat-speed">0.0</div>
-        <div class="lbl">km/h</div>
+        <div class="lbl">💨 速度 (km/h)</div>
       </div>
     </div>
+    <div class="stats-page-stops-label">站點進度</div>
     <div id="stops-progress"></div>
     <button id="btn-end-ride">🔴 結束騎行</button>
+  </div>
+
+  <!-- Page navigation dots -->
+  <div id="ride-page-dots" style="display:none;">
+    <button class="ride-dot active" onclick="setRidePage(0)" title="地圖頁" aria-label="地圖頁"></button>
+    <button class="ride-dot" onclick="setRidePage(1)" title="數據頁" aria-label="數據頁"></button>
   </div>
 
   <!-- End ride summary -->
@@ -479,6 +552,60 @@
       const el = document.getElementById('stat-xp');
       if (el) el.textContent = sessionXp;
     }
+
+    // ── Two-page ride UI ──────────────────────────────────────────────────
+    let currentRidePage = 0;
+
+    function showRideHUD(visible) {
+      const mapFooter = document.getElementById('ride-page-map-footer');
+      const statsPage = document.getElementById('ride-stats-page');
+      const dots = document.getElementById('ride-page-dots');
+      if (visible) {
+        mapFooter.classList.remove('hidden-below');
+        dots.style.display = '';
+      } else {
+        mapFooter.classList.add('hidden-below');
+        statsPage.classList.remove('active');
+        dots.style.display = 'none';
+        currentRidePage = 0;
+        updatePageDots();
+      }
+    }
+
+    window.setRidePage = function(page) {
+      currentRidePage = page;
+      const statsPage = document.getElementById('ride-stats-page');
+      if (page === 1) {
+        statsPage.classList.add('active');
+      } else {
+        statsPage.classList.remove('active');
+      }
+      updatePageDots();
+    };
+
+    function updatePageDots() {
+      document.querySelectorAll('.ride-dot').forEach((d, i) => {
+        d.classList.toggle('active', i === currentRidePage);
+      });
+    }
+
+    // Touch swipe to switch pages
+    (function initSwipe() {
+      let tx = 0, ty = 0;
+      document.addEventListener('touchstart', e => {
+        tx = e.touches[0].clientX;
+        ty = e.touches[0].clientY;
+      }, { passive: true });
+      document.addEventListener('touchend', e => {
+        const dotsEl = document.getElementById('ride-page-dots');
+        if (!dotsEl || dotsEl.style.display === 'none') return;
+        const dx = e.changedTouches[0].clientX - tx;
+        const dy = e.changedTouches[0].clientY - ty;
+        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          window.setRidePage(dx < 0 ? 1 : 0);
+        }
+      }, { passive: true });
+    })();
 
     // ── Locked screen ─────────────────────────────────────────────────────
     function showLocked(needed) {
@@ -687,7 +814,7 @@
         } else {
           // Still navigating to start: keep banner visible, hide bottom sheet
           if (gtsBanner) gtsBanner.style.display = '';
-          document.getElementById('ride-bottom').style.display = 'none';
+          showRideHUD(false);
           document.getElementById('next-stop-card').style.display = 'none';
         }
         lastLat = lat; lastLon = lon;
@@ -742,7 +869,7 @@
       // Hide go-to-start banner; show ride HUD
       const gtsBanner = document.getElementById('go-to-start-banner');
       if (gtsBanner) gtsBanner.style.display = 'none';
-      document.getElementById('ride-bottom').style.display = '';
+      showRideHUD(true);
       document.getElementById('next-stop-card').style.display = '';
       document.getElementById('btn-end-ride').disabled = false;
 
@@ -1039,7 +1166,7 @@
 
         // Show go-to-start banner; hide ride HUD until ride begins
         document.getElementById('go-to-start-banner').style.display = '';
-        document.getElementById('ride-bottom').style.display = 'none';
+        showRideHUD(false);
         document.getElementById('next-stop-card').style.display = 'none';
 
         // Update next stop card with start info
