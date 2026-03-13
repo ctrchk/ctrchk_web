@@ -227,6 +227,12 @@
             color: #ffd54f;
             margin-top: 0.2em;
         }
+        .checkin-today-reward {
+            font-size: 0.78em;
+            color: #BFE340;
+            margin-top: 0.2em;
+            font-weight: 600;
+        }
         .checkin-btn {
             background: var(--app-accent, #6dba65);
             color: #121f14;
@@ -245,6 +251,174 @@
             color: var(--app-text-secondary, #a8d8a0);
             cursor: default;
             opacity: 0.7;
+        }
+        /* ── Checkin reward table ─────────────────────────────────────── */
+        .checkin-table-wrap {
+            margin: 0 1em 0.8em;
+        }
+        .checkin-table-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            background: none;
+            border: 1px solid #2d4d2d;
+            border-radius: 8px;
+            padding: 0.45em 0.9em;
+            color: var(--app-text-secondary, #a8d8a0);
+            font-size: 0.8em;
+            cursor: pointer;
+            width: 100%;
+            justify-content: space-between;
+            transition: border-color 0.2s;
+        }
+        .checkin-table-toggle:hover { border-color: var(--app-accent, #6dba65); }
+        .checkin-table-toggle .arrow { transition: transform 0.2s; }
+        .checkin-table-toggle.open .arrow { transform: rotate(180deg); }
+        .checkin-reward-table {
+            display: none;
+            margin-top: 0.6em;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #2d4d2d;
+        }
+        .checkin-reward-table.open { display: block; }
+        .crt-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+        .crt-cell {
+            background: #1a2d1c;
+            border-right: 1px solid #2d4d2d;
+            border-bottom: 1px solid #2d4d2d;
+            padding: 0.45em 0.3em;
+            text-align: center;
+            position: relative;
+        }
+        .crt-cell:nth-child(4n) { border-right: none; }
+        .crt-cell:nth-last-child(-n+4) { border-bottom: none; }
+        .crt-day {
+            font-size: 0.62em;
+            color: var(--app-text-secondary, #a8d8a0);
+            margin-bottom: 0.15em;
+        }
+        .crt-xp {
+            font-size: 0.78em;
+            font-weight: 700;
+            color: #BFE340;
+        }
+        .crt-coins {
+            font-size: 0.68em;
+            color: #ffd54f;
+        }
+        .crt-cell.special-7 { background: rgba(109,186,101,0.12); }
+        .crt-cell.special-14 { background: rgba(255,200,50,0.12); }
+        .crt-cell.special-21 { background: rgba(100,180,255,0.12); }
+        .crt-cell.special-28 {
+            background: linear-gradient(135deg, rgba(255,200,50,0.25), rgba(255,120,50,0.25));
+            grid-column: span 4;
+        }
+        .crt-cell.special-28 .crt-xp { font-size: 1em; }
+        .crt-cell.today {
+            outline: 2px solid var(--app-accent, #6dba65);
+            outline-offset: -2px;
+        }
+        .crt-cell.done::after {
+            content: '✓';
+            position: absolute;
+            top: 2px; right: 3px;
+            font-size: 0.6em;
+            color: var(--app-accent, #6dba65);
+        }
+        .crt-cell.future { opacity: 0.5; }
+        /* ── Notification toggle ─────────────────────────────────────── */
+        .notif-toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            margin: 0 1em 0.8em;
+            padding: 0.6em 0.9em;
+            background: #1a2d1c;
+            border: 1px solid #2d4d2d;
+            border-radius: 10px;
+        }
+        .notif-toggle-label {
+            flex: 1;
+            font-size: 0.82em;
+            color: var(--app-text-secondary, #a8d8a0);
+        }
+        .notif-toggle-label strong {
+            display: block;
+            font-size: 1em;
+            color: var(--app-text-primary, #e8f5e9);
+            margin-bottom: 0.1em;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #2d4d2d;
+            border-radius: 22px;
+            transition: background 0.2s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 16px;
+            height: 16px;
+            background: #a8d8a0;
+            border-radius: 50%;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--app-accent, #6dba65); }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(18px);
+            background: #121f14;
+        }
+        /* ── All-tasks bonus card ────────────────────────────────────── */
+        .all-tasks-bonus {
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+            background: linear-gradient(135deg, #1e3020, #253a26);
+            border: 1px dashed #4d8a45;
+            border-radius: 10px;
+            padding: 0.8em 1em;
+            margin-bottom: 0.7em;
+        }
+        .all-tasks-bonus .atb-icon { font-size: 1.5em; flex-shrink: 0; }
+        .all-tasks-bonus .atb-info { flex: 1; min-width: 0; }
+        .all-tasks-bonus .atb-name { font-size: 0.92em; font-weight: 700; color: var(--app-text-primary, #e8f5e9); }
+        .all-tasks-bonus .atb-desc { font-size: 0.75em; color: var(--app-text-secondary, #a8d8a0); }
+        .all-tasks-bonus .atb-reward {
+            font-size: 0.78em; font-weight: bold; color: #BFE340;
+            background: rgba(191,227,64,0.12); padding: 0.2em 0.6em; border-radius: 8px; white-space: nowrap;
+        }
+        .all-tasks-bonus .atb-check { font-size: 1.1em; flex-shrink: 0; }
+        /* ── Coming-soon weekly ──────────────────────────────────────── */
+        .coming-soon-card {
+            text-align: center;
+            padding: 3em 2em;
+        }
+        .coming-soon-icon { font-size: 3em; margin-bottom: 0.3em; }
+        .coming-soon-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--app-text-primary, #e8f5e9);
+            margin-bottom: 0.4em;
+        }
+        .coming-soon-desc {
+            font-size: 0.82em;
+            color: var(--app-text-secondary, #a8d8a0);
+            line-height: 1.5;
         }
         /* ── Tab content ─────────────────────────────────────────────── */
         .tab-content { display: none; }
@@ -328,10 +502,32 @@
                 <div class="checkin-icon">🗓️</div>
                 <div class="checkin-info">
                     <div class="checkin-title">每日簽到</div>
-                    <div class="checkin-subtitle">每天簽到獲取 XP 及里程幣獎勵</div>
+                    <div class="checkin-subtitle">連續簽到可獲得更豐厚獎勵</div>
                     <div class="checkin-streak" id="checkin-streak"></div>
+                    <div class="checkin-today-reward" id="checkin-today-reward"></div>
                 </div>
                 <button class="checkin-btn" id="checkin-btn" onclick="doCheckin()">簽到</button>
+            </div>
+            <!-- Reward table toggle -->
+            <div class="checkin-table-wrap">
+                <button class="checkin-table-toggle" id="checkin-table-toggle" onclick="toggleCheckinTable()">
+                    <span>📋 查看 28 天獎勵表</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div class="checkin-reward-table" id="checkin-reward-table">
+                    <div class="crt-grid" id="crt-grid"></div>
+                </div>
+            </div>
+            <!-- Notification reminder toggle -->
+            <div class="notif-toggle-wrap" id="notif-toggle-wrap">
+                <div class="notif-toggle-label">
+                    <strong>🔔 每日簽到提醒</strong>
+                    每天提醒您別忘簽到
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="notif-toggle" onchange="onNotifToggle(this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
             <div class="tasks-section">
                 <div id="daily-tasks-list"></div>
@@ -340,9 +536,12 @@
 
         <!-- Weekly tasks -->
         <div class="tab-content" id="tab-weekly">
-            <div class="tasks-reset-info" id="weekly-reset-info"></div>
             <div class="tasks-section">
-                <div id="weekly-tasks-list"></div>
+                <div class="coming-soon-card">
+                    <div class="coming-soon-icon">🚧</div>
+                    <div class="coming-soon-title">每週任務即將推出</div>
+                    <div class="coming-soon-desc">由於路線數量仍在持續增加，<br>每週任務將於更多路線上線後開放。<br>敬請期待！</div>
+                </div>
             </div>
         </div>
 
@@ -361,90 +560,48 @@
     // ── Task and achievement definitions ──────────────────────────────
     const DAILY_TASKS = [
         {
-            id: 'daily_any_ride',
+            id: 'daily_full_route',
             icon: '🚴',
             name: '出發！',
-            desc: '完成任意一條路線',
-            reward_xp: 50,
+            desc: '完成一條完整路線（到達所有站點）',
+            reward_xp: 40,
             reward_coins: 0,
-            type: 'rides_completed',
+            type: 'full_routes_completed',
             target: 1,
         },
         {
-            id: 'daily_5_stops',
+            id: 'daily_20_stops',
             icon: '📍',
             name: '站點打卡',
-            desc: '到達 5 個站點',
+            desc: '今日到達 20 個站點',
             reward_xp: 30,
             reward_coins: 0,
             type: 'stops_visited',
-            target: 5,
-        },
-        {
-            id: 'daily_ride_20min',
-            icon: '⏱️',
-            name: '持續騎行',
-            desc: '單次騎行超過 20 分鐘',
-            reward_xp: 20,
-            reward_coins: 0,
-            type: 'ride_duration_min',
             target: 20,
         },
         {
-            id: 'daily_route_challenge',
-            icon: '🎯',
-            name: '今日挑戰',
-            desc: '完成每日指定路線（900 線）',
-            reward_xp: 80,
-            reward_coins: 5,
-            type: 'specific_route',
-            route_id: '900',
+            id: 'daily_ride_1hr',
+            icon: '⏱️',
+            name: '持續騎行',
+            desc: '今日累積騎行 1 小時',
+            reward_xp: 50,
+            reward_coins: 0,
+            type: 'total_ride_duration_min',
+            target: 60,
+        },
+        {
+            id: 'daily_3_routes',
+            icon: '🏆',
+            name: '路線達人',
+            desc: '今日完成三條完整路線',
+            reward_xp: 0,
+            reward_coins: 10,
+            type: 'full_routes_completed',
+            target: 3,
         },
     ];
 
-    const WEEKLY_TASKS = [
-        {
-            id: 'weekly_3_rides',
-            icon: '🏃',
-            name: '週週騎行',
-            desc: '本週完成 3 次騎行',
-            reward_xp: 150,
-            reward_coins: 10,
-            type: 'rides_completed',
-            target: 3,
-        },
-        {
-            id: 'weekly_route_900',
-            icon: '🌊',
-            name: '海濱漫遊',
-            desc: '完成 900 線（市區海濱線）',
-            reward_xp: 100,
-            reward_coins: 8,
-            type: 'specific_route',
-            route_id: '900',
-        },
-        {
-            id: 'weekly_tik_stops',
-            icon: '🗺️',
-            name: '調景嶺探索',
-            desc: '到達所有 TIK 區站點',
-            reward_xp: 100,
-            reward_coins: 8,
-            type: 'district_stops',
-            district: 'TIK',
-            target: 4,
-        },
-        {
-            id: 'weekly_10km',
-            icon: '📏',
-            name: '十公里達人',
-            desc: '本週累計騎行 10 公里',
-            reward_xp: 120,
-            reward_coins: 10,
-            type: 'total_distance_km',
-            target: 10,
-        },
-    ];
+    const WEEKLY_TASKS = [];  // 每週任務即將推出
 
     const ACHIEVEMENTS = [
         {
@@ -557,10 +714,40 @@
         return monday.toISOString().slice(0, 10);
     }
 
-    // ── Daily check-in ────────────────────────────────────────────────
-    const CHECKIN_XP = 30;
-    const CHECKIN_COINS = 1;
-    const CHECKIN_STREAK_BONUS_COINS = 1; // extra coin every 7-day streak
+    // ── Daily check-in 28-day reward table ──────────────────────────
+    // Each entry: [xp, coins]. Days 16-20 each add 20XP+1🪙 from day 15.
+    // Days 23-27 each add 25XP+1🪙 from day 22.
+    const CHECKIN_REWARDS = [
+        null,           // index 0 unused (days are 1-indexed)
+        [20, 0],        // Day 1
+        [30, 2],        // Day 2
+        [50, 2],        // Day 3
+        [70, 3],        // Day 4
+        [80, 3],        // Day 5
+        [100, 3],       // Day 6
+        [200, 10],      // Day 7  ★ Weekly milestone
+        [150, 5],       // Day 8
+        [180, 8],       // Day 9
+        [200, 8],       // Day 10
+        [225, 8],       // Day 11
+        [250, 8],       // Day 12
+        [250, 10],      // Day 13
+        [500, 20],      // Day 14 ★★ Fortnight milestone
+        [260, 10],      // Day 15
+        [280, 11],      // Day 16  (+20 XP, +1🪙 from day 15)
+        [300, 12],      // Day 17
+        [320, 13],      // Day 18
+        [340, 14],      // Day 19
+        [360, 15],      // Day 20
+        [600, 30],      // Day 21 ★★★ Three-week milestone
+        [375, 15],      // Day 22
+        [400, 16],      // Day 23  (+25 XP, +1🪙 from day 22)
+        [425, 17],      // Day 24
+        [450, 18],      // Day 25
+        [475, 19],      // Day 26
+        [500, 20],      // Day 27
+        [1000, 100],    // Day 28 ★★★★ Ultimate prize
+    ];
 
     function getCheckinData() {
         try {
@@ -591,14 +778,28 @@
         return streak;
     }
 
+    // Returns the effective day within the 28-day cycle (1-28)
+    function getCheckinCycleDay(streak) {
+        if (streak <= 0) return 1;
+        return ((streak - 1) % 28) + 1;
+    }
+
+    // Get reward for a specific cycle day
+    function getCheckinReward(cycleDay) {
+        const d = Math.max(1, Math.min(28, cycleDay));
+        return CHECKIN_REWARDS[d] || [20, 0];
+    }
+
     function renderCheckin() {
         const btn = document.getElementById('checkin-btn');
         const streakEl = document.getElementById('checkin-streak');
+        const rewardEl = document.getElementById('checkin-today-reward');
         if (!btn) return;
         const data = getCheckinData();
         const today = getTodayKey();
         const streak = getCheckinStreak(data);
         const doneTodayStr = data[today];
+
         if (doneTodayStr) {
             btn.disabled = true;
             btn.textContent = '已簽到 ✓';
@@ -611,7 +812,67 @@
         } else {
             streakEl.textContent = '';
         }
+        // Show today's reward preview or next reward
+        const todayStreak = doneTodayStr ? streak : streak + 1;
+        const cycleDay = getCheckinCycleDay(todayStreak);
+        const [xp, coins] = getCheckinReward(cycleDay);
+        const coinsStr = coins > 0 ? ` + ${coins} 🪙` : '';
+        if (!doneTodayStr) {
+            rewardEl.textContent = `今日獎勵（第 ${cycleDay} 天）：+${xp} XP${coinsStr}`;
+        } else {
+            rewardEl.textContent = `已獲得第 ${cycleDay} 天獎勵 ✓`;
+        }
+        renderCheckinTable();
     }
+
+    // Render the 28-day reward grid table
+    function renderCheckinTable() {
+        const grid = document.getElementById('crt-grid');
+        if (!grid) return;
+        const data = getCheckinData();
+        const today = getTodayKey();
+        const streak = getCheckinStreak(data);
+        const doneTodayStr = data[today];
+        // Current position in cycle (1-28)
+        const currentCycleDay = doneTodayStr
+            ? getCheckinCycleDay(streak)
+            : getCheckinCycleDay(streak + 1);
+
+        grid.innerHTML = '';
+        for (let d = 1; d <= 28; d++) {
+            const cell = document.createElement('div');
+            const [xp, coins] = getCheckinReward(d);
+            let cls = 'crt-cell';
+            if (d === 7)  cls += ' special-7';
+            if (d === 14) cls += ' special-14';
+            if (d === 21) cls += ' special-21';
+            if (d === 28) cls += ' special-28';
+            // Mark days as done/today/future relative to current cycle position
+            if (doneTodayStr && d <= currentCycleDay) {
+                cls += ' done';
+            } else if (!doneTodayStr && d < currentCycleDay) {
+                cls += ' done';
+            } else if (d === currentCycleDay && !doneTodayStr) {
+                cls += ' today';
+            } else {
+                cls += ' future';
+            }
+            cell.className = cls;
+
+            const coinsHtml = coins > 0 ? `<div class="crt-coins">${coins} 🪙</div>` : '';
+            const label = d === 28 ? '🏆 終極大獎' : (d === 7 || d === 14 || d === 21) ? `第 ${d} 天 ★` : `第 ${d} 天`;
+            cell.innerHTML = `<div class="crt-day">${label}</div><div class="crt-xp">+${xp} XP</div>${coinsHtml}`;
+            grid.appendChild(cell);
+        }
+    }
+
+    window.toggleCheckinTable = function() {
+        const btn = document.getElementById('checkin-table-toggle');
+        const table = document.getElementById('checkin-reward-table');
+        if (!btn || !table) return;
+        btn.classList.toggle('open');
+        table.classList.toggle('open');
+    };
 
     window.doCheckin = function() {
         const today = getTodayKey();
@@ -619,12 +880,13 @@
         if (data[today]) return; // already checked in
         data[today] = new Date().toISOString();
         saveCheckinData(data);
-        renderCheckin();
         const streak = getCheckinStreak(data);
-        const bonusCoins = (streak > 0 && streak % 7 === 0) ? CHECKIN_STREAK_BONUS_COINS : 0;
-        const coinsMsg = (CHECKIN_COINS + bonusCoins) > 0 ? ` + ${CHECKIN_COINS + bonusCoins} 🪙` : '';
+        const cycleDay = getCheckinCycleDay(streak);
+        const [xp, coins] = getCheckinReward(cycleDay);
+        renderCheckin();
+        const coinsMsg = coins > 0 ? ` + ${coins} 🪙` : '';
         const streakMsg = streak > 1 ? `（連續 ${streak} 天）` : '';
-        showCheckinToast(`🗓️ 簽到成功！+${CHECKIN_XP} XP${coinsMsg} ${streakMsg}`);
+        showCheckinToast(`🗓️ 簽到成功！+${xp} XP${coinsMsg} ${streakMsg}`);
     };
 
     function showCheckinToast(text) {
@@ -665,19 +927,17 @@
         const history = getRideHistory().filter(r => r.date === today);
 
         switch (task.type) {
-            case 'rides_completed':
-                return { progress: history.length, done: history.length >= task.target };
+            case 'full_routes_completed': {
+                const count = history.filter(r => r.all_stops).length;
+                return { progress: count, done: count >= task.target };
+            }
             case 'stops_visited': {
                 const total = history.reduce((s, r) => s + (r.stops_count || 0), 0);
                 return { progress: total, done: total >= task.target };
             }
-            case 'ride_duration_min': {
-                const maxDur = history.reduce((m, r) => Math.max(m, r.duration_minutes || 0), 0);
-                return { progress: maxDur, done: maxDur >= task.target };
-            }
-            case 'specific_route': {
-                const done = history.some(r => r.route_id === task.route_id && r.all_stops);
-                return { progress: done ? 1 : 0, done };
+            case 'total_ride_duration_min': {
+                const total = history.reduce((s, r) => s + (r.duration_minutes || 0), 0);
+                return { progress: total, done: total >= task.target };
             }
             default:
                 return { progress: 0, done: false };
@@ -815,6 +1075,39 @@
         return card;
     }
 
+    // ── Notification toggle ───────────────────────────────────────────
+    window.onNotifToggle = async function(enabled) {
+        if (enabled) {
+            let granted = false;
+            if (window.CTRCHK_PWA && window.CTRCHK_PWA.requestNotificationPermission) {
+                granted = await window.CTRCHK_PWA.requestNotificationPermission();
+            } else if ('Notification' in window) {
+                const p = await Notification.requestPermission();
+                granted = p === 'granted';
+            }
+            if (granted) {
+                localStorage.setItem('checkinReminderEnabled', '1');
+            } else {
+                localStorage.removeItem('checkinReminderEnabled');
+                document.getElementById('notif-toggle').checked = false;
+            }
+        } else {
+            localStorage.removeItem('checkinReminderEnabled');
+        }
+    };
+
+    function initNotifToggle() {
+        const toggle = document.getElementById('notif-toggle');
+        if (!toggle) return;
+        const enabled = localStorage.getItem('checkinReminderEnabled') === '1';
+        toggle.checked = enabled;
+        // Hide the whole row if notifications are not supported
+        if (!('Notification' in window)) {
+            const wrap = document.getElementById('notif-toggle-wrap');
+            if (wrap) wrap.style.display = 'none';
+        }
+    }
+
     // ── Main render ───────────────────────────────────────────────────
     function render() {
         const isLoggedIn = !!localStorage.getItem('accessToken');
@@ -829,18 +1122,27 @@
                 const progress = computeDailyProgress(task);
                 dailyList.appendChild(renderTaskCard(task, progress, true));
             });
-        }
 
-        // Weekly tasks
-        const weeklyList = document.getElementById('weekly-tasks-list');
-        weeklyList.innerHTML = '';
-        if (!isLoggedIn) {
-            weeklyList.innerHTML = '<div class="login-prompt"><i class="fas fa-lock"></i>請先登入以查看每週任務<br><a href="/login">登入</a></div>';
-        } else {
-            WEEKLY_TASKS.forEach(task => {
-                const progress = computeWeeklyProgress(task);
-                weeklyList.appendChild(renderTaskCard(task, progress, false));
-            });
+            // All-tasks bonus card
+            const allDone = DAILY_TASKS.every(t => computeDailyProgress(t).done);
+            const bonusKey = 'allTasksBonusClaimed_' + getTodayKey();
+            const bonusClaimed = !!localStorage.getItem(bonusKey);
+            const bonusDiv = document.createElement('div');
+            bonusDiv.className = 'all-tasks-bonus' + (allDone ? '' : '');
+            bonusDiv.innerHTML = `
+                <div class="atb-icon">🎁</div>
+                <div class="atb-info">
+                    <div class="atb-name">完成所有任務</div>
+                    <div class="atb-desc">完成今日全部四個任務即可獲得額外獎勵</div>
+                </div>
+                <div class="atb-reward">+80 XP +5 🪙</div>
+                <div class="atb-check">${(allDone || bonusClaimed) ? '✅' : '⬜'}</div>
+            `;
+            if (allDone && !bonusClaimed) {
+                localStorage.setItem(bonusKey, '1');
+                bonusDiv.querySelector('.atb-check').textContent = '✅';
+            }
+            dailyList.appendChild(bonusDiv);
         }
 
         // Achievement medals
@@ -860,10 +1162,9 @@
         // Summary bar
         if (isLoggedIn) {
             const dailyDone = DAILY_TASKS.filter(t => computeDailyProgress(t).done).length;
-            const weeklyDone = WEEKLY_TASKS.filter(t => computeWeeklyProgress(t).done).length;
-            const medalCount = ACHIEVEMENTS.filter(a => computeAchievementProgress(a).earned).length;
             document.getElementById('summary-daily-done').textContent = `${dailyDone}/${DAILY_TASKS.length}`;
-            document.getElementById('summary-weekly-done').textContent = `${weeklyDone}/${WEEKLY_TASKS.length}`;
+            document.getElementById('summary-weekly-done').textContent = '即將推出';
+            const medalCount = ACHIEVEMENTS.filter(a => computeAchievementProgress(a).earned).length;
             document.getElementById('summary-medals').textContent = medalCount;
             document.getElementById('tasks-summary').style.display = '';
         }
@@ -876,11 +1177,6 @@
 
         document.getElementById('daily-reset-info').textContent =
             `每日任務每天午夜重置 · 剩餘 ${dailyHrsLeft} 小時`;
-
-        const dayOfWeek = now.getDay(); // 0=Sun
-        const daysToMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
-        document.getElementById('weekly-reset-info').textContent =
-            `每週任務每週一重置 · 剩餘 ${daysToMonday} 天`;
     }
 
     // ── Tabs ──────────────────────────────────────────────────────────
@@ -897,6 +1193,7 @@
     // ── Init ──────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
         renderCheckin();
+        initNotifToggle();
         render();
     });
 
