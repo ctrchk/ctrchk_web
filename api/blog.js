@@ -50,11 +50,11 @@ export default async function handler(req, res) {
              bp.summary,
              bp.content,
              bp.image_url,
-             u.full_name AS author_name,
+             COALESCE(u.full_name, '管理員') AS author_name,
              bp.created_at,
              bp.updated_at
            FROM blog_posts bp
-           JOIN users u ON bp.author_id = u.id
+           LEFT JOIN users u ON bp.author_id = u.id
            WHERE bp.id = $1`,
           [postId]
         );
@@ -70,10 +70,11 @@ export default async function handler(req, res) {
            bp.title,
            bp.summary,
            bp.image_url,
-           u.full_name AS author_name,
+           COALESCE(u.full_name, '管理員') AS author_name,
            bp.created_at
          FROM blog_posts bp
-         JOIN users u ON bp.author_id = u.id
+         LEFT JOIN users u ON bp.author_id = u.id
+         WHERE bp.published = TRUE
          ORDER BY bp.created_at DESC`
       );
       return res.status(200).json({ posts });
