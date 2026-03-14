@@ -831,7 +831,7 @@
 
             try {
                 const token = localStorage.getItem('accessToken') || '';
-                const res = await fetch('/api/admin-push', {
+                const res = await fetch('/api/push?action=send', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

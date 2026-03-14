@@ -1,0 +1,154 @@
+// /api/user.js
+// Consolidated user profile endpoint.
+//
+//   GET  /api/user?user_id=X   → get user info (replaces get-user.js)
+//   GET  /api/user?google_id=X → get user by Google ID
+//   GET  /api/user?email=X     → get user by email
+//   POST /api/user             → update profile (replaces update-profile.js)
+//
+import { query } from './_db.js';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // ── GET → fetch user info ───────────────────────────────────────────────
+  if (req.method === 'GET') {
+    try {
+      const { google_id, email, user_id } = req.query;
+
+      if (!google_id && !email && !user_id) {
+        return res.status(400).json({ message: 'User identifier required (google_id, email, or user_id)' });
+      }
+
+      let result;
+      const SELECT = `SELECT u.id, u.email, u.user_role, u.full_name, u.phone, u.profile_completed,
+                             u.auth_provider, u.created_at, u.email_verified,
+                             gp.level, gp.xp, gp.coins
+                        FROM users u
+                        LEFT JOIN user_game_profile gp ON gp.user_id = u.id`;
+
+      if (google_id) {
+        result = await query(`${SELECT} WHERE u.google_id = $1`, [google_id]);
+      } else if (user_id) {
+        result = await query(`${SELECT} WHERE u.id = $1`, [user_id]);
+      } else {
+        result = await query(`${SELECT} WHERE u.email = $1`, [email]);
+      }
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const user = result.rows[0];
+      if (user.level === null || user.level === undefined) {
+        user.level = 1;
+        user.xp = 0;
+        user.coins = 0;
+      }
+
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error('Get user error:', error);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  // ── POST → update profile ───────────────────────────────────────────────
+  if (req.method === 'POST') {
+    try {
+      const {
+        user_id,
+        google_id,
+        email,
+        full_name,
+        phone,
+        experience,
+        preferred_area,
+        birthdate,
+        bike_type,
+      } = req.body;
+
+      if (!full_name) {
+        return res.status(400).json({ message: 'Full name is required' });
+      }
+
+      let preferredAreaStr = '';
+      if (preferred_area) {
+        preferredAreaStr = Array.isArray(preferred_area)
+          ? preferred_area.join(',')
+          : String(preferred_area).trim();
+      }
+
+      if (!user_id && !google_id && !email) {
+        return res.status(400).json({ message: 'User identifier required' });
+      }
+
+      let checkResult;
+      if (user_id) {
+        checkResult = await query('SELECT id, email, user_role FROM users WHERE id = $1', [user_id]);
+      } else if (google_id) {
+        checkResult = await query('SELECT id, email, user_role FROM users WHERE google_id = $1', [google_id]);
+      } else {
+        checkResult = await query('SELECT id, email, user_role FROM users WHERE email = $1', [email]);
+      }
+
+      if (checkResult.rows.length === 0) {
+        if (google_id && email) {
+          await query(
+            `INSERT INTO users (
+              email, google_id, user_role, full_name, phone, experience,
+              preferred_area, birthdate, bike_type, profile_completed,
+              profile_completion_date, auth_provider
+            ) VALUES ($1, $2, 'senior', $3, $4, $5, $6, $7, $8, true, NOW(), 'google')`,
+            [email, google_id, full_name, phone || null, experience, preferredAreaStr,
+             birthdate || null, bike_type || null]
+          );
+          return res.status(201).json({
+            message: 'Profile created and upgraded to senior member',
+            user_role: 'senior',
+          });
+        }
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const currentRole = checkResult.rows[0].user_role;
+      const userId = checkResult.rows[0].id;
+      const hasFullProfile = experience && preferredAreaStr;
+
+      if (hasFullProfile) {
+        const newRole = currentRole === 'admin' ? 'admin' : 'senior';
+        const profileCompleted = newRole !== 'admin';
+        await query(
+          `UPDATE users
+           SET user_role = $1, full_name = $2, phone = $3, experience = $4,
+               preferred_area = $5, birthdate = $6, bike_type = $7,
+               profile_completed = $8,
+               profile_completion_date = CASE WHEN $8 AND profile_completion_date IS NULL THEN NOW() ELSE profile_completion_date END
+           WHERE id = $9`,
+          [newRole, full_name, phone || null, experience, preferredAreaStr,
+           birthdate || null, bike_type || null, profileCompleted, userId]
+        );
+        return res.status(200).json({
+          message: newRole === 'senior' ? 'Profile updated and upgraded to senior member' : 'Profile updated',
+          user_role: newRole,
+        });
+      } else {
+        await query(
+          `UPDATE users
+           SET full_name = $1, phone = $2, birthdate = $3, bike_type = $4
+           WHERE id = $5`,
+          [full_name, phone || null, birthdate || null, bike_type || null, userId]
+        );
+        return res.status(200).json({ message: 'Profile updated', user_role: currentRole });
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
+  return res.status(405).json({ message: 'Method Not Allowed' });
+}

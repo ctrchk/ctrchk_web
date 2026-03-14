@@ -134,9 +134,8 @@ document.addEventListener('DOMContentLoaded', function() {
         { id: 'S91', alias: "清半接駁線", start: "清水灣半島", end: "將軍澳站", via: "北橋、怡明邨", nature: "混合", time: 6, length: "1.1km", difficulty: 1, image: "images/S91.jpg", description: "循環來往清水灣半島與康城站的循環線。適合清水灣半島居民通勤，也適合體驗康城海濱，道路平坦，讓你輕鬆騎行，探索康城風光。", tags: ["將軍澳", "平坦", "循環", "清水灣半島專線", "通勤", "旅遊"], color: "#ffff00", textColor: "black", gpx: [{ label: "往清水灣半島", file: "S91清水灣半島.gpx" }, { label: "往調景嶺", file: "S91調景嶺.gpx" }] },
         { id: 'ST01', alias: " ", start: "沙田站", end: "第一城", via: "城門河畔", nature: "通勤", time: "待定", length: "待定", difficulty: "待定", image: "images/st_coming_soon.jpg", description: "規劃中的沙田路線，敬請期待！", tags: ["沙田區", "通勤"], color: "#333", link: "/coming_soon.html", gpx: [] }
     ];
-
-    // =========================================================================
-    // Blog 文章資料 (你原有的程式碼)
+    // Expose routes for the PWA app (routes.html uses this to merge display data)
+    window.CTRCHK_ROUTES = routes;
     // =========================================================================
     const blogPosts = [
         {

@@ -1062,6 +1062,28 @@ async function initAppRidePage() {
         const data = await res.json();
         appRoutes = data.routes || [];
 
+        // Merge display fields (alias, start, end, via, color, tags, nature, time, length)
+        // from main.js const routes (window.CTRCHK_ROUTES) — single source of truth for UI display
+        if (window.CTRCHK_ROUTES && window.CTRCHK_ROUTES.length) {
+            const displayMap = new Map(window.CTRCHK_ROUTES.map(r => [r.id, r]));
+            appRoutes = appRoutes.map(r => {
+                const d = displayMap.get(r.id);
+                if (!d) return r;
+                return Object.assign({}, r, {
+                    alias: d.alias || r.alias,
+                    start: d.start || r.start,
+                    // `end` may be null for circular routes; use d.end when explicitly set
+                    end: d.end !== undefined ? d.end : r.end,
+                    via: d.via || r.via,
+                    color: d.color || r.color,
+                    tags: d.tags || r.tags,
+                    nature: d.nature || r.nature,
+                    time: d.time || r.time,
+                    length: d.length || r.length,
+                });
+            });
+        }
+
         // Count routes per department by tag
         const tkoDept = DEPARTMENTS.find(d => d.id === 'tko');
         if (tkoDept) {

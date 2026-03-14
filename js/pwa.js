@@ -375,7 +375,7 @@
 
   // ── Web Push 訂閱 ─────────────────────────────────────────────────────────
   // Subscribes the current device to server-side Web Push notifications
-  // using the VAPID public key. The subscription is sent to /api/push-subscribe
+  // using the VAPID public key. The subscription is sent to /api/push
   // so the server can send push notifications even when the app is closed.
 
   function urlBase64ToUint8Array(base64String) {
@@ -391,7 +391,7 @@
 
     try {
       // Fetch the server-side VAPID public key
-      const keyRes = await fetch('/api/push-vapid');
+      const keyRes = await fetch('/api/push');
       if (!keyRes.ok) return;
       const { publicKey } = await keyRes.json();
       if (!publicKey) return;
@@ -406,13 +406,13 @@
       }
 
       const token = localStorage.getItem('accessToken') || '';
-      await fetch('/api/push-subscribe', {
+      await fetch('/api/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ subscription: sub.toJSON() }),
+        body: JSON.stringify({ action: 'subscribe', subscription: sub.toJSON() }),
       });
     } catch (err) {
       console.warn('Push subscription failed:', err);

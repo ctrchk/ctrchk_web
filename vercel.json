@@ -9,7 +9,7 @@
   ],
   "crons": [
     {
-      "path": "/api/cron-checkin-remind",
+      "path": "/api/push?action=cron-remind",
       "schedule": "0 1 * * *"
     }
   ]
