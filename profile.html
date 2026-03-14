@@ -175,6 +175,58 @@
             color: var(--app-text-secondary, #a8d8a0);
         }
         .upgrade-notice a { color: var(--app-accent, #6dba65); }
+        /* ── Notification settings ─────────────────────────────────────── */
+        .notif-setting-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+        }
+        .notif-setting-info {
+            flex: 1;
+            font-size: 0.9em;
+        }
+        .notif-setting-info strong {
+            display: block;
+            color: var(--app-text-primary, #e8f5e9);
+            margin-bottom: 0.15em;
+        }
+        .notif-setting-info span {
+            color: var(--app-text-secondary, #a8d8a0);
+            font-size: 0.9em;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #2d4d2d;
+            border-radius: 24px;
+            transition: background 0.2s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 3px;
+            width: 18px;
+            height: 18px;
+            background: #a8d8a0;
+            border-radius: 50%;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--app-accent, #6dba65); }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(20px);
+            background: #121f14;
+        }
+        .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
+        #notif-perm-status { font-size: 0.8em; margin-top: 0.6em; }
     </style>
 </head>
 <body>
@@ -288,6 +340,22 @@
                     <a href="/forgot-password" class="cta-button" style="font-size:0.85em; padding:0.6em 1.5em; display:inline-block; margin-top:0.5em;">
                         <i class="fas fa-key"></i> 重設密碼
                     </a>
+                </div>
+
+                <!-- 通知設置 -->
+                <div class="profile-card" id="notif-settings-card">
+                    <h3><i class="fas fa-bell"></i> 通知設置</h3>
+                    <div class="notif-setting-row">
+                        <div class="notif-setting-info">
+                            <strong>接收所有通知</strong>
+                            <span>包括每日簽到提醒及系統消息</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="notif-all-toggle" onchange="onAllNotifToggle(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p id="notif-perm-status"></p>
                 </div>
             </div>
         </section>
@@ -433,6 +501,66 @@
             }
         });
     });
+
+    // ── Notification settings ────────────────────────────────────────────
+    function updateNotifStatus() {
+        const statusEl = document.getElementById('notif-perm-status');
+        const toggle = document.getElementById('notif-all-toggle');
+        if (!statusEl || !toggle) return;
+
+        if (!('Notification' in window)) {
+            statusEl.textContent = '此瀏覽器不支持推送通知。';
+            statusEl.style.color = '#ef9a9a';
+            toggle.disabled = true;
+            return;
+        }
+        if (Notification.permission === 'denied') {
+            statusEl.textContent = '🚫 瀏覽器已拒絕通知權限。如需啟用，請在瀏覽器設定中手動允許通知。';
+            statusEl.style.color = '#ef9a9a';
+            toggle.checked = false;
+            toggle.disabled = true;
+            return;
+        }
+        toggle.disabled = false;
+        const allDisabled = localStorage.getItem('pushNotificationsDisabled') === '1';
+        if (!allDisabled && Notification.permission === 'granted') {
+            statusEl.textContent = '✅ 通知已啟用';
+            statusEl.style.color = '#6dba65';
+        } else {
+            statusEl.textContent = '';
+        }
+    }
+
+    function initNotifSettings() {
+        const toggle = document.getElementById('notif-all-toggle');
+        if (!toggle) return;
+        const allDisabled = localStorage.getItem('pushNotificationsDisabled') === '1';
+        toggle.checked = !allDisabled;
+        updateNotifStatus();
+    }
+
+    window.onAllNotifToggle = async function(enabled) {
+        if (enabled) {
+            localStorage.removeItem('pushNotificationsDisabled');
+            if (window.CTRCHK_PWA) {
+                const granted = await window.CTRCHK_PWA.requestNotificationPermission();
+                if (!granted) {
+                    // Browser denied — revert toggle
+                    document.getElementById('notif-all-toggle').checked = false;
+                    localStorage.setItem('pushNotificationsDisabled', '1');
+                } else {
+                    window.CTRCHK_PWA.subscribeToPush();
+                    window.CTRCHK_PWA.scheduleDailyCheckinReminder();
+                }
+            }
+        } else {
+            localStorage.setItem('pushNotificationsDisabled', '1');
+            if (window.CTRCHK_PWA) window.CTRCHK_PWA.unsubscribeFromPush();
+        }
+        updateNotifStatus();
+    };
+
+    document.addEventListener('DOMContentLoaded', function() { initNotifSettings(); });
     </script>
 </body>
 </html>

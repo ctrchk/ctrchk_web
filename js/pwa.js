@@ -325,12 +325,14 @@
   // ── 每日簽到提醒 ──────────────────────────────────────────────────────────
   // Schedules a daily check-in reminder notification using setTimeout.
   // The reminder fires once per day if the user hasn't checked in yet.
-  // It is only active if the user has enabled it (localStorage key) and
-  // notification permission is granted.
+  // Reminders are ON by default; disabled only when the user explicitly turns
+  // them off (checkinReminderDisabled==='1') or turns off all notifications
+  // (pushNotificationsDisabled==='1').
   function scheduleDailyCheckinReminder() {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
-    if (localStorage.getItem('checkinReminderEnabled') !== '1') return;
+    if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
+    if (localStorage.getItem('checkinReminderDisabled') === '1') return;
 
     const now = new Date();
     const todayKey = now.toISOString().slice(0, 10);
@@ -350,13 +352,14 @@
 
     const delay = target.getTime() - now.getTime();
     setTimeout(() => {
-      // Re-check: user may have signed in between now and the scheduled time
+      // Re-check: user may have changed settings between scheduling and firing
       const todayKeyNow = new Date().toISOString().slice(0, 10);
       try {
         const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
         if (checkins[todayKeyNow]) return; // already done
       } catch (_) {}
-      if (localStorage.getItem('checkinReminderEnabled') !== '1') return;
+      if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
+      if (localStorage.getItem('checkinReminderDisabled') === '1') return;
       sendLocalNotification(
         '🗓️ 別忘了今日簽到！',
         '連續簽到可解鎖豐厚 XP 及里程幣獎勵，快來打卡吧！',
@@ -367,10 +370,22 @@
     }, delay);
   }
 
-  // Kick off reminder scheduling when the page loads
+  // Kick off reminder scheduling and push subscription when the page loads.
+  // Notifications are ON by default: automatically request permission if not
+  // yet asked, and subscribe to push unless the user has opted out.
   window.addEventListener('load', () => {
-    scheduleDailyCheckinReminder();
-    subscribeToPush();
+    if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
+    if (!('Notification' in window)) return;
+
+    if (Notification.permission === 'granted') {
+      subscribeToPush();
+      scheduleDailyCheckinReminder();
+    } else if (Notification.permission !== 'denied') {
+      // Auto-request permission on first visit (default ON behavior)
+      requestNotificationPermission().then((granted) => {
+        if (granted) scheduleDailyCheckinReminder();
+      });
+    }
   });
 
   // ── Web Push 訂閱 ─────────────────────────────────────────────────────────
@@ -419,6 +434,32 @@
     }
   }
 
+  // ── Web Push 退訂 ─────────────────────────────────────────────────────────
+  // Unsubscribes the current device from server-side Web Push notifications
+  // and removes the stored subscription from the server.
+  async function unsubscribeFromPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        const token = localStorage.getItem('accessToken') || '';
+        await fetch('/api/push', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ endpoint }),
+        });
+      }
+    } catch (err) {
+      console.warn('Push unsubscribe failed:', err);
+    }
+  }
+
   // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
     isStandalone,
@@ -426,6 +467,7 @@
     sendLocalNotification,
     scheduleDailyCheckinReminder,
     subscribeToPush,
+    unsubscribeFromPush,
     // Manually enable/disable Liquid Glass (for settings UI)
     enableLiquidGlass() {
       document.body.classList.add('liquid-glass');

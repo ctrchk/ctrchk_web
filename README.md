@@ -803,7 +803,7 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 - 簽到記錄儲存於 `localStorage.dailyCheckins`（鍵為日期 `YYYY-MM-DD`）
 - 每達 28 天或**斷簽**即重新計算循環天數
 - 頁面顯示完整 28 天獎勵表格（可展開），今日獎勵一目了然
-- **PWA 每日提醒**：用戶可在任務頁切換「每日簽到提醒」開關，每天早上 9 時發送本地通知提醒簽到
+- **PWA 每日提醒**：通知功能**默認開啟**，用戶首次訪問時自動請求通知權限；每天早上 9 時發送本地通知提醒簽到。用戶可在**任務頁**關閉「每日簽到提醒」，或在**我的帳戶（設置）**中關閉所有通知。
 
 ### 16.5 技術實現
 
@@ -875,7 +875,7 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 |------|------|---------|
 | 每日簽到 28 天循環系統 | 移除原先固定 +30 XP 方案，改為 28 天遞增獎勵表（最高第 28 天 +1000 XP +100 🪙）；循環每 28 天或斷簽後重計 | `tasks.html` |
 | 簽到獎勵表格 | 任務頁新增可展開的「28 天獎勵表」，以格子卡片呈現每天獎勵，含今日高亮、里程碑特效 | `tasks.html` |
-| PWA 每日簽到提醒 | `pwa.js` 新增 `scheduleDailyCheckinReminder()` 函數；任務頁面新增提醒開關（每天早上 9 時觸發本地通知）；用戶可隨時關閉 | `js/pwa.js`, `tasks.html` |
+| PWA 每日簽到提醒 | `pwa.js` 新增 `scheduleDailyCheckinReminder()` 函數；通知功能改為**默認開啟**，首次訪問自動請求通知權限；任務頁面保留提醒開關（用戶可隨時關閉每日提醒）；「我的帳戶」新增「通知設置」可關閉所有通知 | `js/pwa.js`, `tasks.html`, `profile.html` |
 | 每日任務更新 | 更新四項任務：完整路線 +40 XP、20 站打卡 +30 XP、累積騎行 1 小時 +50 XP、完成三條路線 +10 🪙 | `tasks.html` |
 | 全部任務加成獎勵 | 完成當日全部四個任務可額外獲得 +80 XP +5 🪙 | `tasks.html` |
 | 每週任務改為「即將推出」 | 替換每週任務列表為「即將推出」佔位卡片（路線數量尚未足夠） | `tasks.html` |
