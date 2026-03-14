@@ -374,6 +374,16 @@
   // Notifications are ON by default: automatically request permission if not
   // yet asked, and subscribe to push unless the user has opted out.
   window.addEventListener('load', () => {
+    // One-time migration: re-enable push notifications for all existing users.
+    // Any previous opt-out (pushNotificationsDisabled='1') is cleared so that
+    // every user starts fresh with notifications enabled by default.
+    // The 'notifReset_v1' key can be removed from this migration block after
+    // most active users have visited once (e.g. after ~6 months).
+    if (!localStorage.getItem('notifReset_v1')) {
+      localStorage.removeItem('pushNotificationsDisabled');
+      localStorage.setItem('notifReset_v1', '1');
+    }
+
     if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
     if (!('Notification' in window)) return;
 
