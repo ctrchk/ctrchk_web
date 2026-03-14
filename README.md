@@ -14,7 +14,7 @@
 6. [資料庫設置](#6-資料庫設置)
 7. [會員系統說明](#7-會員系統說明)
 8. [電郵驗證系統](#8-電郵驗證系統)
-9. [管理員後台](#9-管理員後台)
+9. [管理員後台](#9-管理員後台)（含 [推送通知 Web Push 設置](#web-push-推送通知設置)）
 10. [Google 登入設置](#10-google-登入設置)
 11. [API 端點說明](#11-api-端點說明)
 12. [部署指南（Vercel）](#12-部署指南vercel)
@@ -151,6 +151,17 @@ ctrchk_web/
 > 設定路徑：Google 帳戶 → 安全性 → 兩步驟驗證 → 應用程式密碼
 
 > 💡 由於 enquiry@ctrchk.com 被重定向至 ctrcz9829@gmail.com，請使用 Gmail SMTP 設定。
+
+### 選填（Web Push 推送通知）
+
+| 變數名 | 說明 | 範例 |
+|--------|------|------|
+| `VAPID_PUBLIC_KEY` | VAPID 公開金鑰（Web Push 必需） | `BN...` |
+| `VAPID_PRIVATE_KEY` | VAPID 私有金鑰（Web Push 必需） | `abc123...` |
+| `VAPID_SUBJECT` | VAPID 主題（電郵格式，選填） | `mailto:admin@ctrchk.com` |
+| `CRON_SECRET` | Cron 任務驗證密鑰（防止未授權觸發） | `any-random-secret` |
+
+> ⚠️ 若不設置 VAPID 金鑰，管理員後台的「發送推送通知」功能將顯示**「推送服務未配置（缺少 VAPID 金鑰）」**錯誤。詳見「[管理員後台 → Web Push 推送通知設置](#web-push-推送通知設置)」。
 
 ---
 
@@ -304,8 +315,74 @@ VALUES ('admin@ctrchk.com', '<hash結果>', 'admin', 'CTRC HK 管理員', true, 
 | 修改角色 | 升級/降級用戶（junior ↔ senior ↔ admin） |
 | 刪除用戶 | 永久刪除用戶帳號 |
 | 新增管理員 | 建立新管理員帳戶 |
+| 網誌管理 | 撰寫、編輯、刪除網誌文章（標題、摘要、封面圖片、HTML 正文） |
+| 推送通知 | 向全部訂閱者、指定用戶 ID 或指定角色類別發送 Web Push 通知 |
 
 > ⚠️ 管理員密碼**不**顯示於後台，管理員的個人信息受到保護。
+
+---
+
+### Web Push 推送通知設置
+
+管理員後台的「推送通知」功能需要 **VAPID 金鑰**才能運作。以下為完整設置步驟：
+
+#### 步驟一：生成 VAPID 金鑰
+
+確保已安裝專案依賴（`npm install`），然後執行：
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+輸出範例：
+
+```
+=======================================
+
+Public Key:
+BM7...（約 88 字元）
+
+Private Key:
+abc...（約 44 字元）
+
+=======================================
+```
+
+> 💡 也可以全局安裝後使用：
+> ```bash
+> npm install -g web-push
+> web-push generate-vapid-keys
+> ```
+
+#### 步驟二：在 Vercel 設置環境變數
+
+前往 Vercel 專案 → **Settings** → **Environment Variables**，新增以下變數：
+
+| 變數名 | 值 | 環境 |
+|--------|-----|------|
+| `VAPID_PUBLIC_KEY` | 上方生成的 Public Key | Production + Preview |
+| `VAPID_PRIVATE_KEY` | 上方生成的 Private Key | Production + Preview |
+| `VAPID_SUBJECT` | `mailto:admin@ctrchk.com`（可改為你的電郵） | Production + Preview |
+| `CRON_SECRET` | 任意隨機字串（建議 32+ 字元） | Production + Preview |
+
+> ⚠️ **請妥善保管私有金鑰**，切勿提交至 Git 倉庫。
+
+#### 步驟三：重新部署
+
+Vercel 環境變數更新後，需**重新部署**（Redeploy）才能生效：
+1. 前往 Vercel 儀表板 → Deployments
+2. 點擊最新部署右側的 **⋯** → **Redeploy**
+
+#### 步驟四：測試推送功能
+
+1. 用瀏覽器開啟網站並**允許通知權限**（瀏覽器會彈出通知允許請求）
+2. 登入管理員帳號，前往 `/admin` → 點選**「推送通知」**標籤
+3. 填寫標題、內容，目標選「所有訂閱者」，點擊**「發送通知」**
+4. 若顯示 `✅ 已送達 1 裝置`，表示設置成功
+
+#### CRON 每日提醒（選填）
+
+系統每天凌晨 1 時（UTC）自動向所有訂閱者發送簽到提醒（`vercel.json` 中已設置）。若需保護此 cron 端點避免被外部隨意觸發，可設置 `CRON_SECRET` 環境變數。
 
 ---
 
@@ -455,6 +532,17 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 - 確認 `GOOGLE_CLIENT_ID` 已設置
 - 確認 Google Cloud Console 中的「授權來源」包含當前網域
 - 確認頁面中已載入 `https://accounts.google.com/gsi/client`
+
+### Q: 推送通知顯示「推送服務未配置（缺少 VAPID 金鑰）」？
+
+這表示 `VAPID_PUBLIC_KEY` 或 `VAPID_PRIVATE_KEY` 環境變數尚未設置。請按照「[管理員後台 → Web Push 推送通知設置](#web-push-推送通知設置)」章節的步驟生成並配置 VAPID 金鑰，然後重新部署。
+
+### Q: 網誌文章在 /blog 頁面沒有顯示？
+
+可能原因及解決方法：
+
+1. **資料表尚未建立**：確認已在 Neon/Postgres 執行最新版 `database-schema.sql`（執行是冪等的，含 `IF NOT EXISTS` 不會破壞現有資料）。
+2. **資料庫執行錯誤**：查看 Vercel Functions 日誌，確認 `/api/blog` 沒有回傳 500 錯誤。
 
 ---
 
