@@ -495,8 +495,8 @@
 
     <!-- ════════ APP-ONLY department selection screen ════════ -->
     <!-- ════════ APP-ONLY dept select sheet ════════ -->
-    <div id="app-dept-overlay" class="app-only" onclick="hideDeptSheet()"></div>
-    <div id="app-dept-select" class="app-only">
+    <div id="app-dept-overlay" onclick="hideDeptSheet()"></div>
+    <div id="app-dept-select">
         <div class="app-dept-header">
             <h2>🗺️ 選擇騎行部門</h2>
             <button onclick="hideDeptSheet()" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em;font-size:1.1em;margin-left:auto;"><i class="fas fa-times"></i></button>
@@ -573,9 +573,9 @@ const ROUTE_UNLOCK = {
     'X935':50,'S90':50,'S91':50,
 };
 const ROUTE_XP = {
-    '900':150,'900A':120,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
+    '900':450,'900A':360,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
     '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
-    '966C':90,'928':170,'929':160,'966T':90,'961':130,'961P':100,'932':220,
+    '966C':90,'928':170,'929':160,'966T':320,'961':130,'961P':100,'932':220,
     '935':250,'939':120,'939M':120,'955':110,'955A':60,'955H':80,'960':400,
     '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
 };
@@ -765,13 +765,13 @@ function renderRoutes() {
 
     container.innerHTML = '';
     filtered.forEach(route => {
-        const needed = ROUTE_UNLOCK[route.id] || 1;
+        const needed = route.unlock_level || ROUTE_UNLOCK[route.id] || 1;
         const isCoinRoute = route.is_special && route.coin_cost > 0;
         const coinUnlocked = isCoinRoute && isCoinRouteUnlocked(route);
         const levelLocked = isLoggedIn && !isCoinRoute && userLevel < needed;
         const coinLocked = isLoggedIn && isCoinRoute && !coinUnlocked;
         const locked = levelLocked || coinLocked;
-        const xp = ROUTE_XP[route.id] || route.xp_reward || 0;
+        const xp = route.xp_reward || ROUTE_XP[route.id] || 0;
         const isSelected = route.id === selectedRouteId;
 
         const card = document.createElement('div');
@@ -1005,8 +1005,8 @@ function showDeptSheet() {
         list.appendChild(card);
     });
 
-    document.getElementById('app-dept-select').style.display = '';
-    document.getElementById('app-dept-overlay').style.display = '';
+    document.getElementById('app-dept-select').style.display = 'block';
+    document.getElementById('app-dept-overlay').style.display = 'block';
 }
 
 function hideDeptSheet() {
@@ -1061,6 +1061,28 @@ async function initAppRidePage() {
         const res = await fetch('/routes.json');
         const data = await res.json();
         appRoutes = data.routes || [];
+
+        // Merge display fields (alias, start, end, via, color, tags, nature, time, length)
+        // from main.js const routes (window.CTRCHK_ROUTES) — single source of truth for UI display
+        if (window.CTRCHK_ROUTES && window.CTRCHK_ROUTES.length) {
+            const displayMap = new Map(window.CTRCHK_ROUTES.map(r => [r.id, r]));
+            appRoutes = appRoutes.map(r => {
+                const d = displayMap.get(r.id);
+                if (!d) return r;
+                return Object.assign({}, r, {
+                    alias: d.alias || r.alias,
+                    start: d.start || r.start,
+                    // `end` may be null for circular routes; use d.end when explicitly set
+                    end: d.end !== undefined ? d.end : r.end,
+                    via: d.via || r.via,
+                    color: d.color || r.color,
+                    tags: d.tags || r.tags,
+                    nature: d.nature || r.nature,
+                    time: d.time || r.time,
+                    length: d.length || r.length,
+                });
+            });
+        }
 
         // Count routes per department by tag
         const tkoDept = DEPARTMENTS.find(d => d.id === 'tko');

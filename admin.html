@@ -254,6 +254,9 @@
                 <button class="tab-btn" onclick="showTab('blog'); loadBlogPosts();">
                     <i class="fas fa-pen"></i> 網誌管理
                 </button>
+                <button class="tab-btn" onclick="showTab('push');">
+                    <i class="fas fa-bell"></i> 推送通知
+                </button>
             </div>
 
             <!-- 用戶管理標籤 -->
@@ -333,6 +336,54 @@
                 </div>
 
                 <div id="blog-list-admin" style="display:none;"></div>
+            </div>
+
+            <!-- 推送通知標籤 -->
+            <div id="tab-push" style="display:none;">
+                <h3 style="margin-top:0;">📢 發送推送通知</h3>
+                <p style="color:#555; font-size:0.9em;">可向所有用戶、指定用戶 ID 或指定角色類別發送自訂通知。</p>
+                <form id="push-form" onsubmit="sendAdminPush(event)" style="max-width:540px;">
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">標題 <span style="color:red">*</span></label>
+                        <input type="text" id="push-title" required maxlength="80"
+                               placeholder="e.g. 🚲 新路線上線！"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">內容 <span style="color:red">*</span></label>
+                        <textarea id="push-body" required maxlength="200" rows="3"
+                                  placeholder="通知內容（最多 200 字）"
+                                  style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">跳轉網址（可選）</label>
+                        <input type="text" id="push-url" maxlength="200" placeholder="e.g. /routes 或留空"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">目標</label>
+                        <select id="push-target-type" onchange="togglePushTarget()"
+                                style="padding:0.5em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em;">
+                            <option value="all">所有訂閱者</option>
+                            <option value="user">指定用戶 ID</option>
+                            <option value="role">指定角色（user / senior / admin）</option>
+                        </select>
+                    </div>
+                    <div id="push-target-user" style="margin-bottom:1em; display:none;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">用戶 ID</label>
+                        <input type="number" id="push-user-id" min="1" placeholder="數字 ID"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <div id="push-target-role" style="margin-bottom:1em; display:none;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">角色</label>
+                        <input type="text" id="push-role" placeholder="user / senior / admin"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <button type="submit" class="cta-button" id="push-submit-btn">
+                        <i class="fas fa-paper-plane"></i> 發送通知
+                    </button>
+                </form>
+                <div id="push-result" style="margin-top:1em;"></div>
             </div>
         </div>
     </main>
@@ -744,6 +795,64 @@
                 }
             } catch (err) {
                 alert('錯誤: ' + err.message);
+            }
+        }
+
+        // ── 推送通知功能 ─────────────────────────────────────────────────────
+        function togglePushTarget() {
+            const type = document.getElementById('push-target-type').value;
+            document.getElementById('push-target-user').style.display = type === 'user' ? 'block' : 'none';
+            document.getElementById('push-target-role').style.display = type === 'role' ? 'block' : 'none';
+        }
+
+        async function sendAdminPush(e) {
+            e.preventDefault();
+            const btn = document.getElementById('push-submit-btn');
+            const resultEl = document.getElementById('push-result');
+            btn.disabled = true;
+            btn.textContent = '發送中…';
+            resultEl.textContent = '';
+
+            const title = document.getElementById('push-title').value.trim();
+            const body  = document.getElementById('push-body').value.trim();
+            const url   = document.getElementById('push-url').value.trim() || '/';
+            const type  = document.getElementById('push-target-type').value;
+            const payload = { title, body, url };
+
+            if (type === 'user') {
+                const uid = document.getElementById('push-user-id').value.trim();
+                if (!uid) { resultEl.textContent = '請填寫用戶 ID'; btn.disabled = false; btn.textContent = '發送通知'; return; }
+                payload.target_user_id = parseInt(uid, 10);
+            } else if (type === 'role') {
+                const role = document.getElementById('push-role').value.trim();
+                if (!role) { resultEl.textContent = '請填寫角色'; btn.disabled = false; btn.textContent = '發送通知'; return; }
+                payload.target_category = role;
+            }
+
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const res = await fetch('/api/push?action=send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    resultEl.style.color = 'green';
+                    resultEl.textContent = `✅ 已發送至 ${data.sent} 個裝置${data.failed ? `（${data.failed} 個失敗）` : ''}${data.message ? '：' + data.message : ''}`;
+                } else {
+                    resultEl.style.color = 'red';
+                    resultEl.textContent = '❌ ' + (data.message || '發送失敗');
+                }
+            } catch (err) {
+                resultEl.style.color = 'red';
+                resultEl.textContent = '❌ 錯誤：' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送通知';
             }
         }
     </script>

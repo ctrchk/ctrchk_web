@@ -333,7 +333,7 @@
                 // 從後端取得最新的用戶角色及遊戲進度
                 try {
                     const token = localStorage.getItem('accessToken');
-                    const dbResponse = await fetch(`/api/get-user?user_id=${user.id}`, {
+                    const dbResponse = await fetch(`/api/user?user_id=${user.id}`, {
                         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                     });
                     if (dbResponse.ok) {

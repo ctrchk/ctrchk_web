@@ -6,5 +6,11 @@
       "destination": "/$1",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/push?action=cron-remind",
+      "schedule": "0 1 * * *"
+    }
   ]
 }

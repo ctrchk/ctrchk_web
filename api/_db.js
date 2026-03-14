@@ -142,6 +142,16 @@ const schemaReady = pool.query(`
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(reply_id, user_id)
   );
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    endpoint   TEXT NOT NULL UNIQUE,
+    p256dh     TEXT,
+    auth       TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
   CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
   CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
   CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token);

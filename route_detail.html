@@ -687,6 +687,9 @@
         // 顯示地圖區塊
         document.getElementById('route-map-section').style.display = 'block';
         initMap(defaultCenter[0], defaultCenter[1], 14);
+        // invalidateSize ensures Leaflet recalculates the map container
+        // dimensions after the section transitions from display:none
+        setTimeout(() => { if (map) map.invalidateSize(); }, 50);
 
         // 加載 GPX（取第一條 GPX 文件）
         if (routeData && routeData.gpx && routeData.gpx.length > 0) {
@@ -754,9 +757,9 @@
         'X935':50,'S90':50,'S91':50,
       };
       const ROUTE_XP = {
-        '900':150,'900A':120,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
+        '900':450,'900A':360,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
         '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
-        '966C':90,'928':170,'929':160,'966T':90,'961':130,'961P':100,'932':220,
+        '966C':90,'928':170,'929':160,'966T':320,'961':130,'961P':100,'932':220,
         '935':250,'939':120,'939M':120,'955':110,'955A':60,'955H':80,'960':400,
         '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
       };

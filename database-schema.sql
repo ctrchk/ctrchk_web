@@ -441,3 +441,18 @@ ON CONFLICT (ach_key) DO UPDATE SET
   coin_reward    = EXCLUDED.coin_reward,
   condition_type = EXCLUDED.condition_type,
   condition_value= EXCLUDED.condition_value;
+
+-- ── Web Push 推送通知訂閱 ─────────────────────────────────────────────────
+-- 儲存瀏覽器的 Web Push 訂閱資訊，供伺服器推送通知使用。
+-- user_id 可為 NULL（未登入的訪客也可訂閱提醒）。
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  endpoint   TEXT NOT NULL UNIQUE,
+  p256dh     TEXT,
+  auth       TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);

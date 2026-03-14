@@ -947,7 +947,7 @@
         "少坡"
       ],
       "color": "#0b5394",
-      "unlock_level": 4,
+      "unlock_level": 8,
       "unlock_cost": null,
       "xp_reward": 110,
       "is_special": false,
@@ -984,7 +984,7 @@
         "少坡"
       ],
       "color": "#073763",
-      "unlock_level": 4,
+      "unlock_level": 8,
       "unlock_cost": null,
       "xp_reward": 80,
       "is_special": false,
@@ -1025,7 +1025,7 @@
         "旅遊"
       ],
       "color": "#3c78d8",
-      "unlock_level": 7,
+      "unlock_level": 15,
       "unlock_cost": null,
       "xp_reward": 100,
       "is_special": false,
@@ -1062,7 +1062,7 @@
         "學校線"
       ],
       "color": "#660000",
-      "unlock_level": 10,
+      "unlock_level": 22,
       "unlock_cost": null,
       "xp_reward": 130,
       "is_special": false,
@@ -1099,7 +1099,7 @@
         "旅遊"
       ],
       "color": "#ff0000",
-      "unlock_level": 13,
+      "unlock_level": 30,
       "unlock_cost": null,
       "xp_reward": 160,
       "is_special": false,
@@ -1141,7 +1141,7 @@
         "旅遊"
       ],
       "color": "#ff00ff",
-      "unlock_level": 19,
+      "unlock_level": 45,
       "unlock_cost": null,
       "xp_reward": 220,
       "is_special": false,
@@ -1182,7 +1182,7 @@
         "挑戰"
       ],
       "color": "#76a5af",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 400,
       "is_special": false,
@@ -1219,7 +1219,7 @@
         "旅遊"
       ],
       "color": "#0b5394",
-      "unlock_level": 4,
+      "unlock_level": 8,
       "unlock_cost": null,
       "xp_reward": 90,
       "is_special": false,
@@ -1239,8 +1239,8 @@
     {
       "id": "900S",
       "alias": "特快海濱線",
-      "start": "寶琳（新都城二期）",
-      "end": "調景嶺彩明",
+      "start": "調景嶺總站",
+      "end": "寶琳消防局",
       "via": "香港單車館、將軍澳海濱（特快直達）",
       "nature": "通勤",
       "time": 25,
@@ -1256,7 +1256,7 @@
         "少坡"
       ],
       "color": "#e6a817",
-      "unlock_level": 7,
+      "unlock_level": 15,
       "unlock_cost": 600,
       "xp_reward": 130,
       "is_special": true,
@@ -1288,7 +1288,7 @@
         "少坡"
       ],
       "color": "#6f2da8",
-      "unlock_level": 7,
+      "unlock_level": 15,
       "unlock_cost": null,
       "xp_reward": 140,
       "is_special": false,
@@ -1325,7 +1325,7 @@
         "快速"
       ],
       "color": "#cc4125",
-      "unlock_level": 7,
+      "unlock_level": 15,
       "unlock_cost": 500,
       "xp_reward": 80,
       "is_special": true,
@@ -1361,7 +1361,7 @@
         "坑口北專線"
       ],
       "color": "#85200c",
-      "unlock_level": 10,
+      "unlock_level": 22,
       "unlock_cost": null,
       "xp_reward": 80,
       "is_special": false,
@@ -1399,7 +1399,7 @@
         "少坡"
       ],
       "color": "#0e6b5e",
-      "unlock_level": 10,
+      "unlock_level": 22,
       "unlock_cost": null,
       "xp_reward": 90,
       "is_special": false,
@@ -1435,7 +1435,7 @@
         "少坡"
       ],
       "color": "#e69138",
-      "unlock_level": 13,
+      "unlock_level": 30,
       "unlock_cost": null,
       "xp_reward": 100,
       "is_special": false,
@@ -1473,7 +1473,7 @@
         "風景優美"
       ],
       "color": "#4a86e8",
-      "unlock_level": 13,
+      "unlock_level": 30,
       "unlock_cost": null,
       "xp_reward": 90,
       "is_special": false,
@@ -1510,7 +1510,7 @@
         "風景優美"
       ],
       "color": "#783f04",
-      "unlock_level": 16,
+      "unlock_level": 38,
       "unlock_cost": null,
       "xp_reward": 170,
       "is_special": false,
@@ -1546,7 +1546,7 @@
         "坑口北專線"
       ],
       "color": "#b45f06",
-      "unlock_level": 16,
+      "unlock_level": 38,
       "unlock_cost": null,
       "xp_reward": 160,
       "is_special": false,
@@ -1566,8 +1566,8 @@
     {
       "id": "961",
       "alias": "清水灣大環線",
-      "start": "調景嶺站",
-      "end": "康城站",
+      "start": "維景灣畔",
+      "end": "康城西",
       "via": "坑口北、清水灣半島、將軍澳西、康城",
       "nature": "旅遊",
       "time": 60,
@@ -1584,7 +1584,7 @@
         "風景優美"
       ],
       "color": "#38761d",
-      "unlock_level": 16,
+      "unlock_level": 38,
       "unlock_cost": null,
       "xp_reward": 130,
       "is_special": false,
@@ -1604,8 +1604,8 @@
     {
       "id": "961P",
       "alias": "清水灣半島特快",
-      "start": "將軍澳站",
-      "end": "清水灣半島",
+      "start": "康城西",
+      "end": "將軍澳中心",
       "via": "坑口北、清水灣半島（特快）",
       "nature": "旅遊",
       "time": 40,
@@ -1621,7 +1621,7 @@
         "挑戰"
       ],
       "color": "#134f5c",
-      "unlock_level": 16,
+      "unlock_level": 38,
       "unlock_cost": 800,
       "xp_reward": 100,
       "is_special": true,
@@ -1654,7 +1654,7 @@
         "長途"
       ],
       "color": "#c90076",
-      "unlock_level": 19,
+      "unlock_level": 45,
       "unlock_cost": null,
       "xp_reward": 250,
       "is_special": false,
@@ -1690,7 +1690,7 @@
         "坑口北專線"
       ],
       "color": "#7f6000",
-      "unlock_level": 19,
+      "unlock_level": 45,
       "unlock_cost": null,
       "xp_reward": 120,
       "is_special": false,
@@ -1706,8 +1706,8 @@
     {
       "id": "939M",
       "alias": "迷你坑口環",
-      "start": "坑口站",
-      "end": "坑口站（循環）",
+      "start": "康城站",
+      "end": "將軍澳創新園",
       "via": "景林邨、坑口南",
       "nature": "旅遊",
       "time": 20,
@@ -1722,7 +1722,7 @@
         "新手必試"
       ],
       "color": "#b6a20a",
-      "unlock_level": 19,
+      "unlock_level": 45,
       "unlock_cost": null,
       "xp_reward": 120,
       "is_special": false,
@@ -1756,7 +1756,7 @@
         "多坡"
       ],
       "color": "#7b2d8b",
-      "unlock_level": 19,
+      "unlock_level": 45,
       "unlock_cost": null,
       "xp_reward": 250,
       "is_special": false,
@@ -1792,7 +1792,7 @@
         "運動訓練"
       ],
       "color": "#4a1942",
-      "unlock_level": 19,
+      "unlock_level": 45,
       "unlock_cost": null,
       "xp_reward": 250,
       "is_special": false,
@@ -1828,7 +1828,7 @@
         "多坡"
       ],
       "color": "#1c4587",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 110,
       "is_special": false,
@@ -1865,7 +1865,7 @@
         "風景優美"
       ],
       "color": "#1155cc",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 60,
       "is_special": false,
@@ -1904,7 +1904,7 @@
         "長途"
       ],
       "color": "#3c78d8",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 80,
       "is_special": false,
@@ -1938,7 +1938,7 @@
         "運動訓練"
       ],
       "color": "#9900ff",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": 1000,
       "xp_reward": 150,
       "is_special": true,
@@ -1973,7 +1973,7 @@
         "運動訓練"
       ],
       "color": "#990000",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": 1000,
       "xp_reward": 130,
       "is_special": true,
@@ -2006,7 +2006,7 @@
         "少坡"
       ],
       "color": "#b64e00",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 210,
       "is_special": false,
@@ -2044,7 +2044,7 @@
         "風景優美"
       ],
       "color": "#6aa84f",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 200,
       "is_special": false,
@@ -2079,7 +2079,7 @@
         "風景優美"
       ],
       "color": "#006064",
-      "unlock_level": 20,
+      "unlock_level": 50,
       "unlock_cost": null,
       "xp_reward": 200,
       "is_special": false,

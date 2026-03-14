@@ -304,6 +304,10 @@
     if (Notification.permission === 'denied') return false;
 
     const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      // Subscribe to server-side push now that permission is granted
+      subscribeToPush();
+    }
     return permission === 'granted';
   }
 
@@ -366,7 +370,54 @@
   // Kick off reminder scheduling when the page loads
   window.addEventListener('load', () => {
     scheduleDailyCheckinReminder();
+    subscribeToPush();
   });
+
+  // ── Web Push 訂閱 ─────────────────────────────────────────────────────────
+  // Subscribes the current device to server-side Web Push notifications
+  // using the VAPID public key. The subscription is sent to /api/push
+  // so the server can send push notifications even when the app is closed.
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  }
+
+  async function subscribeToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+      // Fetch the server-side VAPID public key
+      const keyRes = await fetch('/api/push');
+      if (!keyRes.ok) return;
+      const { publicKey } = await keyRes.json();
+      if (!publicKey) return;
+
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
+
+      const token = localStorage.getItem('accessToken') || '';
+      await fetch('/api/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'subscribe', subscription: sub.toJSON() }),
+      });
+    } catch (err) {
+      console.warn('Push subscription failed:', err);
+    }
+  }
 
   // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
@@ -374,6 +425,7 @@
     requestNotificationPermission,
     sendLocalNotification,
     scheduleDailyCheckinReminder,
+    subscribeToPush,
     // Manually enable/disable Liquid Glass (for settings UI)
     enableLiquidGlass() {
       document.body.classList.add('liquid-glass');
