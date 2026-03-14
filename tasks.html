@@ -1078,34 +1078,59 @@
     // ── Notification toggle ───────────────────────────────────────────
     window.onNotifToggle = async function(enabled) {
         if (enabled) {
-            let granted = false;
-            if (window.CTRCHK_PWA && window.CTRCHK_PWA.requestNotificationPermission) {
-                granted = await window.CTRCHK_PWA.requestNotificationPermission();
-            } else if ('Notification' in window) {
-                const p = await Notification.requestPermission();
-                granted = p === 'granted';
+            // Request permission if not yet granted
+            let granted = Notification.permission === 'granted';
+            if (!granted) {
+                if (window.CTRCHK_PWA && window.CTRCHK_PWA.requestNotificationPermission) {
+                    granted = await window.CTRCHK_PWA.requestNotificationPermission();
+                } else if ('Notification' in window) {
+                    const p = await Notification.requestPermission();
+                    granted = p === 'granted';
+                }
             }
             if (granted) {
-                localStorage.setItem('checkinReminderEnabled', '1');
+                localStorage.removeItem('checkinReminderDisabled');
+                if (window.CTRCHK_PWA) window.CTRCHK_PWA.scheduleDailyCheckinReminder();
             } else {
-                localStorage.removeItem('checkinReminderEnabled');
+                localStorage.setItem('checkinReminderDisabled', '1');
                 document.getElementById('notif-toggle').checked = false;
             }
         } else {
-            localStorage.removeItem('checkinReminderEnabled');
+            localStorage.setItem('checkinReminderDisabled', '1');
         }
     };
 
     function initNotifToggle() {
         const toggle = document.getElementById('notif-toggle');
+        const wrap = document.getElementById('notif-toggle-wrap');
         if (!toggle) return;
-        const enabled = localStorage.getItem('checkinReminderEnabled') === '1';
-        toggle.checked = enabled;
-        // Hide the whole row if notifications are not supported
+
+        // Hide if notifications not supported at all
         if (!('Notification' in window)) {
-            const wrap = document.getElementById('notif-toggle-wrap');
             if (wrap) wrap.style.display = 'none';
+            return;
         }
+
+        // If all notifications are disabled in settings, show informational message
+        if (localStorage.getItem('pushNotificationsDisabled') === '1') {
+            if (wrap) {
+                const label = document.createElement('div');
+                label.className = 'notif-toggle-label';
+                const title = document.createElement('strong');
+                title.textContent = '🔔 每日簽到提醒';
+                const note = document.createElement('span');
+                note.textContent = '已在「我的帳戶」中關閉所有通知';
+                note.style.cssText = 'color:#ef9a9a; display:block; margin-top:0.15em;';
+                label.appendChild(title);
+                label.appendChild(note);
+                wrap.innerHTML = '';
+                wrap.appendChild(label);
+            }
+            return;
+        }
+
+        // Default ON: reminder is enabled unless user explicitly disabled it
+        toggle.checked = localStorage.getItem('checkinReminderDisabled') !== '1';
     }
 
     // ── Main render ───────────────────────────────────────────────────
