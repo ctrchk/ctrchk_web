@@ -6,7 +6,8 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.1",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "web-push": "^3.6.7"
   },
   "name": "ctrchk",
   "version": "1.0.0",

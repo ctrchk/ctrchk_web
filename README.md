@@ -604,6 +604,36 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 | 1 | TIK 13 | 調景嶺站-出口 | Tiu Keng Leng Station - Exit | 景嶺路 | 🔴 | 22.30465° N, 114.25305° E |
 | 2 | LHP 06 | 康城站 | Lohas Park Station | 康城路 | 🟢 | 22.29626° N, 114.26692° E |
 
+---
+
+### 15.7 路線 900 站點詳情
+
+**西貢區 將軍澳部 ‧ 市區海濱線**  
+20 站 ‧ 每站 +10 XP ‧ 每跨區 +20 XP ‧ 完成 +150 XP ‧ 45 分鐘內完成額外 +5 里程幣
+
+| 順序 | 代碼 | 中文名 | 英文名 | 道路 | 方向 | 座標 |
+|------|------|--------|--------|------|------|------|
+| 1 | POA 01 | 新都城二期、寶琳邨 | Metro City Plaza II, Po Lam Estate | 寶豐路 | 🔴 | 22.32424° N, 114.25696° E |
+| 2 | POA 02 | 欣明苑、將軍澳賽馬會診所 | Yan Ming Court, Tseung Kwan O Jockey Club Clinic | 寶琳北路 | ↕️ | 22.32413° N, 114.25951° E |
+| 3 | POA 03 | 景林邨轉乘站——景林邨景棉樓 | King Lam Estate Interchange - King Min House King Lam Estate | — | ↕️ | 22.32197° N, 114.26127° E |
+| 4 | POA 04 | 景林邨轉乘站——景林邨滑板公園 | King Lam Estate Interchange - King Lam Estate Roller Skating Park | 寶順路 | ↕️ | 22.31961° N, 114.26238° E |
+| 5 | HAH 02 | 寶順路轉乘站 | Po Shun Road Interchange | — | ↕️ | 22.31793° N, 114.26225° E |
+| 6 | HAH 10 | 常寧遊樂場 | Sheung Ning Playground | 環保大道 | ↕️ | 22.31550° N, 114.26121° E |
+| 7 | HAH 11 | 將軍澳極限運動場 | Tseung Kwan O Skatepark | — | ↕️ | 22.31507° N, 114.26090° E |
+| 8 | HAH 12 | 單車公園露天劇場 | Velodrome Park Amphitheater | 寶康路 | ↕️ | 22.31406° N, 114.26010° E |
+| 9 | HAH 13 | 香港單車館公園 | Hong Kong Velodrome Park | — | ↕️ | 22.31325° N, 114.26072° E |
+| 10 | HAH 14 | 將軍澳運動場 | Tseung Kwan O Sports Ground | — | ↕️ | 22.31017° N, 114.26323° E |
+| 11 | TKO 01 | 調景嶺碼頭 | Tiu Keng Leng Pier | 至善街 | ↕️ | 22.30806° N, 114.26421° E |
+| 12 | TKO 02 | 雍明商場、雍明苑 | Yung Ming Shopping Centre, Yung Ming Court | 海濱長廊(將) | ↕️ | 22.30491° N, 114.26515° E |
+| 13 | TKO 12 | 南橋 | South Bridge | — | ↕️ | 22.30145° N, 114.26287° E |
+| 14 | TKO 13 | 將軍澳南梯台 | Tseung Kwan O South Landing Steps | — | ↕️ | 22.30153° N, 114.26103° E |
+| 15 | TKO 03 | 將軍澳海濱長廊寵物公園 | Tseung Kwan O Waterfront Park Pet Garden | — | ↕️ | 22.30195° N, 114.25996° E |
+| 16 | TKO 04 | 藍塘傲 | Alto Residences | — | ↕️ | 22.30146° N, 114.25823° E |
+| 17 | TIK 06 | 調景嶺總站 | Tiu Keng Leng Terminus | 單車徑 | ↕️ | 22.30096° N, 114.25607° E |
+| 18 | TIK 01 | 調景嶺站-唐賢街 | Tiu Keng Leng Station | 唐賢街 | ⬇️ | 22.30415° N, 114.25344° E |
+| 19 | TIK 12 | 調景嶺站-知專設計學院總站 | Tiu Keng Leng Station - IVE (TKO) Terminus | — | ↕️ | 22.30494° N, 114.25348° E |
+| 20 | TIK 04 | 彩明苑總站 | Choi Ming Court Terminus | 彩明街 | 🟢 | 22.30646° N, 114.25331° E |
+
 > **注意：** 未提交站點的路線在騎行介面中無法顯示沿途站點和追蹤功能，但仍可在路線清單中查看基本資訊。請按 **15.2 提交格式**提交，格式須包含 `code`、`direction`、`district`、`xp` 等完整欄位。
 
 ---
