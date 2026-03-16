@@ -151,6 +151,17 @@ const schemaReady = pool.query(`
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   );
+  CREATE TABLE IF NOT EXISTS user_daily_checkins (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    checkin_date DATE NOT NULL,
+    xp_earned INTEGER DEFAULT 0,
+    coins_earned INTEGER DEFAULT 0,
+    streak_day INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, checkin_date)
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_daily_checkins_user_id ON user_daily_checkins(user_id);
   CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
   CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
   CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);

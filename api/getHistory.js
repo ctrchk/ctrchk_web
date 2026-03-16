@@ -5,6 +5,63 @@ import jwt from 'jsonwebtoken';
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
 
+// 28-day daily check-in reward table — must match tasks.html CHECKIN_REWARDS
+// Each entry: [xp, coins]. Index 0 is unused (days are 1-indexed).
+const CHECKIN_REWARDS = [
+  null,
+  [20, 0],    // Day 1
+  [30, 2],    // Day 2
+  [50, 2],    // Day 3
+  [70, 3],    // Day 4
+  [80, 3],    // Day 5
+  [100, 3],   // Day 6
+  [200, 10],  // Day 7  ★
+  [150, 5],   // Day 8
+  [180, 8],   // Day 9
+  [200, 8],   // Day 10
+  [225, 8],   // Day 11
+  [250, 8],   // Day 12
+  [250, 10],  // Day 13
+  [500, 20],  // Day 14 ★★
+  [260, 10],  // Day 15
+  [280, 11],  // Day 16
+  [300, 12],  // Day 17
+  [320, 13],  // Day 18
+  [340, 14],  // Day 19
+  [360, 15],  // Day 20
+  [600, 30],  // Day 21 ★★★
+  [375, 15],  // Day 22
+  [400, 16],  // Day 23
+  [425, 17],  // Day 24
+  [450, 18],  // Day 25
+  [475, 19],  // Day 26
+  [500, 20],  // Day 27
+  [1000, 100],// Day 28 ★★★★
+];
+
+// Calculate check-in streak ending at yesterday (i.e. consecutive days before today)
+async function calcCheckinStreak(userId, todayStr) {
+  const { rows } = await query(
+    'SELECT checkin_date::text AS d FROM user_daily_checkins WHERE user_id = $1 ORDER BY checkin_date DESC',
+    [userId]
+  );
+  const dateSet = new Set(rows.map(r => r.d.slice(0, 10)));
+  const oneDayMs = 86400000;
+  let streak = 0;
+  let check = new Date(todayStr + 'T00:00:00Z');
+  check = new Date(check.getTime() - oneDayMs); // start from yesterday
+  for (let i = 0; i < 366; i++) {
+    const key = check.toISOString().slice(0, 10);
+    if (dateSet.has(key)) {
+      streak++;
+      check = new Date(check.getTime() - oneDayMs);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 // 通用 JWT 驗證中介函數
 async function authenticate(req, res) {
   const authHeader = req.headers.authorization;
@@ -105,8 +162,68 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST：提交新騎行紀錄 ─────────────────────────────────────────────
+  // ── POST：提交新騎行紀錄 or 每日簽到 ────────────────────────────────────
   if (req.method === 'POST') {
+    // ── POST?action=checkin：每日簽到 ──────────────────────────────────
+    if (req.query.action === 'checkin') {
+      try {
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+
+        // Check if already checked in today
+        const { rows: existing } = await query(
+          'SELECT id FROM user_daily_checkins WHERE user_id = $1 AND checkin_date = $2',
+          [userData.userId, today]
+        );
+        if (existing.length > 0) {
+          const profile = await ensureGameProfile(userData.userId);
+          return res.status(200).json({ already_checked_in: true, gameProfile: profile });
+        }
+
+        // Calculate streak (consecutive days ending yesterday)
+        const streak = await calcCheckinStreak(userData.userId, today);
+        const newStreak = streak + 1;
+        const cycleDay = ((newStreak - 1) % 28) + 1;
+        const [xpEarned, coinsEarned] = CHECKIN_REWARDS[cycleDay] || [20, 0];
+
+        // Record check-in
+        await query(
+          `INSERT INTO user_daily_checkins (user_id, checkin_date, xp_earned, coins_earned, streak_day)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, checkin_date) DO NOTHING`,
+          [userData.userId, today, xpEarned, coinsEarned, newStreak]
+        );
+
+        // Update game profile
+        const profile = await ensureGameProfile(userData.userId);
+        const oldLevel = profile.level;
+        const newXp = profile.xp + xpEarned;
+        const newCoins = profile.coins + coinsEarned;
+        const newLevel = calcLevel(newXp);
+        const levelUp = newLevel > oldLevel;
+
+        await query(
+          `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (user_id) DO UPDATE
+             SET level = $2, xp = $3, coins = $4, updated_at = NOW()`,
+          [userData.userId, newLevel, newXp, newCoins]
+        );
+
+        const gameProfile = { level: newLevel, xp: newXp, coins: newCoins };
+        return res.status(200).json({
+          success: true,
+          xp_earned: xpEarned,
+          coins_earned: coinsEarned,
+          streak: newStreak,
+          cycle_day: cycleDay,
+          level_up: levelUp,
+          gameProfile,
+        });
+      } catch (error) {
+        console.error('[checkin] error:', error);
+        return res.status(500).json({ message: 'Failed to process check-in' });
+      }
+    }
+
     try {
       const {
         route_id,
