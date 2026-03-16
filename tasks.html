@@ -874,19 +874,57 @@
         table.classList.toggle('open');
     };
 
-    window.doCheckin = function() {
+    window.doCheckin = async function() {
         const today = getTodayKey();
         const data = getCheckinData();
         if (data[today]) return; // already checked in
-        data[today] = new Date().toISOString();
-        saveCheckinData(data);
-        const streak = getCheckinStreak(data);
-        const cycleDay = getCheckinCycleDay(streak);
-        const [xp, coins] = getCheckinReward(cycleDay);
-        renderCheckin();
-        const coinsMsg = coins > 0 ? ` + ${coins} 🪙` : '';
-        const streakMsg = streak > 1 ? `（連續 ${streak} 天）` : '';
-        showCheckinToast(`🗓️ 簽到成功！+${xp} XP${coinsMsg} ${streakMsg}`);
+
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            showCheckinToast('請先登入以獲得簽到獎勵 🔒');
+            return;
+        }
+
+        // Call the server API first to persist XP and coins before updating the UI
+        try {
+            const resp = await fetch('/api/getHistory?action=checkin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ checkin_date: today }),
+            });
+            if (!resp.ok) {
+                showCheckinToast('簽到失敗，請稍後再試 ❌');
+                return;
+            }
+            const result = await resp.json();
+
+            // Sync localStorage so the UI reflects the server state
+            data[today] = new Date().toISOString();
+            saveCheckinData(data);
+            renderCheckin();
+
+            if (result.already_checked_in) {
+                showCheckinToast('今日已簽到 ✓');
+                return;
+            }
+
+            const xp = result.xp_earned || 0;
+            const coins = result.coins_earned || 0;
+            const streak = result.streak || getCheckinStreak(data);
+            const coinsMsg = coins > 0 ? ` + ${coins} 🪙` : '';
+            const streakMsg = streak > 1 ? `（連續 ${streak} 天）` : '';
+            showCheckinToast(`🗓️ 簽到成功！+${xp} XP${coinsMsg} ${streakMsg}`);
+
+            if (result.gameProfile) {
+                localStorage.setItem('gameProfile', JSON.stringify(result.gameProfile));
+            }
+        } catch (e) {
+            console.warn('[doCheckin] API call failed:', e);
+            showCheckinToast('簽到失敗，請稍後再試 ❌');
+        }
     };
 
     function showCheckinToast(text) {
