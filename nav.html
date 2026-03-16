@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#121f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+  <link rel="apple-touch-icon" href="/images/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>單車徑導航 - 城市運輸單車</title>
+  <!-- MapLibre GL JS (free, open-source Mapbox GL fork) -->
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" crossorigin="">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; overflow: hidden;
+      background: #121f14;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+      color: #e8f5e9;
+    }
+
+    /* ── Full-screen map ── */
+    #nav-map {
+      position: fixed; inset: 0; z-index: 0;
+      background: #121f14;
+    }
+
+    /* ── Top bar ── */
+    #nav-topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      padding: calc(env(safe-area-inset-top) + 0.5em) 0.8em 0.5em;
+      background: linear-gradient(to bottom, rgba(18,31,20,0.95) 75%, transparent);
+      display: flex; align-items: center; gap: 0.6em;
+    }
+    #btn-nav-back {
+      background: rgba(255,255,255,0.12); border: none; color: #fff;
+      width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1em; flex-shrink: 0; text-decoration: none;
+    }
+    #nav-title {
+      flex: 1; font-weight: bold; font-size: 1em;
+    }
+    #btn-heading-up {
+      background: rgba(255,255,255,0.12); border: none; color: #e8f5e9;
+      width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1em; flex-shrink: 0; transition: background 0.2s;
+    }
+    #btn-heading-up.active { background: #04D93C; color: #121f14; }
+
+    /* ── Turn instruction banner (shown during active navigation) ── */
+    #turn-banner {
+      display: none;
+      position: fixed; top: calc(env(safe-area-inset-top) + 3.5em); left: 0; right: 0;
+      z-index: 200;
+      background: rgba(4, 80, 22, 0.96);
+      border-bottom: 2px solid #04D93C;
+      padding: 0.7em 1em;
+      display: none; align-items: center; gap: 0.8em;
+    }
+    #turn-banner.show { display: flex; }
+    #turn-icon { font-size: 2em; flex-shrink: 0; min-width: 1.8em; text-align: center; }
+    #turn-text-wrap { flex: 1; }
+    #turn-dist { font-size: 1.3em; font-weight: bold; color: #BFE340; }
+    #turn-instruction { font-size: 0.85em; opacity: 0.85; }
+
+    /* ── Route planner panel ── */
+    #planner-panel {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: #1a2d1c;
+      border-radius: 18px 18px 0 0;
+      padding: 0.9em 1em calc(env(safe-area-inset-bottom) + 0.9em);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+    #planner-panel.collapsed { transform: translateY(calc(100% - 3.8em)); }
+
+    /* drag handle */
+    .panel-handle {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.2); margin: 0 auto 0.8em;
+      cursor: pointer;
+    }
+
+    /* ── Plan form ── */
+    .plan-row {
+      display: flex; align-items: center; gap: 0.6em; margin-bottom: 0.6em;
+    }
+    .plan-row-icon {
+      font-size: 1.1em; width: 1.4em; text-align: center; flex-shrink: 0;
+    }
+    .plan-input {
+      flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px; color: #e8f5e9; padding: 0.55em 0.8em; font-size: 0.92em;
+      appearance: none; outline: none;
+    }
+    .plan-input:focus { border-color: #04D93C; }
+    .plan-input option { background: #1a2d1c; }
+
+    #btn-plan-route {
+      width: 100%; padding: 0.85em; border: none; border-radius: 10px;
+      background: #04D93C; color: #121f14; font-size: 1em; font-weight: bold;
+      cursor: pointer; margin-top: 0.4em; letter-spacing: 0.03em;
+      transition: background 0.2s;
+    }
+    #btn-plan-route:hover { background: #06f043; }
+    #btn-plan-route:disabled { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); cursor: default; }
+
+    /* ── Route summary (shown after planning) ── */
+    #route-summary {
+      display: none; margin-top: 0.6em;
+      background: rgba(4,217,60,0.08); border-radius: 10px; border: 1px solid rgba(4,217,60,0.25);
+      padding: 0.75em 1em;
+    }
+    #route-summary.show { display: block; }
+    .route-summary-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.88em; margin-bottom: 0.3em; opacity: 0.85;
+    }
+    .route-summary-row strong { color: #BFE340; }
+    #btn-start-nav {
+      width: 100%; padding: 0.85em; border: none; border-radius: 10px;
+      background: #BFE340; color: #121f14; font-size: 1em; font-weight: bold;
+      cursor: pointer; margin-top: 0.6em; letter-spacing: 0.03em;
+      transition: background 0.2s; display: none;
+    }
+    #btn-start-nav.show { display: block; }
+    #btn-start-nav:hover { background: #d4f060; }
+
+    /* ── Active nav stats bar (shown during navigation) ── */
+    #nav-stats-bar {
+      display: none; gap: 0; border-radius: 10px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    #nav-stats-bar.show { display: flex; }
+    .nav-stat {
+      flex: 1; text-align: center; padding: 0.6em 0.3em;
+      background: rgba(255,255,255,0.05);
+      border-right: 1px solid rgba(255,255,255,0.07);
+    }
+    .nav-stat:last-child { border-right: none; }
+    .nav-stat .val { font-size: 1.1em; font-weight: bold; color: #BFE340; }
+    .nav-stat .lbl { font-size: 0.62em; opacity: 0.6; margin-top: 0.1em; }
+
+    #btn-end-nav {
+      width: 100%; padding: 0.7em; border: none; border-radius: 8px;
+      background: rgba(231,76,60,0.8); color: #fff; font-size: 0.9em; font-weight: bold;
+      cursor: pointer; margin-top: 0.5em;
+    }
+
+    /* ── GPS accuracy dot ── */
+    #gps-dot {
+      position: fixed; bottom: calc(env(safe-area-inset-bottom) + 0.5em); left: 1em; z-index: 201;
+      display: flex; align-items: center; gap: 0.4em;
+      background: rgba(18,31,20,0.8); border-radius: 20px; padding: 0.25em 0.7em;
+      font-size: 0.7em; opacity: 0.8;
+    }
+    #gps-dot-indicator {
+      width: 8px; height: 8px; border-radius: 50%; background: #aaa;
+      transition: background 0.5s;
+    }
+    #gps-dot-indicator.good { background: #04D93C; animation: pulse 1.5s infinite; }
+    #gps-dot-indicator.searching { background: #f39c12; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* ── Zoom control (reposition above panel) ── */
+    .maplibregl-ctrl-bottom-right { bottom: 45vh !important; }
+
+    /* ── Loading overlay ── */
+    #nav-loading {
+      position: fixed; inset: 0; z-index: 500;
+      background: #121f14; color: #e8f5e9;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1em;
+    }
+    #nav-loading.hidden { display: none; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #04D93C; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Arrived overlay ── */
+    #arrived-overlay {
+      display: none; position: fixed; inset: 0; z-index: 600;
+      background: rgba(18,31,20,0.96); align-items: center; justify-content: center;
+      flex-direction: column; text-align: center; padding: 2em;
+    }
+    #arrived-overlay.show { display: flex; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    #arrived-emoji { font-size: 4em; margin-bottom: 0.3em; }
+    #arrived-title { font-size: 1.8em; font-weight: bold; color: #BFE340; margin-bottom: 0.5em; }
+    #arrived-stats { font-size: 0.9em; opacity: 0.8; margin-bottom: 1.5em; line-height: 1.7; }
+    #btn-arrived-done {
+      background: #04D93C; color: #121f14; border: none;
+      padding: 0.85em 2.5em; border-radius: 10px; font-size: 1em; font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* ── Panel collapsed title ── */
+    #panel-collapsed-title {
+      display: none; align-items: center; gap: 0.5em;
+      font-size: 0.88em; font-weight: bold; color: #a8d8a0;
+    }
+    #planner-panel.collapsed #panel-collapsed-title { display: flex; }
+    #planner-panel.collapsed #planner-form { display: none; }
+    #planner-panel.collapsed #route-summary { display: none !important; }
+    #planner-panel.collapsed #btn-start-nav { display: none !important; }
+    #planner-panel.collapsed #nav-stats-bar { display: none !important; }
+    #planner-panel.collapsed #btn-end-nav { display: none; }
+
+    /* ── maplibre custom user dot ── */
+    .user-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #04D93C; border: 3px solid #fff;
+      box-shadow: 0 0 8px rgba(4,217,60,0.6);
+    }
+    .user-cone {
+      width: 0; height: 0; position: absolute; top: -14px; left: 50%;
+      transform: translateX(-50%);
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 14px solid rgba(4,217,60,0.5);
+    }
+    .user-dot-wrap {
+      position: relative; width: 18px; height: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading -->
+  <div id="nav-loading">
+    <div class="spinner"></div>
+    <p>正在載入地圖...</p>
+  </div>
+
+  <!-- Full-screen map -->
+  <div id="nav-map"></div>
+
+  <!-- Top bar -->
+  <div id="nav-topbar">
+    <a href="javascript:navBack()" id="btn-nav-back" aria-label="返回">
+      <i class="fas fa-chevron-left"></i>
+    </a>
+    <span id="nav-title">🗺️ 單車徑導航</span>
+    <button id="btn-heading-up" title="切換地圖方向" aria-label="切換地圖方向">
+      <i class="fas fa-compass"></i>
+    </button>
+  </div>
+
+  <!-- Turn instruction banner -->
+  <div id="turn-banner" aria-live="polite">
+    <div id="turn-icon">↑</div>
+    <div id="turn-text-wrap">
+      <div id="turn-dist">-- m</div>
+      <div id="turn-instruction">沿單車徑繼續前行</div>
+    </div>
+  </div>
+
+  <!-- GPS accuracy indicator -->
+  <div id="gps-dot">
+    <div id="gps-dot-indicator"></div>
+    <span id="gps-dot-label">GPS</span>
+  </div>
+
+  <!-- Bottom planner panel -->
+  <div id="planner-panel">
+    <div class="panel-handle" id="panel-handle"></div>
+
+    <!-- Collapsed title (only visible when panel is collapsed) -->
+    <div id="panel-collapsed-title">
+      <i class="fas fa-map-marked-alt"></i>
+      <span id="collapsed-summary-text">規劃單車路線</span>
+    </div>
+
+    <!-- Full planner form -->
+    <div id="planner-form">
+      <div class="plan-row">
+        <span class="plan-row-icon" style="color:#04D93C;">📍</span>
+        <select class="plan-input" id="sel-from" aria-label="選擇起點">
+          <option value="">─ 選擇起點 ─</option>
+        </select>
+      </div>
+      <div class="plan-row">
+        <span class="plan-row-icon" style="color:#e74c3c;">🏁</span>
+        <select class="plan-input" id="sel-to" aria-label="選擇終點">
+          <option value="">─ 選擇終點 ─</option>
+        </select>
+      </div>
+      <button id="btn-plan-route" disabled>🔍 規劃路線</button>
+
+      <!-- Route summary (after planning) -->
+      <div id="route-summary">
+        <div class="route-summary-row">
+          <span>路線長度</span><strong id="rs-dist">--</strong>
+        </div>
+        <div class="route-summary-row">
+          <span>預計時間</span><strong id="rs-time">--</strong>
+        </div>
+        <div class="route-summary-row">
+          <span>轉向次數</span><strong id="rs-turns">--</strong>
+        </div>
+      </div>
+      <button id="btn-start-nav">🚴 開始導航</button>
+
+      <!-- Active navigation stats -->
+      <div id="nav-stats-bar">
+        <div class="nav-stat">
+          <div class="val" id="nav-stat-dist">0 m</div>
+          <div class="lbl">已行距離</div>
+        </div>
+        <div class="nav-stat">
+          <div class="val" id="nav-stat-remain">--</div>
+          <div class="lbl">剩餘距離</div>
+        </div>
+        <div class="nav-stat">
+          <div class="val" id="nav-stat-eta">--</div>
+          <div class="lbl">預計到達</div>
+        </div>
+        <div class="nav-stat">
+          <div class="val" id="nav-stat-speed">--</div>
+          <div class="lbl">速度 km/h</div>
+        </div>
+      </div>
+      <button id="btn-end-nav" style="display:none;">⏹ 結束導航</button>
+    </div>
+  </div>
+
+  <!-- Arrived overlay -->
+  <div id="arrived-overlay">
+    <div id="arrived-emoji">🎉</div>
+    <div id="arrived-title">已到達目的地！</div>
+    <div id="arrived-stats"></div>
+    <button id="btn-arrived-done">完成</button>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Landmarks (start/end points for route planning) ────────────────────
+    const LANDMARKS = [
+      { id: 'poa',   name: '寶琳（新都城二期）', lat: 22.32424, lon: 114.25696 },
+      { id: 'kl',    name: '景林邨',             lat: 22.31870, lon: 114.25650 },
+      { id: 'tkv',   name: '將軍澳村',           lat: 22.32480, lon: 114.24900 },
+      { id: 'hah',   name: '坑口站',             lat: 22.31240, lon: 114.26550 },
+      { id: 'tko',   name: '將軍澳中心',         lat: 22.30738, lon: 114.25666 },
+      { id: 'tik',   name: '調景嶺（彩明苑）',   lat: 22.30046, lon: 114.25331 },
+      { id: 'lhp',   name: '康城（日出康城）',   lat: 22.29070, lon: 114.26692 },
+      { id: 'tkoi',  name: '將軍澳創新園',       lat: 22.28570, lon: 114.27240 },
+    ];
+
+    // ── OSRM Demo API (public, free, no API key needed) ───────────────────
+    // Routing profile: bike
+    const OSRM_BASE = 'https://router.project-osrm.org/route/v1/bike';
+
+    // ── State ─────────────────────────────────────────────────────────────
+    let map = null;
+    let userMarker = null;
+    let watchId = null;
+    let headingUp = false;         // true = rotate map to face travel direction
+    let lastLat = null, lastLon = null;
+    let lastBearing = 0;
+    let lastSpeedKmh = 0;
+
+    // Navigation state
+    let isNavigating = false;
+    let plannedRoute = null;       // decoded route from OSRM
+    let plannedSteps = [];         // turn-by-turn steps
+    let currentStepIdx = 0;
+    let navStartTime = null;
+    let navDistTravelledM = 0;
+    let navTotalDistM = 0;
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    function haversineM(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function bearingDeg(lat1, lon1, lat2, lon2) {
+      const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      const y = Math.sin(Δλ) * Math.cos(φ2);
+      const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+      return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+    }
+
+    function formatDist(m) {
+      if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
+      return `${Math.round(m)} m`;
+    }
+
+    function formatMinutes(mins) {
+      if (mins < 60) return `${Math.round(mins)} 分鐘`;
+      const h = Math.floor(mins / 60), m = Math.round(mins % 60);
+      return `${h} 小時 ${m} 分鐘`;
+    }
+
+    /** Snap [userLat, userLon] to nearest point on routeCoords [[lon,lat],...] */
+    function snapToRoute(userLat, userLon, routeCoords) {
+      let minDist = Infinity;
+      let snapped = null;
+      for (let i = 0; i < routeCoords.length - 1; i++) {
+        const p = closestPointOnSegment(
+          [userLon, userLat], routeCoords[i], routeCoords[i + 1]
+        );
+        const d = haversineM(userLat, userLon, p[1], p[0]);
+        if (d < minDist) { minDist = d; snapped = p; }
+      }
+      // Only snap if within 30 m to avoid forcing position when off-track
+      return (snapped && minDist < 30) ? snapped : [userLon, userLat];
+    }
+
+    /** Closest point on line segment [p1, p2] to point p0 (all [lon, lat]) */
+    function closestPointOnSegment(p0, p1, p2) {
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+      if (dx === 0 && dy === 0) return p1;
+      const t = Math.max(0, Math.min(1, ((p0[0]-p1[0])*dx + (p0[1]-p1[1])*dy) / (dx*dx + dy*dy)));
+      return [p1[0] + t*dx, p1[1] + t*dy];
+    }
+
+    /** Decode OSRM polyline (precision 5 or 6) */
+    function decodePolyline(encoded, precision) {
+      const factor = Math.pow(10, precision || 5);
+      const coords = [];
+      let index = 0, lat = 0, lng = 0;
+      while (index < encoded.length) {
+        let b, shift = 0, result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lat += (result & 1) ? ~(result >> 1) : result >> 1;
+        shift = 0; result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lng += (result & 1) ? ~(result >> 1) : result >> 1;
+        coords.push([lng / factor, lat / factor]);
+      }
+      return coords;
+    }
+
+    /** Turn type → emoji arrow */
+    function turnEmoji(modifier) {
+      const m = (modifier || '').toLowerCase();
+      if (m.includes('sharp right') || m.includes('uturn')) return '↩';
+      if (m.includes('right')) return '↱';
+      if (m.includes('sharp left')) return '↪';
+      if (m.includes('left')) return '↰';
+      if (m.includes('slight right')) return '↗';
+      if (m.includes('slight left')) return '↖';
+      return '↑';
+    }
+
+    /** Translate OSRM maneuver to Chinese instruction */
+    function stepInstruction(step) {
+      if (!step) return '繼續前行';
+      const type = step.maneuver && step.maneuver.type;
+      const modifier = step.maneuver && step.maneuver.modifier;
+      const road = step.name ? `「${step.name}」` : '';
+      if (type === 'arrive') return `抵達${road}目的地`;
+      if (type === 'depart') return `出發，沿${road}前行`;
+      if (type === 'turn') {
+        const dir = modifier
+          ? modifier.replace('sharp ', '急').replace('slight ', '輕微').replace('right', '右轉').replace('left', '左轉').replace('uturn', 'U形轉').replace('straight', '直行')
+          : '直行';
+        return `${dir}${road ? `，進入${road}` : ''}`;
+      }
+      if (type === 'continue') return `繼續沿${road}前行`;
+      if (type === 'roundabout' || type === 'rotary') return `進入迴旋處${road}`;
+      if (type === 'fork') return `保持${modifier === 'right' ? '右側' : '左側'}分叉${road}`;
+      return `繼續前行${road}`;
+    }
+
+    // ── Map initialisation ────────────────────────────────────────────────
+    function initMap() {
+      map = new maplibregl.Map({
+        container: 'nav-map',
+        // OpenFreeMap free vector tiles (no API key, no usage limits)
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [114.2597, 22.3083],  // TKO area default
+        zoom: 14,
+        attributionControl: false,
+      });
+
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+      map.on('load', () => {
+        addCyclewayLayers();
+        loadTkoGeoJson();
+        document.getElementById('nav-loading').classList.add('hidden');
+        startGPS();
+      });
+
+      map.on('error', (e) => {
+        console.warn('[Nav] Map error:', e);
+        // Fallback to OSM raster if vector tiles fail
+        fallbackToRasterTiles();
+      });
+    }
+
+    /** Fallback raster tiles if OpenFreeMap unavailable */
+    function fallbackToRasterTiles() {
+      document.getElementById('nav-loading').classList.add('hidden');
+      // Replace style with a simple raster source
+      try {
+        map.setStyle({
+          version: 8,
+          sources: {
+            'osm-raster': {
+              type: 'raster',
+              tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap © CartoDB',
+              maxzoom: 19,
+            },
+          },
+          layers: [{ id: 'osm-raster', type: 'raster', source: 'osm-raster' }],
+        });
+        map.once('styledata', () => {
+          addTkoLocalLayer();
+        });
+      } catch (e) { console.warn('[Nav] Fallback raster also failed', e); }
+    }
+
+    /** Add custom cycleway style layers on top of the vector basemap */
+    function addCyclewayLayers() {
+      // Only add if transportation source exists (OpenMapTiles schema)
+      if (!map.getSource('openmaptiles') && !map.getSource('maptiler_planet')) return;
+      const src = map.getSource('openmaptiles') ? 'openmaptiles' : 'maptiler_planet';
+
+      // Layer 1: Cycleway background fill (wide green strip)
+      if (!map.getLayer('ctrc-cycleway-fill')) {
+        map.addLayer({
+          id: 'ctrc-cycleway-fill',
+          type: 'line',
+          source: src,
+          'source-layer': 'transportation',
+          filter: ['any',
+            ['==', ['get', 'subclass'], 'cycleway'],
+            ['all', ['==', ['get', 'class'], 'path'], ['==', ['get', 'bicycle'], 'designated']],
+          ],
+          paint: {
+            'line-color': '#00C853',
+            'line-width': ['interpolate', ['linear'], ['zoom'],
+              12, 2, 15, 5, 17, 10, 19, 18],
+            'line-opacity': 0.75,
+          },
+        }, findFirstSymbolLayer());
+      }
+
+      // Layer 2: Dashed centerline (mimics road markings)
+      if (!map.getLayer('ctrc-cycleway-center')) {
+        map.addLayer({
+          id: 'ctrc-cycleway-center',
+          type: 'line',
+          source: src,
+          'source-layer': 'transportation',
+          filter: ['any',
+            ['==', ['get', 'subclass'], 'cycleway'],
+            ['all', ['==', ['get', 'class'], 'path'], ['==', ['get', 'bicycle'], 'designated']],
+          ],
+          minzoom: 15,
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': 1.2,
+            'line-dasharray': [4, 4],
+            'line-opacity': 0.65,
+          },
+        }, findFirstSymbolLayer());
+      }
+    }
+
+    /** Find first symbol layer to insert below it */
+    function findFirstSymbolLayer() {
+      const layers = map.getStyle().layers || [];
+      for (const layer of layers) {
+        if (layer.type === 'symbol') return layer.id;
+      }
+      return undefined;
+    }
+
+    /** Load TKO GeoJSON cycling track overlay */
+    function loadTkoGeoJson() {
+      fetch('/gpx/tko/cycling_tracks_tko.geojson')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          addTkoLocalLayer(data);
+        })
+        .catch(e => console.warn('[Nav] TKO GeoJSON load failed', e));
+    }
+
+    function addTkoLocalLayer(data) {
+      if (!map) return;
+      if (map.getSource('tko-cycleways')) return; // already added
+
+      map.addSource('tko-cycleways', {
+        type: 'geojson',
+        data: data || { type: 'FeatureCollection', features: [] },
+      });
+
+      // Background: bright green track (official/local data takes precedence visually)
+      map.addLayer({
+        id: 'tko-cycleway-bg',
+        type: 'line',
+        source: 'tko-cycleways',
+        paint: {
+          'line-color': '#00E676',
+          'line-width': ['interpolate', ['linear'], ['zoom'],
+            12, 3, 15, 6, 17, 12, 19, 20],
+          'line-opacity': 0.85,
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+      });
+
+      // Dashed centerline overlay
+      map.addLayer({
+        id: 'tko-cycleway-center',
+        type: 'line',
+        source: 'tko-cycleways',
+        minzoom: 14,
+        paint: {
+          'line-color': '#FFFFFF',
+          'line-width': 1.5,
+          'line-dasharray': [4, 5],
+          'line-opacity': 0.6,
+        },
+      });
+
+      // Edge outline for lane-level clarity
+      map.addLayer({
+        id: 'tko-cycleway-edge',
+        type: 'line',
+        source: 'tko-cycleways',
+        minzoom: 16,
+        paint: {
+          'line-color': '#007A2D',
+          'line-width': ['interpolate', ['linear'], ['zoom'],
+            16, 14, 17, 22, 19, 32],
+          'line-opacity': 0.25,
+          'line-gap-width': 0,
+        },
+      }, 'tko-cycleway-bg');
+    }
+
+    // ── GPS ───────────────────────────────────────────────────────────────
+    const GPS_OPTS = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+
+    function startGPS() {
+      if (!('geolocation' in navigator)) {
+        setGpsDot('error', '不支援 GPS');
+        return;
+      }
+      setGpsDot('searching', '搜尋中...');
+      navigator.geolocation.getCurrentPosition(
+        pos => { handlePosition(pos); startWatch(); },
+        err => { setGpsDot('error', 'GPS 錯誤'); startWatch(); },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
+    function startWatch() {
+      if (watchId !== null) return;
+      watchId = navigator.geolocation.watchPosition(handlePosition, onGpsError, GPS_OPTS);
+    }
+
+    function handlePosition(pos) {
+      const { latitude: lat, longitude: lon, accuracy, speed } = pos.coords;
+      const acc = Math.round(accuracy);
+      setGpsDot(acc < 20 ? 'good' : acc < 50 ? 'fair' : 'searching', `±${acc} m`);
+
+      // Compute bearing from movement
+      if (lastLat !== null) {
+        const d = haversineM(lastLat, lastLon, lat, lon);
+        if (d > 2) {
+          lastBearing = bearingDeg(lastLat, lastLon, lat, lon);
+          if (isNavigating) navDistTravelledM += d;
+        }
+      }
+      lastLat = lat; lastLon = lon;
+      lastSpeedKmh = speed != null ? speed * 3.6 : 0;
+
+      updateUserMarker(lat, lon, lastBearing);
+
+      // Pan/rotate map
+      if (headingUp) {
+        map.easeTo({ center: [lon, lat], bearing: lastBearing, duration: 300, zoom: Math.max(map.getZoom(), 16) });
+      } else {
+        if (!map.getBounds().contains([lon, lat])) map.panTo([lon, lat]);
+      }
+
+      if (isNavigating) updateNavProgress(lat, lon);
+    }
+
+    function onGpsError(err) {
+      setGpsDot('error', err.message.length < 30 ? err.message : 'GPS 錯誤');
+    }
+
+    function setGpsDot(state, text) {
+      const dot = document.getElementById('gps-dot-indicator');
+      const lbl = document.getElementById('gps-dot-label');
+      dot.className = 'gps-dot-indicator';
+      if (state === 'good') dot.classList.add('good');
+      else if (state === 'searching' || state === 'fair') dot.classList.add('searching');
+      if (lbl && text) lbl.textContent = text;
+    }
+
+    // ── User marker (with direction cone) ────────────────────────────────
+    function updateUserMarker(lat, lon, bearing) {
+      const el = document.getElementById('user-marker-el') || createUserMarkerEl();
+      const cone = el.querySelector('.user-cone');
+      if (cone) cone.style.transform = `translateX(-50%) rotate(${bearing - 180}deg)`;
+
+      if (!userMarker) {
+        userMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lon, lat])
+          .addTo(map);
+      } else {
+        userMarker.setLngLat([lon, lat]);
+      }
+    }
+
+    function createUserMarkerEl() {
+      const wrap = document.createElement('div');
+      wrap.id = 'user-marker-el';
+      wrap.className = 'user-dot-wrap';
+      wrap.innerHTML = '<div class="user-cone"></div><div class="user-dot"></div>';
+      return wrap;
+    }
+
+    // ── Route planning ────────────────────────────────────────────────────
+    async function planRoute() {
+      const fromId = document.getElementById('sel-from').value;
+      const toId   = document.getElementById('sel-to').value;
+      if (!fromId || !toId) return;
+
+      const from = LANDMARKS.find(l => l.id === fromId);
+      const to   = LANDMARKS.find(l => l.id === toId);
+      if (!from || !to) return;
+
+      const btn = document.getElementById('btn-plan-route');
+      btn.disabled = true;
+      btn.textContent = '正在規劃...';
+      document.getElementById('route-summary').classList.remove('show');
+      document.getElementById('btn-start-nav').classList.remove('show');
+
+      // Remove any existing planned route layer
+      clearRouteLayers();
+
+      try {
+        const url = `${OSRM_BASE}/${from.lon},${from.lat};${to.lon},${to.lat}` +
+          `?overview=full&geometries=polyline6&steps=true&annotations=false`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('OSRM returned ' + resp.status);
+        const data = await resp.json();
+        if (data.code !== 'Ok' || !data.routes || !data.routes.length) {
+          throw new Error('No route found');
+        }
+        const route = data.routes[0];
+        const coords = decodePolyline(route.geometry, 6); // polyline6
+
+        plannedRoute = coords;
+        plannedSteps = route.legs[0].steps || [];
+        navTotalDistM = route.distance;
+
+        drawPlannedRoute(coords, from, to);
+
+        // Summary
+        const distKm = (route.distance / 1000).toFixed(1);
+        const mins   = Math.round(route.duration / 60);
+        document.getElementById('rs-dist').textContent = `${distKm} km`;
+        document.getElementById('rs-time').textContent = formatMinutes(mins);
+        document.getElementById('rs-turns').textContent = `${plannedSteps.filter(s => s.maneuver && s.maneuver.type !== 'depart' && s.maneuver.type !== 'arrive').length} 個`;
+        document.getElementById('route-summary').classList.add('show');
+        document.getElementById('btn-start-nav').classList.add('show');
+
+        // Fit map to route
+        const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+        map.fitBounds([
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
+
+        expandPanel();
+      } catch (e) {
+        console.error('[Nav] Route planning failed', e);
+        alert('路線規劃失敗，請檢查網絡連接後再試。\n（如問題持續，可嘗試更換起點/終點。）');
+      }
+
+      btn.disabled = false;
+      btn.textContent = '🔍 規劃路線';
+    }
+
+    function drawPlannedRoute(coords, from, to) {
+      if (!map) return;
+
+      // Route polyline source
+      if (!map.getSource('planned-route')) {
+        map.addSource('planned-route', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } },
+        });
+      } else {
+        map.getSource('planned-route').setData(
+          { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
+        );
+      }
+
+      // Route shadow (for depth)
+      if (!map.getLayer('planned-route-shadow')) {
+        map.addLayer({
+          id: 'planned-route-shadow',
+          type: 'line',
+          source: 'planned-route',
+          paint: { 'line-color': '#000', 'line-width': 9, 'line-opacity': 0.25, 'line-blur': 3 },
+        });
+      }
+
+      // Main route highlight
+      if (!map.getLayer('planned-route-line')) {
+        map.addLayer({
+          id: 'planned-route-line',
+          type: 'line',
+          source: 'planned-route',
+          paint: {
+            'line-color': '#1E90FF',
+            'line-width': 5,
+            'line-opacity': 0.92,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        });
+      }
+
+      // Animated direction arrows on route
+      if (!map.getLayer('planned-route-arrows')) {
+        map.addLayer({
+          id: 'planned-route-arrows',
+          type: 'symbol',
+          source: 'planned-route',
+          minzoom: 13,
+          layout: {
+            'symbol-placement': 'line',
+            'symbol-spacing': 100,
+            'icon-image': 'triangle-11',   // built-in MapLibre icon
+            'icon-size': 0.9,
+            'icon-rotate': 90,
+            'icon-rotation-alignment': 'map',
+            'icon-allow-overlap': true,
+          },
+          paint: { 'icon-color': '#fff', 'icon-opacity': 0.7 },
+        });
+      }
+
+      // Start / end markers
+      addRouteMarker('start-marker', from.lon, from.lat, '#04D93C', '🚴');
+      addRouteMarker('end-marker',   to.lon,   to.lat,   '#e74c3c', '🏁');
+    }
+
+    function addRouteMarker(id, lon, lat, color, emoji) {
+      const existing = document.getElementById(id);
+      if (existing) existing.remove();
+      const el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = `width:32px;height:32px;border-radius:50%;background:${color};
+        display:flex;align-items:center;justify-content:center;font-size:1em;
+        border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);`;
+      el.textContent = emoji;
+      new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(map);
+    }
+
+    function clearRouteLayers() {
+      ['planned-route-arrows','planned-route-line','planned-route-shadow'].forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id);
+      });
+      if (map.getSource('planned-route')) map.removeSource('planned-route');
+      ['start-marker','end-marker'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+    }
+
+    // ── Active navigation ─────────────────────────────────────────────────
+    function startNavigation() {
+      if (!plannedRoute || !plannedSteps.length) return;
+      isNavigating = true;
+      navStartTime = Date.now();
+      navDistTravelledM = 0;
+      currentStepIdx = 0;
+
+      // Switch UI to nav mode
+      document.getElementById('btn-start-nav').classList.remove('show');
+      document.getElementById('route-summary').classList.remove('show');
+      document.getElementById('nav-stats-bar').classList.add('show');
+      document.getElementById('btn-end-nav').style.display = '';
+      document.getElementById('turn-banner').classList.add('show');
+
+      // Enable heading-up mode
+      headingUp = true;
+      document.getElementById('btn-heading-up').classList.add('active');
+
+      collapsePanel();
+      updateTurnBanner();
+      updateNavStats();
+    }
+
+    function updateNavProgress(lat, lon) {
+      if (!isNavigating || !plannedSteps.length) return;
+
+      // Find next waypoint in current step
+      const step = plannedSteps[currentStepIdx];
+      if (!step) return;
+
+      const stepCoords = decodePolyline(step.geometry, 6);
+      const lastPt = stepCoords[stepCoords.length - 1];
+      const distToEnd = haversineM(lat, lon, lastPt[1], lastPt[0]);
+
+      // Advance step when within 20 m of step end
+      if (distToEnd < 20 && currentStepIdx < plannedSteps.length - 1) {
+        currentStepIdx++;
+        updateTurnBanner();
+      }
+
+      // Update distance to next turn
+      document.getElementById('turn-dist').textContent = formatDist(distToEnd);
+
+      // Check if arrived (within 30 m of destination)
+      const dest = plannedRoute[plannedRoute.length - 1];
+      const distToDest = haversineM(lat, lon, dest[1], dest[0]);
+      if (distToDest < 30) {
+        showArrived();
+        return;
+      }
+
+      updateNavStats();
+
+      // Auto-zoom near intersections
+      if (distToEnd < 80) {
+        map.easeTo({ zoom: 18, duration: 500 });
+      } else if (distToEnd > 200 && map.getZoom() > 17) {
+        map.easeTo({ zoom: 16, duration: 500 });
+      }
+
+      // Snap user to route
+      const snappedCoords = snapToRoute(lat, lon, plannedRoute);
+      if (userMarker) userMarker.setLngLat(snappedCoords);
+    }
+
+    function updateTurnBanner() {
+      const step = plannedSteps[currentStepIdx];
+      if (!step) return;
+      const next = plannedSteps[currentStepIdx + 1];
+      const modifier = next && next.maneuver ? next.maneuver.modifier : null;
+      document.getElementById('turn-icon').textContent = next ? turnEmoji(modifier) : '✅';
+      document.getElementById('turn-instruction').textContent = stepInstruction(next || step);
+      document.getElementById('turn-dist').textContent = '-- m';
+    }
+
+    function updateNavStats() {
+      const remain = Math.max(0, navTotalDistM - navDistTravelledM);
+      const avgSpeed = navDistTravelledM > 0 && navStartTime
+        ? (navDistTravelledM / 1000) / ((Date.now() - navStartTime) / 3600000)
+        : null;
+      const etaMins = (avgSpeed && avgSpeed > 1)
+        ? (remain / 1000) / avgSpeed * 60
+        : remain / 1000 / 15 * 60; // assume 15 km/h default
+
+      document.getElementById('nav-stat-dist').textContent    = formatDist(navDistTravelledM);
+      document.getElementById('nav-stat-remain').textContent  = formatDist(remain);
+      document.getElementById('nav-stat-eta').textContent     = formatMinutes(etaMins);
+      document.getElementById('nav-stat-speed').textContent   = lastSpeedKmh.toFixed(1);
+    }
+
+    function showArrived() {
+      isNavigating = false;
+      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+
+      const elapsed = navStartTime ? Math.round((Date.now() - navStartTime) / 60000) : 0;
+      document.getElementById('arrived-stats').textContent =
+        `騎行距離：${formatDist(navDistTravelledM)}\n用時：${formatMinutes(elapsed)}\n平均速度：${navDistTravelledM > 0 && elapsed > 0 ? ((navDistTravelledM/1000)/(elapsed/60)).toFixed(1) : '--'} km/h`;
+      document.getElementById('arrived-overlay').classList.add('show');
+    }
+
+    function endNavigation() {
+      isNavigating = false;
+      document.getElementById('turn-banner').classList.remove('show');
+      document.getElementById('nav-stats-bar').classList.remove('show');
+      document.getElementById('btn-end-nav').style.display = 'none';
+      document.getElementById('btn-start-nav').classList.remove('show');
+      document.getElementById('route-summary').classList.remove('show');
+      headingUp = false;
+      document.getElementById('btn-heading-up').classList.remove('active');
+      map.easeTo({ bearing: 0, duration: 500 });
+      expandPanel();
+      clearRouteLayers();
+      plannedRoute = null;
+      plannedSteps = [];
+      document.getElementById('sel-from').value = '';
+      document.getElementById('sel-to').value = '';
+      checkPlanBtn();
+    }
+
+    // ── Panel collapse / expand ───────────────────────────────────────────
+    function collapsePanel() {
+      document.getElementById('planner-panel').classList.add('collapsed');
+    }
+    function expandPanel() {
+      document.getElementById('planner-panel').classList.remove('collapsed');
+    }
+
+    // ── Heading-up toggle ─────────────────────────────────────────────────
+    document.getElementById('btn-heading-up').addEventListener('click', () => {
+      headingUp = !headingUp;
+      document.getElementById('btn-heading-up').classList.toggle('active', headingUp);
+      if (!headingUp) map.easeTo({ bearing: 0, duration: 500 });
+    });
+
+    // ── Back navigation ───────────────────────────────────────────────────
+    window.navBack = function () {
+      if (isNavigating) {
+        if (!confirm('確定結束導航嗎？')) return;
+        endNavigation();
+      }
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      history.back();
+    };
+
+    // ── Populate selects ──────────────────────────────────────────────────
+    function populateSelects() {
+      const fromSel = document.getElementById('sel-from');
+      const toSel   = document.getElementById('sel-to');
+      LANDMARKS.forEach(l => {
+        const opt1 = new Option(l.name, l.id);
+        const opt2 = new Option(l.name, l.id);
+        fromSel.appendChild(opt1);
+        toSel.appendChild(opt2);
+      });
+    }
+
+    function checkPlanBtn() {
+      const from = document.getElementById('sel-from').value;
+      const to   = document.getElementById('sel-to').value;
+      document.getElementById('btn-plan-route').disabled = !from || !to || from === to;
+    }
+
+    // ── Event listeners ───────────────────────────────────────────────────
+    document.getElementById('sel-from').addEventListener('change', checkPlanBtn);
+    document.getElementById('sel-to').addEventListener('change', checkPlanBtn);
+    document.getElementById('btn-plan-route').addEventListener('click', planRoute);
+    document.getElementById('btn-start-nav').addEventListener('click', startNavigation);
+    document.getElementById('btn-end-nav').addEventListener('click', () => {
+      if (confirm('確定結束導航？')) endNavigation();
+    });
+    document.getElementById('btn-arrived-done').addEventListener('click', () => {
+      document.getElementById('arrived-overlay').classList.remove('show');
+      endNavigation();
+    });
+
+    // Panel handle toggle
+    document.getElementById('panel-handle').addEventListener('click', () => {
+      const panel = document.getElementById('planner-panel');
+      panel.classList.toggle('collapsed');
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────
+    populateSelects();
+    initMap();
+
+  })();
+  </script>
+</body>
+</html>
