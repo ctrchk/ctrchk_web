@@ -101,6 +101,22 @@ PWA 就是把現有網頁「升級」為可安裝的 App，不需要從零開始
 10. [開發路線圖](#10-開發路線圖)
 11. [開放問題與待決定事項](#11-開放問題與待決定事項)
 12. [單車徑導航可行性探討](#12-單車徑導航可行性探討)
+    - [12.1 背景：現有遊戲化功能 vs. 實用導航需求](#121-背景現有遊戲化功能-vs-實用導航需求)
+    - [12.2 香港單車徑概覽](#122-香港單車徑概覽)
+    - [12.3 技術可行性分析](#123-技術可行性分析)
+    - [12.4 實現方案比較](#124-實現方案比較)
+    - [12.5 單車徑導航 UI 設計](#125-單車徑導航-ui-設計)
+    - [12.6 與現有遊戲化系統整合](#126-與現有遊戲化系統整合)
+    - [12.7 資料庫擴充（導航模式）](#127-資料庫擴充導航模式)
+    - [12.8 技術挑戰與風險](#128-技術挑戰與風險)
+    - [12.9 建議實施步驟](#129-建議實施步驟)
+    - [12.10 結論](#1210-結論)
+    - [12.11 目標升級：超越傳統導航的車道級單車徑導航](#1211-目標升級超越傳統導航的車道級單車徑導航)
+    - [12.12 將軍澳單車徑網絡詳覽（首階段目標）](#1212-將軍澳單車徑網絡詳覽首階段目標)
+    - [12.13 零成本完整技術方案分析](#1213-零成本完整技術方案分析)
+    - [12.14 車道級視覺化實現技術](#1214-車道級視覺化實現技術)
+    - [12.15 首階段實施計劃（將軍澳）](#1215-首階段實施計劃將軍澳)
+    - [12.16 更新結論（包含車道級導航目標）](#1216-更新結論包含車道級導航目標)
 
 ---
 
@@ -1171,6 +1187,452 @@ ALTER TABLE routes_config
 
 ---
 
+### 12.11 目標升級：超越傳統導航的車道級單車徑導航
+
+#### 核心願景
+
+> 目標是開發一款以**單車徑為主體**的動態車道級導航，在用戶體驗上全面超越 Google Maps、Apple Maps 等傳統導航。
+
+| 對比項目 | 傳統導航（Google/Apple Maps） | CTRC HK 單車徑導航 |
+|---------|------------------------------|------------------|
+| **路徑規劃** | 以公路/馬路為主，單車路徑次要 | ✅ **以單車徑為優先**，盡量走專用徑 |
+| **地圖顯示** | 公路佔主導，單車徑不突出 | ✅ **單車徑高亮顯示**，清晰可見 |
+| **車道層級** | 無法顯示單車徑劃線細節 | ✅ **清晰顯示路面劃線、方向箭頭** |
+| **動態路線** | 靜態地圖，不針對單車徑即時更新 | ✅ **即時更新**，根據 GPS 位置動態調整 |
+| **本地化** | 通用導航，不了解香港單車徑細節 | ✅ **專為香港單車徑設計** |
+| **費用** | 免費（但 API 有限制） | ✅ **完全零成本** |
+
+#### 「車道級導航」的具體含義
+
+「車道級（Lane-Level）」對於單車導航，意味著地圖在高縮放時能顯示如同實際路面的細節：
+
+```
+一般導航顯示（低精度）：
+  ───────────────────────────────────────  ← 一條模糊線段
+
+車道級單車導航顯示（高精度）：
+  ══════════════════════════════════════  ← 單車徑（顯示實際路幅寬度）
+     ←  ←  ←  ←  ←  ←  ←  ←  ←  ←     ← 方向箭頭劃線（模擬路面標記）
+  🚲─────🚲──────────────────────────    ← 用戶位置及前方路況
+     ▲ ⚠️ 前方路口 50m                   ← 路口提示
+```
+
+具體視覺元素：
+
+1. **彩色路徑高亮**：單車徑以鮮明顏色（如綠色）與普通道路區分
+2. **劃線標記**：模擬實際路面的虛線中線、方向箭頭標記
+3. **路口指示**：岔路口顯示清晰箭頭，提示用戶下一步方向
+4. **用戶位置貼附**：GPS 位置自動「吸附」至單車徑中心線
+5. **動態縮放**：接近路口時自動放大地圖，顯示更多車道細節
+
+---
+
+### 12.12 將軍澳單車徑網絡詳覽（首階段目標）
+
+> 第一階段專注於**將軍澳區**，因為這正是 CTRC HK 現有路線（900、900A、966T 等）的覆蓋範圍，並且擁有完善的專用單車徑網絡。
+
+#### 將軍澳主要單車徑路段
+
+```
+寶琳（新都城二期）
+     │
+     ▼ 坑口單車徑（沿坑口道）約 1.5 km
+     │
+坑口（港鐵站周邊）
+     │
+     ▼ 將軍澳市中心段（環保大道）約 2.5 km
+     │
+將軍澳市中心（日出康城方向）
+     │
+     ├──→ 調景嶺海濱（沿海單車徑）約 1.5 km
+     │
+調景嶺（彩明苑）
+     │
+     ▼ 調景嶺至坑口（LOHAS Park 方向）約 2 km
+     │
+日出康城（LOHAS Park）
+```
+
+#### 路段概覽
+
+| 路段 | 長度（約） | 路面狀況 | OSM 數據完整度 |
+|------|----------|---------|--------------|
+| 寶琳 ↔ 坑口 | 1.5 km | 平坦，瀝青 | ⚠️ 部分標注 |
+| 坑口 ↔ 將軍澳市中心 | 2.5 km | 平坦，瀝青 | ✅ 完整 |
+| 將軍澳市中心 ↔ 調景嶺海濱 | 1.5 km | 平坦，海景 | ✅ 完整 |
+| 調景嶺 ↔ 日出康城 | 2 km | 平坦，瀝青 | ✅ 完整 |
+| 環保大道支線 | 1 km | 平坦，瀝青 | ✅ 完整 |
+| **合計** | **~8.5 km** | — | ✅ 大部分完整 |
+
+#### OSM 標注情況（將軍澳）
+
+| 路段 | OSM 標籤 | 數據狀態 |
+|------|---------|---------|
+| 坑口單車徑 | `highway=cycleway` | ✅ 完整 |
+| 將軍澳環保大道 | `highway=cycleway` | ✅ 完整 |
+| 調景嶺海濱 | `highway=cycleway` + `surface=asphalt` | ✅ 完整 |
+| 寶琳周邊 | `highway=path` + `bicycle=designated` | ⚠️ 部分 |
+| 日出康城周邊 | `highway=cycleway` | ✅ 完整 |
+
+**OSM 數據提取工具**：可使用 [Overpass Turbo](https://overpass-turbo.eu) 以下查詢提取將軍澳所有單車徑：
+
+```
+[out:json][timeout:25];
+(
+  way["highway"="cycleway"]({{bbox}});
+  way["bicycle"="designated"]["highway"="path"]({{bbox}});
+  way["bicycle"="designated"]["highway"="track"]({{bbox}});
+);
+out body;
+>;
+out skel qt;
+```
+
+#### 政府 GeoData 單車徑數據
+
+香港政府在 [GeoData.gov.hk](https://geodata.gov.hk) 免費提供官方單車徑矢量數據：
+
+| 數據集 | 格式 | 精確度 | 說明 |
+|-------|------|-------|------|
+| 香港單車徑網絡 | GeoJSON / Shapefile | ✅ 高（政府官方） | 含路段分類、寬度資訊 |
+| 道路交通設施 | GeoJSON | ✅ 中 | 含單車停放設施 |
+
+**與 OSM 結合使用**：GeoData 官方數據 + OSM 社群標注 = 最準確的將軍澳單車徑資料庫，兩者均完全免費。
+
+---
+
+### 12.13 零成本完整技術方案分析
+
+#### 費用總計：$0
+
+| 組件 | 選擇方案 | 費用 | 說明 |
+|------|---------|------|------|
+| **地圖底圖** | OpenFreeMap.org 向量圖磚 | **免費** | CDN 向量圖磚，無需 API Key，無流量限制 |
+| **地圖渲染引擎** | MapLibre GL JS | **免費** | Mapbox GL JS 的開源分支，WebGL 加速 |
+| **單車徑數據** | OpenStreetMap（Overpass API） | **免費** | 社群維護，將軍澳覆蓋完整 |
+| **政府官方數據** | GeoData.gov.hk | **免費** | 香港政府開放數據 |
+| **路由計算** | Brouter WASM（瀏覽器內運行） | **免費** | 無需伺服器，純前端 WASM |
+| **地理編碼** | Nominatim（OSM 官方） | **免費**（有使用限制） | 搜尋地名轉坐標 |
+| **部署** | Vercel Hobby 現有方案 | **免費** | 無需新增伺服器資源 |
+| **合計** | — | **$0 / 月** | 完全無成本 |
+
+#### 地圖底圖方案對比
+
+| 方案 | 費用 | 向量支援 | 適合性 | 備注 |
+|------|------|--------|-------|------|
+| **OpenFreeMap.org** ⭐ | 完全免費 | ✅ | ⭐⭐⭐⭐⭐ | 無流量限制，推薦首選 |
+| **Protomaps（自架 + Cloudflare）** | 免費 | ✅ | ⭐⭐⭐⭐ | 需額外配置 Cloudflare Worker |
+| **CARTO Basemaps** | 免費（75k 請求/月） | ✅ | ⭐⭐⭐⭐ | 有月度配額上限 |
+| **OpenStreetMap 標準圖磚** | 免費（有限制） | ❌（圖片格式） | ⭐⭐⭐ | 不支援向量，無法自定義樣式 |
+| **Google Maps** | 按用量收費 | ✅ | ❌ | 有成本，單車徑覆蓋不全 |
+
+**推薦方案：OpenFreeMap.org + MapLibre GL JS**
+- OpenFreeMap 提供免費、無流量限制的 OpenMapTiles 格式向量圖磚
+- MapLibre GL JS 完全開源，可完全自定義地圖樣式
+- 兩者結合可實現接近 Mapbox 的視覺效果，但**零成本**
+
+#### 路由引擎方案對比
+
+| 方案 | 費用 | 離線支援 | 單車優化程度 | 適合階段 |
+|------|------|--------|-----------|---------|
+| **OSRM Demo API** | 完全免費 | ❌ 需網絡 | ⚠️ 一般 | ✅ 初期快速驗證 |
+| **GraphHopper 免費配額** | 免費（500次/日） | ❌ 需網絡 | ✅ 有 bike profile | ✅ 中期 MVP |
+| **Brouter WASM** ⭐ | 完全免費 | ✅ 完全離線 | ✅ 最佳（專為單車） | 中長期目標 |
+| **Valhalla（自架）** | 免費（需伺服器） | ✅ 離線 | ✅ 好 | ❌ 成本高 |
+
+**推薦方案（分階段）**：
+
+1. **初期**：`OSRM Demo API`（`router.project-osrm.org`）—— 完全免費，無需 API Key，即時可用
+2. **中期**：`GraphHopper 免費 API` —— 更好的單車路徑優化，每日 500 次足夠測試
+3. **長期**：`Brouter WASM` —— 完全離線、專為單車設計、永遠免費
+
+---
+
+### 12.14 車道級視覺化實現技術
+
+#### 從 Leaflet 升級至 MapLibre GL JS
+
+現有 `ride.html` 使用 Leaflet.js 顯示地圖。為實現車道級顯示效果，建議升級至 **MapLibre GL JS**（支援向量瓦片及自定義樣式）：
+
+| 功能 | Leaflet.js（現有） | MapLibre GL JS（升級目標） |
+|------|------------------|--------------------------|
+| 向量瓦片支援 | ❌ 只支援圖磚（圖片） | ✅ 原生支援向量瓦片 |
+| 路型自定義樣式 | ⚠️ 有限（疊加層） | ✅ 完全自定義（按縮放、路型分類） |
+| 單車徑高亮 | ⚠️ 需手動疊加層 | ✅ 原生樣式規則，按 OSM 標籤自動渲染 |
+| 方向箭頭符號 | ⚠️ 需手動繪製 | ✅ symbol 圖層原生支援 |
+| 性能 | 中 | ✅ 高（WebGL GPU 加速） |
+| 檔案大小 | ~130 KB | ~250 KB |
+| 費用 | 免費 | **免費**（開源） |
+
+#### 車道級單車徑樣式方案
+
+使用 MapLibre GL JS 的樣式規則，可以精確控制單車徑的顯示效果：
+
+```javascript
+// MapLibre GL JS 樣式配置示例（車道級單車徑顯示）
+const cyclePathLayers = [
+  // 底層：單車徑路幅（綠色寬條，模擬路面寬度）
+  {
+    id: 'cycleway-fill',
+    type: 'line',
+    source: 'openmaptiles',
+    'source-layer': 'transportation',
+    filter: ['any',
+      ['==', ['get', 'subclass'], 'cycleway'],
+      ['==', ['get', 'bicycle'], 'designated']
+    ],
+    paint: {
+      'line-color': [
+        'case',
+        ['==', ['get', 'subclass'], 'cycleway'], '#00C853', // 綠色：專用單車徑
+        ['==', ['get', 'bicycle'], 'designated'],  '#64DD17', // 淺綠：指定單車路
+        '#AAAAAA' // 灰色：其他路徑
+      ],
+      'line-width': ['interpolate', ['linear'], ['zoom'],
+        12, 2,   // 縮放 12：2px（概覽）
+        15, 5,   // 縮放 15：5px（區域）
+        17, 10,  // 縮放 17：10px（路段，開始顯示車道細節）
+        19, 18   // 縮放 19：18px（車道級別，顯示路面劃線）
+      ],
+      'line-opacity': 0.85
+    }
+  },
+  // 中層：虛線中線（模擬路面中線劃線）
+  {
+    id: 'cycleway-centerline',
+    type: 'line',
+    source: 'openmaptiles',
+    'source-layer': 'transportation',
+    filter: ['==', ['get', 'subclass'], 'cycleway'],
+    minzoom: 16,
+    paint: {
+      'line-color': '#FFFFFF',
+      'line-width': 1,
+      'line-dasharray': [4, 4],  // 虛線：模擬路面白色中線
+      'line-opacity': 0.7
+    }
+  },
+  // 上層：方向箭頭（縮放 15+ 時顯示，指示單車行駛方向）
+  {
+    id: 'cycleway-arrows',
+    type: 'symbol',
+    source: 'openmaptiles',
+    'source-layer': 'transportation',
+    filter: ['==', ['get', 'subclass'], 'cycleway'],
+    minzoom: 15,
+    layout: {
+      'symbol-placement': 'line',
+      'symbol-spacing': 120,
+      'icon-image': 'cycle-arrow',   // 自定義單車箭頭圖標
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 15, 0.5, 18, 1.0],
+      'icon-rotation-alignment': 'map'
+    }
+  }
+];
+```
+
+#### 政府 GeoData 數據疊加
+
+政府官方單車徑數據可作為額外圖層疊加，補充 OSM 可能缺漏的路段：
+
+```javascript
+map.on('load', () => {
+  // 方法一：直接引用政府 WMS/GeoJSON API（需網絡連接）
+  // 方法二（推薦）：預先下載 GeoJSON 靜態文件，放入 /gpx/tko/ 資料夾
+  map.addSource('tko-official-cycling', {
+    type: 'geojson',
+    data: '/gpx/tko/cycling_tracks_tko.geojson'  // 本地靜態文件，零 API 成本
+  });
+
+  map.addLayer({
+    id: 'hk-official-cycleways',
+    type: 'line',
+    source: 'tko-official-cycling',
+    paint: {
+      'line-color': '#00E676',       // 亮綠色：政府官方數據
+      'line-width': 4,
+      'line-dasharray': [1, 0],      // 實線：官方已確認路段
+      'line-opacity': 0.9
+    }
+  });
+});
+```
+
+#### GPS 路線貼附（Route Snapping）
+
+防止 GPS 漂移導致用戶位置偏離單車徑顯示：
+
+```javascript
+/**
+ * 路線貼附算法：將用戶 GPS 位置吸附至最近的單車徑中線
+ *
+ * @param {number} userLat       - 用戶當前緯度
+ * @param {number} userLon       - 用戶當前經度
+ * @param {Array}  routeCoords   - 路線座標陣列，格式：[[lon, lat], [lon, lat], ...]
+ * @returns {Array}              - 吸附後的座標 [lon, lat]；若偏離 > 30m 則返回原始位置
+ */
+function snapToRoute(userLat, userLon, routeCoords) {
+  let minDist = Infinity;
+  let snappedPoint = null;
+
+  for (let i = 0; i < routeCoords.length - 1; i++) {
+    const point = closestPointOnSegment(
+      [userLon, userLat],
+      routeCoords[i],
+      routeCoords[i + 1]
+    );
+    const dist = haversineDistance(userLat, userLon, point[1], point[0]);
+    if (dist < minDist) {
+      minDist = dist;
+      snappedPoint = point;
+    }
+  }
+
+  // 偏離超過 30 米時返回真實位置（可能已離開單車徑，不強制吸附）
+  return minDist < 30 ? snappedPoint : [userLon, userLat];
+}
+```
+
+#### 地圖自動旋轉（Heading Up）
+
+騎行時地圖方向跟隨騎行方向旋轉，始終保持「前方在上」：
+
+```javascript
+// 根據 GPS 軌跡自動計算行進方向並旋轉地圖
+let lastPosition = null;
+
+navigator.geolocation.watchPosition((pos) => {
+  const { latitude, longitude } = pos.coords;
+
+  if (lastPosition) {
+    const bearing = calculateBearing(
+      lastPosition.lat, lastPosition.lon,
+      latitude, longitude
+    );
+    map.easeTo({ bearing, duration: 500 });  // 流暢旋轉地圖
+  }
+
+  lastPosition = { lat: latitude, lon: longitude };
+  map.setCenter([longitude, latitude]);
+});
+```
+
+---
+
+### 12.15 首階段實施計劃（將軍澳）
+
+#### 目標範圍
+
+```
+首階段覆蓋：將軍澳區全部主要單車徑
+  └─ 寶琳 ↔ 坑口段（~1.5 km）
+  └─ 坑口 ↔ 將軍澳市中心段（~2.5 km）
+  └─ 將軍澳市中心 ↔ 調景嶺海濱段（~1.5 km）
+  └─ 調景嶺 ↔ 日出康城段（~2 km）
+  └─ 環保大道支線（~1 km）
+
+  總計：約 8.5 km 單車徑網絡
+  覆蓋現有路線：900、900A、966T（全部在範圍內）
+```
+
+#### 實施步驟（漸進式，全程零成本）
+
+##### 第一步：數據準備（約 1 週）
+
+- [ ] 從 [GeoData.gov.hk](https://geodata.gov.hk) 下載將軍澳單車徑 GeoJSON 數據
+- [ ] 用 [Overpass Turbo](https://overpass-turbo.eu) 匯出將軍澳 OSM 單車徑數據（GeoJSON）
+- [ ] 比對兩份數據，補充缺漏路段，整合為 `cycling_tracks_tko.geojson`
+- [ ] 將文件放入 `/gpx/tko/` 資料夾（靜態文件，零 API 成本）
+
+##### 第二步：地圖引擎升級（約 1-2 週）
+
+- [ ] 在 `ride.html` 引入 MapLibre GL JS（可與現有 Leaflet 並存，按模式切換）
+  ```html
+  <!-- ride.html 新增（導航模式使用） -->
+  <link href='https://unpkg.com/maplibre-gl/dist/maplibre-gl.css' rel='stylesheet' />
+  <script src='https://unpkg.com/maplibre-gl/dist/maplibre-gl.js'></script>
+  ```
+- [ ] 配置 OpenFreeMap.org 作為免費向量底圖來源
+- [ ] 套用車道級單車徑樣式（綠色高亮 + 方向箭頭 + 虛線中線）
+- [ ] 疊加政府 GeoJSON 數據圖層（本地靜態文件，無 API 費用）
+
+##### 第三步：導航核心功能（約 2-3 週）
+
+- [ ] 接入 OSRM Demo API（免費）作為初期路由引擎，驗證導航邏輯
+- [ ] 實現將軍澳範圍內「起點到終點」沿單車徑路線規劃 UI
+- [ ] 動態轉向指示（turn-by-turn）顯示，顯示下一個路口距離及方向
+- [ ] GPS 路線貼附邏輯（防止位置漂移偏離單車徑）
+- [ ] 路口接近時自動放大地圖（縮放至 zoom level 17–18 顯示車道細節）
+- [ ] 地圖自動旋轉（Heading Up，前進方向始終向上）
+
+##### 第四步：體驗提升（持續優化）
+
+- [ ] 語音轉向提示（Web Speech API，完全免費）
+- [ ] Service Worker 預快取將軍澳地圖瓦片（離線支援，弱網環境可用）
+- [ ] 接入 Brouter WASM，替換 OSRM（更精準的單車路徑規劃）
+- [ ] 新增「路況標記」功能（用戶可標記路段狀況，社群回報）
+
+#### 技術依存關係
+
+```
+OpenFreeMap.org 向量圖磚（免費 CDN）
+        │
+        ▼
+MapLibre GL JS（開源 WebGL 地圖渲染）
+        │
+        ├── /gpx/tko/cycling_tracks_tko.geojson（政府+OSM整合數據）
+        ├── OSM 向量圖磚樣式（車道級單車徑高亮）
+        └── OSRM / Brouter（路由計算，均免費）
+                │
+                ▼
+        ride.html 導航模式（新增 Tab）
+                │
+                ├── GPS watchPosition()（現有，複用）
+                ├── 路線貼附邏輯（新增）
+                ├── 地圖自動旋轉（新增）
+                └── 轉向提示 UI（新增）
+```
+
+#### 與現有遊戲化系統並存
+
+首階段導航功能設計為**不影響現有遊戲化功能**，可直接整合：
+
+| 整合點 | 實施方式 |
+|--------|---------|
+| 不影響現有打卡功能 | 導航模式作為 `ride.html` 的新 Tab，現有遊戲模式完整保留 |
+| 路線 900/900A 同步 | 現有路線的 GPX 可作為導航路線的基礎路徑，一次製作雙用 |
+| 騎行記錄 | 導航騎行同樣記入 `cycling_history`，`source='nav'` 標記 |
+| 零後端修改 | 初期全部邏輯在前端實現，不需要新增任何後端 API |
+| XP 整合 | 完成導航路線亦可獲 XP（按距離計算），遊戲化與實用並存 |
+
+---
+
+### 12.16 更新結論（包含車道級導航目標）
+
+| 評估項目 | 結論 |
+|---------|------|
+| **技術可行性** | ✅ 高度可行：MapLibre GL JS + OSM + GeoData 可實現車道級顯示 |
+| **成本** | ✅ **完全零成本**：OpenFreeMap + Brouter + OSM + GeoData.gov.hk 均免費 |
+| **首階段範圍** | ✅ **將軍澳區**：現有路線覆蓋範圍，OSM 數據完整，最適合優先實施 |
+| **與現有功能兼容** | ✅ 導航模式與遊戲化模式並存，共用同一 `ride.html`，互不影響 |
+| **超越傳統導航** | ✅ 單車徑優先、車道劃線顯示，是 Google Maps 無法提供的體驗 |
+| **建議優先度** | 🟢 **高優先**：從將軍澳出發，MapLibre GL JS 重構地圖顯示，分步實現 |
+
+**最終目標願景**：
+
+一款完全免費、以香港單車徑為核心的動態車道級導航 App，用戶可以：
+
+1. 選擇將軍澳任意起點與終點
+2. App 自動規劃沿單車徑的最佳路線（優先走專用徑）
+3. 全程高亮顯示單車徑，清晰可見路面劃線及方向箭頭
+4. 轉彎前 200 米提示（視覺 + 語音）
+5. 地圖隨騎行方向自動旋轉，始終前方在上
+6. 無需網絡連接（本地數據緩存，離線可用）
+
+> 💡 **與遊戲化功能結合**：導航路線同樣可獲得 XP 獎勵，打通「實用工具」與「遊戲體驗」，令用戶有多重理由持續使用 App。
+
+---
+
 ## 參考資料
 
 | 資源 | 連結 |
@@ -1178,6 +1640,9 @@ ALTER TABLE routes_config
 | Leaflet.js（Web 地圖） | https://leafletjs.com |
 | leaflet-gpx | https://github.com/mpetazzoni/leaflet-gpx |
 | MapLibre GL JS | https://maplibre.org |
+| OpenFreeMap（免費向量圖磚） | https://openfreemap.org |
+| OpenMapTiles 樣式規範 | https://openmaptiles.org/schema |
+| Overpass Turbo（OSM 查詢工具） | https://overpass-turbo.eu |
 | Web Push Notifications（MDN） | https://developer.mozilla.org/en-US/docs/Web/API/Push_API |
 | iOS PWA 推送通知支援 | https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/ |
 | Web Geolocation API（MDN） | https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API |
@@ -1188,6 +1653,7 @@ ALTER TABLE routes_config
 | Expo 文檔（日後 React Native） | https://docs.expo.dev |
 | OpenStreetMap 單車徑數據 | https://www.openstreetmap.org |
 | GraphHopper Routing API | https://docs.graphhopper.com |
+| OSRM（開源路由機） | http://project-osrm.org |
 | Brouter（離線單車路由） | https://brouter.de |
 | 香港政府地理資訊（GeoData） | https://geodata.gov.hk |
 
