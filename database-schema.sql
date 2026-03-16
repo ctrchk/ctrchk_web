@@ -129,6 +129,23 @@ CREATE TABLE IF NOT EXISTS user_unlocked_routes (
 );
 
 -- =========================================================
+-- 遊戲化：用戶每日簽到記錄
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS user_daily_checkins (
+  id            SERIAL PRIMARY KEY,
+  user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  checkin_date  DATE NOT NULL,
+  xp_earned     INTEGER DEFAULT 0,
+  coins_earned  INTEGER DEFAULT 0,
+  streak_day    INTEGER DEFAULT 1,
+  created_at    TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, checkin_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_daily_checkins_user_id ON user_daily_checkins(user_id);
+
+-- =========================================================
 -- 遊戲化：路線解鎖條件配置
 -- =========================================================
 
@@ -142,21 +159,21 @@ CREATE TABLE IF NOT EXISTS routes_config (
 
 -- 初始路線配置（每3-4級解鎖一條新路線）
 -- Level 1 起始路線：900, 900A, 966T（966T 取代 966 成為初始路線）
--- 里程幣解鎖路線：900S, 914B, 920, 961P, 962P, 962X（unlock_cost 為暫定值，待確認）
+-- 里程幣解鎖路線：900S(300幣), 914B(200幣), 920, 961P, 962P, 962X（920/961P/962P/962X 幣數為暫定值，待確認）
 INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
 VALUES
   ('900',   1,  NULL, 450, false),  -- 20站：19站×10 XP（TIK 01除外不加XP）+ 3區段×20 XP + 200完成獎勵 = 最高450 XP
   ('900A',  1,  NULL, 360, false),  -- 15站：15站×10 XP + 3區段×20 XP + 150完成獎勵 = 最高360 XP
   ('966T',  1,  NULL, 320, false),  -- 2站（無中途站）：1區段×20 XP + 300完成獎勵 = 最高320 XP（初始路線，取代 966）
   ('914',   4,  NULL,  80, false),
+  ('914H',  4,  NULL, 170, false),  -- 4級解鎖，5站×10 XP + 120完成 = 最高170 XP
   ('966A',  4,  NULL,  90, false),
   ('966',   4,  NULL, 110, false),  -- 已非初始路線，移至第4級
-  ('910',   7,  NULL, 100, false),
-  ('914B',  7,   500,  80, true),   -- 需要里程幣解鎖（暫定 500 幣）
-  ('914H',  10, NULL,  80, false),
+  ('910',   5,  NULL, 260, false),  -- 5級解鎖，10站×10 XP + 160完成 = 最高260 XP
+  ('914B',  1,   200, 290, true),   -- 200里程幣解鎖，9站×10 XP + 200完成 = 最高290 XP
+  ('900S',  1,   300, 595, true),   -- 300里程幣解鎖，13站×15 XP + TKO-HAH區間100 + 300完成 = 最高595 XP
   ('920',   10,  800, 130, true),   -- 需要里程幣解鎖（暫定 800 幣）
   ('920X',  13, NULL, 100, false),
-  ('900S',  13,  600, 130, true),   -- 需要里程幣解鎖（暫定 600 幣）
   ('901P',  16, NULL, 140, false),
   ('923',   16, NULL, 160, false),
   ('928',   19, NULL, 170, false),

@@ -177,15 +177,15 @@ const schemaReady = pool.query(`
   INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special) VALUES
     ('900',   1,  NULL, 150, false),('900A',  1,  NULL, 120, false),('966T',  1,  NULL,  90, false),
     ('914',   4,  NULL,  80, false),('966A',  4,  NULL,  90, false),('966',   4,  NULL, 110, false),
-    ('910',   7,  NULL, 100, false),
-    -- 914B 需要里程幣解鎖（暫定 500 幣，待確認）
-    ('914B',  7,   500,  80, true),
-    ('914H',  10, NULL,  80, false),
+    ('910',   5,  NULL, 260, false),
+    -- 914B 需要里程幣解鎖（200 幣）
+    ('914B',  1,   200, 290, true),
+    ('914H',  4,  NULL, 170, false),
     -- 920 需要里程幣解鎖（暫定 800 幣，待確認）
     ('920',   10,  800, 130, true),
     ('920X',  13, NULL, 100, false),
-    -- 900S 需要里程幣解鎖（暫定 600 幣，待確認）
-    ('900S',  13,  600, 130, true),
+    -- 900S 需要里程幣解鎖（300 幣）
+    ('900S',  1,   300, 595, true),
     ('901P',  16, NULL, 140, false),('923',   16, NULL, 160, false),
     ('928',   19, NULL, 170, false),('929',   19, NULL, 160, false),
     ('932',   20, NULL, 220, false),('935',   20, NULL, 250, false),
