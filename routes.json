@@ -984,7 +984,7 @@
         "少坡"
       ],
       "color": "#073763",
-      "unlock_level": 8,
+      "unlock_level": 4,
       "unlock_cost": null,
       "xp_reward": 80,
       "is_special": false,
@@ -998,7 +998,45 @@
           "file": "914坑口.gpx"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "POA 17",
+          "name": "景林單車駅",
+          "name_en": "King Lam Bicycle Hub",
+          "road": "寶順路",
+          "direction": "🔴",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.32058,
+          "lon": 114.26181
+        },
+        {
+          "order": 2,
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3179927,
+          "lon": 114.2622479
+        },
+        {
+          "order": 3,
+          "code": "HAH 01",
+          "name": "坑口站、頌明苑",
+          "name_en": "Hang Hau Station, Chung Ming Court",
+          "road": "單車徑",
+          "direction": "🟢",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3170474,
+          "lon": 114.2631152
+        }
+      ],
+      "completion_xp": 50
     },
     {
       "id": "910",
@@ -1025,9 +1063,9 @@
         "旅遊"
       ],
       "color": "#3c78d8",
-      "unlock_level": 15,
+      "unlock_level": 5,
       "unlock_cost": null,
-      "xp_reward": 100,
+      "xp_reward": 260,
       "is_special": false,
       "gpx": [
         {
@@ -1039,7 +1077,129 @@
           "file": "910逆時針.gpx"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "HAH 01",
+          "name": "坑口站、頌明苑",
+          "name_en": "Hang Hau Station, Chung Ming Court",
+          "road": "單車徑",
+          "direction": "🔴",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3170474,
+          "lon": 114.2631152
+        },
+        {
+          "order": 2,
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3179927,
+          "lon": 114.2622479
+        },
+        {
+          "order": 3,
+          "code": "HAH 03",
+          "name": "厚德邨巴士站",
+          "name_en": "Hau Tak Estate Bus Stop",
+          "road": "寶寧路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3191161,
+          "lon": 114.2642532
+        },
+        {
+          "order": 4,
+          "code": "HAH 04",
+          "name": "厚德邨得裕樓",
+          "name_en": "Hau Tak Estate Tak Yue House",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.318565,
+          "lon": 114.2673246
+        },
+        {
+          "order": 5,
+          "code": "HAH 05",
+          "name": "將軍澳醫院、富寧花園",
+          "name_en": "Tseung Kwan O Hospital, Fu Ning Garden",
+          "road": "寶寧里",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3186549,
+          "lon": 114.2688739
+        },
+        {
+          "order": 6,
+          "code": "HAH 06",
+          "name": "坑口社區會堂、明德邨",
+          "name_en": "Hang Hau Community Hall, Ming Tak Estate",
+          "road": "寶寧路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3175173,
+          "lon": 114.2686332
+        },
+        {
+          "order": 7,
+          "code": "HAH 07",
+          "name": "煜明苑、和明苑",
+          "name_en": "Yuk Ming Court, Wo Ming Court",
+          "road": "昭信路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3148759,
+          "lon": 114.2685185
+        },
+        {
+          "order": 8,
+          "code": "HAH 08",
+          "name": "文曲里公園南口",
+          "name_en": "Man Kuk Lane Park South Entrance",
+          "road": "環保大道",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3131002,
+          "lon": 114.2645868
+        },
+        {
+          "order": 9,
+          "code": "HAH 10",
+          "name": "常寧遊樂場",
+          "name_en": "Sheung Ning Playground",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3155,
+          "lon": 114.26121
+        },
+        {
+          "order": 10,
+          "code": "HAH 01",
+          "name": "坑口站、頌明苑",
+          "name_en": "Hang Hau Station, Chung Ming Court",
+          "road": "單車徑",
+          "direction": "🟢",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3170474,
+          "lon": 114.2631152
+        }
+      ],
+      "completion_xp": 160
     },
     {
       "id": "920",
@@ -1256,18 +1416,176 @@
         "少坡"
       ],
       "color": "#e6a817",
-      "unlock_level": 15,
-      "unlock_cost": 600,
-      "xp_reward": 130,
+      "unlock_level": 1,
+      "unlock_cost": 300,
+      "xp_reward": 595,
       "is_special": true,
-      "coin_cost": 600,
+      "coin_cost": 300,
       "gpx": [
         {
           "label": "往寶琳",
           "file": "900S寶琳.gpx"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "TIK 06",
+          "name": "調景嶺總站",
+          "name_en": "Tiu Keng Leng Terminus",
+          "road": "單車徑",
+          "direction": "🔴",
+          "district": "TIK",
+          "xp": 15,
+          "lat": 22.30096,
+          "lon": 114.25607
+        },
+        {
+          "order": 2,
+          "code": "TKO 04",
+          "name": "藍塘傲",
+          "name_en": "Alto Residences",
+          "road": "海濱長廊(將)",
+          "direction": "⬇️",
+          "district": "TKO",
+          "xp": 15,
+          "lat": 22.30146,
+          "lon": 114.25823
+        },
+        {
+          "order": 3,
+          "code": "TKO 03",
+          "name": "將軍澳海濱長廊寵物公園",
+          "name_en": "Tseung Kwan O Waterfront Park Pet Garden",
+          "road": null,
+          "direction": "⬇️",
+          "district": "TKO",
+          "xp": 15,
+          "lat": 22.30195,
+          "lon": 114.25996
+        },
+        {
+          "order": 4,
+          "code": "TKO 13",
+          "name": "將軍澳南梯台",
+          "name_en": "Tseung Kwan O South Landing Steps",
+          "road": null,
+          "direction": "⬇️",
+          "district": "TKO",
+          "xp": 15,
+          "lat": 22.30153,
+          "lon": 114.26103
+        },
+        {
+          "order": 5,
+          "code": "TKO 12",
+          "name": "南橋",
+          "name_en": "South Bridge",
+          "road": null,
+          "direction": "⬇️",
+          "district": "TKO",
+          "xp": 15,
+          "lat": 22.30145,
+          "lon": 114.26287
+        },
+        {
+          "order": 6,
+          "code": "TKO 02",
+          "name": "雍明商場、雍明苑",
+          "name_en": "Yung Ming Shopping Centre, Yung Ming Court",
+          "road": null,
+          "direction": "⬇️",
+          "district": "TKO",
+          "xp": 15,
+          "lat": 22.30491,
+          "lon": 114.26515
+        },
+        {
+          "order": 7,
+          "code": "TKO 01",
+          "name": "調景嶺碼頭",
+          "name_en": "Tiu Keng Leng Pier",
+          "road": "至善街",
+          "direction": "⬇️",
+          "district": "TKO",
+          "xp": 15,
+          "lat": 22.30806,
+          "lon": 114.26421
+        },
+        {
+          "order": 8,
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": "寶順路",
+          "direction": "⬇️",
+          "district": "HAH",
+          "xp": 15,
+          "lat": 22.3179927,
+          "lon": 114.2622479
+        },
+        {
+          "order": 9,
+          "code": "POA 04",
+          "name": "景林邨轉乘站——景林邨滑板公園",
+          "name_en": "King Lam Estate Interchange - King Lam Estate Roller Skating Park",
+          "road": null,
+          "direction": "⬇️",
+          "district": "POA",
+          "xp": 15,
+          "lat": 22.319158,
+          "lon": 114.2622998
+        },
+        {
+          "order": 10,
+          "code": "POA 03",
+          "name": "景林邨轉乘站——景林邨景棉樓",
+          "name_en": "King Lam Estate Interchange - King Min House King Lam Estate",
+          "road": "寶琳北路",
+          "direction": "⬇️",
+          "district": "POA",
+          "xp": 15,
+          "lat": 22.3219615,
+          "lon": 114.2613027
+        },
+        {
+          "order": 11,
+          "code": "POA 02",
+          "name": "欣明苑、將軍澳賽馬會診所",
+          "name_en": "Yan Ming Court, Tseung Kwan O Jockey Club Clinic",
+          "road": null,
+          "direction": "⬇️",
+          "district": "POA",
+          "xp": 15,
+          "lat": 22.3249033,
+          "lon": 114.2589675
+        },
+        {
+          "order": 12,
+          "code": "POA 11",
+          "name": "英明苑",
+          "name_en": "Ying Ming Court",
+          "road": "寶琳北路",
+          "direction": "⬇️",
+          "district": "POA",
+          "xp": 15,
+          "lat": 22.3269849,
+          "lon": 114.2561378
+        },
+        {
+          "order": 13,
+          "code": "POA 10",
+          "name": "寶琳消防局、寶琳邨",
+          "name_en": "Po Lam Fire Station, Po Lam Estate",
+          "road": null,
+          "direction": "🟢",
+          "district": "POA",
+          "xp": 15,
+          "lat": 22.3263129,
+          "lon": 114.2522674
+        }
+      ],
+      "completion_xp": 300
     },
     {
       "id": "901P",
@@ -1325,11 +1643,11 @@
         "快速"
       ],
       "color": "#cc4125",
-      "unlock_level": 15,
-      "unlock_cost": 500,
-      "xp_reward": 80,
+      "unlock_level": 1,
+      "unlock_cost": 200,
+      "xp_reward": 290,
       "is_special": true,
-      "coin_cost": 500,
+      "coin_cost": 200,
       "gpx": [
         {
           "label": "往寶琳",
@@ -1340,7 +1658,117 @@
           "file": "914B醫院.gpx"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "POA 01",
+          "name": "新都城二期、寶琳邨",
+          "name_en": "Metro City Plaza II, Po Lam Estate",
+          "road": "寶豐路",
+          "direction": "🔴",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.3244024,
+          "lon": 114.2571832
+        },
+        {
+          "order": 2,
+          "code": "POA 02",
+          "name": "欣明苑、將軍澳賽馬會診所",
+          "name_en": "Yan Ming Court, Tseung Kwan O Jockey Club Clinic",
+          "road": "寶琳北路",
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.3249033,
+          "lon": 114.2589675
+        },
+        {
+          "order": 3,
+          "code": "POA 03",
+          "name": "景林邨轉乘站——景林邨景棉樓",
+          "name_en": "King Lam Estate Interchange - King Min House King Lam Estate",
+          "road": null,
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.3219615,
+          "lon": 114.2613027
+        },
+        {
+          "order": 4,
+          "code": "POA 04",
+          "name": "景林邨轉乘站——景林邨滑板公園",
+          "name_en": "King Lam Estate Interchange - King Lam Estate Roller Skating Park",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "POA",
+          "xp": 10,
+          "lat": 22.319158,
+          "lon": 114.2622998
+        },
+        {
+          "order": 5,
+          "code": "HAH 01",
+          "name": "坑口站、頌明苑",
+          "name_en": "Hang Hau Station, Chung Ming Court",
+          "road": "單車徑",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3170474,
+          "lon": 114.2631152
+        },
+        {
+          "order": 6,
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3179927,
+          "lon": 114.2622479
+        },
+        {
+          "order": 7,
+          "code": "HAH 03",
+          "name": "厚德邨巴士站",
+          "name_en": "Hau Tak Estate Bus Stop",
+          "road": "寶寧路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3191161,
+          "lon": 114.2642532
+        },
+        {
+          "order": 8,
+          "code": "HAH 04",
+          "name": "厚德邨得裕樓",
+          "name_en": "Hau Tak Estate Tak Yue House",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.318565,
+          "lon": 114.2673246
+        },
+        {
+          "order": 9,
+          "code": "HAH 05",
+          "name": "將軍澳醫院、富寧花園",
+          "name_en": "Tseung Kwan O Hospital, Fu Ning Garden",
+          "road": "寶寧里",
+          "direction": "🟢",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3186549,
+          "lon": 114.2688739
+        }
+      ],
+      "completion_xp": 200
     },
     {
       "id": "914H",
@@ -1361,9 +1789,9 @@
         "坑口北專線"
       ],
       "color": "#85200c",
-      "unlock_level": 22,
+      "unlock_level": 4,
       "unlock_cost": null,
-      "xp_reward": 80,
+      "xp_reward": 170,
       "is_special": false,
       "coin_cost": 0,
       "gpx": [
@@ -1376,7 +1804,69 @@
           "file": "914H醫院.gpx"
         }
       ],
-      "stops": []
+      "stops": [
+        {
+          "order": 1,
+          "code": "HAH 01",
+          "name": "坑口站、頌明苑",
+          "name_en": "Hang Hau Station, Chung Ming Court",
+          "road": "單車徑",
+          "direction": "🔴",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3170474,
+          "lon": 114.2631152
+        },
+        {
+          "order": 2,
+          "code": "HAH 02",
+          "name": "寶順路轉乘站",
+          "name_en": "Po Shun Road Interchange",
+          "road": "寶順路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3179927,
+          "lon": 114.2622479
+        },
+        {
+          "order": 3,
+          "code": "HAH 03",
+          "name": "厚德邨巴士站",
+          "name_en": "Hau Tak Estate Bus Stop",
+          "road": "寶寧路",
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3191161,
+          "lon": 114.2642532
+        },
+        {
+          "order": 4,
+          "code": "HAH 04",
+          "name": "厚德邨得裕樓",
+          "name_en": "Hau Tak Estate Tak Yue House",
+          "road": null,
+          "direction": "↕️",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.318565,
+          "lon": 114.2673246
+        },
+        {
+          "order": 5,
+          "code": "HAH 05",
+          "name": "將軍澳醫院、富寧花園",
+          "name_en": "Tseung Kwan O Hospital, Fu Ning Garden",
+          "road": "寶寧里",
+          "direction": "🟢",
+          "district": "HAH",
+          "xp": 10,
+          "lat": 22.3186549,
+          "lon": 114.2688739
+        }
+      ],
+      "completion_xp": 120
     },
     {
       "id": "966B",
