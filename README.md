@@ -655,8 +655,12 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 | **900** | 初始路線（等級 1） | ✅ **已驗證**（20 站，含方向標記） |
 | **900A** | 初始路線（等級 1） | ✅ **已驗證**（15 站，含方向標記，XP 上限 290） |
 | **966T** | 初始路線（等級 1） | ✅ **已驗證**（2 站，無中途站，完成獎勵 300 XP） |
+| **900S** | 300 里程幣 | ✅ **已驗證**（13 站，單向服務，完成獎勵 300 XP） |
+| **910** | 等級 5 解鎖 | ✅ **已驗證**（10 站，雙循環線，完成獎勵 160 XP） |
+| **914** | 等級 4 解鎖 | ✅ **已驗證**（3 站，完成獎勵 50 XP） |
+| **914B** | 200 里程幣 | ✅ **已驗證**（9 站，完成獎勵 200 XP） |
+| **914H** | 等級 4 解鎖 | ✅ **已驗證**（5 站，完成獎勵 120 XP） |
 | 966 | 等級 8 解鎖 | ❌ 站點待提交 |
-| 914 | 等級 8 解鎖 | ❌ 站點待提交 |
 | 其他路線 | 各路線對應等級 | ❌ 站點待提交 |
 
 ### 15.5 路線 900A 站點詳情
@@ -723,6 +727,159 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 | 20 | TIK 04 | 彩明苑總站 | Choi Ming Court Terminus | 彩明街 | 🟢 | 22.30646° N, 114.25331° E |
 
 > **注意：** 未提交站點的路線在騎行介面中無法顯示沿途站點和追蹤功能，但仍可在路線清單中查看基本資訊。請按 **15.2 提交格式**提交，格式須包含 `code`、`direction`、`district`、`xp` 等完整欄位。
+
+---
+
+### 15.8 地點表（POA / HAH / LHP / INE）
+
+> 以下為各站點的精確位置及對應路線，座標精確至小數點後 7 位。  
+> HAH 09 為預留站點編號，暫未使用。HAH 10–14、LHP 及 INE 系列站點座標尚待實地量測後補充。
+
+#### 西貢區
+
+| 編號 | 使用路線 | Google Map | 座標 |
+|------|---------|-----------|------|
+| POA 01 | 900, 900A, 914B, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/WmVgAJAKV6XNHBEJA?g_st=ic) | 22.3244024° N, 114.2571832° E |
+| POA 02 | 900, 900A, 900S, 914B, X935, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/gc8J8xyMcaJKg7hf6?g_st=ic) | 22.3249033° N, 114.2589675° E |
+| POA 03 | 900, 900A, 900S, 914B, X935, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/XtWCdh4t4DGM2M5M8?g_st=ic) | 22.3219615° N, 114.2613027° E |
+| POA 04 | 900, 900A, 900S, 914B, X935, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/oQk7q1L8zGToebTDA?g_st=ic) | 22.3191580° N, 114.2622998° E |
+| POA 05 | 928, 935, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/GUySibTgB1Febhen7?g_st=ic) | 22.3171252° N, 114.2589360° E |
+| POA 06 | 928, 935, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/wR1tZQ9YAw5eVa3n6?g_st=ic) | 22.3167605° N, 114.2582453° E |
+| POA 07 | 901P, 935, 955E, 955F | [地圖](https://maps.app.goo.gl/NnKx6QroNTuQxj7KA?g_st=ic) | 22.3190188° N, 114.2565411° E |
+| POA 08 | 901P, 935, 955E, 955F | [地圖](https://maps.app.goo.gl/VQrzCKrR7KxPrjCc8?g_st=ic) | 22.3219345° N, 114.2554300° E |
+| POA 09 | 901P, 935, X935, 955E, 955F | [地圖](https://maps.app.goo.gl/Wyx2Ezu3A8CF3VPKA?g_st=ic) | 22.3235292° N, 114.2530065° E |
+| POA 10 | 900S, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/qx9cKp2mc5GF6i3d8?g_st=ic) | 22.3263129° N, 114.2522674° E |
+| POA 11 | 900S, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/9CP6cVjM7BSoeWG38?g_st=ic) | 22.3269849° N, 114.2561378° E |
+| POA 12 | X935 | [地圖](https://maps.app.goo.gl/QxZ6A4xG5fsP8wpc6?g_st=ic) | 22.3244250° N, 114.2567349° E |
+| POA 13 | 920P, 928 | [地圖](https://maps.app.goo.gl/4KfVrR1nRsB5VRcY6?g_st=ic) | 22.3197076° N, 114.2596662° E |
+| POA 14 | 920P, 928 | [地圖](https://maps.app.goo.gl/YxFuxaXS7JJ5GBsH9?g_st=ic) | 22.3219606° N, 114.2579815° E |
+| POA 15 | 901P, 935, X935, 960 | [地圖](https://maps.app.goo.gl/KC5Sb83gNMrmqrgW8?g_st=ic) | 22.3270895° N, 114.2509688° E |
+| POA 17 | 914 | — | 22.32058° N, 114.26181° E |
+| HAH 01 | 910E, 910F, 914B, 920P, 929, 932 | [地圖](https://maps.app.goo.gl/3A6ye4LVugQFhZdT8?g_st=ic) | 22.3170474° N, 114.2631152° E |
+| HAH 02 | 900, 900A, 900S, 910E, 910F, 914B, 920P, 928, 929, 932, 935, X935, 955E, 955F, 960 | [地圖](https://maps.app.goo.gl/1jhanjQ22UqP4LDR6?g_st=ic) | 22.3179927° N, 114.2622479° E |
+| HAH 03 | 910E, 910F, 914B, 929, 932 | [地圖](https://maps.app.goo.gl/KWZ6WTtC37cHsQGV7?g_st=ic) | 22.3191161° N, 114.2642532° E |
+| HAH 04 | 910E, 910F, 914B, 929, 932 | [地圖](https://maps.app.goo.gl/WPHP79HxcNV5bk8CA?g_st=ic) | 22.3185650° N, 114.2673246° E |
+| HAH 05 | 910E, 910F, 914B, 929, 932 | [地圖](https://maps.app.goo.gl/gNfoWYQL2MbMahHF8?g_st=ic) | 22.3186549° N, 114.2688739° E |
+| HAH 06 | 910E, 910F, 929, 932 | [地圖](https://maps.app.goo.gl/8BWqEoukxdzr3RPXA?g_st=ic) | 22.3175173° N, 114.2686332° E |
+| HAH 07 | 910E, 910F, 929, 932 | [地圖](https://maps.app.goo.gl/a9cXmE363T4nU9Tx9?g_st=ic) | 22.3148759° N, 114.2685185° E |
+| HAH 08 | 910E, 910F, 929, 932 | [地圖](https://maps.app.goo.gl/93YHDFeybXAoPMVq8?g_st=ic) | 22.3131002° N, 114.2645868° E |
+| HAH 09 | 預留 Reserved | — | — |
+| HAH 10 | 900, 900A, 910E, 910F, 935 | — | 22.31550° N, 114.26121° E |
+| HAH 11 | 900, 900A, 935 | — | 22.31507° N, 114.26090° E |
+| HAH 12 | 900, 923E, 923F, 935 | — | 22.31406° N, 114.26010° E |
+| HAH 13 | 900, 923E, 923F, 935 | — | 22.31325° N, 114.26072° E |
+| HAH 14 | 900, 923E, 923F, 935 | — | 22.31017° N, 114.26323° E |
+| LHP 01 | 960, 966 | — | 待補充 |
+| LHP 02 | 929, S90, S91 | — | 待補充 |
+| LHP 03 | 929, 932, 935, 961, F29, S90, S91 | — | 待補充 |
+| LHP 04 | 932, 935, 961, F29, S90 | — | 待補充 |
+| LHP 05 | 932, 935, 961, F29, S90 | — | 待補充 |
+| LHP 06 | 932, 935, 961, 966, F29, S90, X935 | — | 待補充 |
+| LHP 07 | 932, 935, 960, 961, 966, F29, S90, X935 | — | 待補充 |
+| LHP 08 | 932, 935, 960, F29, X935 | — | 待補充 |
+| LHP 09 | 935, 939, 960, F29 | — | 待補充 |
+| LHP 10 | 939 | — | 待補充 |
+| LHP 11 | 939 | — | 待補充 |
+| INE 01 | 932, 935, 939, 960, X935 | — | 待補充 |
+| INE 02 | 932, 935, 939, 960, X935 | — | 待補充 |
+| INE 03 | 932, 935, 939, 960, X935 | — | 待補充 |
+| INE 04 | 932, 935, 939, 960, X935 | — | 待補充 |
+| INE 05 | 932, 935, 939, 960, X935 | — | 待補充 |
+
+---
+
+### 15.9 路線 900S 站點詳情
+
+**西貢區 將軍澳部 ‧ 900S（單向服務）**  
+13 站 ‧ 每站 +15 XP ‧ 無常規區域獎勵 ‧ TKO01 至 HAH02 區間 +100 XP ‧ 完成 +300 XP  
+解鎖路線要求：300 里程幣
+
+| 順序 | 代碼 | 中文名 | 英文名 | 道路 | 方向 | 備注 |
+|------|------|--------|--------|------|------|------|
+| 1 | TIK 06 | 調景嶺總站 | Tiu Keng Leng Terminus | 單車徑 | 🔴 | 與 900 線相同 |
+| 2 | TKO 04 | 藍塘傲 | Alto Residences | 海濱長廊(將) | ⬇️ | 與 900 線相同 |
+| 3 | TKO 03 | 將軍澳海濱長廊寵物公園 | Tseung Kwan O Waterfront Park Pet Garden | — | ⬇️ | 與 900 線相同 |
+| 4 | TKO 13 | 將軍澳南梯台 | Tseung Kwan O South Landing Steps | — | ⬇️ | 與 900 線相同 |
+| 5 | TKO 12 | 南橋 | South Bridge | — | ⬇️ | 與 900 線相同 |
+| 6 | TKO 02 | 雍明商場、雍明苑 | Yung Ming Shopping Centre, Yung Ming Court | — | ⬇️ | 與 900 線相同 |
+| 7 | TKO 01 | 調景嶺碼頭 | Tiu Keng Leng Pier | 至善街 | ⬇️ | 與 900 線相同 |
+| 8 | HAH 02 | 寶順路轉乘站 | Po Shun Road Interchange | 寶順路 | ⬇️ | 與 900 線相同 |
+| 9 | POA 04 | 景林邨轉乘站——景林邨滑板公園 | King Lam Estate Interchange - King Lam Estate Roller Skating Park | — | ⬇️ | 與 900 線相同 |
+| 10 | POA 03 | 景林邨轉乘站——景林邨景棉樓 | King Lam Estate Interchange - King Min House King Lam Estate | 寶琳北路 | ⬇️ | 與 900 線相同 |
+| 11 | POA 02 | 欣明苑、將軍澳賽馬會診所 | Yan Ming Court, Tseung Kwan O Jockey Club Clinic | — | ⬇️ | 與 900 線相同 |
+| 12 | POA 11 | 英明苑 | Ying Ming Court | 寶琳北路 | ⬇️ | 參考地點表 |
+| 13 | POA 10 | 寶琳消防局、寶琳邨 | Po Lam Fire Station, Po Lam Estate | — | 🟢 | 參考地點表 |
+
+---
+
+### 15.10 路線 910 站點詳情
+
+**西貢區 將軍澳部 ‧ 910（雙循環線）**  
+10 站 ‧ 每站 +10 XP ‧ 無常規區域獎勵 ‧ 完成 +160 XP  
+解鎖路線要求：5 級／lvl5
+
+| 順序 | 代碼 | 中文名 | 英文名 | 道路 | 方向 | 備注 |
+|------|------|--------|--------|------|------|------|
+| 1 | HAH 01 | 坑口站、頌明苑 | Hang Hau Station, Chung Ming Court | 單車徑 | 🔴 | 參考地點表 |
+| 2 | HAH 02 | 寶順路轉乘站 | Po Shun Road Interchange | 寶順路 | ↕️ | 參考地點表 |
+| 3 | HAH 03 | 厚德邨巴士站 | Hau Tak Estate Bus Stop | 寶寧路 | ↕️ | 參考地點表 |
+| 4 | HAH 04 | 厚德邨得裕樓 | Hau Tak Estate Tak Yue House | — | ↕️ | 參考地點表 |
+| 5 | HAH 05 | 將軍澳醫院、富寧花園 | Tseung Kwan O Hospital, Fu Ning Garden | 寶寧里 | ↕️ | 參考地點表 |
+| 6 | HAH 06 | 坑口社區會堂、明德邨 | Hang Hau Community Hall, Ming Tak Estate | 寶寧路 | ↕️ | 參考地點表 |
+| 7 | HAH 07 | 煜明苑、和明苑 | Yuk Ming Court, Wo Ming Court | 昭信路 | ↕️ | 參考地點表 |
+| 8 | HAH 08 | 文曲里公園南口 | Man Kuk Lane Park South Entrance | 環保大道 | ↕️ | 參考地點表 |
+| 9 | HAH 10 | 常寧遊樂場 | Sheung Ning Playground | — | ↕️ | 參考地點表 |
+| 10 | HAH 01 | 坑口站、頌明苑 | Hang Hau Station, Chung Ming Court | 單車徑 | 🟢 | 參考地點表（循環終點） |
+
+---
+
+### 15.11 路線 914 站點詳情
+
+**西貢區 將軍澳部 ‧ 914**  
+3 站 ‧ 每站 +10 XP ‧ 無常規區域獎勵 ‧ 完成 +50 XP  
+解鎖路線要求：4 級／lvl4
+
+| 順序 | 代碼 | 中文名 | 英文名 | 道路 | 方向 | 座標／備注 |
+|------|------|--------|--------|------|------|-----------|
+| 1 | POA 17 | 景林單車駅 | King Lam Bicycle Hub | 寶順路 | 🔴 | 22.32058° N, 114.26181° E |
+| 2 | HAH 02 | 寶順路轉乘站 | Po Shun Road Interchange | 寶順路 | ↕️ | 參考地點表 |
+| 3 | HAH 01 | 坑口站、頌明苑 | Hang Hau Station, Chung Ming Court | 單車徑 | 🟢 | 參考地點表 |
+
+---
+
+### 15.12 路線 914B 站點詳情
+
+**西貢區 將軍澳部 ‧ 914B**  
+9 站 ‧ 每站 +10 XP ‧ 無常規區域獎勵 ‧ 完成 +200 XP  
+解鎖路線要求：200 里程幣
+
+| 順序 | 代碼 | 中文名 | 英文名 | 道路 | 方向 | 備注 |
+|------|------|--------|--------|------|------|------|
+| 1 | POA 01 | 新都城二期、寶琳邨 | Metro City Plaza II, Po Lam Estate | 寶豐路 | 🔴 | 參考地點表 |
+| 2 | POA 02 | 欣明苑、將軍澳賽馬會診所 | Yan Ming Court, Tseung Kwan O Jockey Club Clinic | 寶琳北路 | ↕️ | 參考地點表 |
+| 3 | POA 03 | 景林邨轉乘站——景林邨景棉樓 | King Lam Estate Interchange - King Min House King Lam Estate | — | ↕️ | 參考地點表 |
+| 4 | POA 04 | 景林邨轉乘站——景林邨滑板公園 | King Lam Estate Interchange - King Lam Estate Roller Skating Park | 寶順路 | ↕️ | 參考地點表 |
+| 5 | HAH 01 | 坑口站、頌明苑 | Hang Hau Station, Chung Ming Court | 單車徑 | ↕️ | 參考地點表 |
+| 6 | HAH 02 | 寶順路轉乘站 | Po Shun Road Interchange | 寶順路 | ↕️ | 參考地點表 |
+| 7 | HAH 03 | 厚德邨巴士站 | Hau Tak Estate Bus Stop | 寶寧路 | ↕️ | 參考地點表 |
+| 8 | HAH 04 | 厚德邨得裕樓 | Hau Tak Estate Tak Yue House | — | ↕️ | 參考地點表 |
+| 9 | HAH 05 | 將軍澳醫院、富寧花園 | Tseung Kwan O Hospital, Fu Ning Garden | 寶寧里 | 🟢 | 參考地點表 |
+
+---
+
+### 15.13 路線 914H 站點詳情
+
+**西貢區 將軍澳部 ‧ 914H**  
+5 站 ‧ 每站 +10 XP ‧ 無常規區域獎勵 ‧ 完成 +120 XP  
+解鎖路線要求：4 級／lvl4
+
+| 順序 | 代碼 | 中文名 | 英文名 | 道路 | 方向 | 備注 |
+|------|------|--------|--------|------|------|------|
+| 1 | HAH 01 | 坑口站、頌明苑 | Hang Hau Station, Chung Ming Court | 單車徑 | 🔴 | 參考地點表 |
+| 2 | HAH 02 | 寶順路轉乘站 | Po Shun Road Interchange | 寶順路 | ↕️ | 參考地點表 |
+| 3 | HAH 03 | 厚德邨巴士站 | Hau Tak Estate Bus Stop | 寶寧路 | ↕️ | 參考地點表 |
+| 4 | HAH 04 | 厚德邨得裕樓 | Hau Tak Estate Tak Yue House | — | ↕️ | 參考地點表 |
+| 5 | HAH 05 | 將軍澳醫院、富寧花園 | Tseung Kwan O Hospital, Fu Ning Garden | 寶寧里 | 🟢 | 參考地點表 |
 
 ---
 
