@@ -142,6 +142,101 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: `User ${user_id} deleted` });
       }
 
+      if (action === 'get_game_profile') {
+        // 取得指定用戶的遊戲資料（等級、XP、里程幣、已解鎖路線）
+        const userResult = await query(
+          `SELECT u.id, u.email, u.full_name,
+                  COALESCE(gp.level, 1)  AS level,
+                  COALESCE(gp.xp,    0)  AS xp,
+                  COALESCE(gp.coins, 0)  AS coins
+           FROM users u
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+           WHERE u.id = $1`,
+          [user_id]
+        );
+        if (userResult.rows.length === 0) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+
+        const routesResult = await query(
+          `SELECT route_id, unlock_method, unlocked_at
+           FROM user_unlocked_routes
+           WHERE user_id = $1
+           ORDER BY unlocked_at ASC`,
+          [user_id]
+        );
+
+        return res.status(200).json({
+          user: userResult.rows[0],
+          unlocked_routes: routesResult.rows
+        });
+      }
+
+      if (action === 'set_game_stats') {
+        // 更新用戶的等級、XP、里程幣（僅更新提供的欄位）
+        const { level, xp, coins } = req.body;
+
+        if (level === undefined && xp === undefined && coins === undefined) {
+          return res.status(400).json({ message: 'At least one of level, xp, coins must be provided' });
+        }
+        if (level !== undefined && (typeof level !== 'number' || level < 1 || level > 20)) {
+          return res.status(400).json({ message: 'level must be a number between 1 and 20' });
+        }
+        if (xp !== undefined && (typeof xp !== 'number' || xp < 0)) {
+          return res.status(400).json({ message: 'xp must be a non-negative number' });
+        }
+        if (coins !== undefined && (typeof coins !== 'number' || coins < 0)) {
+          return res.status(400).json({ message: 'coins must be a non-negative number' });
+        }
+
+        // 確保 user_game_profile 列存在
+        await query(
+          `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
+           VALUES ($1, COALESCE($2, 1), COALESCE($3, 0), COALESCE($4, 0), NOW())
+           ON CONFLICT (user_id) DO UPDATE SET
+             level      = CASE WHEN $2 IS NOT NULL THEN $2 ELSE user_game_profile.level END,
+             xp         = CASE WHEN $3 IS NOT NULL THEN $3 ELSE user_game_profile.xp   END,
+             coins      = CASE WHEN $4 IS NOT NULL THEN $4 ELSE user_game_profile.coins END,
+             updated_at = NOW()`,
+          [user_id,
+           level !== undefined ? level : null,
+           xp    !== undefined ? xp    : null,
+           coins !== undefined ? coins : null]
+        );
+
+        return res.status(200).json({ message: `User ${user_id} game stats updated` });
+      }
+
+      if (action === 'grant_route') {
+        const { route_id } = req.body;
+        if (!route_id) {
+          return res.status(400).json({ message: 'route_id is required' });
+        }
+
+        await query(
+          `INSERT INTO user_unlocked_routes (user_id, route_id, unlock_method, unlocked_at)
+           VALUES ($1, $2, 'admin', NOW())
+           ON CONFLICT (user_id, route_id) DO NOTHING`,
+          [user_id, route_id]
+        );
+
+        return res.status(200).json({ message: `Route ${route_id} granted to user ${user_id}` });
+      }
+
+      if (action === 'revoke_route') {
+        const { route_id } = req.body;
+        if (!route_id) {
+          return res.status(400).json({ message: 'route_id is required' });
+        }
+
+        await query(
+          `DELETE FROM user_unlocked_routes WHERE user_id = $1 AND route_id = $2`,
+          [user_id, route_id]
+        );
+
+        return res.status(200).json({ message: `Route ${route_id} revoked from user ${user_id}` });
+      }
+
       if (action === 'create_admin') {
         const { email, full_name, password, role = 'admin' } = req.body;
 
