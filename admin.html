@@ -181,27 +181,42 @@
     </style>
 
     <script>
+        /**
+         * JWT Payload 解碼（僅讀取，不驗證簽名）
+         * JWT 使用 base64url 編碼，需先轉換為標準 base64 才能使用 atob()。
+         * @param {string} token - JWT token 字串
+         * @returns {object|null} 解碼後的 payload，失敗時回傳 null
+         */
+        function decodeJwtPayload(token) {
+            try {
+                const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+                return JSON.parse(atob(padded));
+            } catch (e) {
+                return null;
+            }
+        }
+
         // 頁面守衛 - 檢查是否為管理員
         (function() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 alert('請先登入管理員帳戶。');
-                window.location.replace('/login.html');
+                window.location.replace('/login');
                 throw new Error('Unauthorized');
             }
-            // JWT decode (不驗證簽名，只讀取 payload)
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                if (payload.role !== 'admin') {
-                    document.addEventListener('DOMContentLoaded', function() {
-                        document.getElementById('admin-content').style.display = 'none';
-                        document.getElementById('access-denied').style.display = 'block';
-                    });
-                }
-            } catch (e) {
+            const payload = decodeJwtPayload(token);
+            if (!payload) {
+                localStorage.removeItem('accessToken');
                 alert('Token 無效，請重新登入。');
-                window.location.replace('/login.html');
+                window.location.replace('/login');
                 throw new Error('Invalid token');
+            }
+            if (payload.role !== 'admin') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.getElementById('admin-content').style.display = 'none';
+                    document.getElementById('access-denied').style.display = 'block';
+                });
             }
         })();
     </script>
@@ -502,6 +517,23 @@
     <script>
         let currentPage = 1;
 
+        /**
+         * 統一處理 API 回應中的 Token 錯誤（401/403）。
+         * 若 Token 已過期或失效（例如更換 JWT_SECRET 後），
+         * 清除本地 Token 並提示用戶重新登入。
+         * @param {Response} resp - fetch() 回傳的 Response 物件
+         * @returns {boolean} 若已處理 Token 錯誤則回傳 true
+         */
+        function handleTokenError(resp) {
+            if (resp.status === 401 || resp.status === 403) {
+                localStorage.removeItem('accessToken');
+                alert('登入憑證已過期或無效，請重新登入管理員帳戶。\n（更換 JWT_SECRET 環境變數後，需重新登入以取得新的 Token。）');
+                window.location.replace('/login');
+                return true;
+            }
+            return false;
+        }
+
         function showTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
@@ -526,6 +558,7 @@
                 });
 
                 if (!response.ok) {
+                    if (handleTokenError(response)) return;
                     const err = await response.json();
                     throw new Error(err.message || '載入失敗');
                 }
@@ -970,6 +1003,7 @@
                     const r = await fetch(`/api/admin-users?search=${encodeURIComponent(input)}&limit=1`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
+                    if (handleTokenError(r)) return;
                     const d = await r.json();
                     if (!r.ok || !d.users || d.users.length === 0) {
                         loadingEl.innerHTML = `<p style="color:red;">找不到電郵為「${escapeHtml(input)}」的用戶。</p>`;
@@ -991,6 +1025,7 @@
                     },
                     body: JSON.stringify({ action: 'get_game_profile', user_id: userId })
                 });
+                if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.message || '載入失敗');
 
@@ -1053,6 +1088,7 @@
                     },
                     body: JSON.stringify({ action: 'set_game_stats', user_id: gpCurrentUserId, level, xp, coins })
                 });
+                if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     msgEl.style.color = 'green';
@@ -1083,6 +1119,7 @@
                     },
                     body: JSON.stringify({ action: 'grant_route', user_id: gpCurrentUserId, route_id: routeId })
                 });
+                if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     msgEl.style.color = 'green';
@@ -1113,6 +1150,7 @@
                     },
                     body: JSON.stringify({ action: 'revoke_route', user_id: gpCurrentUserId, route_id: routeId })
                 });
+                if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     msgEl.style.color = 'green';
@@ -1140,6 +1178,7 @@
                     },
                     body: JSON.stringify({ action: 'get_game_profile', user_id: gpCurrentUserId })
                 });
+                if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     renderUnlockedRoutes(data.unlocked_routes);
