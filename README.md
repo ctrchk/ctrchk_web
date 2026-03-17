@@ -538,6 +538,8 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 
 - 確認 `JWT_SECRET` 在所有環境（Vercel Production/Preview）一致
 - Token 有效期為 7 天，過期需重新登入
+- **⚠️ 若你剛剛在 Vercel 新增或修改了 `JWT_SECRET`，所有舊 Token 均會立即失效。請先至 `/login` 重新登入，取得以新 `JWT_SECRET` 簽署的新 Token，再訪問管理員後台及遊戲管理功能。**
+- 管理員後台（`/admin`）的遊戲管理 API 呼叫若收到 401/403 錯誤，頁面會自動清除失效的 Token 並提示重新登入。
 
 ### Q: Google 登入按鈕沒有顯示？
 
@@ -1128,6 +1130,21 @@ postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
 | **第四步** | 語音提示、離線緩存、Brouter WASM 升級 | 持續優化 |
 
 > 📖 完整技術分析（包括程式碼示例、路線貼附算法、地圖自動旋轉等）請參閱 **[APP-DEVELOPMENT.md §12.11–§12.16](./APP-DEVELOPMENT.md#1211-目標升級超越傳統導航的車道級單車徑導航)**。
+
+### 19.5 常見問題（導航）
+
+#### Q: 打開 `/nav` 頁面立刻死機或凍結？
+
+**已修復**。舊版本存在兩個問題：
+1. 沒有檢查 WebGL 支援（某些設備不支援 WebGL 時直接崩潰）
+2. `map.on('error', ...)` 對每個失敗的地圖瓦片都觸發 `setStyle()`，形成錯誤循環導致瀏覽器崩潰
+
+目前版本已修復：加入 `maplibregl.supported()` 檢查、`fallbackUsed` 防抖標誌、以及 12 秒載入逾時保護。
+詳見 **[APP-DEVELOPMENT.md §13.1](./APP-DEVELOPMENT.md#131-打開導航頁面立刻死機或卡頓怎麼辦)**。
+
+#### Q: 我需要自己建立路由模型（建模）嗎？
+
+**不需要**（初期）。`nav.html` 已接入 OSRM 公開示範 API，零設置即可使用。中期可切換至 GraphHopper 免費 API（每日 500 次），長期目標是整合 Brouter WASM（完全免費、可離線）。詳見 **[APP-DEVELOPMENT.md §13.2](./APP-DEVELOPMENT.md#132-我需要自己建立路由模型建模嗎)**。
 
 ---
 

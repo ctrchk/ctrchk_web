@@ -1633,6 +1633,73 @@ MapLibre GL JS（開源 WebGL 地圖渲染）
 
 ---
 
+## 13. 常見問題：導航頁面（/nav）
+
+### 13.1 打開導航頁面立刻死機或卡頓怎麼辦？
+
+**原因**：`nav.html` 使用 MapLibre GL JS（WebGL 向量地圖渲染），在以下情況下可能立即死機：
+
+| 原因 | 說明 |
+|------|------|
+| **裝置不支援 WebGL** | 部分舊款 Android 或低端設備的瀏覽器不支援 WebGL，`new maplibregl.Map()` 直接崩潰 |
+| **地圖錯誤事件循環** | `map.on('error', ...)` 對每一個失敗的地圖瓦片請求都觸發，若沒有防抖保護，每個 404 回應都會調用 `setStyle()`，在短時間內反複重設地圖 WebGL 狀態，導致瀏覽器崩潰或介面凍結 |
+| **OpenFreeMap CDN 不可用** | `tiles.openfreemap.org` 暫時不可用時，大量請求同時失敗，上述循環問題更嚴重 |
+
+**已修復（目前版本）**：
+
+1. **WebGL 支援檢查**：在建立地圖前先調用 `maplibregl.supported()`，不支援時顯示友善提示而非崩潰
+2. **Fallback 防抖保護**：`fallbackToRasterTiles()` 加入 `fallbackUsed` 標誌，確保只執行一次，徹底杜絕錯誤事件循環
+3. **載入逾時保護**：12 秒後自動移除載入遮罩，即使地圖初始化失敗，用戶也不會被白屏困住
+
+如果你仍遇到地圖無法顯示的問題：
+- 確認設備支援 WebGL（可在 [https://get.webgl.org](https://get.webgl.org) 測試）
+- 嘗試關閉省電模式（省電模式常會停用 GPU 加速）
+- 切換至 Chrome 或 Safari 最新版本
+
+---
+
+### 13.2 我需要自己建立路由模型（建模）嗎？
+
+**簡短回答：初期不需要。**
+
+`nav.html` 目前使用 **OSRM 公開示範 API**（`router.project-osrm.org`）作為路由引擎，無需任何設置即可使用。這個 API 是免費的，適合開發和測試階段。
+
+| 方案 | 需要自建？ | 適合階段 | 限制 |
+|------|-----------|---------|------|
+| **OSRM 公開 Demo API**（現用） | ❌ 不需要 | 開發 / 測試 | 官方不建議生產使用，偶爾回應較慢，無 SLA 保障 |
+| **GraphHopper 免費 API** | ❌ 不需要 | MVP / 早期生產 | 每日 500 次免費路由請求，超出需付費 |
+| **Brouter（純前端 WASM）** | ❌ 不需要 | 長期 / 離線 | 需下載路由數據（約幾十 MB），首次加載較慢 |
+| **OSRM 自架伺服器** | ✅ 需要自架 | 大規模生產 | 需要 VPS 並自行處理 OpenStreetMap 數據提取 |
+
+#### 「建模」是什麼意思？
+
+在導航語境中，「建模」通常指**處理 OpenStreetMap（OSM）原始地圖數據，提取香港單車徑網絡，生成路由圖（routing graph）**。這需要：
+
+1. **下載 OSM 香港數據**（約 100–200 MB .osm.pbf 文件）
+2. **使用 OSRM 工具鏈處理**（需要 4–8 GB RAM，處理時間約 5–15 分鐘）
+3. **啟動 OSRM 服務**（需要 VPS 或雲端伺服器）
+
+對於 CTRC HK 初期而言，**完全不需要自建模型**，直接使用上表的免費方案即可。
+
+#### 推薦路線：GraphHopper 免費 API（中期過渡方案）
+
+如果 OSRM Demo API 不夠穩定，建議切換至 [GraphHopper 免費 API](https://docs.graphhopper.com)：
+
+```javascript
+// 替換 nav.html 中的 OSRM_BASE 常量：
+// const OSRM_BASE = 'https://router.project-osrm.org/route/v1/bike';  // 舊
+// 使用 GraphHopper：
+const GH_API_KEY = 'your-free-api-key';  // 從 graphhopper.com 免費獲取
+async function planRoute() {
+  const url = `https://graphhopper.com/api/1/route?point=${fromLat},${fromLng}&point=${toLat},${toLng}&vehicle=bike&locale=zh-CN&key=${GH_API_KEY}&type=json&instructions=true`;
+  // ...
+}
+```
+
+GraphHopper 免費計劃提供每日 500 次路由請求，對於初期用戶量完全足夠。
+
+---
+
 ## 參考資料
 
 | 資源 | 連結 |

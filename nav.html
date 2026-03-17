@@ -364,6 +364,9 @@
     // Routing profile: bike
     const OSRM_BASE = 'https://router.project-osrm.org/route/v1/bike';
 
+    // Maximum time (ms) to wait for map initial load before hiding the overlay
+    const MAP_LOADING_TIMEOUT_MS = 12000;
+
     // ── State ─────────────────────────────────────────────────────────────
     let map = null;
     let userMarker = null;
@@ -372,6 +375,8 @@
     let lastLat = null, lastLon = null;
     let lastBearing = 0;
     let lastSpeedKmh = 0;
+    let fallbackUsed = false;      // prevent repeated fallbackToRasterTiles() calls
+    let loadingTimer = null;       // safety timeout for loading overlay
 
     // Navigation state
     let isNavigating = false;
@@ -485,6 +490,21 @@
 
     // ── Map initialisation ────────────────────────────────────────────────
     function initMap() {
+      // Check for WebGL support before attempting to create the map
+      if (!maplibregl.supported()) {
+        const el = document.getElementById('nav-loading');
+        el.innerHTML = '<p style="color:#BFE340; text-align:center; padding:1em; line-height:1.7;">' +
+          '⚠️ 你的裝置不支援 WebGL，無法顯示地圖。<br>' +
+          '<small style="opacity:0.7;">請嘗試在 Safari 或 Chrome 中重新開啟此頁面。</small><br><br>' +
+          '<a href="javascript:history.back()" style="color:#04D93C;">← 返回</a></p>';
+        return;
+      }
+
+      // Safety timeout: hide loading overlay after MAP_LOADING_TIMEOUT_MS even if map fails to load
+      loadingTimer = setTimeout(() => {
+        document.getElementById('nav-loading').classList.add('hidden');
+      }, MAP_LOADING_TIMEOUT_MS);
+
       map = new maplibregl.Map({
         container: 'nav-map',
         // OpenFreeMap free vector tiles (no API key, no usage limits)
@@ -498,6 +518,7 @@
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
       map.on('load', () => {
+        clearTimeout(loadingTimer);
         addCyclewayLayers();
         loadTkoGeoJson();
         document.getElementById('nav-loading').classList.add('hidden');
@@ -506,13 +527,23 @@
 
       map.on('error', (e) => {
         console.warn('[Nav] Map error:', e);
-        // Fallback to OSM raster if vector tiles fail
+        // Fallback to OSM raster tiles if vector tile source fails.
+        // Guard ensures this runs at most once — the 'error' event fires for
+        // every failed tile request, so without the guard each tile 404 would
+        // call setStyle() again and crash the browser.
         fallbackToRasterTiles();
       });
     }
 
     /** Fallback raster tiles if OpenFreeMap unavailable */
     function fallbackToRasterTiles() {
+      // Guard: only run once. The MapLibre 'error' event fires for every failed
+      // tile request, so without this flag each 404 would call setStyle() again,
+      // causing repeated map resets that freeze/crash the browser on mobile.
+      if (fallbackUsed) return;
+      fallbackUsed = true;
+
+      clearTimeout(loadingTimer);
       document.getElementById('nav-loading').classList.add('hidden');
       // Replace style with a simple raster source
       try {
