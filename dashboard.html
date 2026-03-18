@@ -452,6 +452,8 @@
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 if (response.status === 401) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('user');
                     window.location.href = '/login';
                     return;
                 }

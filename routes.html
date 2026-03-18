@@ -467,6 +467,71 @@
     color: var(--app-text-secondary, #a8d8a0);
 }
 .app-no-routes i { font-size: 2em; display: block; margin-bottom: 0.5em; opacity: 0.4; }
+/* ── Coin purchase sheet ─────────────────────────────────────────────── */
+#coin-purchase-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1299;
+    background: rgba(0,0,0,0.6);
+}
+#coin-purchase-sheet {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1300;
+    background: #1a2d1c;
+    border-radius: 16px 16px 0 0;
+    padding: 1.4em 1.2em calc(2em + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+}
+#coin-purchase-sheet h3 {
+    font-size: 1em;
+    font-weight: bold;
+    margin-bottom: 0.6em;
+    color: var(--app-text-primary, #e8f5e9);
+}
+#coin-purchase-desc {
+    font-size: 0.88em;
+    color: var(--app-text-secondary, #a8d8a0);
+    line-height: 1.5;
+    margin-bottom: 1.2em;
+}
+#coin-purchase-balance {
+    font-size: 0.85em;
+    color: #e6a817;
+    margin-bottom: 1em;
+}
+.coin-purchase-actions {
+    display: flex;
+    gap: 0.8em;
+}
+#btn-coin-confirm {
+    flex: 1;
+    padding: 0.75em;
+    border: none;
+    border-radius: 10px;
+    background: var(--app-accent, #6dba65);
+    color: #121f14;
+    font-size: 0.95em;
+    font-weight: bold;
+    cursor: pointer;
+}
+#btn-coin-confirm:disabled {
+    background: #3a5a3c;
+    color: #7a9a7a;
+    cursor: not-allowed;
+}
+#btn-coin-cancel {
+    flex: 1;
+    padding: 0.75em;
+    border: 1.5px solid #2d4d2d;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--app-text-secondary, #a8d8a0);
+    font-size: 0.95em;
+    cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -508,6 +573,18 @@
         </div>
         <div class="app-dept-subtitle">選擇部門，即可查看對應地圖及路線</div>
         <div id="app-dept-list"></div>
+    </div>
+
+    <!-- ════════ APP-ONLY coin purchase sheet ════════ -->
+    <div id="coin-purchase-overlay"></div>
+    <div id="coin-purchase-sheet">
+        <h3>🪙 里程幣解鎖路線</h3>
+        <div id="coin-purchase-desc"></div>
+        <div id="coin-purchase-balance"></div>
+        <div class="coin-purchase-actions">
+            <button id="btn-coin-confirm">確認購買</button>
+            <button id="btn-coin-cancel">取消</button>
+        </div>
     </div>
 
     <!-- ════════ APP-ONLY ride / cycling page ════════ -->
@@ -647,6 +724,95 @@ function isCoinRouteUnlocked(route) {
         return unlocked.includes(route.id);
     } catch(e) { return false; }
 }
+
+// ── Coin purchase sheet ─────────────────────────────────────────────────
+let _purchaseRoute = null;
+
+function showCoinPurchaseSheet(route) {
+    _purchaseRoute = route;
+    const userCoins = getUserCoins();
+    const cost = route.coin_cost;
+    const canAfford = userCoins >= cost;
+
+    document.getElementById('coin-purchase-desc').textContent =
+        `路線 ${route.id}（${route.alias || route.id}）是特別路線，需要 🪙${cost} 里程幣才能解鎖。`;
+    document.getElementById('coin-purchase-balance').textContent =
+        `你目前有 🪙${userCoins} 里程幣${canAfford ? '' : '，餘額不足'}。`;
+
+    const confirmBtn = document.getElementById('btn-coin-confirm');
+    confirmBtn.textContent = canAfford ? `🪙 花費 ${cost} 里程幣解鎖` : '里程幣不足';
+    confirmBtn.disabled = !canAfford;
+
+    document.getElementById('coin-purchase-overlay').style.display = 'block';
+    document.getElementById('coin-purchase-sheet').style.display = 'block';
+}
+
+function hideCoinPurchaseSheet() {
+    _purchaseRoute = null;
+    document.getElementById('coin-purchase-overlay').style.display = 'none';
+    document.getElementById('coin-purchase-sheet').style.display = 'none';
+}
+
+async function purchaseCoinRoute() {
+    const route = _purchaseRoute;
+    if (!route) return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) { window.location.href = '/login'; return; }
+
+    const confirmBtn = document.getElementById('btn-coin-confirm');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '處理中…';
+
+    try {
+        const resp = await fetch('/api/getHistory?action=purchase_route', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ route_id: route.id }),
+        });
+        if (resp.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            // Update localStorage coin balance and unlocked routes
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || '{}');
+                if (data.coins_remaining !== undefined) u.coins = data.coins_remaining;
+                localStorage.setItem('user', JSON.stringify(u));
+            } catch(e) {}
+            try {
+                const unlocked = JSON.parse(localStorage.getItem('unlockedCoinRoutes') || '[]');
+                if (!unlocked.includes(route.id)) unlocked.push(route.id);
+                localStorage.setItem('unlockedCoinRoutes', JSON.stringify(unlocked));
+            } catch(e) {}
+            hideCoinPurchaseSheet();
+            renderRoutes();
+        } else if (resp.status === 402) {
+            confirmBtn.textContent = '里程幣不足';
+            document.getElementById('coin-purchase-balance').textContent =
+                `你目前有 🪙${data.coins ?? getUserCoins()} 里程幣，不足 🪙${data.required} 里程幣。`;
+        } else {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = `🪙 花費 ${route.coin_cost} 里程幣解鎖`;
+            document.getElementById('coin-purchase-desc').textContent =
+                `購買失敗：${data.message || '請稍後再試'}`;
+        }
+    } catch(e) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = `🪙 花費 ${route.coin_cost} 里程幣解鎖`;
+        document.getElementById('coin-purchase-desc').textContent = '網絡錯誤，請稍後再試。';
+    }
+}
+
+// Wire up coin purchase sheet buttons
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-coin-confirm').addEventListener('click', purchaseCoinRoute);
+    document.getElementById('btn-coin-cancel').addEventListener('click', hideCoinPurchaseSheet);
+    document.getElementById('coin-purchase-overlay').addEventListener('click', hideCoinPurchaseSheet);
+});
 
 // ── Map initialisation ─────────────────────────────────────────────────
 function initMap() {
@@ -834,11 +1000,11 @@ function renderRoutes() {
             card.addEventListener('click', () => selectRoute(route));
         } else if (coinLocked) {
             card.addEventListener('click', () => {
-                const userCoins = getUserCoins();
-                const msg = isLoggedIn
-                    ? `此為特別路線，需 🪙${route.coin_cost} 里程幣解鎖。\n你目前有 🪙${userCoins} 里程幣。`
-                    : '請先登入以查看里程幣路線。';
-                alert(msg);
+                if (!isLoggedIn) {
+                    window.location.href = '/login';
+                    return;
+                }
+                showCoinPurchaseSheet(route);
             });
         }
 
