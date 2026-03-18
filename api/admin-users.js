@@ -4,6 +4,32 @@ import { query } from './_db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
+// 根據累計 XP 計算等級（與 getHistory.js 保持一致）
+function calcLevel(xp) {
+  const thresholds = [
+    0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+    4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
+    28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
+    98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
+    267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
+  ];
+  const BASE_GAP = 61000;
+  const GROWTH   = 1.10;
+  const BASE_XP  = 654000;
+  const BASE_LVL = 50;
+
+  if (xp < BASE_XP) {
+    let lo = 0, hi = thresholds.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (thresholds[mid] <= xp) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+  const n = BASE_LVL + Math.log(1 + (xp - BASE_XP) * (GROWTH - 1) / BASE_GAP) / Math.log(GROWTH);
+  return Math.floor(n) + 1;
+}
+
 /**
  * 驗證管理員身份的中間件
  */
@@ -173,14 +199,11 @@ export default async function handler(req, res) {
       }
 
       if (action === 'set_game_stats') {
-        // 更新用戶的等級、XP、里程幣（僅更新提供的欄位）
-        const { level, xp, coins } = req.body;
+        // 更新用戶的 XP、里程幣（等級由 XP 自動計算）
+        const { xp, coins } = req.body;
 
-        if (level === undefined && xp === undefined && coins === undefined) {
-          return res.status(400).json({ message: 'At least one of level, xp, coins must be provided' });
-        }
-        if (level !== undefined && (typeof level !== 'number' || level < 1 || level > 20)) {
-          return res.status(400).json({ message: 'level must be a number between 1 and 20' });
+        if (xp === undefined && coins === undefined) {
+          return res.status(400).json({ message: 'At least one of xp, coins must be provided' });
         }
         if (xp !== undefined && (typeof xp !== 'number' || xp < 0)) {
           return res.status(400).json({ message: 'xp must be a non-negative number' });
@@ -189,7 +212,13 @@ export default async function handler(req, res) {
           return res.status(400).json({ message: 'coins must be a non-negative number' });
         }
 
-        // 確保 user_game_profile 列存在
+        // 若有提供 XP，自動計算對應等級
+        let newLevel = undefined;
+        if (xp !== undefined) {
+          newLevel = calcLevel(xp);
+        }
+
+        // 確保 user_game_profile 列存在，並更新
         await query(
           `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
            VALUES ($1, COALESCE($2, 1), COALESCE($3, 0), COALESCE($4, 0), NOW())
@@ -199,12 +228,12 @@ export default async function handler(req, res) {
              coins      = CASE WHEN $4 IS NOT NULL THEN $4 ELSE user_game_profile.coins END,
              updated_at = NOW()`,
           [user_id,
-           level !== undefined ? level : null,
+           newLevel !== undefined ? newLevel : null,
            xp    !== undefined ? xp    : null,
            coins !== undefined ? coins : null]
         );
 
-        return res.status(200).json({ message: `User ${user_id} game stats updated` });
+        return res.status(200).json({ message: `User ${user_id} game stats updated`, level: newLevel });
       }
 
       if (action === 'grant_route') {

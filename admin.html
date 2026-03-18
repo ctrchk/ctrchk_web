@@ -359,7 +359,22 @@
             <!-- 遊戲管理標籤 -->
             <div id="tab-game" style="display:none;">
                 <h3 style="margin-top:0;"><i class="fas fa-gamepad"></i> 遊戲管理</h3>
-                <p style="color:#555; font-size:0.9em;">搜尋並調整指定用戶的等級、XP、里程幣及已解鎖路線。</p>
+                <p style="color:#555; font-size:0.9em;">搜尋並調整指定用戶的 XP、里程幣及已解鎖路線。等級由 XP 自動計算。每次提交需輸入安全密碼。</p>
+
+                <!-- 安全密碼設定 -->
+                <div style="background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:1em 1.5em; margin-bottom:1.5em; max-width:540px;">
+                    <h4 style="margin-top:0; color:#e65100;"><i class="fas fa-lock"></i> 安全密碼設定</h4>
+                    <p style="margin:0 0 0.8em; font-size:0.9em; color:#555;">首次使用前請設定 6 位數字安全密碼，提交遊戲管理操作時需要輸入。</p>
+                    <div style="display:flex; gap:0.5em; align-items:center; flex-wrap:wrap;">
+                        <input type="password" id="admin-pin-input" maxlength="6" pattern="[0-9]{6}" placeholder="輸入 6 位數字密碼"
+                            style="flex:1; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box; letter-spacing:0.2em;">
+                        <button class="cta-button" onclick="setAdminPin()" style="white-space:nowrap; padding:0.6em 1.2em; background:#e65100;">
+                            <i class="fas fa-key"></i> 設定密碼
+                        </button>
+                    </div>
+                    <div id="admin-pin-msg" style="margin-top:0.5em; font-size:0.85em;"></div>
+                    <div id="admin-pin-status" style="margin-top:0.4em; font-size:0.85em; color:#666;"></div>
+                </div>
 
                 <!-- 搜尋欄 -->
                 <div class="search-bar" style="max-width:540px;">
@@ -381,13 +396,12 @@
                     </div>
 
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5em; align-items:start;">
-                        <!-- 等級 / XP / 里程幣 編輯面板 -->
+                        <!-- XP / 里程幣 編輯面板（等級由 XP 自動計算） -->
                         <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-                            <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-star"></i> 等級 / XP / 里程幣</h4>
-                            <div style="margin-bottom:1em;">
-                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">等級（1–20）</label>
-                                <input type="number" id="gp-level" min="1" max="20" step="1"
-                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                            <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-star"></i> XP / 里程幣</h4>
+                            <div style="margin-bottom:1em; background:#f0f7ff; border-radius:6px; padding:0.7em 1em; font-size:0.9em;">
+                                <i class="fas fa-info-circle" style="color:#3498db;"></i>
+                                等級將根據 XP 值自動計算，目前等級：<strong id="gp-level-display">—</strong>
                             </div>
                             <div style="margin-bottom:1em;">
                                 <label style="display:block; font-weight:bold; margin-bottom:0.3em;">XP（≥ 0）</label>
@@ -1035,7 +1049,7 @@
                 document.getElementById('gp-name').textContent  = user.full_name || '(無姓名)';
                 document.getElementById('gp-email').textContent = user.email;
                 document.getElementById('gp-id').textContent    = user.id;
-                document.getElementById('gp-level').value       = user.level;
+                document.getElementById('gp-level-display').textContent = user.level;
                 document.getElementById('gp-xp').value          = user.xp;
                 document.getElementById('gp-coins').value       = user.coins;
                 document.getElementById('gp-stats-msg').textContent = '';
@@ -1069,14 +1083,15 @@
 
         async function saveGameStats() {
             if (!gpCurrentUserId) return;
-            const level = parseInt(document.getElementById('gp-level').value, 10);
             const xp    = parseInt(document.getElementById('gp-xp').value,    10);
             const coins = parseInt(document.getElementById('gp-coins').value,  10);
             const msgEl = document.getElementById('gp-stats-msg');
 
-            if (isNaN(level) || level < 1 || level > 20) { msgEl.style.color = 'red'; msgEl.textContent = '等級須介於 1–20。'; return; }
-            if (isNaN(xp)    || xp    < 0)               { msgEl.style.color = 'red'; msgEl.textContent = 'XP 不可為負數。';     return; }
-            if (isNaN(coins) || coins < 0)               { msgEl.style.color = 'red'; msgEl.textContent = '里程幣不可為負數。'; return; }
+            if (isNaN(xp)    || xp    < 0) { msgEl.style.color = 'red'; msgEl.textContent = 'XP 不可為負數。';     return; }
+            if (isNaN(coins) || coins < 0) { msgEl.style.color = 'red'; msgEl.textContent = '里程幣不可為負數。'; return; }
+
+            const pin = await promptAdminPin();
+            if (pin === null) return;
 
             const token = localStorage.getItem('accessToken');
             try {
@@ -1086,13 +1101,15 @@
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ action: 'set_game_stats', user_id: gpCurrentUserId, level, xp, coins })
+                    body: JSON.stringify({ action: 'set_game_stats', user_id: gpCurrentUserId, xp, coins })
                 });
                 if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     msgEl.style.color = 'green';
-                    msgEl.textContent = '✅ 已更新！';
+                    msgEl.textContent = '✅ 已更新！等級已自動根據 XP 計算。';
+                    // Refresh the level display
+                    await refreshGameProfile();
                 } else {
                     msgEl.style.color = 'red';
                     msgEl.textContent = '❌ ' + (data.message || '更新失敗');
@@ -1108,6 +1125,9 @@
             const routeId = document.getElementById('gp-route-select').value;
             const msgEl = document.getElementById('gp-route-msg');
             if (!routeId) return;
+
+            const pin = await promptAdminPin();
+            if (pin === null) return;
 
             const token = localStorage.getItem('accessToken');
             try {
@@ -1138,6 +1158,9 @@
         async function revokeRoute(routeId) {
             if (!gpCurrentUserId) return;
             if (!confirm(`確定要移除用戶的路線「${routeId}」嗎？`)) return;
+
+            const pin = await promptAdminPin();
+            if (pin === null) return;
 
             const msgEl = document.getElementById('gp-route-msg');
             const token = localStorage.getItem('accessToken');
@@ -1186,6 +1209,112 @@
             } catch (_) {}
         }
 
+        async function refreshGameProfile() {
+            if (!gpCurrentUserId) return;
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'get_game_profile', user_id: gpCurrentUserId })
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (resp.ok && data.user) {
+                    document.getElementById('gp-level-display').textContent = data.user.level;
+                    document.getElementById('gp-xp').value   = data.user.xp;
+                    document.getElementById('gp-coins').value = data.user.coins;
+                    renderUnlockedRoutes(data.unlocked_routes);
+                }
+            } catch (e) { console.error('[Admin] refreshGameProfile error:', e); }
+        }
+
+        // ── 安全密碼（6位數字，SHA-256 hash 存 localStorage）──────────────
+        const PIN_PATTERN = /^\d{6}$/;
+
+        async function sha256(text) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function setAdminPin() {
+            const input = document.getElementById('admin-pin-input').value.trim();
+            const msgEl = document.getElementById('admin-pin-msg');
+            if (!PIN_PATTERN.test(input)) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = '❌ 安全密碼必須為 6 位數字。';
+                return;
+            }
+            const hash = await sha256(input);
+            localStorage.setItem('adminSecurityPinHash', hash);
+            document.getElementById('admin-pin-input').value = '';
+            msgEl.style.color = 'green';
+            msgEl.textContent = '✅ 安全密碼已設定。';
+            updatePinStatus();
+        }
+
+        function updatePinStatus() {
+            const statusEl = document.getElementById('admin-pin-status');
+            if (!statusEl) return;
+            statusEl.textContent = localStorage.getItem('adminSecurityPinHash')
+                ? '🔒 安全密碼已設定'
+                : '⚠️ 尚未設定安全密碼';
+        }
+
+        // Returns null if cancelled/failed, or the PIN string if verified
+        function promptAdminPin() {
+            return new Promise((resolve) => {
+                const storedHash = localStorage.getItem('adminSecurityPinHash');
+                if (!storedHash) {
+                    alert('請先設定 6 位數字安全密碼後再進行操作。');
+                    resolve(null);
+                    return;
+                }
+                const modal = document.getElementById('admin-pin-modal');
+                const input = document.getElementById('admin-pin-modal-input');
+                const errEl = document.getElementById('admin-pin-modal-err');
+                input.value = '';
+                errEl.textContent = '';
+                modal.style.display = 'flex';
+                input.focus();
+
+                function cleanup() {
+                    modal.style.display = 'none';
+                    document.removeEventListener('keydown', onKey);
+                }
+                async function onConfirm() {
+                    const pin = input.value.trim();
+                    if (!PIN_PATTERN.test(pin)) {
+                        errEl.textContent = '請輸入 6 位數字密碼。';
+                        return;
+                    }
+                    const hash = await sha256(pin);
+                    if (hash !== storedHash) {
+                        errEl.textContent = '❌ 密碼錯誤，請重試。';
+                        input.value = '';
+                        input.focus();
+                        return;
+                    }
+                    cleanup();
+                    resolve(pin);
+                }
+                function onCancel() {
+                    cleanup();
+                    resolve(null);
+                }
+                function onKey(e) {
+                    if (e.key === 'Enter') onConfirm();
+                    if (e.key === 'Escape') onCancel();
+                }
+                document.addEventListener('keydown', onKey);
+                document.getElementById('admin-pin-modal-confirm').onclick = onConfirm;
+                document.getElementById('admin-pin-modal-cancel').onclick  = onCancel;
+            });
+        }
+
         // 遊戲管理搜尋按 Enter
         document.addEventListener('DOMContentLoaded', function() {
             const gpInput = document.getElementById('game-search-input');
@@ -1194,7 +1323,28 @@
                     if (e.key === 'Enter') loadGameProfile();
                 });
             }
+            updatePinStatus();
         });
     </script>
+
+    <!-- 安全密碼驗證 Modal -->
+    <div id="admin-pin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:12px; padding:2em; max-width:340px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+            <h3 style="margin-top:0; color:#2c3e50;"><i class="fas fa-lock"></i> 輸入安全密碼</h3>
+            <p style="font-size:0.9em; color:#555; margin-bottom:1em;">請輸入 6 位數字安全密碼以繼續此操作。</p>
+            <input type="password" id="admin-pin-modal-input" maxlength="6" pattern="[0-9]{6}"
+                placeholder="6 位數字密碼"
+                style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:6px; font-size:1.2em; letter-spacing:0.3em; text-align:center; box-sizing:border-box;">
+            <div id="admin-pin-modal-err" style="min-height:1.4em; margin-top:0.5em; font-size:0.9em; color:red;"></div>
+            <div style="display:flex; gap:0.8em; margin-top:1em;">
+                <button id="admin-pin-modal-confirm" class="cta-button" style="flex:1;">
+                    <i class="fas fa-check"></i> 確認
+                </button>
+                <button id="admin-pin-modal-cancel" style="flex:1; padding:0.7em; border:1px solid #ccc; border-radius:8px; background:white; cursor:pointer; font-size:1em;">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
