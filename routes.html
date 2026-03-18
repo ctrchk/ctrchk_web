@@ -1059,6 +1059,31 @@ async function initAppRidePage() {
     isLoggedIn = !!localStorage.getItem('accessToken');
     userLevel = getUserLevel();
 
+    // Fetch fresh user data (including coins/level) from the API to ensure up-to-date values
+    if (isLoggedIn) {
+        try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const userId = storedUser.id;
+            const token = localStorage.getItem('accessToken');
+            if (userId && token) {
+                const userResp = await fetch(`/api/user?user_id=${userId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (userResp.ok) {
+                    const freshUser = await userResp.json();
+                    // Merge fresh game data into localStorage user object
+                    const merged = Object.assign({}, storedUser, {
+                        level: freshUser.level ?? storedUser.level ?? 1,
+                        xp:    freshUser.xp    ?? storedUser.xp    ?? 0,
+                        coins: freshUser.coins ?? storedUser.coins ?? 0,
+                    });
+                    localStorage.setItem('user', JSON.stringify(merged));
+                    userLevel = Math.max(1, parseInt(merged.level || 1));
+                }
+            }
+        } catch (e) { console.error('[AppRide] Failed to fetch fresh user data:', e); }
+    }
+
     // Init map
     initMap();
 
