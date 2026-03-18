@@ -155,7 +155,20 @@ export default async function handler(req, res) {
         // game tables 可能尚未建立；忽略錯誤
       }
 
-      return res.status(200).json({ history, gameProfile });
+      // 附帶已購買的特別路線（方便前端同步 unlockedCoinRoutes）
+      let unlockedCoinRoutes = [];
+      try {
+        const { rows: unlockRows } = await query(
+          `SELECT route_id FROM user_unlocked_routes
+           WHERE user_id = $1 AND unlock_method = 'purchase'`,
+          [userData.userId]
+        );
+        unlockedCoinRoutes = unlockRows.map(r => r.route_id);
+      } catch (e) {
+        // table may not exist yet
+      }
+
+      return res.status(200).json({ history, gameProfile, unlockedCoinRoutes });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Failed to fetch history' });
@@ -227,6 +240,73 @@ export default async function handler(req, res) {
       } catch (error) {
         console.error('[checkin] error:', error);
         return res.status(500).json({ message: 'Failed to process check-in' });
+      }
+    }
+
+    // ── POST?action=purchase_route：里程幣購買特別路線 ──────────────────
+    if (req.query.action === 'purchase_route') {
+      try {
+        const { route_id } = req.body || {};
+        if (!route_id) {
+          return res.status(400).json({ message: 'route_id is required' });
+        }
+
+        // Look up route unlock cost and is_special flag
+        const { rows: routeRows } = await query(
+          'SELECT unlock_cost, is_special FROM routes_config WHERE route_id = $1',
+          [route_id]
+        );
+        if (routeRows.length === 0) {
+          return res.status(404).json({ message: 'Route not found in config' });
+        }
+        const { unlock_cost, is_special } = routeRows[0];
+        if (!is_special || !unlock_cost) {
+          return res.status(400).json({ message: 'This route cannot be purchased with coins' });
+        }
+
+        // Check if already unlocked
+        const { rows: alreadyUnlocked } = await query(
+          'SELECT id FROM user_unlocked_routes WHERE user_id = $1 AND route_id = $2',
+          [userData.userId, route_id]
+        );
+        if (alreadyUnlocked.length > 0) {
+          return res.status(200).json({ success: true, already_owned: true });
+        }
+
+        // Check user has enough coins
+        const profile = await ensureGameProfile(userData.userId);
+        if (profile.coins < unlock_cost) {
+          return res.status(402).json({
+            message: 'Insufficient coins',
+            coins: profile.coins,
+            required: unlock_cost,
+          });
+        }
+
+        // Deduct coins and record unlock atomically
+        const newCoins = profile.coins - unlock_cost;
+        await query(
+          `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (user_id) DO UPDATE
+             SET coins = $4, updated_at = NOW()`,
+          [userData.userId, profile.level, profile.xp, newCoins]
+        );
+        await query(
+          `INSERT INTO user_unlocked_routes (user_id, route_id, unlock_method, unlocked_at)
+           VALUES ($1, $2, 'purchase', NOW())
+           ON CONFLICT (user_id, route_id) DO NOTHING`,
+          [userData.userId, route_id]
+        );
+
+        return res.status(200).json({
+          success: true,
+          coins_spent: unlock_cost,
+          coins_remaining: newCoins,
+        });
+      } catch (error) {
+        console.error('[purchase_route] error:', error);
+        return res.status(500).json({ message: 'Failed to process purchase' });
       }
     }
 
