@@ -171,12 +171,18 @@ export default async function handler(req, res) {
 
         // Check if already checked in today
         const { rows: existing } = await query(
-          'SELECT id FROM user_daily_checkins WHERE user_id = $1 AND checkin_date = $2',
+          'SELECT id, xp_earned, coins_earned, streak_day FROM user_daily_checkins WHERE user_id = $1 AND checkin_date = $2',
           [userData.userId, today]
         );
         if (existing.length > 0) {
           const profile = await ensureGameProfile(userData.userId);
-          return res.status(200).json({ already_checked_in: true, gameProfile: profile });
+          return res.status(200).json({
+            already_checked_in: true,
+            xp_earned: existing[0].xp_earned,
+            coins_earned: existing[0].coins_earned,
+            streak: existing[0].streak_day,
+            gameProfile: profile,
+          });
         }
 
         // Calculate streak (consecutive days ending yesterday)

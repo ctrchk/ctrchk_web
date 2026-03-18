@@ -907,7 +907,13 @@
             renderCheckin();
 
             if (result.already_checked_in) {
-                showCheckinToast('今日已簽到 ✓');
+                if (result.gameProfile) {
+                    localStorage.setItem('gameProfile', JSON.stringify(result.gameProfile));
+                }
+                const xp = result.xp_earned || 0;
+                const coins = result.coins_earned || 0;
+                const coinsMsg = coins > 0 ? ` + ${coins} 🪙` : '';
+                showCheckinToast(xp > 0 ? `今日已簽到 ✓ 已獲得 +${xp} XP${coinsMsg}` : '今日已簽到 ✓');
                 return;
             }
 
