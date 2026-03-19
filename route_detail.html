@@ -445,6 +445,9 @@
       let userMarker = null;
       let watchId = null;
       let routeStops = [];
+      let routeDataCurrent = null;
+      let routePolyline = null;
+      let stopMarkers = [];
       // 50 meters: tight enough to confirm arrival at a stop without false positives,
       // while still reachable given typical GPS accuracy (~5–15m in open areas).
       // Adjust down to ~30m if stops are very close together on a route.
@@ -476,6 +479,10 @@
       async function loadGpxOnMap(gpxFile) {
         if (!map) return;
         try {
+          if (routePolyline) {
+            map.removeLayer(routePolyline);
+            routePolyline = null;
+          }
           const res = await fetch('/gpx/' + gpxFile);
           if (!res.ok) return;
           const gpxText = await res.text();
@@ -494,9 +501,9 @@
           });
 
           if (latlngs.length > 0) {
-            const polyline = L.polyline(latlngs, { color: '#990000', weight: 4, opacity: 0.8 });
-            polyline.addTo(map);
-            map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+            routePolyline = L.polyline(latlngs, { color: '#990000', weight: 4, opacity: 0.8 });
+            routePolyline.addTo(map);
+            map.fitBounds(routePolyline.getBounds(), { padding: [20, 20] });
           }
         } catch (e) {
           console.warn('[Map] GPX 加載失敗:', e);
@@ -506,6 +513,8 @@
       // 在地圖上標示站點
       function renderStopsOnMap(stops) {
         if (!map || !stops.length) return;
+        stopMarkers.forEach(m => map.removeLayer(m));
+        stopMarkers = [];
         stops.forEach(stop => {
           const isStart = stop.direction === '🔴';
           const isEnd   = stop.direction === '🟢';
@@ -521,9 +530,10 @@
           const label = stop.code ? `<b>${stop.code}</b>` : `<b>站 ${stop.order}</b>`;
           const road = stop.road ? `<br><span style="font-size:0.85em;opacity:0.75">📍 ${stop.road}</span>` : '';
           const enName = stop.name_en ? `<br><span style="font-size:0.82em;opacity:0.75">${stop.name_en}</span>` : '';
-          L.marker([stop.lat, stop.lon], { icon })
+          const marker = L.marker([stop.lat, stop.lon], { icon })
             .bindPopup(`${label}<br>${stop.name}${enName}${road}`)
             .addTo(map);
+          stopMarkers.push(marker);
         });
       }
 
@@ -589,6 +599,32 @@
           list.appendChild(li);
         });
         document.getElementById('stops-section').style.display = 'block';
+      }
+
+      function getStopsForDirection(routeData, dirIndex) {
+        let stops = (routeData && routeData.stops) ? [...routeData.stops] : [];
+        if (!(routeData && routeData.gpx && routeData.gpx.length > 1)) return stops;
+        const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];
+        const dirFilter = gpxEntry && gpxEntry.dir_filter;
+        if (dirFilter === 'up') {
+          stops = stops
+            .filter(s => s.direction !== '⬇️')
+            .reverse()
+            .map((s, i) => ({ ...s, order: i + 1 }));
+        } else if (dirFilter === 'down') {
+          stops = stops.filter(s => s.direction !== '⬆️');
+        }
+        return stops;
+      }
+
+      async function renderDirection(dirIndex) {
+        if (!routeDataCurrent) return;
+        const safeDir = Number.isInteger(dirIndex) && dirIndex >= 0 ? dirIndex : 0;
+        routeStops = getStopsForDirection(routeDataCurrent, safeDir);
+        const gpxEntry = (routeDataCurrent.gpx || [])[safeDir] || (routeDataCurrent.gpx || [])[0];
+        if (gpxEntry && gpxEntry.file) await loadGpxOnMap(gpxEntry.file);
+        renderStopsOnMap(routeStops);
+        renderStopsList(routeStops);
       }
 
       // 更新站點已到達狀態
@@ -678,7 +714,9 @@
             routeData = (data.routes || []).find(r => r.id === routeId);
           }
         } catch (e) {}
+        routeDataCurrent = routeData;
         routeStops = routeData ? (routeData.stops || []) : [];
+        const initialDir = parseInt(params.get('dir') || '0', 10);
 
         const defaultCenter = routeStops.length > 0
           ? [routeStops[0].lat, routeStops[0].lon]
@@ -691,14 +729,7 @@
         // dimensions after the section transitions from display:none
         setTimeout(() => { if (map) map.invalidateSize(); }, 50);
 
-        // 加載 GPX（取第一條 GPX 文件）
-        if (routeData && routeData.gpx && routeData.gpx.length > 0) {
-          await loadGpxOnMap(routeData.gpx[0].file);
-        }
-
-        // 標示站點
-        renderStopsOnMap(routeStops);
-        renderStopsList(routeStops);
+        await renderDirection(initialDir);
 
         // 顯示報站按鈕（若支援）
         if ('Notification' in window) {
@@ -741,6 +772,10 @@
         // 若已有內容（無需等待）
         if (container.children.length > 0) initRouteMap();
       });
+
+      window.CTRCHK_ROUTE_DETAIL_SELECT_DIR = async function (idx) {
+        await renderDirection(idx);
+      };
     })();
 
     // ── 啟動騎行按鈕 ──────────────────────────────────────────────────────
@@ -779,7 +814,7 @@
         const section = document.getElementById('start-ride-section');
         if (!section) return;
 
-        const needed = ROUTE_UNLOCK[routeId] || 1;
+        const needed = (routeDataObj && routeDataObj.unlock_level) || ROUTE_UNLOCK[routeId] || 1;
         let userLvl = 1;
         try {
           const raw = localStorage.getItem('user');
@@ -790,7 +825,9 @@
         const isLocked = isLoggedIn && userLvl < needed;
         // Prefer xp_reward from routes.json; fall back to local table
         const xp = (routeDataObj && routeDataObj.xp_reward) || ROUTE_XP[routeId] || 0;
-        const completionXp = (routeDataObj && routeDataObj.completion_xp) || 0;
+        const completionXp = (routeDataObj && typeof routeDataObj.completion_xp === 'number')
+          ? routeDataObj.completion_xp
+          : 0;
         let selectedDir = 0;
 
         // Direction buttons
@@ -804,6 +841,9 @@
               document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('selected'));
               btn.classList.add('selected');
               selectedDir = i;
+              if (window.CTRCHK_ROUTE_DETAIL_SELECT_DIR) {
+                window.CTRCHK_ROUTE_DETAIL_SELECT_DIR(selectedDir);
+              }
             });
             dirContainer.appendChild(btn);
           });

@@ -582,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const card = document.createElement('div');
                     card.className = 'route-card-full animated-element';
                     const link = route.link || `/route_detail?id=${route.id}`;
-                    const needed = ROUTE_UNLOCK[route.id] || 1;
+                    const needed = route.unlock_level || ROUTE_UNLOCK[route.id] || 1;
                     const isLocked = isLoggedIn && userLvl > 0 && userLvl < needed;
                     const xp = ROUTE_XP[route.id] || 0;
                     const lockBadge = isLocked

@@ -2114,6 +2114,7 @@
       "unlock_level": 38,
       "unlock_cost": 800,
       "xp_reward": 100,
+      "completion_xp": 100,
       "is_special": true,
       "coin_cost": 800,
       "gpx": [
@@ -2431,6 +2432,7 @@
       "unlock_level": 50,
       "unlock_cost": 1000,
       "xp_reward": 150,
+      "completion_xp": 150,
       "is_special": true,
       "coin_cost": 1000,
       "gpx": [
@@ -2466,6 +2468,7 @@
       "unlock_level": 50,
       "unlock_cost": 1000,
       "xp_reward": 130,
+      "completion_xp": 130,
       "is_special": true,
       "coin_cost": 1000,
       "gpx": [

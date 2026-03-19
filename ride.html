@@ -1119,7 +1119,7 @@
       }
 
       // Check unlock level
-      const needed = ROUTE_UNLOCK[routeId] || 1;
+      const needed = (routeData && routeData.unlock_level) || ROUTE_UNLOCK[routeId] || 1;
       const userLvl = getUserLevel();
       if (userLvl < needed && localStorage.getItem('accessToken')) {
         showLocked(needed);
