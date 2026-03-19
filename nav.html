@@ -501,7 +501,7 @@
         return;
       }
       // Check for WebGL support before attempting to create the map
-      if (!maplibregl.supported()) {
+      if (typeof maplibregl.supported === 'function' && !maplibregl.supported()) {
         const el = document.getElementById('nav-loading');
         el.innerHTML = '<p style="color:#BFE340; text-align:center; padding:1em; line-height:1.7;">' +
           '⚠️ 你的裝置不支援 WebGL，無法顯示地圖。<br>' +
