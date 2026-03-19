@@ -318,6 +318,23 @@
     <script src="/js/login.js"></script> 
     
     <script>
+        // ── 工具函數：清除登入狀態並顯示重新登入提示 ──────────────────────────
+        function showSessionExpired(container) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+            if (container) {
+                container.innerHTML = `<p style="color: var(--app-text-secondary, #a8d8a0);">
+                    <i class="fas fa-lock" style="color:#ef9a9a;"></i>
+                    登入已過期，請
+                    <a href="/login" style="color: var(--app-accent, #6dba65);">重新登入</a>
+                    以載入進度。
+                </p>`;
+            }
+            // Also update the welcome text
+            const welcomeEl = document.getElementById('welcome-email');
+            if (welcomeEl) welcomeEl.textContent = '登入已過期';
+        }
+
         // 等待所有東西載入完畢
         document.addEventListener('DOMContentLoaded', async function() {
             try {
@@ -341,7 +358,17 @@
                         userRole = dbUser.user_role || user.user_role || 'junior';
                         // 更新本地快取
                         user.user_role = userRole;
+                        // Merge game data + unlocked coin routes into user object
+                        if (dbUser.level !== undefined) {
+                            user.level = dbUser.level;
+                            user.xp = dbUser.xp;
+                            user.coins = dbUser.coins;
+                        }
                         localStorage.setItem('user', JSON.stringify(user));
+                        // 同步已購買的里程幣路線
+                        if (Array.isArray(dbUser.unlocked_coin_routes)) {
+                            localStorage.setItem('unlockedCoinRoutes', JSON.stringify(dbUser.unlocked_coin_routes));
+                        }
                         // 顯示遊戲進度卡片
                         if (dbUser.level !== undefined) {
                             renderGameProfile(dbUser.level, dbUser.xp, dbUser.coins);
@@ -452,14 +479,14 @@
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 if (response.status === 401) {
-                    window.location.href = '/login';
+                    showSessionExpired(container);
                     return;
                 }
                 if (!response.ok) throw new Error('Server error ' + response.status);
                 const data = await response.json();
 
-                // 同步遊戲進度（若尚未渲染）
-                if (data.gameProfile && document.getElementById('game-profile-card').style.display === 'none') {
+                // 同步遊戲進度（若 /api/user 未能先取得最新數值，則以此補充）
+                if (data.gameProfile) {
                     renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins);
                 }
 

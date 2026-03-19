@@ -49,6 +49,17 @@ export default async function handler(req, res) {
         user.coins = 0;
       }
 
+      // Fetch coin-purchased route IDs for the front-end unlock cache
+      try {
+        const { rows: unlockedRows } = await query(
+          `SELECT route_id FROM user_unlocked_routes WHERE user_id = $1 AND unlock_method = 'purchase'`,
+          [user.id]
+        );
+        user.unlocked_coin_routes = unlockedRows.map(r => r.route_id);
+      } catch (e) {
+        user.unlocked_coin_routes = [];
+      }
+
       return res.status(200).json(user);
     } catch (error) {
       console.error('Get user error:', error);

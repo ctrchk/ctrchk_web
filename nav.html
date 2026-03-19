@@ -490,6 +490,16 @@
 
     // ── Map initialisation ────────────────────────────────────────────────
     function initMap() {
+      // Guard: maplibregl may not be available if the CDN script failed to load
+      if (typeof maplibregl === 'undefined') {
+        const el = document.getElementById('nav-loading');
+        if (el) {
+          el.innerHTML = '<p style="color:#BFE340; text-align:center; padding:1em; line-height:1.7;">' +
+            '⚠️ 地圖庫載入失敗，請檢查網絡連接後重試。<br><br>' +
+            '<a href="javascript:history.back()" style="color:#04D93C;">← 返回</a></p>';
+        }
+        return;
+      }
       // Check for WebGL support before attempting to create the map
       if (!maplibregl.supported()) {
         const el = document.getElementById('nav-loading');
@@ -1109,7 +1119,26 @@
 
     // ── Init ──────────────────────────────────────────────────────────────
     populateSelects();
-    initMap();
+    try {
+      initMap();
+    } catch (e) {
+      console.error('[Nav] initMap failed:', e);
+      const el = document.getElementById('nav-loading');
+      if (el) {
+        const msg = document.createElement('p');
+        msg.style.cssText = 'color:#BFE340;text-align:center;padding:1em;line-height:1.7';
+        const errSpan = document.createElement('small');
+        errSpan.style.opacity = '0.7';
+        errSpan.textContent = e.message;
+        const backBtn = document.createElement('button');
+        backBtn.style.cssText = 'color:#04D93C;background:none;border:none;cursor:pointer;font-size:1em;';
+        backBtn.textContent = '← 返回';
+        backBtn.addEventListener('click', () => history.back());
+        msg.append('⚠️ 地圖初始化失敗。', document.createElement('br'), errSpan, document.createElement('br'), document.createElement('br'), backBtn);
+        el.innerHTML = '';
+        el.appendChild(msg);
+      }
+    }
 
   })();
   </script>
