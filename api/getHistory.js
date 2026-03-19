@@ -164,6 +164,71 @@ export default async function handler(req, res) {
 
   // ── POST：提交新騎行紀錄 or 每日簽到 ────────────────────────────────────
   if (req.method === 'POST') {
+    // ── POST?action=purchase-route：里程幣購買路線 ──────────────────────
+    if (req.query.action === 'purchase-route') {
+      try {
+        const { route_id } = req.body || {};
+        if (!route_id) {
+          return res.status(400).json({ message: 'route_id is required' });
+        }
+
+        // Fetch route cost from routes_config
+        const { rows: cfgRows } = await query(
+          'SELECT route_id, unlock_cost, is_special FROM routes_config WHERE route_id = $1',
+          [route_id]
+        );
+        if (cfgRows.length === 0 || !cfgRows[0].is_special) {
+          return res.status(400).json({ message: 'Route not available for purchase' });
+        }
+        const cost = parseInt(cfgRows[0].unlock_cost || 0, 10);
+
+        // Fetch profile once for both the already-unlocked check and coin check
+        const profile = await ensureGameProfile(userData.userId);
+
+        // Check if already unlocked
+        const { rows: existing } = await query(
+          'SELECT id FROM user_unlocked_routes WHERE user_id = $1 AND route_id = $2',
+          [userData.userId, route_id]
+        );
+        if (existing.length > 0) {
+          return res.status(200).json({
+            already_unlocked: true,
+            gameProfile: profile,
+          });
+        }
+
+        // Ensure user has enough coins
+        if (profile.coins < cost) {
+          return res.status(400).json({
+            message: '里程幣不足',
+            required: cost,
+            current: profile.coins,
+          });
+        }
+
+        // Deduct coins and record purchase
+        const newCoins = profile.coins - cost;
+        await query(
+          `UPDATE user_game_profile SET coins = $1, updated_at = NOW() WHERE user_id = $2`,
+          [newCoins, userData.userId]
+        );
+        await query(
+          `INSERT INTO user_unlocked_routes (user_id, route_id, unlock_method)
+           VALUES ($1, $2, 'purchase') ON CONFLICT (user_id, route_id) DO NOTHING`,
+          [userData.userId, route_id]
+        );
+
+        return res.status(200).json({
+          success: true,
+          coins_spent: cost,
+          gameProfile: { ...profile, coins: newCoins },
+        });
+      } catch (error) {
+        console.error('[purchase-route] error:', error);
+        return res.status(500).json({ message: 'Failed to process purchase' });
+      }
+    }
+
     // ── POST?action=checkin：每日簽到 ──────────────────────────────────
     if (req.query.action === 'checkin') {
       try {

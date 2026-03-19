@@ -633,8 +633,12 @@ function isRouteUnlocked(routeId) {
 
 function getUserCoins() {
     try {
+        // Primary: merged game data in user object (set by initAppRide or dashboard)
         const u = JSON.parse(localStorage.getItem('user') || '{}');
-        return parseInt(u.coins || 0, 10);
+        if (u.coins !== undefined) return parseInt(u.coins, 10);
+        // Fallback: gameProfile key (set by check-in or ride completion)
+        const gp = JSON.parse(localStorage.getItem('gameProfile') || '{}');
+        return parseInt(gp.coins || 0, 10);
     } catch(e) { return 0; }
 }
 
@@ -833,17 +837,72 @@ function renderRoutes() {
         if (!locked) {
             card.addEventListener('click', () => selectRoute(route));
         } else if (coinLocked) {
-            card.addEventListener('click', () => {
-                const userCoins = getUserCoins();
-                const msg = isLoggedIn
-                    ? `此為特別路線，需 🪙${route.coin_cost} 里程幣解鎖。\n你目前有 🪙${userCoins} 里程幣。`
-                    : '請先登入以查看里程幣路線。';
-                alert(msg);
-            });
+            card.addEventListener('click', () => purchaseCoinRoute(route));
         }
 
         container.appendChild(card);
     });
+}
+
+async function purchaseCoinRoute(route) {
+    if (!isLoggedIn) {
+        alert('請先登入以購買里程幣路線。');
+        return;
+    }
+    const userCoins = getUserCoins();
+    const cost = route.coin_cost || 0;
+    if (userCoins < cost) {
+        alert(`里程幣不足！\n需要 🪙${cost} 里程幣，你目前有 🪙${userCoins} 里程幣。\n完成騎行或每日簽到以賺取更多里程幣。`);
+        return;
+    }
+    const confirmed = confirm(`解鎖「${route.alias || route.id}」需要 🪙${cost} 里程幣。\n你目前有 🪙${userCoins} 里程幣。\n\n確定購買？`);
+    if (!confirmed) return;
+
+    try {
+        const token = localStorage.getItem('accessToken');
+        const resp = await fetch('/api/getHistory?action=purchase-route', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ route_id: route.id }),
+        });
+        if (resp.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+            alert('登入已過期，請重新登入後再試。');
+            return;
+        }
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || '購買失敗，請稍後再試。');
+            return;
+        }
+        // Update localStorage: coins and unlocked routes
+        if (data.gameProfile) {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            storedUser.coins = data.gameProfile.coins;
+            storedUser.xp = data.gameProfile.xp;
+            storedUser.level = data.gameProfile.level;
+            localStorage.setItem('user', JSON.stringify(storedUser));
+            localStorage.setItem('gameProfile', JSON.stringify(data.gameProfile));
+        }
+        const unlocked = JSON.parse(localStorage.getItem('unlockedCoinRoutes') || '[]');
+        if (!unlocked.includes(route.id)) {
+            unlocked.push(route.id);
+            localStorage.setItem('unlockedCoinRoutes', JSON.stringify(unlocked));
+        }
+        if (data.already_unlocked) {
+            alert(`「${route.alias || route.id}」已是你的解鎖路線！`);
+        } else {
+            alert(`🎉 成功解鎖「${route.alias || route.id}」！\n剩餘里程幣：🪙${data.gameProfile ? data.gameProfile.coins : getUserCoins()}`);
+        }
+        renderRoutes(); // Refresh to show route as unlocked
+    } catch (e) {
+        console.error('[purchaseCoinRoute]', e);
+        alert('購買失敗，請稍後再試。');
+    }
 }
 
 function selectRoute(route) {
@@ -1079,6 +1138,10 @@ async function initAppRidePage() {
                     });
                     localStorage.setItem('user', JSON.stringify(merged));
                     userLevel = Math.max(1, parseInt(merged.level || 1));
+                    // Sync server-side purchased coin routes
+                    if (Array.isArray(freshUser.unlocked_coin_routes)) {
+                        localStorage.setItem('unlockedCoinRoutes', JSON.stringify(freshUser.unlocked_coin_routes));
+                    }
                 }
             }
         } catch (e) { console.error('[AppRide] Failed to fetch fresh user data:', e); }

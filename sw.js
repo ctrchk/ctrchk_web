@@ -1,9 +1,9 @@
 // CTRC HK Service Worker — PWA 離線緩存
-// Version: 2.0.0
+// Version: 2.1.0
 
-const CACHE_NAME = 'ctrchk-v2';
-const STATIC_CACHE = 'ctrchk-static-v2';
-const DYNAMIC_CACHE = 'ctrchk-dynamic-v2';
+const CACHE_NAME = 'ctrchk-v3';
+const STATIC_CACHE = 'ctrchk-static-v3';
+const DYNAMIC_CACHE = 'ctrchk-dynamic-v3';
 
 // 預緩存的靜態資源（核心 shell）
 const PRECACHE_URLS = [

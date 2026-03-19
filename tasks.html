@@ -896,7 +896,13 @@
                 body: JSON.stringify({ checkin_date: today }),
             });
             if (!resp.ok) {
-                showCheckinToast('簽到失敗，請稍後再試 ❌');
+                if (resp.status === 401) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('user');
+                    showCheckinToast('登入已過期，請重新登入後簽到 🔒');
+                } else {
+                    showCheckinToast('簽到失敗，請稍後再試 ❌');
+                }
                 return;
             }
             const result = await resp.json();
