@@ -467,6 +467,23 @@
     color: var(--app-text-secondary, #a8d8a0);
 }
 .app-no-routes i { font-size: 2em; display: block; margin-bottom: 0.5em; opacity: 0.4; }
+.app-routes-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.6em 0.4em;
+    color: var(--app-text-secondary, #a8d8a0);
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+.app-routes-divider::before,
+.app-routes-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.4;
+}
 </style>
 </head>
 <body>
@@ -570,7 +587,7 @@
 const ROUTE_UNLOCK = {
     '900':1,'900A':1,'966T':1,
     '914':8,'966A':8,'966':8,
-    '900S':15,'901P':15,'910':15,'914B':15,
+    '900S':1,'914B':1,'910':5,'901P':15,
     '914H':22,'920':22,'966B':22,
     '920X':30,'923':30,'966C':30,
     '928':38,'929':38,'961':38,'961P':38,
@@ -589,16 +606,15 @@ const ROUTE_XP = {
 // TKO terminal stations — coordinates verified from routes.json stop data
 const TERMINALS = [
     { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696 }, // POA 01
-    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.3187,  lng: 114.2565  },
+    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.32058,  lng: 114.26181 },
     { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248,  lng: 114.2490  },
     { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607 }, // TIK 06
     { id: 'tseung_exit', name: '調景嶺站-出口',         lat: 22.30465, lng: 114.25305 }, // TIK 13 (966T start)
-    { id: 'hang_hau',    name: '坑口站',                lat: 22.3124,  lng: 114.2655  },
+    { id: 'hang_hau',    name: '坑口站',                lat: 22.3170474,  lng: 114.2631152 },
     { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.30738, lng: 114.25666 }, // TIK 11
     { id: 'lohas',       name: '康城站',                lat: 22.29626, lng: 114.26692 }, // LHP 06 (966T end)
     { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724  },
     { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331 }, // TIK 04
-    { id: 'green_field', name: 'Green Field 公園',      lat: 22.31444, lng: 114.25895 }, // TKO 08
     { id: 'po_shun',     name: '寶順路轉乘站',          lat: 22.31793, lng: 114.26225 }, // HAH 02
 ];
 
@@ -773,14 +789,34 @@ function renderRoutes() {
         return;
     }
 
-    container.innerHTML = '';
-    filtered.forEach(route => {
+    // Separate unlocked and locked routes, then sort each group
+    const routeWithLock = filtered.map(route => {
         const needed = route.unlock_level || ROUTE_UNLOCK[route.id] || 1;
         const isCoinRoute = route.is_special && route.coin_cost > 0;
         const coinUnlocked = isCoinRoute && isCoinRouteUnlocked(route);
         const levelLocked = isLoggedIn && !isCoinRoute && userLevel < needed;
         const coinLocked = isLoggedIn && isCoinRoute && !coinUnlocked;
         const locked = levelLocked || coinLocked;
+        return { route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, locked };
+    });
+
+    // Helper: numeric sort key for route ID (e.g. "900A" → 900.1, "914B" → 914.2)
+    function routeSortKey(id) {
+        const m = id.match(/^(\d+)([A-Z]?)(.*)$/i);
+        if (!m) return [9999, 0];
+        const num = parseInt(m[1], 10);
+        const suffix = m[2] ? m[2].charCodeAt(0) - 64 : 0; // A=1, B=2, ...
+        return num * 100 + suffix;
+    }
+
+    const unlockedRoutes = routeWithLock.filter(r => !r.locked)
+        .sort((a, b) => routeSortKey(a.route.id) - routeSortKey(b.route.id));
+    const lockedRoutes = routeWithLock.filter(r => r.locked)
+        .sort((a, b) => a.needed - b.needed || routeSortKey(a.route.id) - routeSortKey(b.route.id));
+
+    container.innerHTML = '';
+
+    function buildCard({ route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, locked }) {
         const xp = route.xp_reward || ROUTE_XP[route.id] || 0;
         const isSelected = route.id === selectedRouteId;
 
@@ -808,7 +844,7 @@ function renderRoutes() {
             </div>
             <div class="app-route-meta">
                 <span><i class="fas fa-map-marker-alt" style="font-size:0.9em;"></i> ${route.start || '—'}</span>
-                ${(route.tags && route.tags.includes('循環線')) || !route.end ? '<span>循環</span>' : `<span>→ ${route.end}</span>`}
+                ${(route.tags && route.tags.includes('循環線')) || !route.end ? '<span>循環</span>' : `<span>${(route.gpx && route.gpx.length > 1) ? '↔' : '→'} ${route.end}</span>`}
                 ${route.time ? `<span><i class="fas fa-clock" style="font-size:0.9em;"></i> ${route.time}分</span>` : ''}
                 ${route.length ? `<span>${route.length}</span>` : ''}
             </div>
@@ -840,8 +876,19 @@ function renderRoutes() {
             card.addEventListener('click', () => purchaseCoinRoute(route));
         }
 
-        container.appendChild(card);
-    });
+        return card;
+    }
+
+    unlockedRoutes.forEach(r => container.appendChild(buildCard(r)));
+
+    if (unlockedRoutes.length > 0 && lockedRoutes.length > 0) {
+        const divider = document.createElement('div');
+        divider.className = 'app-routes-divider';
+        divider.innerHTML = '<span>🔒 未解鎖路線</span>';
+        container.appendChild(divider);
+    }
+
+    lockedRoutes.forEach(r => container.appendChild(buildCard(r)));
 }
 
 async function purchaseCoinRoute(route) {
