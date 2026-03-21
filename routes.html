@@ -772,9 +772,12 @@ async function showRouteOnMap(route, dirIndex) {
 
 // ── Route card rendering ───────────────────────────────────────────────
 function routeBelongsToDept(route, deptId) {
+    // Primary: use dept_id field if present
+    if (route.dept_id) return route.dept_id === deptId;
+    // Fallback: tag-based classification for legacy routes without dept_id
     if (deptId === 'tko') return route.tags && route.tags.some(t => t.includes('將軍澳'));
-    if (deptId === 'hki') return route.dept_id === 'hki' || (route.tags && route.tags.some(t => t.includes('港島')));
-    return true;
+    if (deptId === 'hki') return route.tags && route.tags.some(t => t.includes('港島'));
+    return false;
 }
 
 function matchesTerminal(route) {

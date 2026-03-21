@@ -160,28 +160,23 @@ export default async function handler(req, res) {
 
       // Update department config (promo settings)
       if (action === 'update-dept-config') {
-        const { dept_id, is_promo, promo_cost, pin } = body;
-        const storedPin = process.env.ADMIN_PIN;
-        if (storedPin && pin !== storedPin) {
-          return res.status(403).json({ message: '安全密碼錯誤' });
-        }
+        const { dept_id, is_promo, promo_cost } = body;
+        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
         await query(
           `UPDATE department_config SET is_promo = $1, promo_cost = $2 WHERE dept_id = $3`,
-          [is_promo, promo_cost, dept_id]
+          [is_promo, promo_cost != null ? parseInt(promo_cost, 10) : null, dept_id]
         );
         return res.status(200).json({ success: true });
       }
 
+
       // Update route promo price
       if (action === 'update-route-promo') {
-        const { route_id, promo_cost, pin } = body;
-        const storedPin = process.env.ADMIN_PIN;
-        if (storedPin && pin !== storedPin) {
-          return res.status(403).json({ message: '安全密碼錯誤' });
-        }
+        const { route_id, promo_cost } = body;
+        if (!route_id) return res.status(400).json({ message: 'route_id is required' });
         await query(
           `UPDATE routes_config SET promo_cost = $1 WHERE route_id = $2`,
-          [promo_cost || null, route_id]
+          [promo_cost != null ? parseInt(promo_cost, 10) : null, route_id]
         );
         return res.status(200).json({ success: true });
       }
