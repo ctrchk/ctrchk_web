@@ -275,6 +275,9 @@
                 <button class="tab-btn" onclick="showTab('push');">
                     <i class="fas fa-bell"></i> 推送通知
                 </button>
+                <button class="tab-btn" onclick="showTab('route-mgmt'); loadRouteMgmt();">
+                    <i class="fas fa-route"></i> 路線管理
+                </button>
             </div>
 
             <!-- 用戶管理標籤 -->
@@ -483,6 +486,26 @@
                     </button>
                 </form>
                 <div id="push-result" style="margin-top:1em;"></div>
+            </div>
+            <!-- 路線管理標籤 -->
+            <div id="tab-route-mgmt" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-route"></i> 路線管理</h3>
+                <p style="color:#555; font-size:0.9em;">管理路線解鎖優惠及部門推廣活動。</p>
+
+                <!-- 部門推廣管理 -->
+                <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:1.5em;">
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-building"></i> 部門解鎖推廣管理</h4>
+                    <div id="dept-config-list" style="margin-bottom:1em;"></div>
+                    <div id="dept-config-loading" style="text-align:center; color:#888;">載入中...</div>
+                </div>
+
+                <!-- 路線優惠管理 -->
+                <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-tags"></i> 里程幣路線優惠管理</h4>
+                    <p style="font-size:0.85em; color:#666; margin-bottom:1em;">設定臨時優惠價格（留空或 0 表示使用原價）。需輸入安全密碼確認更改。</p>
+                    <div id="route-config-list" style="margin-bottom:1em;"></div>
+                    <div id="route-config-loading" style="text-align:center; color:#888;">載入中...</div>
+                </div>
             </div>
         </div>
     </main>
@@ -1325,6 +1348,146 @@
             }
             updatePinStatus();
         });
+
+        // ── 路線管理功能 ────────────────────────────────────────────────────
+        async function loadRouteMgmt() {
+            const token = localStorage.getItem('accessToken');
+
+            // Load department configs
+            document.getElementById('dept-config-loading').style.display = '';
+            document.getElementById('dept-config-list').innerHTML = '';
+            try {
+                const resp = await fetch('/api/admin-users?action=get-dept-config', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById('dept-config-loading').style.display = 'none';
+                    renderDeptConfig(data.departments || []);
+                } else {
+                    document.getElementById('dept-config-loading').textContent = '載入失敗';
+                }
+            } catch(e) {
+                document.getElementById('dept-config-loading').textContent = '載入失敗';
+            }
+
+            // Load route configs (coin routes only)
+            document.getElementById('route-config-loading').style.display = '';
+            document.getElementById('route-config-list').innerHTML = '';
+            try {
+                const resp = await fetch('/api/admin-users?action=get-route-config', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById('route-config-loading').style.display = 'none';
+                    renderRouteConfig(data.routes || []);
+                } else {
+                    document.getElementById('route-config-loading').textContent = '載入失敗';
+                }
+            } catch(e) {
+                document.getElementById('route-config-loading').textContent = '載入失敗';
+            }
+        }
+
+        function renderDeptConfig(depts) {
+            const container = document.getElementById('dept-config-list');
+            if (!depts.length) { container.innerHTML = '<p style="color:#888;">沒有部門設定</p>'; return; }
+            depts.forEach(dept => {
+                const row = document.createElement('div');
+                row.style.cssText = 'border:1px solid #eee; border-radius:8px; padding:1em; margin-bottom:0.8em; display:flex; gap:1em; align-items:center; flex-wrap:wrap;';
+                row.innerHTML = `
+                    <div style="flex:1; min-width:150px;">
+                        <strong>${dept.name}</strong>
+                        <div style="font-size:0.85em; color:#666;">原價：🪙${dept.unlock_cost}</div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:0.4em; font-size:0.9em;">
+                        <input type="checkbox" id="dept-promo-${dept.dept_id}" ${dept.is_promo ? 'checked' : ''}>
+                        推廣期
+                    </label>
+                    <div style="display:flex; align-items:center; gap:0.4em;">
+                        <span style="font-size:0.9em;">推廣價：🪙</span>
+                        <input type="number" id="dept-promo-cost-${dept.dept_id}" value="${dept.promo_cost || ''}" min="0" placeholder="推廣價"
+                            style="width:80px; padding:0.4em; border:1px solid #ccc; border-radius:4px; font-size:0.9em;">
+                    </div>
+                    <button onclick="saveDeptConfig('${dept.dept_id}')" style="background:#04D93C; color:white; border:none; padding:0.5em 1em; border-radius:6px; cursor:pointer; font-size:0.9em;">
+                        <i class="fas fa-save"></i> 儲存
+                    </button>
+                    <span id="dept-save-msg-${dept.dept_id}" style="font-size:0.85em;"></span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function saveDeptConfig(deptId) {
+            const pin = await promptAdminPin();
+            if (pin === null) return;
+            const isPromo = document.getElementById(`dept-promo-${deptId}`).checked;
+            const promoCost = document.getElementById(`dept-promo-cost-${deptId}`).value;
+            const msgEl = document.getElementById(`dept-save-msg-${deptId}`);
+            msgEl.textContent = '儲存中...';
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ action: 'update-dept-config', dept_id: deptId, is_promo: isPromo, promo_cost: promoCost ? parseInt(promoCost) : null, pin })
+                });
+                const data = await resp.json();
+                msgEl.textContent = resp.ok ? '✅ 已儲存' : `❌ ${data.message || '失敗'}`;
+                msgEl.style.color = resp.ok ? 'green' : 'red';
+            } catch(e) {
+                msgEl.textContent = '❌ 錯誤';
+                msgEl.style.color = 'red';
+            }
+        }
+
+        function renderRouteConfig(routes) {
+            const container = document.getElementById('route-config-list');
+            if (!routes.length) { container.innerHTML = '<p style="color:#888;">沒有里程幣路線</p>'; return; }
+            routes.forEach(route => {
+                const row = document.createElement('div');
+                row.style.cssText = 'border:1px solid #eee; border-radius:8px; padding:1em; margin-bottom:0.8em; display:flex; gap:1em; align-items:center; flex-wrap:wrap;';
+                row.innerHTML = `
+                    <div style="flex:1; min-width:150px;">
+                        <strong>${route.route_id}</strong>
+                        <div style="font-size:0.85em; color:#666;">原價：🪙${route.unlock_cost}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.4em;">
+                        <span style="font-size:0.9em;">優惠價：🪙</span>
+                        <input type="number" id="route-promo-${route.route_id}" value="${route.promo_cost || ''}" min="0" placeholder="留空=原價"
+                            style="width:90px; padding:0.4em; border:1px solid #ccc; border-radius:4px; font-size:0.9em;">
+                    </div>
+                    <button onclick="saveRoutePromo('${route.route_id}')" style="background:#04D93C; color:white; border:none; padding:0.5em 1em; border-radius:6px; cursor:pointer; font-size:0.9em;">
+                        <i class="fas fa-save"></i> 儲存
+                    </button>
+                    <span id="route-promo-msg-${route.route_id}" style="font-size:0.85em;"></span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function saveRoutePromo(routeId) {
+            const pin = await promptAdminPin();
+            if (pin === null) return;
+            const promoCost = document.getElementById(`route-promo-${routeId}`).value;
+            const msgEl = document.getElementById(`route-promo-msg-${routeId}`);
+            msgEl.textContent = '儲存中...';
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ action: 'update-route-promo', route_id: routeId, promo_cost: promoCost ? parseInt(promoCost) : null, pin })
+                });
+                const data = await resp.json();
+                msgEl.textContent = resp.ok ? '✅ 已儲存' : `❌ ${data.message || '失敗'}`;
+                msgEl.style.color = resp.ok ? 'green' : 'red';
+            } catch(e) {
+                msgEl.textContent = '❌ 錯誤';
+                msgEl.style.color = 'red';
+            }
+        }
     </script>
 
     <!-- 安全密碼驗證 Modal -->

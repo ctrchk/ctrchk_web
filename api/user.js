@@ -60,6 +60,17 @@ export default async function handler(req, res) {
         user.unlocked_coin_routes = [];
       }
 
+      // Fetch unlocked department IDs
+      try {
+        const { rows: unlockedDeptRows } = await query(
+          `SELECT dept_id FROM user_unlocked_departments WHERE user_id = $1`,
+          [user.id]
+        );
+        user.unlocked_departments = unlockedDeptRows.map(r => r.dept_id);
+      } catch(e) {
+        user.unlocked_departments = [];
+      }
+
       return res.status(200).json(user);
     } catch (error) {
       console.error('Get user error:', error);

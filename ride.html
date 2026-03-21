@@ -841,10 +841,11 @@
       }
 
       // ── Normal ride phase ──────────────────────────────────────────────
-      // Accumulate distance
+      // Accumulate distance (filter GPS drift: min 3m movement, max 500m jump, need ≤50m accuracy)
+      const MIN_DIST_M = 3;
       if (lastLat !== null && rideStarted) {
         const d = haversineM(lastLat, lastLon, lat, lon);
-        if (d < MAX_GPS_JUMP_M) totalDistM += d;
+        if (d >= MIN_DIST_M && d < MAX_GPS_JUMP_M && accuracy <= 50) totalDistM += d;
       }
       lastLat = lat; lastLon = lon;
 

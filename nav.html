@@ -789,8 +789,30 @@
       const toId   = document.getElementById('sel-to').value;
       if (!fromId || !toId) return;
 
-      const from = LANDMARKS.find(l => l.id === fromId);
-      const to   = LANDMARKS.find(l => l.id === toId);
+      let from = LANDMARKS.find(l => l.id === fromId);
+      let to   = LANDMARKS.find(l => l.id === toId);
+
+      // Handle GPS-based locations
+      if (fromId === '__gps__' || toId === '__gps__') {
+        const btn = document.getElementById('btn-plan-route');
+        btn.disabled = true;
+        btn.textContent = '正在取得位置...';
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+          });
+          const gpsLoc = { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
+          if (fromId === '__gps__') from = gpsLoc;
+          if (toId === '__gps__') to = gpsLoc;
+        } catch(e) {
+          alert('無法取得目前位置，請確保已授予定位權限。');
+          const btn2 = document.getElementById('btn-plan-route');
+          btn2.disabled = false;
+          btn2.textContent = '🔍 規劃路線';
+          return;
+        }
+      }
+
       if (!from || !to) return;
 
       const btn = document.getElementById('btn-plan-route');
@@ -1084,6 +1106,13 @@
     function populateSelects() {
       const fromSel = document.getElementById('sel-from');
       const toSel   = document.getElementById('sel-to');
+
+      // Add "Use current GPS location" option at the top
+      const gpsOpt1 = new Option('📍 使用目前位置', '__gps__');
+      const gpsOpt2 = new Option('📍 使用目前位置', '__gps__');
+      fromSel.appendChild(gpsOpt1);
+      toSel.appendChild(gpsOpt2);
+
       LANDMARKS.forEach(l => {
         const opt1 = new Option(l.name, l.id);
         const opt2 = new Option(l.name, l.id);
