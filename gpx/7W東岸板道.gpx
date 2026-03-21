@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx version="1.1" creator="https://onthegomap.com" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>1km route</name>
+    <link href="https://onthegomap.com">
+      <text>On The Go Map</text>
+    </link>
+    <time>2026-03-21T12:05:09.489Z</time>
+    <copyright author="On The Go Map, OpenStreetMap Contributors">
+      <year>2026</year>
+    </copyright>
+  </metadata>
+  <trk>
+    <name>1km route</name>
+    <trkseg>
+      <trkpt lat="22.2935" lon="114.20107"/>
+      <trkpt lat="22.29349" lon="114.20107"/>
+      <trkpt lat="22.29335" lon="114.2011"/>
+      <trkpt lat="22.29326" lon="114.20062"/>
+      <trkpt lat="22.29324" lon="114.20057"/>
+      <trkpt lat="22.29313" lon="114.2"/>
+      <trkpt lat="22.2931" lon="114.19984"/>
+      <trkpt lat="22.29298" lon="114.19926"/>
+      <trkpt lat="22.29296" lon="114.19919"/>
+      <trkpt lat="22.29288" lon="114.19879"/>
+      <trkpt lat="22.29288" lon="114.19872"/>
+      <trkpt lat="22.2929" lon="114.19867"/>
+      <trkpt lat="22.29295" lon="114.19864"/>
+      <trkpt lat="22.293" lon="114.19863"/>
+      <trkpt lat="22.29302" lon="114.19863"/>
+      <trkpt lat="22.29312" lon="114.1986"/>
+      <trkpt lat="22.29335" lon="114.1985"/>
+      <trkpt lat="22.29337" lon="114.19849"/>
+      <trkpt lat="22.29347" lon="114.19841"/>
+      <trkpt lat="22.29358" lon="114.19827"/>
+      <trkpt lat="22.29363" lon="114.19819"/>
+      <trkpt lat="22.2937" lon="114.19796"/>
+      <trkpt lat="22.29372" lon="114.19776"/>
+      <trkpt lat="22.29368" lon="114.19753"/>
+      <trkpt lat="22.29352" lon="114.19701"/>
+      <trkpt lat="22.29346" lon="114.19697"/>
+      <trkpt lat="22.29325" lon="114.19687"/>
+      <trkpt lat="22.29321" lon="114.19684"/>
+      <trkpt lat="22.29313" lon="114.19656"/>
+      <trkpt lat="22.29303" lon="114.1963"/>
+      <trkpt lat="22.29297" lon="114.1961"/>
+      <trkpt lat="22.29296" lon="114.19606"/>
+      <trkpt lat="22.29291" lon="114.1957"/>
+      <trkpt lat="22.29287" lon="114.19554"/>
+      <trkpt lat="22.2928" lon="114.19512"/>
+      <trkpt lat="22.29275" lon="114.19487"/>
+      <trkpt lat="22.29267" lon="114.19472"/>
+      <trkpt lat="22.2926" lon="114.19457"/>
+      <trkpt lat="22.29253" lon="114.19444"/>
+      <trkpt lat="22.29247" lon="114.1944"/>
+      <trkpt lat="22.29222" lon="114.19402"/>
+      <trkpt lat="22.29191" lon="114.19362"/>
+      <trkpt lat="22.29188" lon="114.19347"/>
+      <trkpt lat="22.29191" lon="114.19319"/>
+      <trkpt lat="22.29139" lon="114.19254"/>
+      <trkpt lat="22.29137" lon="114.19248"/>
+      <trkpt lat="22.29136" lon="114.19247"/>
+    </trkseg>
+  </trk>
+</gpx>
