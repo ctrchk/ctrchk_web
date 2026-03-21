@@ -84,57 +84,73 @@
     #next-stop-name  { font-size: 1.05em; font-weight: bold; margin: 0.15em 0; }
     #next-stop-dist  { font-size: 1.3em; font-weight: bold; color: #BFE340; }
 
-    /* ── Two-page ride layout ── */
-    /* Page 1 footer: compact GPS status bar */
-    #ride-page-map-footer {
+    /* ── Floating bottom sheet (overlaid on map) ── */
+    #ride-bottom-sheet {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(26,37,47,0.82);
+      background: rgba(26,37,47,0.93);
       border-radius: 18px 18px 0 0;
-      padding: 0.5em 1.2em calc(env(safe-area-inset-bottom) + 2.4em);
-      backdrop-filter: blur(6px);
-      text-align: center;
+      backdrop-filter: blur(8px);
+      padding-bottom: env(safe-area-inset-bottom);
       transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
     }
-    #ride-page-map-footer.hidden-below { transform: translateY(100%); }
+    #ride-bottom-sheet.hidden-below { transform: translateY(100%); }
 
-    /* Page 2: full stats overlay (slides in from right) */
-    #ride-stats-page {
-      position: fixed;
-      top: calc(env(safe-area-inset-top) + 3.5em);
-      bottom: 0; left: 0; right: 0; z-index: 190;
-      background: #1a252f;
-      color: #fff;
-      overflow-y: auto;
-      padding: 1em 1em calc(env(safe-area-inset-bottom) + 3em);
-      transform: translateX(100vw);
-      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    /* Handle / collapsed area */
+    #rbs-handle {
+      padding: 0.55em 1.2em 0.5em;
+      cursor: pointer;
+      user-select: none;
     }
-    #ride-stats-page.active { transform: translateX(0); }
-    .stats-page-title {
-      font-size: 0.82em; color: #a8d8a0; text-transform: uppercase;
-      letter-spacing: 0.08em; margin-bottom: 0.8em; font-weight: 600;
+    .rbs-handle-bar {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.25);
+      margin: 0 auto 0.55em;
     }
+    .rbs-stats-row {
+      display: flex; align-items: center; gap: 0.3em; color: #fff;
+    }
+    .rbs-stat { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+    .rbs-stat .val { font-size: 1.05em; font-weight: bold; color: #BFE340; white-space: nowrap; }
+    .rbs-stat .lbl { font-size: 0.64em; opacity: 0.6; margin-top: 0.1em; }
+    .rbs-divider { width: 1px; height: 2em; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+    #rbs-toggle-btn {
+      margin-left: auto; flex-shrink: 0;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.75); border-radius: 14px;
+      padding: 0.28em 0.8em; font-size: 0.75em; cursor: pointer;
+    }
+    #gps-status-text { font-size: 0.67em; opacity: 0.5; text-align: center; margin-top: 0.25em; }
 
-    /* Stats grid on page 2 */
+    /* Expanded panel */
+    #rbs-expanded {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+    #ride-bottom-sheet.expanded #rbs-expanded {
+      max-height: 65vh; overflow-y: auto;
+    }
+    .rbs-expanded-inner { padding: 0.5em 1.2em 1em; }
+
+    /* Stats grid inside expanded panel */
     #ride-stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.7em;
+      gap: 0.6em;
       margin-bottom: 1em;
     }
     .ride-stat-card {
       background: rgba(255,255,255,0.07);
       border-radius: 12px;
-      padding: 0.85em 0.7em;
+      padding: 0.8em 0.6em;
       text-align: center;
     }
     .ride-stat-card.wide { grid-column: span 2; }
-    .ride-stat-card .val { font-size: 1.4em; font-weight: bold; color: #BFE340; }
-    .ride-stat-card .lbl { font-size: 0.68em; opacity: 0.65; margin-top: 0.25em; }
+    .ride-stat-card .val { font-size: 1.35em; font-weight: bold; color: #BFE340; }
+    .ride-stat-card .lbl { font-size: 0.66em; opacity: 0.65; margin-top: 0.22em; }
 
-    /* Stops progress (on page 2) */
+    /* Stops progress inside expanded panel */
     .stats-page-stops-label {
-      font-size: 0.8em; color: #a8d8a0; margin-bottom: 0.5em; font-weight: 600;
+      font-size: 0.78em; color: #a8d8a0; margin-bottom: 0.5em; font-weight: 600;
       letter-spacing: 0.06em;
     }
     #stops-progress {
@@ -159,27 +175,27 @@
       margin-bottom: 0.5em;
     }
     #btn-end-ride:active { background: #c0392b; }
-    #gps-status-text { font-size: 0.72em; opacity: 0.65; }
 
-    /* Page navigation dots (always on top, centered) */
-    #ride-page-dots {
-      position: fixed;
-      bottom: calc(env(safe-area-inset-bottom) + 0.7em);
-      left: 50%; transform: translateX(-50%);
-      z-index: 260;
-      display: flex; gap: 0.55em; align-items: center;
+    /* ── Go-to-start stop selector ── */
+    #gts-custom-start {
+      margin-top: 0.8em; padding-top: 0.8em;
+      border-top: 1px solid rgba(255,255,255,0.12);
     }
-    .ride-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: rgba(255,255,255,0.32);
-      cursor: pointer;
-      transition: all 0.25s ease;
-      border: none; padding: 0;
+    #gts-custom-start label {
+      display: block; font-size: 0.78em; opacity: 0.7; margin-bottom: 0.45em;
     }
-    .ride-dot.active {
-      width: 22px; border-radius: 4px;
-      background: #BFE340;
+    #gts-stop-select {
+      width: 100%; background: #223040; color: #fff;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+      padding: 0.5em 0.8em; font-size: 0.85em; margin-bottom: 0.5em;
+      appearance: none; -webkit-appearance: none;
     }
+    #btn-start-from-stop {
+      width: 100%; background: #BFE340; color: #1a252f;
+      border: none; border-radius: 8px;
+      padding: 0.55em; font-size: 0.88em; font-weight: bold; cursor: pointer;
+    }
+    #btn-start-from-stop:active { background: #a8cc2a; }
 
     /* ── Locked screen ── */
     #ride-locked {
@@ -324,51 +340,57 @@
     <h3>前往起點</h3>
     <p id="gts-start-name">請前往路線起點，抵達後將自動開始計時</p>
     <div id="gts-dist-row">
-      <span>距起點</span>
+      <span id="gts-dist-label">距起點</span>
       <span id="gts-dist-val">-- m</span>
     </div>
-    <button class="btn-skip-gts" id="btn-skip-gts" onclick="skipGoToStart()">略過 →</button>
+    <button class="btn-skip-gts" id="btn-skip-gts" onclick="skipGoToStart()">從當前位置出發 →</button>
+    <div id="gts-custom-start">
+      <label>或選擇出發站點：</label>
+      <select id="gts-stop-select"></select>
+      <button id="btn-start-from-stop" onclick="startFromSelectedStop()">從選定站點出發</button>
+    </div>
   </div>
 
-  <!-- Page 1 footer: compact GPS status bar -->
-  <div id="ride-page-map-footer">
-    <div id="gps-status-text">正在連接 GPS...</div>
-  </div>
-
-  <!-- Page 2: Stats panel (slides in from right) -->
-  <div id="ride-stats-page">
-    <div class="stats-page-title">📊 騎行數據</div>
-    <div id="ride-stats-grid">
-      <div class="ride-stat-card">
-        <div class="val" id="stat-time">00:00</div>
-        <div class="lbl">⏱ 時間</div>
+  <!-- Floating bottom sheet (stats + controls overlaid on map) -->
+  <div id="ride-bottom-sheet" class="hidden-below">
+    <div id="rbs-handle" onclick="toggleBottomSheet()">
+      <div class="rbs-handle-bar"></div>
+      <div class="rbs-stats-row">
+        <div class="rbs-stat">
+          <span class="val" id="stat-time">00:00</span>
+          <span class="lbl">⏱ 時間</span>
+        </div>
+        <div class="rbs-divider"></div>
+        <div class="rbs-stat">
+          <span class="val" id="stat-dist">0 m</span>
+          <span class="lbl">🚴 距離</span>
+        </div>
+        <div class="rbs-divider"></div>
+        <div class="rbs-stat">
+          <span class="val" id="stat-stops">0/0</span>
+          <span class="lbl">🚏 站點</span>
+        </div>
+        <button id="rbs-toggle-btn">更多 ▲</button>
       </div>
-      <div class="ride-stat-card">
-        <div class="val" id="stat-dist">0 m</div>
-        <div class="lbl">🚴 距離</div>
-      </div>
-      <div class="ride-stat-card">
-        <div class="val" id="stat-stops">0/0</div>
-        <div class="lbl">🚏 站點</div>
-      </div>
-      <div class="ride-stat-card">
-        <div class="val" id="stat-xp">0</div>
-        <div class="lbl">⭐ XP</div>
-      </div>
-      <div class="ride-stat-card wide">
-        <div class="val" id="stat-speed">0.0</div>
-        <div class="lbl">💨 速度 (km/h)</div>
+      <div id="gps-status-text">正在連接 GPS...</div>
+    </div>
+    <div id="rbs-expanded">
+      <div class="rbs-expanded-inner">
+        <div id="ride-stats-grid">
+          <div class="ride-stat-card">
+            <div class="val" id="stat-xp">0</div>
+            <div class="lbl">⭐ XP</div>
+          </div>
+          <div class="ride-stat-card">
+            <div class="val" id="stat-speed">0.0</div>
+            <div class="lbl">💨 速度 (km/h)</div>
+          </div>
+        </div>
+        <div class="stats-page-stops-label">站點進度</div>
+        <div id="stops-progress"></div>
+        <button id="btn-end-ride">🔴 結束騎行</button>
       </div>
     </div>
-    <div class="stats-page-stops-label">站點進度</div>
-    <div id="stops-progress"></div>
-    <button id="btn-end-ride">🔴 結束騎行</button>
-  </div>
-
-  <!-- Page navigation dots -->
-  <div id="ride-page-dots" style="display:none;">
-    <button class="ride-dot active" onclick="setRidePage(0)" title="地圖頁" aria-label="地圖頁"></button>
-    <button class="ride-dot" onclick="setRidePage(1)" title="數據頁" aria-label="數據頁"></button>
   </div>
 
   <!-- End ride summary -->
@@ -478,6 +500,7 @@
     let pendingSummary = null;   // stored after API response
     let sessionXp = 0;          // running XP total for this ride session
     let lastReachedDistrict = null; // for district-change bonus tracking
+    let gtsTargetStopIdx = 0;       // index in routeStops that we're navigating to in go-to-start phase
 
     // ── Helpers ───────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -553,59 +576,29 @@
       if (el) el.textContent = sessionXp;
     }
 
-    // ── Two-page ride UI ──────────────────────────────────────────────────
-    let currentRidePage = 0;
+    // ── Floating bottom sheet UI ─────────────────────────────────────────
+    let bottomSheetExpanded = false;
 
-    function showRideHUD(visible) {
-      const mapFooter = document.getElementById('ride-page-map-footer');
-      const statsPage = document.getElementById('ride-stats-page');
-      const dots = document.getElementById('ride-page-dots');
-      if (visible) {
-        mapFooter.classList.remove('hidden-below');
-        dots.style.display = '';
-      } else {
-        mapFooter.classList.add('hidden-below');
-        statsPage.classList.remove('active');
-        dots.style.display = 'none';
-        currentRidePage = 0;
-        updatePageDots();
-      }
-    }
-
-    window.setRidePage = function(page) {
-      currentRidePage = page;
-      const statsPage = document.getElementById('ride-stats-page');
-      if (page === 1) {
-        statsPage.classList.add('active');
-      } else {
-        statsPage.classList.remove('active');
-      }
-      updatePageDots();
+    window.toggleBottomSheet = function () {
+      bottomSheetExpanded = !bottomSheetExpanded;
+      const sheet = document.getElementById('ride-bottom-sheet');
+      const btn = document.getElementById('rbs-toggle-btn');
+      sheet.classList.toggle('expanded', bottomSheetExpanded);
+      if (btn) btn.textContent = bottomSheetExpanded ? '收起 ▼' : '更多 ▲';
     };
 
-    function updatePageDots() {
-      document.querySelectorAll('.ride-dot').forEach((d, i) => {
-        d.classList.toggle('active', i === currentRidePage);
-      });
+    function showRideHUD(visible) {
+      const sheet = document.getElementById('ride-bottom-sheet');
+      if (visible) {
+        sheet.classList.remove('hidden-below');
+      } else {
+        sheet.classList.add('hidden-below');
+        sheet.classList.remove('expanded');
+        bottomSheetExpanded = false;
+        const btn = document.getElementById('rbs-toggle-btn');
+        if (btn) btn.textContent = '更多 ▲';
+      }
     }
-
-    // Touch swipe to switch pages
-    (function initSwipe() {
-      let tx = 0, ty = 0;
-      document.addEventListener('touchstart', e => {
-        tx = e.touches[0].clientX;
-        ty = e.touches[0].clientY;
-      }, { passive: true });
-      document.addEventListener('touchend', e => {
-        const dotsEl = document.getElementById('ride-page-dots');
-        if (!dotsEl || dotsEl.style.display === 'none') return;
-        const dx = e.changedTouches[0].clientX - tx;
-        const dy = e.changedTouches[0].clientY - ty;
-        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-          window.setRidePage(dx < 0 ? 1 : 0);
-        }
-      }, { passive: true });
-    })();
 
     // ── Locked screen ─────────────────────────────────────────────────────
     function showLocked(needed) {
@@ -673,6 +666,26 @@
         pill.textContent = label;
         container.appendChild(pill);
       });
+      // Populate go-to-start stop selector
+      const sel = document.getElementById('gts-stop-select');
+      if (sel) {
+        sel.innerHTML = stops.map((s, i) => {
+          const label = s.code ? `${s.code}：${s.name}` : `站 ${s.order}：${s.name}`;
+          return `<option value="${i}">${label}</option>`;
+        }).join('');
+        sel.onchange = function () {
+          const idx = parseInt(this.value, 10);
+          if (!isNaN(idx) && idx >= 0 && idx < stops.length) {
+            gtsTargetStopIdx = idx;
+            const stop = stops[idx];
+            const label = stop.code ? `${stop.code}：${stop.name}` : `站 ${stop.order}：${stop.name}`;
+            const nameEl = document.getElementById('gts-start-name');
+            if (nameEl) nameEl.textContent = `出發站：${label}`;
+            const distLabelEl = document.getElementById('gts-dist-label');
+            if (distLabelEl) distLabelEl.textContent = idx === 0 ? '距起點' : '距選定站';
+          }
+        };
+      }
       updateNextStopUI();
     }
 
@@ -798,7 +811,9 @@
 
       // ── Go-to-start phase ─────────────────────────────────────────────
       if (goToStartPhase && routeStops.length > 0) {
-        const startStop = routeStops[0];
+        const targetIdx = Math.min(gtsTargetStopIdx, routeStops.length - 1);
+        gtsTargetStopIdx = targetIdx;
+        const startStop = routeStops[targetIdx];
         const distToStart = haversineM(lat, lon, startStop.lat, startStop.lon);
         const gtsBanner = document.getElementById('go-to-start-banner');
         const gtsDistEl = document.getElementById('gts-dist-val');
@@ -809,7 +824,11 @@
         }
 
         if (distToStart <= STOP_DETECTION_RADIUS_M) {
-          // User reached start — begin ride!
+          // User reached the target stop — trim preceding stops and begin ride
+          if (targetIdx > 0) {
+            routeStops = routeStops.slice(targetIdx).map((s, i) => ({ ...s, order: i + 1 }));
+            buildStopsUI(routeStops);
+          }
           beginRide();
         } else {
           // Still navigating to start: keep banner visible, hide bottom sheet
@@ -882,6 +901,17 @@
     }
 
     window.skipGoToStart = function () {
+      beginRide();
+    };
+
+    // Start ride from a user-selected stop (skips preceding stops)
+    window.startFromSelectedStop = function () {
+      const sel = document.getElementById('gts-stop-select');
+      const idx = sel ? parseInt(sel.value, 10) : 0;
+      if (!isNaN(idx) && idx >= 0 && idx < routeStops.length && idx > 0) {
+        routeStops = routeStops.slice(idx).map((s, i) => ({ ...s, order: i + 1 }));
+        buildStopsUI(routeStops);
+      }
       beginRide();
     };
 
@@ -1169,6 +1199,7 @@
 
       // Set up go-to-start banner or skip if no stops
       if (routeStops.length > 0) {
+        gtsTargetStopIdx = 0;
         goToStartPhase = true;
         const startStop = routeStops[0];
         const startLabel = startStop.code
@@ -1184,6 +1215,12 @@
 
         // Update next stop card with start info
         document.getElementById('next-stop-name').textContent = `前往：${startLabel}`;
+
+        // Hide custom stop selector if only one stop (nothing to choose from)
+        if (routeStops.length <= 1) {
+          const customStartEl = document.getElementById('gts-custom-start');
+          if (customStartEl) customStartEl.style.display = 'none';
+        }
       } else {
         // No stops: skip go-to-start and start immediately
         goToStartPhase = false;
