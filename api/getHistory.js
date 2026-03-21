@@ -229,6 +229,60 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── POST?action=purchase-department：里程幣解鎖部門 ──────────────────────
+    if (req.query.action === 'purchase-department') {
+      try {
+        const { dept_id } = req.body || {};
+        if (!dept_id) return res.status(400).json({ message: 'Missing dept_id' });
+
+        // Fetch department config
+        const { rows: deptRows } = await query(
+          'SELECT dept_id, unlock_cost, promo_cost, is_promo FROM department_config WHERE dept_id = $1',
+          [dept_id]
+        );
+        if (!deptRows.length) return res.status(400).json({ message: 'Department not found' });
+
+        const deptCfg = deptRows[0];
+        const cost = deptCfg.is_promo && deptCfg.promo_cost != null
+          ? parseInt(deptCfg.promo_cost, 10)
+          : parseInt(deptCfg.unlock_cost, 10);
+
+        const profile = await ensureGameProfile(userData.userId);
+
+        // Check if already unlocked
+        const { rows: existRows } = await query(
+          'SELECT id FROM user_unlocked_departments WHERE user_id = $1 AND dept_id = $2',
+          [userData.userId, dept_id]
+        );
+        if (existRows.length) {
+          return res.status(200).json({ already_unlocked: true, gameProfile: profile });
+        }
+
+        if (profile.coins < cost) {
+          return res.status(400).json({ message: '里程幣不足', required: cost, current: profile.coins });
+        }
+
+        const newCoins = profile.coins - cost;
+        await query(
+          `UPDATE user_game_profile SET coins = $1, updated_at = NOW() WHERE user_id = $2`,
+          [newCoins, userData.userId]
+        );
+        await query(
+          `INSERT INTO user_unlocked_departments (user_id, dept_id, unlock_method) VALUES ($1, $2, 'purchase') ON CONFLICT DO NOTHING`,
+          [userData.userId, dept_id]
+        );
+
+        return res.status(200).json({
+          dept_id,
+          coins_spent: cost,
+          gameProfile: { ...profile, coins: newCoins },
+        });
+      } catch (error) {
+        console.error('[purchase-department] error:', error);
+        return res.status(500).json({ message: 'Failed to process department purchase' });
+      }
+    }
+
     // ── POST?action=checkin：每日簽到 ──────────────────────────────────
     if (req.query.action === 'checkin') {
       try {

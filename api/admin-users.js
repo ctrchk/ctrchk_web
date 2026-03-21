@@ -73,8 +73,20 @@ export default async function handler(req, res) {
     return res.status(authResult.status).json({ message: authResult.error });
   }
 
-  // GET: 獲取用戶列表
+  // GET: 獲取用戶列表 / 部門與路線配置
   if (req.method === 'GET') {
+    // GET department configs
+    if (req.query.action === 'get-dept-config') {
+      const { rows } = await query('SELECT dept_id, name, unlock_cost, promo_cost, is_promo FROM department_config ORDER BY dept_id');
+      return res.status(200).json({ departments: rows });
+    }
+
+    // GET route configs (coin routes only)
+    if (req.query.action === 'get-route-config') {
+      const { rows } = await query(`SELECT route_id, unlock_cost, promo_cost, is_special FROM routes_config WHERE is_special = TRUE ORDER BY route_id`);
+      return res.status(200).json({ routes: rows });
+    }
+
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 20;
@@ -143,7 +155,33 @@ export default async function handler(req, res) {
   // POST: 修改用戶角色
   if (req.method === 'POST') {
     try {
-      const { action, user_id, new_role } = req.body;
+      const body = req.body;
+      const { action } = body;
+
+      // Update department config (promo settings)
+      if (action === 'update-dept-config') {
+        const { dept_id, is_promo, promo_cost } = body;
+        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
+        await query(
+          `UPDATE department_config SET is_promo = $1, promo_cost = $2 WHERE dept_id = $3`,
+          [is_promo, promo_cost != null ? parseInt(promo_cost, 10) : null, dept_id]
+        );
+        return res.status(200).json({ success: true });
+      }
+
+
+      // Update route promo price
+      if (action === 'update-route-promo') {
+        const { route_id, promo_cost } = body;
+        if (!route_id) return res.status(400).json({ message: 'route_id is required' });
+        await query(
+          `UPDATE routes_config SET promo_cost = $1 WHERE route_id = $2`,
+          [promo_cost != null ? parseInt(promo_cost, 10) : null, route_id]
+        );
+        return res.status(200).json({ success: true });
+      }
+
+      const { user_id, new_role } = body;
 
       if (!action || !user_id) {
         return res.status(400).json({ message: 'action and user_id are required' });

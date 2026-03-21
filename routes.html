@@ -199,6 +199,29 @@
     border-color: var(--app-border, #2d4d2d);
     background: var(--app-bg-card, #1e3820);
 }
+.app-dept-unlock-btn {
+    margin-top: 0.6em;
+    background: linear-gradient(135deg, #00838F, #006064);
+    color: white;
+    border: none;
+    padding: 0.4em 1em;
+    border-radius: 20px;
+    font-size: 0.82em;
+    font-weight: bold;
+    cursor: pointer;
+}
+.app-dept-promo-badge {
+    background: #FF6F00;
+    color: white;
+    padding: 0.15em 0.5em;
+    border-radius: 10px;
+    font-size: 0.78em;
+    font-weight: bold;
+    margin-left: 0.4em;
+}
+.app-dept-locked-overlay {
+    opacity: 0.8;
+}
 
 #app-ride-page {
     display: flex;
@@ -585,6 +608,7 @@
 
 // XP thresholds and unlock table (mirrored from main.js)
 const ROUTE_UNLOCK = {
+    '7E':1,'7W':1,
     '900':1,'900A':1,'966T':1,
     '914':8,'966A':8,'966':8,
     '900S':1,'914B':1,'910':5,'901P':15,
@@ -596,6 +620,7 @@ const ROUTE_UNLOCK = {
     'X935':50,'S90':50,'S91':50,
 };
 const ROUTE_XP = {
+    '7E':80,'7W':80,
     '900':450,'900A':360,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
     '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
     '966C':90,'928':170,'929':160,'966T':320,'961':130,'961P':100,'932':220,
@@ -746,6 +771,15 @@ async function showRouteOnMap(route, dirIndex) {
 }
 
 // ── Route card rendering ───────────────────────────────────────────────
+function routeBelongsToDept(route, deptId) {
+    // Primary: use dept_id field if present
+    if (route.dept_id) return route.dept_id === deptId;
+    // Fallback: tag-based classification for legacy routes without dept_id
+    if (deptId === 'tko') return route.tags && route.tags.some(t => t.includes('將軍澳'));
+    if (deptId === 'hki') return route.tags && route.tags.some(t => t.includes('港島'));
+    return false;
+}
+
 function matchesTerminal(route) {
     if (!selectedTerminalId) return true;
     const terminal = TERMINALS.find(t => t.id === selectedTerminalId);
@@ -782,7 +816,16 @@ function renderRoutes() {
         container.innerHTML = '<div class="app-no-routes"><i class="fas fa-spinner fa-spin"></i>載入路線中...</div>';
         return;
     }
-    const filtered = appRoutes.filter(r => matchesTerminal(r) && matchesFilter(r) && matchesSearch(r));
+
+    // Filter routes by selected department
+    let deptRoutes = appRoutes;
+    if (selectedDeptId === 'tko') {
+        deptRoutes = appRoutes.filter(r => routeBelongsToDept(r, 'tko'));
+    } else if (selectedDeptId === 'hki') {
+        deptRoutes = appRoutes.filter(r => routeBelongsToDept(r, 'hki'));
+    }
+
+    const filtered = deptRoutes.filter(r => matchesTerminal(r) && matchesFilter(r) && matchesSearch(r));
 
     if (filtered.length === 0) {
         container.innerHTML = '<div class="app-no-routes"><i class="fas fa-search"></i>找不到符合條件的路線</div>';
@@ -796,8 +839,11 @@ function renderRoutes() {
         const coinUnlocked = isCoinRoute && isCoinRouteUnlocked(route);
         const levelLocked = isLoggedIn && !isCoinRoute && userLevel < needed;
         const coinLocked = isLoggedIn && isCoinRoute && !coinUnlocked;
-        const locked = levelLocked || coinLocked;
-        return { route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, locked };
+        // Dept lock: if route has dept_id, check if user has unlocked that department
+        const deptId = route.dept_id;
+        const deptLocked = !!(deptId && isLoggedIn && !getUnlockedDepartments().includes(deptId));
+        const locked = levelLocked || coinLocked || deptLocked;
+        return { route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, deptLocked, locked };
     });
 
     // Helper: numeric sort key for route ID (e.g. "900A" → 900.1, "914B" → 914.2)
@@ -816,7 +862,7 @@ function renderRoutes() {
 
     container.innerHTML = '';
 
-    function buildCard({ route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, locked }) {
+    function buildCard({ route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, deptLocked, locked }) {
         const xp = route.xp_reward || ROUTE_XP[route.id] || 0;
         const isSelected = route.id === selectedRouteId;
 
@@ -826,7 +872,9 @@ function renderRoutes() {
         card.dataset.routeId = route.id;
 
         let lockBadge = '';
-        if (levelLocked) {
+        if (deptLocked) {
+            lockBadge = `<span class="app-route-lock-badge">🔒 需解鎖部門</span>`;
+        } else if (levelLocked) {
             lockBadge = `<span class="app-route-lock-badge">🔒 Lv.${needed}</span>`;
         } else if (coinLocked) {
             lockBadge = `<span class="app-route-coin-badge">🪙 ${route.coin_cost}</span>`;
@@ -1073,6 +1121,19 @@ const DEPARTMENTS = [
         available: true,
     },
     {
+        id: 'hki',
+        name: '港島海濱部',
+        region: '東區',
+        description: '港島北岸各海濱單車路線，包括北角東岸板道等',
+        routeCount: null,
+        mapCenter: [22.293, 114.201],
+        mapZoom: 15,
+        available: true,
+        unlock_cost: 400,
+        promo_cost: 20,
+        is_promo: true,
+    },
+    {
         id: 'st',
         name: '沙田部',
         region: '沙田區',
@@ -1090,35 +1151,112 @@ let selectedDeptId = null;
 function showDeptSheet() {
     const list = document.getElementById('app-dept-list');
     list.innerHTML = '';
+    const unlockedDepts = getUnlockedDepartments();
 
     DEPARTMENTS.forEach(dept => {
+        const isDeptUnlocked = !dept.unlock_cost || unlockedDepts.includes(dept.id);
         const card = document.createElement('div');
-        card.className = 'app-dept-card' + (dept.available ? '' : ' app-dept-coming-soon');
+        card.className = 'app-dept-card' + (dept.available ? '' : ' app-dept-coming-soon') + (!isDeptUnlocked ? ' app-dept-locked-overlay' : '');
 
         const routeCountText = dept.routeCount !== null
             ? `${dept.routeCount} 條路線`
             : '載入中...';
 
+        const costBadge = dept.is_promo
+            ? `<span class="app-dept-promo-badge">推廣 🪙${dept.promo_cost}</span>`
+            : (dept.unlock_cost ? `<span style="color:#888;font-size:0.82em;">🪙${dept.unlock_cost}</span>` : '');
+
         card.innerHTML = `
             <div class="app-dept-card-title">
                 🚴 ${dept.name}
-                <span class="app-dept-card-arrow">${dept.available ? '›' : '🔒'}</span>
+                ${costBadge}
+                <span class="app-dept-card-arrow">${dept.available ? (isDeptUnlocked ? '›' : '🔒') : '🔒'}</span>
             </div>
             <div class="app-dept-card-region">${dept.region}</div>
-            <div class="app-dept-card-meta">${dept.description}${dept.available ? ` ‧ ${routeCountText}` : ' ‧ 即將推出'}</div>
+            <div class="app-dept-card-meta">${dept.description}${dept.available && isDeptUnlocked ? ` ‧ ${routeCountText}` : (dept.available ? ' ‧ 需解鎖' : ' ‧ 即將推出')}</div>
+            ${dept.available && !isDeptUnlocked ? `<button class="app-dept-unlock-btn" id="unlock-btn-${dept.id}">🔑 解鎖部門（🪙${dept.is_promo ? dept.promo_cost : dept.unlock_cost}）</button>` : ''}
         `;
 
-        if (dept.available) {
+        if (dept.available && isDeptUnlocked) {
             card.addEventListener('click', () => {
                 hideDeptSheet();
                 enterDepartment(dept, true);
             });
+        } else if (dept.available && !isDeptUnlocked) {
+            const unlockBtn = card.querySelector(`#unlock-btn-${dept.id}`);
+            if (unlockBtn) {
+                unlockBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    purchaseDepartment(dept);
+                });
+            }
         }
         list.appendChild(card);
     });
 
     document.getElementById('app-dept-select').style.display = 'block';
     document.getElementById('app-dept-overlay').style.display = 'block';
+}
+
+function getUnlockedDepartments() {
+    try {
+        return JSON.parse(localStorage.getItem('unlockedDepartments') || '[]');
+    } catch(e) { return []; }
+}
+
+async function purchaseDepartment(dept) {
+    if (!isLoggedIn) {
+        alert('請先登入以解鎖部門。');
+        return;
+    }
+    const cost = dept.is_promo ? dept.promo_cost : dept.unlock_cost;
+    const userCoins = getUserCoins();
+    if (userCoins < cost) {
+        alert(`里程幣不足！\n解鎖「${dept.name}」需要 🪙${cost} 里程幣，你目前有 🪙${userCoins} 里程幣。\n完成騎行或每日簽到以賺取更多里程幣。`);
+        return;
+    }
+    const promoNote = dept.is_promo ? `\n🎉 推廣期優惠價：原價 🪙${dept.unlock_cost}，現只需 🪙${cost}！` : '';
+    const confirmed = confirm(`解鎖「${dept.name}」需要 🪙${cost} 里程幣。${promoNote}\n你目前有 🪙${userCoins} 里程幣。\n\n確定解鎖？`);
+    if (!confirmed) return;
+
+    try {
+        const token = localStorage.getItem('accessToken');
+        const resp = await fetch('/api/getHistory?action=purchase-department', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ dept_id: dept.id }),
+        });
+        if (resp.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+            alert('登入已過期，請重新登入後再試。');
+            return;
+        }
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert(data.message || '解鎖失敗，請稍後再試。');
+            return;
+        }
+        if (data.gameProfile) {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            storedUser.coins = data.gameProfile.coins;
+            localStorage.setItem('user', JSON.stringify(storedUser));
+        }
+        const unlockedDepts = getUnlockedDepartments();
+        if (!unlockedDepts.includes(dept.id)) {
+            unlockedDepts.push(dept.id);
+            localStorage.setItem('unlockedDepartments', JSON.stringify(unlockedDepts));
+        }
+        if (data.already_unlocked) {
+            alert(`「${dept.name}」已是你的解鎖部門！`);
+        } else {
+            alert(`🎉 成功解鎖「${dept.name}」！\n剩餘里程幣：🪙${data.gameProfile ? data.gameProfile.coins : getUserCoins()}`);
+        }
+        showDeptSheet(); // Refresh the sheet
+    } catch (e) {
+        console.error('[purchaseDepartment]', e);
+        alert('解鎖失敗，請稍後再試。');
+    }
 }
 
 function hideDeptSheet() {
@@ -1189,6 +1327,10 @@ async function initAppRidePage() {
                     if (Array.isArray(freshUser.unlocked_coin_routes)) {
                         localStorage.setItem('unlockedCoinRoutes', JSON.stringify(freshUser.unlocked_coin_routes));
                     }
+                    // Sync server-side unlocked departments
+                    if (Array.isArray(freshUser.unlocked_departments)) {
+                        localStorage.setItem('unlockedDepartments', JSON.stringify(freshUser.unlocked_departments));
+                    }
                 }
             }
         } catch (e) { console.error('[AppRide] Failed to fetch fresh user data:', e); }
@@ -1228,9 +1370,11 @@ async function initAppRidePage() {
         // Count routes per department by tag
         const tkoDept = DEPARTMENTS.find(d => d.id === 'tko');
         if (tkoDept) {
-            tkoDept.routeCount = appRoutes.filter(r =>
-                r.tags && r.tags.some(t => t.includes('將軍澳'))
-            ).length;
+            tkoDept.routeCount = appRoutes.filter(r => routeBelongsToDept(r, 'tko')).length;
+        }
+        const hkiDept = DEPARTMENTS.find(d => d.id === 'hki');
+        if (hkiDept) {
+            hkiDept.routeCount = appRoutes.filter(r => routeBelongsToDept(r, 'hki')).length;
         }
     } catch(e) {
         console.warn('[AppRide] Failed to load routes:', e);

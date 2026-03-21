@@ -2588,6 +2588,236 @@
         }
       ],
       "stops": []
+    },
+    {
+      "id": "7E",
+      "alias": "東岸板道（東）線",
+      "start": "北角碼頭",
+      "end": "東岸板道 (東)",
+      "via": "北角海濱花園、東岸板道",
+      "nature": "旅遊",
+      "time": 6,
+      "length": "1.0km",
+      "difficulty": 1,
+      "image": "images/7E.jpg",
+      "description": "沿港島北岸東行，由北角碼頭出發，途經北角海濱花園，沿東岸板道欣賞維多利亞港及九龍海景，最終抵達東岸板道（東）。路線平坦，是適合親子及休閒的海濱單車體驗。",
+      "tags": [
+        "港島",
+        "海濱",
+        "新手必試",
+        "風景優美",
+        "平坦"
+      ],
+      "color": "#00838F",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 80,
+      "completion_xp": 50,
+      "is_special": false,
+      "department": "港島海濱部",
+      "region": "東區",
+      "dept_id": "hki",
+      "gpx": [
+        {
+          "label": "往東岸板道(東)",
+          "file": "7E東岸板道.gpx",
+          "dir_filter": "down"
+        },
+        {
+          "label": "往北角碼頭",
+          "file": "7E北角碼頭.gpx",
+          "dir_filter": "up"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "code": "NP 01",
+          "name": "北角碼頭",
+          "name_en": "North Point Ferry Pier",
+          "road": "北角海濱花園",
+          "direction": "🔴",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29356,
+          "lon": 114.20105
+        },
+        {
+          "order": 2,
+          "code": "NP 02",
+          "name": "北角碼頭巴士總站",
+          "name_en": "North Point Ferry Pier Bus Terminus",
+          "road": "北角海濱花園",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29343,
+          "lon": 114.20151
+        },
+        {
+          "order": 3,
+          "code": "NP 03",
+          "name": "電照街",
+          "name_en": "Din Chiu Street",
+          "road": "北角海濱花園",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29369,
+          "lon": 114.20196
+        },
+        {
+          "order": 4,
+          "code": "NP 04",
+          "name": "北角汽車渡輪碼頭",
+          "name_en": "North Point Car Ferry Pier",
+          "road": "東岸板道",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29421,
+          "lon": 114.20335
+        },
+        {
+          "order": 5,
+          "code": "NP 05",
+          "name": "東區走廊北角交匯處",
+          "name_en": "Island Eastern Corridor North Point Junction",
+          "road": "東岸板道",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29402,
+          "lon": 114.20531
+        },
+        {
+          "order": 6,
+          "code": "NP 06",
+          "name": "北角消防局",
+          "name_en": "North Point Fire Station",
+          "road": "東岸板道",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29323,
+          "lon": 114.20762
+        },
+        {
+          "order": 7,
+          "code": "NP 07",
+          "name": "東岸板道 (東)",
+          "name_en": "Eastern Promenade (East)",
+          "road": "東岸板道",
+          "direction": "🔴",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29225,
+          "lon": 114.20991
+        }
+      ]
+    },
+    {
+      "id": "7W",
+      "alias": "東岸板道（西）線",
+      "start": "北角碼頭",
+      "end": "東岸板道 (西)",
+      "via": "北角海濱花園、東岸板道",
+      "nature": "旅遊",
+      "time": 6,
+      "length": "1.0km",
+      "difficulty": 1,
+      "image": "images/7W.jpg",
+      "description": "沿港島北岸西行，由北角碼頭出發，途經北角匯及糖水道，沿東岸板道到達東岸板道（西）。路線平坦，可欣賞維多利亞港全景，是悠閒海濱騎行的絕佳選擇。",
+      "tags": [
+        "港島",
+        "海濱",
+        "新手必試",
+        "風景優美",
+        "平坦"
+      ],
+      "color": "#00838F",
+      "unlock_level": 1,
+      "unlock_cost": null,
+      "xp_reward": 80,
+      "completion_xp": 50,
+      "is_special": false,
+      "department": "港島海濱部",
+      "region": "東區",
+      "dept_id": "hki",
+      "gpx": [
+        {
+          "label": "往東岸板道(西)",
+          "file": "7W東岸板道.gpx",
+          "dir_filter": "down"
+        },
+        {
+          "label": "往北角碼頭",
+          "file": "7W北角碼頭.gpx",
+          "dir_filter": "up"
+        }
+      ],
+      "stops": [
+        {
+          "order": 1,
+          "code": "NP 01",
+          "name": "北角碼頭",
+          "name_en": "North Point Ferry Pier",
+          "road": "北角海濱花園",
+          "direction": "🔴",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29356,
+          "lon": 114.20105
+        },
+        {
+          "order": 2,
+          "code": "NP 08",
+          "name": "北角匯",
+          "name_en": "North Point Hub",
+          "road": "北角海濱花園",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29323,
+          "lon": 114.2005
+        },
+        {
+          "order": 3,
+          "code": "NP 09",
+          "name": "糖水道",
+          "name_en": "Tong Shui Road",
+          "road": "北角海濱花園",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29289,
+          "lon": 114.19871
+        },
+        {
+          "order": 4,
+          "code": "NP 10",
+          "name": "和富",
+          "name_en": "Wo Fook",
+          "road": "東岸板道",
+          "direction": "↕️",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.29292,
+          "lon": 114.19587
+        },
+        {
+          "order": 5,
+          "code": "NP 11",
+          "name": "東岸板道 (西)",
+          "name_en": "Eastern Promenade (West)",
+          "road": "東岸板道",
+          "direction": "🔴",
+          "district": "NP",
+          "xp": 10,
+          "lat": 22.2914,
+          "lon": 114.19247
+        }
+      ]
     }
   ]
 }

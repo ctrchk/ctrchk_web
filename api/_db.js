@@ -96,6 +96,7 @@ const schemaReady = pool.query(`
     route_id VARCHAR(20) PRIMARY KEY,
     unlock_level INTEGER NOT NULL DEFAULT 1,
     unlock_cost INTEGER,
+    promo_cost INTEGER,
     xp_reward INTEGER NOT NULL DEFAULT 100,
     is_special BOOLEAN DEFAULT FALSE
   );
@@ -172,6 +173,23 @@ const schemaReady = pool.query(`
   CREATE INDEX IF NOT EXISTS idx_forum_topics_user_id ON forum_topics(user_id);
   CREATE INDEX IF NOT EXISTS idx_forum_replies_topic_id ON forum_replies(topic_id);
   CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id ON blog_posts(author_id);
+  CREATE TABLE IF NOT EXISTS department_config (
+    dept_id VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    unlock_cost INTEGER NOT NULL DEFAULT 400,
+    promo_cost INTEGER,
+    is_promo BOOLEAN DEFAULT FALSE,
+    promo_until TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS user_unlocked_departments (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    dept_id VARCHAR(20) NOT NULL,
+    unlock_method VARCHAR(20) DEFAULT 'purchase',
+    unlocked_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, dept_id)
+  );
 
   -- 路線解鎖配置種子資料（Level 1 起始路線：900, 900A, 966T）
   INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special) VALUES
@@ -199,12 +217,21 @@ const schemaReady = pool.query(`
     ('962P',  20, 1000, 150, true),
     -- 962X 需要里程幣解鎖（暫定 1000 幣，待確認）
     ('962X',  20, 1000, 130, true),
-    ('X935',  20, NULL, 210, false),('960',   20, NULL, 400, false)
+    ('X935',  20, NULL, 210, false),('960',   20, NULL, 400, false),
+    -- 港島海濱部路線（7E, 7W — 解鎖部門後免費騎行）
+    ('7E', 1, NULL, 80, false),
+    ('7W', 1, NULL, 80, false)
   ON CONFLICT (route_id) DO UPDATE SET
     unlock_level = EXCLUDED.unlock_level,
     unlock_cost  = EXCLUDED.unlock_cost,
     xp_reward    = EXCLUDED.xp_reward,
     is_special   = EXCLUDED.is_special;
+
+  INSERT INTO department_config (dept_id, name, unlock_cost, promo_cost, is_promo) VALUES
+    ('hki', '港島海濱部', 400, 20, TRUE)
+  ON CONFLICT (dept_id) DO UPDATE SET
+    promo_cost = EXCLUDED.promo_cost,
+    is_promo = EXCLUDED.is_promo;
 
   -- 等級配置種子資料（20 級，每5級更換稱號，後期升級要求已適當降低）
   INSERT INTO level_config (level, xp_required, coins_reward, title_zh, title_en) VALUES

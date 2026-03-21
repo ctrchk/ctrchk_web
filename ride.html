@@ -473,6 +473,8 @@
 
     const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
     const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
+    const MIN_DIST_M = 3;                // minimum movement to accumulate distance (filters GPS drift)
+    const MAX_GPS_ACCURACY_M = 50;       // only accumulate distance when GPS accuracy is within this threshold
     const DEFAULT_STOP_XP = 10;          // XP awarded for reaching a stop that has no explicit xp field
     const DEFAULT_ROUTE_COMPLETION_XP = 200; // fallback bonus XP for completing all stops on a route
     const DISTRICT_CHANGE_XP = 20;       // bonus XP for crossing into a new district zone
@@ -841,10 +843,11 @@
       }
 
       // ── Normal ride phase ──────────────────────────────────────────────
-      // Accumulate distance
+      // Accumulate distance (filter GPS drift: min 3m movement, max 500m jump, need ≤50m accuracy)
+      const MIN_DIST_M = 3;
       if (lastLat !== null && rideStarted) {
         const d = haversineM(lastLat, lastLon, lat, lon);
-        if (d < MAX_GPS_JUMP_M) totalDistM += d;
+        if (d >= MIN_DIST_M && d < MAX_GPS_JUMP_M && accuracy <= 50) totalDistM += d;
       }
       lastLat = lat; lastLon = lon;
 
