@@ -484,6 +484,7 @@
     // Per-route overrides (set after routeData loads)
     let ROUTE_COMPLETION_XP = DEFAULT_ROUTE_COMPLETION_XP;
     let FAST_FINISH_MINUTES = DEFAULT_FAST_FINISH_MINUTES;
+    let ROUTE_COMPLETION_COINS = 0; // per-route completion coins (e.g. 7E/7W = 5)
 
     let routeData = null;
     let routeStops = [];
@@ -956,8 +957,11 @@
       }
 
       // Fast-finish bonus coins (per-route time limit)
-      const bonusCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
+      const fastFinishCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
         ? FAST_FINISH_BONUS_COINS : 0;
+      // Per-route completion coins (e.g. 7E/7W = 5 on finishing all stops)
+      const completionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
+      const bonusCoins = fastFinishCoins + completionCoins;
 
       // 過短行程（少於2個車站且少於1公里）不計算進歷史
       const rideTooShort = reachedStops.size < 2 && distKm < 1;
@@ -1064,11 +1068,15 @@
       } else {
         document.getElementById('summary-xp-badge').textContent =
           `+${apiResult.xp_earned || 0} XP`;
-        // Show bonus coins if earned (within fast_finish_minutes)
+        // Show bonus coins if earned
         const bonusCoinsEl = document.getElementById('summary-bonus-coins');
         const bc = apiResult.bonus_coins_earned || 0;
         if (bc > 0) {
-          bonusCoinsEl.textContent = `⚡ ${FAST_FINISH_MINUTES}分鐘內完成！+${bc} 里程幣獎勵`;
+          // Distinguish completion coins vs fast-finish bonus
+          const parts = [];
+          if (completionCoins > 0) parts.push(`🏆 完成路線 +${completionCoins} 里程幣`);
+          if (fastFinishCoins > 0) parts.push(`⚡ ${FAST_FINISH_MINUTES}分鐘內完成 +${fastFinishCoins} 里程幣`);
+          bonusCoinsEl.textContent = parts.length ? parts.join('　') : `+${bc} 里程幣獎勵`;
           bonusCoinsEl.style.display = '';
         } else {
           bonusCoinsEl.style.display = 'none';
@@ -1148,6 +1156,9 @@
         }
         if (typeof routeData.fast_finish_minutes === 'number') {
           FAST_FINISH_MINUTES = routeData.fast_finish_minutes;
+        }
+        if (typeof routeData.completion_coins === 'number') {
+          ROUTE_COMPLETION_COINS = routeData.completion_coins;
         }
       }
 

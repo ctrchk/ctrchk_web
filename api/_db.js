@@ -218,9 +218,9 @@ const schemaReady = pool.query(`
     -- 962X 需要里程幣解鎖（暫定 1000 幣，待確認）
     ('962X',  20, 1000, 130, true),
     ('X935',  20, NULL, 210, false),('960',   20, NULL, 400, false),
-    -- 港島海濱部路線（7E, 7W — 解鎖部門後免費騎行）
-    ('7E', 1, NULL, 80, false),
-    ('7W', 1, NULL, 80, false)
+    -- 港島海濱部路線（7E, 7W — 解鎖部門後免費騎行；完成獎勵 150 XP + 5 里程幣，無到站 XP）
+    ('7E', 1, NULL, 150, false),
+    ('7W', 1, NULL, 150, false)
   ON CONFLICT (route_id) DO UPDATE SET
     unlock_level = EXCLUDED.unlock_level,
     unlock_cost  = EXCLUDED.unlock_cost,

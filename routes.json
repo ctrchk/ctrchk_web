@@ -2611,8 +2611,10 @@
       "color": "#00838F",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 80,
-      "completion_xp": 50,
+      "xp_reward": 150,
+      "completion_xp": 150,
+      "completion_coins": 5,
+      "fast_finish_minutes": 15,
       "is_special": false,
       "department": "港島海濱部",
       "region": "東區",
@@ -2638,7 +2640,7 @@
           "road": "北角海濱花園",
           "direction": "🔴",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29356,
           "lon": 114.20105
         },
@@ -2650,7 +2652,7 @@
           "road": "北角海濱花園",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29343,
           "lon": 114.20151
         },
@@ -2662,7 +2664,7 @@
           "road": "北角海濱花園",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29369,
           "lon": 114.20196
         },
@@ -2674,7 +2676,7 @@
           "road": "東岸板道",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29421,
           "lon": 114.20335
         },
@@ -2686,7 +2688,7 @@
           "road": "東岸板道",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29402,
           "lon": 114.20531
         },
@@ -2698,7 +2700,7 @@
           "road": "東岸板道",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29323,
           "lon": 114.20762
         },
@@ -2710,7 +2712,7 @@
           "road": "東岸板道",
           "direction": "🔴",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29225,
           "lon": 114.20991
         }
@@ -2738,8 +2740,8 @@
       "color": "#00838F",
       "unlock_level": 1,
       "unlock_cost": null,
-      "xp_reward": 80,
-      "completion_xp": 50,
+      "xp_reward": 150,
+      "completion_xp": 150,
       "is_special": false,
       "department": "港島海濱部",
       "region": "東區",
@@ -2765,7 +2767,7 @@
           "road": "北角海濱花園",
           "direction": "🔴",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29356,
           "lon": 114.20105
         },
@@ -2777,7 +2779,7 @@
           "road": "北角海濱花園",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29323,
           "lon": 114.2005
         },
@@ -2789,7 +2791,7 @@
           "road": "北角海濱花園",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29289,
           "lon": 114.19871
         },
@@ -2801,7 +2803,7 @@
           "road": "東岸板道",
           "direction": "↕️",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.29292,
           "lon": 114.19587
         },
@@ -2813,11 +2815,13 @@
           "road": "東岸板道",
           "direction": "🔴",
           "district": "NP",
-          "xp": 10,
+          "xp": 0,
           "lat": 22.2914,
           "lon": 114.19247
         }
-      ]
+      ],
+      "completion_coins": 5,
+      "fast_finish_minutes": 15
     }
   ]
 }
