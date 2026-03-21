@@ -1399,7 +1399,11 @@
                 row.innerHTML = `
                     <div style="flex:1; min-width:150px;">
                         <strong>${dept.name}</strong>
-                        <div style="font-size:0.85em; color:#666;">原價：🪙${dept.unlock_cost}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.4em;">
+                        <span style="font-size:0.9em;">標準價：🪙</span>
+                        <input type="number" id="dept-unlock-cost-${dept.dept_id}" value="${dept.unlock_cost || ''}" min="0" placeholder="標準價"
+                            style="width:80px; padding:0.4em; border:1px solid #ccc; border-radius:4px; font-size:0.9em;">
                     </div>
                     <label style="display:flex; align-items:center; gap:0.4em; font-size:0.9em;">
                         <input type="checkbox" id="dept-promo-${dept.dept_id}" ${dept.is_promo ? 'checked' : ''}>
@@ -1422,6 +1426,7 @@
         async function saveDeptConfig(deptId) {
             const pin = await promptAdminPin();
             if (pin === null) return;
+            const unlockCost = document.getElementById(`dept-unlock-cost-${deptId}`).value;
             const isPromo = document.getElementById(`dept-promo-${deptId}`).checked;
             const promoCost = document.getElementById(`dept-promo-cost-${deptId}`).value;
             const msgEl = document.getElementById(`dept-save-msg-${deptId}`);
@@ -1431,7 +1436,7 @@
                 const resp = await fetch('/api/admin-users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ action: 'update-dept-config', dept_id: deptId, is_promo: isPromo, promo_cost: promoCost ? parseInt(promoCost) : null, pin })
+                    body: JSON.stringify({ action: 'update-dept-config', dept_id: deptId, unlock_cost: unlockCost ? parseInt(unlockCost) : null, is_promo: isPromo, promo_cost: promoCost ? parseInt(promoCost) : null, pin })
                 });
                 const data = await resp.json();
                 msgEl.textContent = resp.ok ? '✅ 已儲存' : `❌ ${data.message || '失敗'}`;

@@ -77,14 +77,24 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     // GET department configs
     if (req.query.action === 'get-dept-config') {
-      const { rows } = await query('SELECT dept_id, name, unlock_cost, promo_cost, is_promo FROM department_config ORDER BY dept_id');
-      return res.status(200).json({ departments: rows });
+      try {
+        const { rows } = await query('SELECT dept_id, name, unlock_cost, promo_cost, is_promo FROM department_config ORDER BY dept_id');
+        return res.status(200).json({ departments: rows });
+      } catch (e) {
+        console.error('[admin-users] get-dept-config error:', e.message);
+        return res.status(500).json({ message: '載入部門設定失敗', departments: [] });
+      }
     }
 
     // GET route configs (coin routes only)
     if (req.query.action === 'get-route-config') {
-      const { rows } = await query(`SELECT route_id, unlock_cost, promo_cost, is_special FROM routes_config WHERE is_special = TRUE ORDER BY route_id`);
-      return res.status(200).json({ routes: rows });
+      try {
+        const { rows } = await query(`SELECT route_id, unlock_cost, promo_cost, is_special FROM routes_config WHERE is_special = TRUE ORDER BY route_id`);
+        return res.status(200).json({ routes: rows });
+      } catch (e) {
+        console.error('[admin-users] get-route-config error:', e.message);
+        return res.status(500).json({ message: '載入路線設定失敗', routes: [] });
+      }
     }
 
     try {
@@ -158,13 +168,18 @@ export default async function handler(req, res) {
       const body = req.body;
       const { action } = body;
 
-      // Update department config (promo settings)
+      // Update department config (standard price + promo settings)
       if (action === 'update-dept-config') {
-        const { dept_id, is_promo, promo_cost } = body;
+        const { dept_id, is_promo, promo_cost, unlock_cost } = body;
         if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
         await query(
-          `UPDATE department_config SET is_promo = $1, promo_cost = $2 WHERE dept_id = $3`,
-          [is_promo, promo_cost != null ? parseInt(promo_cost, 10) : null, dept_id]
+          `UPDATE department_config SET unlock_cost = COALESCE($1, unlock_cost), is_promo = $2, promo_cost = $3 WHERE dept_id = $4`,
+          [
+            unlock_cost != null ? parseInt(unlock_cost, 10) : null,
+            is_promo,
+            promo_cost != null ? parseInt(promo_cost, 10) : null,
+            dept_id,
+          ]
         );
         return res.status(200).json({ success: true });
       }

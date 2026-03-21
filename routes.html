@@ -1163,7 +1163,7 @@ function showDeptSheet() {
             : '載入中...';
 
         const costBadge = dept.is_promo
-            ? `<span class="app-dept-promo-badge">推廣 🪙${dept.promo_cost}</span>`
+            ? `<span class="app-dept-promo-badge"><s style="opacity:0.7;font-weight:normal;">🪙${dept.unlock_cost}</s> 限時優惠 <span style="font-size:1.25em;font-weight:900;">🪙${dept.promo_cost}</span></span>`
             : (dept.unlock_cost ? `<span style="color:#888;font-size:0.82em;">🪙${dept.unlock_cost}</span>` : '');
 
         card.innerHTML = `
@@ -1174,7 +1174,7 @@ function showDeptSheet() {
             </div>
             <div class="app-dept-card-region">${dept.region}</div>
             <div class="app-dept-card-meta">${dept.description}${dept.available && isDeptUnlocked ? ` ‧ ${routeCountText}` : (dept.available ? ' ‧ 需解鎖' : ' ‧ 即將推出')}</div>
-            ${dept.available && !isDeptUnlocked ? `<button class="app-dept-unlock-btn" id="unlock-btn-${dept.id}">🔑 解鎖部門（🪙${dept.is_promo ? dept.promo_cost : dept.unlock_cost}）</button>` : ''}
+            ${dept.available && !isDeptUnlocked ? `<button class="app-dept-unlock-btn" id="unlock-btn-${dept.id}">🔑 解鎖部門</button>` : ''}
         `;
 
         if (dept.available && isDeptUnlocked) {
