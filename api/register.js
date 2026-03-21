@@ -95,10 +95,13 @@ export default async function handler(req, res) {
 
     const newUserId = insertResult.rows[0].id;
 
-    // 發送驗證郵件（非阻塞）
-    sendVerificationEmail(email, full_name, verificationToken).catch(err => {
+    // 發送驗證郵件（等待完成，確保在 Vercel serverless 環境中郵件能成功發出）
+    try {
+      await sendVerificationEmail(email, full_name, verificationToken);
+    } catch (err) {
       console.error('發送驗證郵件失敗:', err);
-    });
+      // 郵件發送失敗不影響註冊流程
+    }
 
     // 自動登入：產生 JWT token
     const JWT_SECRET = process.env.JWT_SECRET;
