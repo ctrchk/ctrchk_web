@@ -60,6 +60,7 @@ const schemaReady = pool.query(`
   ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(255);
   ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry TIMESTAMP;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(16);
   CREATE TABLE IF NOT EXISTS chat_messages (
     id SERIAL PRIMARY KEY,
     sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -180,6 +181,7 @@ const schemaReady = pool.query(`
   CREATE INDEX IF NOT EXISTS idx_user_daily_checkins_user_id ON user_daily_checkins(user_id);
   CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
   CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users ((LOWER(username))) WHERE username IS NOT NULL;
   CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
   CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token);
   CREATE INDEX IF NOT EXISTS idx_cycling_history_user_id ON cycling_history(user_id);

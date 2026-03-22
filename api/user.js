@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       }
 
       let result;
-      const SELECT = `SELECT u.id, u.email, u.user_role, u.full_name, u.phone, u.profile_completed,
+      const SELECT = `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.phone, u.profile_completed,
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
                              gp.level, gp.xp, gp.coins
                         FROM users u
@@ -93,6 +93,7 @@ export default async function handler(req, res) {
         email,
         full_name,
         phone,
+        username,
         experience,
         preferred_area,
         birthdate,
@@ -100,8 +101,8 @@ export default async function handler(req, res) {
         avatar_url,
       } = req.body;
 
-      if (!full_name && !Object.prototype.hasOwnProperty.call(req.body, 'avatar_url')) {
-        return res.status(400).json({ message: 'Full name is required' });
+      if (!full_name && !Object.prototype.hasOwnProperty.call(req.body, 'avatar_url') && !Object.prototype.hasOwnProperty.call(req.body, 'username')) {
+        return res.status(400).json({ message: 'Full name or username is required' });
       }
 
       let preferredAreaStr = '';
@@ -117,11 +118,11 @@ export default async function handler(req, res) {
 
       let checkResult;
       if (user_id) {
-        checkResult = await query('SELECT id, email, user_role FROM users WHERE id = $1', [user_id]);
+        checkResult = await query('SELECT id, email, user_role, username FROM users WHERE id = $1', [user_id]);
       } else if (google_id) {
-        checkResult = await query('SELECT id, email, user_role FROM users WHERE google_id = $1', [google_id]);
+        checkResult = await query('SELECT id, email, user_role, username FROM users WHERE google_id = $1', [google_id]);
       } else {
-        checkResult = await query('SELECT id, email, user_role FROM users WHERE email = $1', [email]);
+        checkResult = await query('SELECT id, email, user_role, username FROM users WHERE email = $1', [email]);
       }
 
       if (checkResult.rows.length === 0) {
@@ -145,7 +146,25 @@ export default async function handler(req, res) {
 
       const currentRole = checkResult.rows[0].user_role;
       const userId = checkResult.rows[0].id;
+      const currentUsername = checkResult.rows[0].username || null;
       const hasFullProfile = experience && preferredAreaStr;
+
+      let normalizedUsername = undefined;
+      if (Object.prototype.hasOwnProperty.call(req.body, 'username')) {
+        normalizedUsername = String(username || '').trim();
+        if (!/^[A-Za-z0-9_]{4,16}$/.test(normalizedUsername)) {
+          return res.status(400).json({ message: 'Username must be 4-16 characters and only include letters, numbers, underscore' });
+        }
+        if (!currentUsername || currentUsername.toLowerCase() !== normalizedUsername.toLowerCase()) {
+          const { rows: usernameRows } = await query(
+            'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2 LIMIT 1',
+            [normalizedUsername, userId]
+          );
+          if (usernameRows.length > 0) {
+            return res.status(409).json({ message: 'Username already exists' });
+          }
+        }
+      }
 
       // Validate avatar_url if provided (must be http/https URL or data: URL, max 1MB base64)
       let sanitizedAvatarUrl = undefined;
@@ -173,23 +192,36 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Avatar updated', user_role: currentRole });
       }
 
+      if (!full_name && normalizedUsername !== undefined) {
+        await query(
+          `UPDATE users SET username = $1 WHERE id = $2`,
+          [normalizedUsername, userId]
+        );
+        return res.status(200).json({ message: 'Username updated', user_role: currentRole });
+      }
+
       if (hasFullProfile) {
         const newRole = currentRole === 'admin' ? 'admin' : 'senior';
         const profileCompleted = newRole !== 'admin';
         const params = [newRole, full_name, phone || null, experience, preferredAreaStr,
                         birthdate || null, bike_type || null, profileCompleted, userId];
         let avatarClause = '';
+        let usernameClause = '';
         if (sanitizedAvatarUrl !== undefined) {
           avatarClause = `, avatar_url = $${params.push(sanitizedAvatarUrl)}`;
         }
+        if (normalizedUsername !== undefined) {
+          usernameClause = `, username = $${params.push(normalizedUsername)}`;
+        }
         await query(
           `UPDATE users
-           SET user_role = $1, full_name = $2, phone = $3, experience = $4,
-               preferred_area = $5, birthdate = $6, bike_type = $7,
-               profile_completed = $8,
-               profile_completion_date = CASE WHEN $8 AND profile_completion_date IS NULL THEN NOW() ELSE profile_completion_date END
-               ${avatarClause}
-           WHERE id = $9`,
+            SET user_role = $1, full_name = $2, phone = $3, experience = $4,
+                preferred_area = $5, birthdate = $6, bike_type = $7,
+                profile_completed = $8,
+                profile_completion_date = CASE WHEN $8 AND profile_completion_date IS NULL THEN NOW() ELSE profile_completion_date END
+                ${usernameClause}
+                ${avatarClause}
+            WHERE id = $${params.length}`,
           params
         );
         return res.status(200).json({
@@ -199,14 +231,19 @@ export default async function handler(req, res) {
       } else {
         const params = [full_name, phone || null, birthdate || null, bike_type || null, userId];
         let avatarClause = '';
+        let usernameClause = '';
         if (sanitizedAvatarUrl !== undefined) {
           avatarClause = `, avatar_url = $${params.push(sanitizedAvatarUrl)}`;
         }
+        if (normalizedUsername !== undefined) {
+          usernameClause = `, username = $${params.push(normalizedUsername)}`;
+        }
         await query(
           `UPDATE users
-           SET full_name = $1, phone = $2, birthdate = $3, bike_type = $4
-               ${avatarClause}
-           WHERE id = $5`,
+            SET full_name = $1, phone = $2, birthdate = $3, bike_type = $4
+                ${usernameClause}
+                ${avatarClause}
+            WHERE id = $${params.length}`,
           params
         );
         return res.status(200).json({ message: 'Profile updated', user_role: currentRole });

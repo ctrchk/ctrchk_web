@@ -292,11 +292,11 @@
     <div id="planner-form">
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#04D93C;">📍</span>
-        <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" placeholder="輸入或選擇起點">
+        <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" placeholder="輸入或選擇起點（可自訂地址）">
       </div>
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#e74c3c;">🏁</span>
-        <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" placeholder="輸入或選擇終點">
+        <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" placeholder="輸入或選擇終點（可自訂地址）">
       </div>
       <datalist id="landmark-options"></datalist>
       <button id="btn-plan-route" disabled>🔍 規劃路線</button>
@@ -795,16 +795,37 @@
       return LANDMARKS.find(l => l.id === v || l.name === v) || null;
     }
 
+    async function geocodeAddress(rawValue) {
+      const q = String(rawValue || '').trim();
+      if (!q) return null;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q + ', Hong Kong')}`;
+      const resp = await fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!resp.ok) return null;
+      const rows = await resp.json();
+      if (!Array.isArray(rows) || !rows.length) return null;
+      const hit = rows[0];
+      return {
+        id: '__custom__',
+        name: q,
+        lat: parseFloat(hit.lat),
+        lon: parseFloat(hit.lon),
+      };
+    }
+
     async function planRoute() {
       const fromRaw = document.getElementById('sel-from').value;
       const toRaw   = document.getElementById('sel-to').value;
       if (!fromRaw || !toRaw) return;
       if (fromRaw.trim() === toRaw.trim()) return;
 
-      const fromResolved = resolveLandmark(fromRaw);
-      const toResolved = resolveLandmark(toRaw);
+      let fromResolved = resolveLandmark(fromRaw);
+      let toResolved = resolveLandmark(toRaw);
+      if (!fromResolved) fromResolved = await geocodeAddress(fromRaw);
+      if (!toResolved) toResolved = await geocodeAddress(toRaw);
       if (!fromResolved || !toResolved) {
-        alert('請從清單選擇有效的起點及終點。');
+        alert('無法解析起點或終點地址，請重新輸入。');
         return;
       }
 

@@ -110,6 +110,7 @@ async function handleRegister(e) {
     const password = document.getElementById('register-password').value;
     const confirmPassword = document.getElementById('register-confirm-password').value;
     const full_name = document.getElementById('register-fullname').value.trim();
+    const username = document.getElementById('register-username')?.value.trim() || '';
     const phone = document.getElementById('register-phone')?.value.trim() || '';
     const experience = document.getElementById('register-experience')?.value || '';
     const birthdate = document.getElementById('register-birthdate')?.value || '';
@@ -125,6 +126,11 @@ async function handleRegister(e) {
     // 驗證密碼一致
     if (password !== confirmPassword) {
         alert('兩次輸入的密碼不一致，請重新輸入。');
+        return;
+    }
+
+    if (!/^[A-Za-z0-9_]{4,16}$/.test(username)) {
+        alert('用戶名格式錯誤：需為 4-16 位英數字或底線（_）');
         return;
     }
 
@@ -147,6 +153,7 @@ async function handleRegister(e) {
             body: JSON.stringify({ 
                 email, 
                 password, 
+                username,
                 full_name, 
                 phone: phone || undefined, 
                 experience: experience || undefined, 
@@ -181,7 +188,13 @@ async function handleRegister(e) {
             } else if (lowerErrorMsg.includes('password')) {
                 errorMessage = '密碼必須至少 8 個字元';
             } else if (lowerErrorMsg.includes('email already exists') || lowerErrorMsg.includes('already exists')) {
-                errorMessage = '此電子郵件已被註冊，請使用其他郵件或前往登入頁面';
+                if (lowerErrorMsg.includes('username')) {
+                    errorMessage = '此用戶名已被使用，請更換另一個用戶名';
+                } else {
+                    errorMessage = '此電子郵件已被註冊，請使用其他郵件或前往登入頁面';
+                }
+            } else if (lowerErrorMsg.includes('username must')) {
+                errorMessage = '用戶名格式錯誤：需為 4-16 位英數字或底線（_）';
             }
             
             throw new Error(errorMessage);

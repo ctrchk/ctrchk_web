@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     // 2. 查詢資料庫是否已有此用戶
     const { rows } = await query(
-      'SELECT id, email, user_role, full_name, profile_completed, google_id, email_verified FROM users WHERE google_id = $1 OR email = $2',
+      'SELECT id, email, username, user_role, full_name, profile_completed, google_id, email_verified FROM users WHERE google_id = $1 OR email = $2',
       [google_id, email]
     );
 
@@ -103,11 +103,34 @@ export default async function handler(req, res) {
     } else {
       // 3. 新用戶：建立帳號，管理員電郵直接設為 admin，其餘為 junior
       const newRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'junior';
+      const baseName = String(email || '').split('@')[0].replace(/[^A-Za-z0-9_]/g, '').slice(0, 16) || `user${Date.now()}`;
+      const usernameSeed = baseName.length < 4 ? (baseName + '0000').slice(0, 4) : baseName;
+      const { rows: usernameRows } = await query(
+        `SELECT username FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(username) LIKE LOWER($2)`,
+        [usernameSeed, `${usernameSeed}%`]
+      );
+      const taken = new Set(usernameRows.map((r) => String(r.username || '').toLowerCase()));
+      let finalUsername = usernameSeed;
+      if (taken.has(finalUsername.toLowerCase())) {
+        let found = false;
+        for (let i = 1; i <= 9999; i++) {
+          const suffix = String(i);
+          const candidate = (usernameSeed.slice(0, Math.max(0, 16 - suffix.length)) + suffix).slice(0, 16);
+          if (candidate.length >= 4 && !taken.has(candidate.toLowerCase())) {
+            finalUsername = candidate;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          finalUsername = (`u${Date.now()}`).slice(-16);
+        }
+      }
       const insertResult = await query(
-        `INSERT INTO users (email, google_id, full_name, user_role, auth_provider, profile_completed, email_verified)
-         VALUES ($1, $2, $3, $4, 'google', false, true)
-         RETURNING id, email, user_role, full_name, profile_completed`,
-        [email, google_id, full_name, newRole]
+        `INSERT INTO users (email, google_id, username, full_name, user_role, auth_provider, profile_completed, email_verified)
+         VALUES ($1, $2, $3, $4, $5, 'google', false, true)
+         RETURNING id, email, username, user_role, full_name, profile_completed`,
+        [email, google_id, finalUsername, full_name, newRole]
       );
       user = insertResult.rows[0];
     }
@@ -133,6 +156,7 @@ export default async function handler(req, res) {
       user: {
         id: user.id,
         email: user.email,
+        username: user.username || '',
         full_name: fullNameToReturn,
         user_role: user.user_role,
         role: user.user_role,

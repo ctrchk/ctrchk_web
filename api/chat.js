@@ -39,12 +39,12 @@ export default async function handler(req, res) {
       // ── 對話列表（最近聯絡人 + 最後一條訊息 + 未讀數）
       if (!action || action === 'conversations') {
         const { rows } = await query(
-          `SELECT
-             peer_id,
-             u.full_name AS peer_name,
-             u.avatar_url AS peer_avatar,
-             last_message,
-             last_at,
+           `SELECT
+              peer_id,
+              COALESCE(u.username, u.full_name, u.email) AS peer_name,
+              u.avatar_url AS peer_avatar,
+              last_message,
+              last_at,
              unread_count
            FROM (
              SELECT
@@ -72,10 +72,10 @@ export default async function handler(req, res) {
         const beforeId = parseInt(before, 10) || null;
 
         const { rows } = await query(
-          `SELECT m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at,
-                  su.full_name AS sender_name, su.avatar_url AS sender_avatar
-           FROM chat_messages m
-           JOIN users su ON su.id = m.sender_id
+           `SELECT m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at,
+                  COALESCE(su.username, su.full_name, su.email) AS sender_name, su.avatar_url AS sender_avatar
+            FROM chat_messages m
+            JOIN users su ON su.id = m.sender_id
            WHERE ((m.sender_id = $1 AND m.receiver_id = $2) OR (m.sender_id = $2 AND m.receiver_id = $1))
              ${beforeId ? 'AND m.id < $4' : ''}
            ORDER BY m.created_at DESC
@@ -100,22 +100,40 @@ export default async function handler(req, res) {
         let searchRows;
         if (keyword) {
           const { rows } = await query(
-            `SELECT id, full_name, avatar_url FROM users
-             WHERE id != $1 AND (full_name ILIKE $2 OR email ILIKE $2) AND email_verified = TRUE
-             ORDER BY full_name LIMIT 20`,
+            `SELECT id, username, full_name, avatar_url FROM users
+             WHERE id != $1 AND (username ILIKE $2 OR full_name ILIKE $2 OR email ILIKE $2) AND email_verified = TRUE AND username IS NOT NULL
+             ORDER BY username LIMIT 20`,
             [uid, `%${keyword}%`]
           );
           searchRows = rows;
         } else {
           const { rows } = await query(
-            `SELECT id, full_name, avatar_url FROM users
-             WHERE id != $1 AND email_verified = TRUE
-             ORDER BY full_name LIMIT 30`,
+            `SELECT id, username, full_name, avatar_url FROM users
+             WHERE id != $1 AND email_verified = TRUE AND username IS NOT NULL
+             ORDER BY username LIMIT 30`,
             [uid]
           );
           searchRows = rows;
         }
         return res.status(200).json(searchRows);
+      }
+
+      if (action === 'start_chat') {
+        const target = String(req.query.target || '').trim();
+        if (!/^[A-Za-z0-9_]{4,16}$/.test(target)) {
+          return res.status(400).json({ message: 'Invalid username' });
+        }
+        const { rows } = await query(
+          `SELECT id, username, full_name, avatar_url
+             FROM users
+            WHERE id != $1
+              AND email_verified = TRUE
+              AND LOWER(username) = LOWER($2)
+            LIMIT 1`,
+          [uid, target]
+        );
+        if (!rows.length) return res.status(404).json({ message: 'User not found' });
+        return res.status(200).json(rows[0]);
       }
 
       return res.status(400).json({ message: 'Unknown action' });

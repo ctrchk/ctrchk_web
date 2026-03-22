@@ -218,7 +218,7 @@ body.is-pwa #app-home {
     #app-home { padding-bottom: calc(4.8em + env(safe-area-inset-bottom)); }
 }
 .app-quick-item {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     align-items: center;
     gap: 0.4em;
@@ -234,6 +234,8 @@ body.is-pwa #app-home {
 .app-quick-item i {
     font-size: 1.4em;
     color: var(--app-accent, #6dba65);
+    display: block;
+    margin: 0 auto;
 }
 .app-quick-item span {
     font-size: 0.65em;
@@ -612,7 +614,7 @@ button.app-quick-item {
                 <i class="fas fa-tasks"></i>
                 <span>任務</span>
             </a>
-            <a href="/chat" class="app-quick-item app-only">
+            <a href="/chat" class="app-quick-item">
                 <i class="fas fa-comments"></i>
                 <span>聊天</span>
             </a>
@@ -820,16 +822,24 @@ button.app-quick-item {
             const history = data.history || [];
             renderAppHome(profile, history);
         } catch (e) {
+            console.warn('[app-home] getHistory failed:', e);
             const card = document.getElementById('app-user-card');
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
             const localLvl = Math.max(1, parseInt(userData.level || 1));
+            const localXp = Math.max(0, parseInt(userData.xp || 0));
+            const localCoins = Math.max(0, parseInt(userData.coins || 0));
+            const localNextXp = getNextThreshold(localLvl);
+            const localPrevXp = THRESHOLDS[localLvl - 1] || 0;
+            const localPct = localNextXp > localPrevXp ? Math.min(100, Math.round((localXp - localPrevXp) / (localNextXp - localPrevXp) * 100)) : 100;
             card.style.display = '';
             document.getElementById('app-home-name').textContent =
                 userData.full_name || userData.username || '騎士';
             document.getElementById('app-home-level').textContent = 'Lv.' + localLvl;
             document.getElementById('app-home-title').textContent = getTitle(localLvl);
-            document.getElementById('app-home-xp-bar').style.width = '0%';
-            document.getElementById('app-home-xp-label').textContent = '無法載入進度';
+            document.getElementById('app-home-xp-bar').style.width = Math.max(localPct, 1) + '%';
+            document.getElementById('app-home-xp-label').textContent = localXp.toLocaleString() + ' / ' + localNextXp.toLocaleString() + ' XP';
+            document.getElementById('app-home-xp-total').textContent = formatNum(localXp);
+            document.getElementById('app-home-coins').textContent = formatNum(localCoins);
             if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法載入記錄</div>';
         }
         _hideSplash(splashEl);
