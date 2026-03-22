@@ -103,7 +103,9 @@ export default async function handler(req, res) {
     } else {
       // 3. 新用戶：建立帳號，管理員電郵直接設為 admin，其餘為 junior
       const newRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'junior';
-      const baseName = String(email || '').split('@')[0].replace(/[^A-Za-z0-9_]/g, '').slice(0, 16) || `user${Date.now()}`;
+      const emailBase = String(email || '').split('@')[0].replace(/[^A-Za-z0-9_]/g, '').slice(0, 16);
+      const fallbackBase = `u${Date.now()}`.slice(0, 16);
+      const baseName = emailBase || fallbackBase;
       const usernameSeed = baseName.length < 4 ? (baseName + '0000').slice(0, 4) : baseName;
       const { rows: usernameRows } = await query(
         `SELECT username FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(username) LIKE LOWER($2)`,
@@ -122,9 +124,7 @@ export default async function handler(req, res) {
             break;
           }
         }
-        if (!found) {
-          finalUsername = (`u${Date.now()}`).slice(-16);
-        }
+        if (!found) finalUsername = `u${Date.now()}`.slice(0, 16);
       }
       const insertResult = await query(
         `INSERT INTO users (email, google_id, username, full_name, user_role, auth_provider, profile_completed, email_verified)

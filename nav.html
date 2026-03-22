@@ -798,7 +798,7 @@
     async function geocodeAddress(rawValue) {
       const q = String(rawValue || '').trim();
       if (!q) return null;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q + ', Hong Kong')}`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&email=support@ctrchk.hk&q=${encodeURIComponent(q + ', Hong Kong')}`;
       const resp = await fetch(url, {
         headers: { 'Accept': 'application/json' }
       });

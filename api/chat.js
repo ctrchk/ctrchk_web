@@ -97,6 +97,9 @@ export default async function handler(req, res) {
       // ── 搜尋用戶
       if (action === 'users') {
         const keyword = (q || '').trim();
+        if (keyword.length < 2) {
+          return res.status(200).json([]);
+        }
         let searchRows;
         if (keyword) {
           const { rows } = await query(
@@ -104,14 +107,6 @@ export default async function handler(req, res) {
              WHERE id != $1 AND (username ILIKE $2 OR full_name ILIKE $2 OR email ILIKE $2) AND email_verified = TRUE AND username IS NOT NULL
              ORDER BY username LIMIT 20`,
             [uid, `%${keyword}%`]
-          );
-          searchRows = rows;
-        } else {
-          const { rows } = await query(
-            `SELECT id, username, full_name, avatar_url FROM users
-             WHERE id != $1 AND email_verified = TRUE AND username IS NOT NULL
-             ORDER BY username LIMIT 30`,
-            [uid]
           );
           searchRows = rows;
         }
