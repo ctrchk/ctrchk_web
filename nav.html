@@ -814,6 +814,51 @@
       };
     }
 
+    function getLandmarkSuggestions(keyword) {
+      const q = String(keyword || '').trim();
+      if (!q) return [];
+      const lower = q.toLowerCase();
+      return LANDMARKS
+        .map(l => l.name)
+        .filter(name => name.toLowerCase().includes(lower))
+        .slice(0, 8);
+    }
+
+    let suggestionAbortController = null;
+    let suggestionSeq = 0;
+    async function fetchAddressSuggestions(rawValue) {
+      const q = String(rawValue || '').trim();
+      if (q.length < 2) {
+        populateSelects();
+        return;
+      }
+      const localMatches = getLandmarkSuggestions(q);
+      populateSelects(localMatches);
+      const seq = ++suggestionSeq;
+      if (suggestionAbortController) suggestionAbortController.abort();
+      suggestionAbortController = new AbortController();
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&email=support@ctrchk.hk&q=${encodeURIComponent(q + ', Hong Kong')}`;
+      try {
+        const resp = await fetch(url, {
+          headers: { 'Accept': 'application/json' },
+          signal: suggestionAbortController.signal
+        });
+        if (!resp.ok) {
+          populateSelects();
+          return;
+        }
+        const rows = await resp.json();
+        if (seq !== suggestionSeq) return;
+        const options = Array.isArray(rows)
+          ? rows.map(r => String(r.display_name || '').trim()).filter(Boolean)
+          : [];
+        populateSelects([...localMatches, ...options]);
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+        populateSelects(localMatches);
+      }
+    }
+
     async function planRoute() {
       const fromRaw = document.getElementById('sel-from').value;
       const toRaw   = document.getElementById('sel-to').value;
@@ -1145,7 +1190,7 @@
     };
 
       // ── Populate landmark options ─────────────────────────────────────────
-      function populateSelects() {
+      function populateSelects(extraOptions = []) {
       const list = document.getElementById('landmark-options');
       if (!list) return;
       list.innerHTML = '';
@@ -1159,6 +1204,16 @@
         opt.value = l.name;
         list.appendChild(opt);
       });
+
+      const seen = new Set(['📍 使用目前位置', ...LANDMARKS.map(l => l.name)]);
+      extraOptions.forEach(name => {
+        const value = String(name || '').trim();
+        if (!value || seen.has(value)) return;
+        const opt = document.createElement('option');
+        opt.value = value;
+        list.appendChild(opt);
+        seen.add(value);
+      });
     }
 
     function checkPlanBtn() {
@@ -1168,8 +1223,15 @@
     }
 
     // ── Event listeners ───────────────────────────────────────────────────
-    document.getElementById('sel-from').addEventListener('input', checkPlanBtn);
-    document.getElementById('sel-to').addEventListener('input', checkPlanBtn);
+    let suggestionTimer = null;
+    function handleAddressInput(e) {
+      checkPlanBtn();
+      if (suggestionTimer) clearTimeout(suggestionTimer);
+      const value = e && e.target ? e.target.value : '';
+      suggestionTimer = setTimeout(() => { fetchAddressSuggestions(value); }, 250);
+    }
+    document.getElementById('sel-from').addEventListener('input', handleAddressInput);
+    document.getElementById('sel-to').addEventListener('input', handleAddressInput);
     document.getElementById('btn-plan-route').addEventListener('click', planRoute);
     document.getElementById('btn-start-nav').addEventListener('click', startNavigation);
     document.getElementById('btn-end-nav').addEventListener('click', () => {

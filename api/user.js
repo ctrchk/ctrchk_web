@@ -8,6 +8,11 @@
 //
 import { query } from './_db.js';
 
+async function ensureUsersUsernameColumn() {
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(16);');
+  await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users ((LOWER(username))) WHERE username IS NOT NULL;');
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -114,6 +119,10 @@ export default async function handler(req, res) {
 
       if (!user_id && !google_id && !email) {
         return res.status(400).json({ message: 'User identifier required' });
+      }
+
+      if (Object.prototype.hasOwnProperty.call(req.body, 'username')) {
+        await ensureUsersUsernameColumn();
       }
 
       let checkResult;
