@@ -298,6 +298,7 @@
                             <tr>
                                 <th>ID</th>
                                 <th>電郵</th>
+                                <th>用戶名</th>
                                 <th>姓名</th>
                                 <th>角色</th>
                                 <th>電郵驗證</th>
@@ -652,6 +653,7 @@
                     <tr>
                         <td>${user.id}</td>
                         <td>${escapeHtml(user.email)}</td>
+                        <td>${escapeHtml(user.username || '-')}</td>
                         <td>${escapeHtml(user.full_name || '-')}</td>
                         <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
                         <td>${verifiedHtml}</td>
