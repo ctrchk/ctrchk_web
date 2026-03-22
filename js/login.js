@@ -5,7 +5,7 @@ let googleClientId = '';
 
 async function loadGoogleSignIn() {
     try {
-        const resp = await fetch('/api/config');
+        const resp = await fetch('/api/user?action=config');
         const config = await resp.json();
         googleClientId = config.googleClientId || '';
     } catch (e) {
