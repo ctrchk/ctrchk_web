@@ -59,6 +59,18 @@ const schemaReady = pool.query(`
   ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(255);
   ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry TIMESTAMP;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id SERIAL PRIMARY KEY,
+    sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver ON chat_messages(receiver_id);
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id));
   CREATE TABLE IF NOT EXISTS cycling_history (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用戶聊天 - 城市運輸單車</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert('你需要登入才能使用聊天功能。');
+                window.location.replace('/login');
+            }
+        })();
+    </script>
+    <style>
+        body.is-pwa, body {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+        }
+        @media (display-mode: standalone) {
+            body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); }
+            footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
+        }
+        .chat-layout {
+            display: flex;
+            max-width: 900px;
+            margin: 0 auto;
+            height: calc(100vh - 120px);
+            min-height: 400px;
+            gap: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #2d4d2d;
+        }
+        /* ── Conversation List ── */
+        .conv-panel {
+            width: 280px;
+            min-width: 200px;
+            background: var(--app-bg-card, #1e3820);
+            border-right: 1px solid #2d4d2d;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .conv-header {
+            padding: 1em;
+            border-bottom: 1px solid #2d4d2d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5em;
+        }
+        .conv-header h3 { margin: 0; font-size: 1em; color: var(--app-accent, #6dba65); }
+        .btn-new-chat {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border: none;
+            border-radius: 8px;
+            padding: 0.35em 0.8em;
+            font-size: 0.82em;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-new-chat:hover { background: #5aaa55; }
+        .conv-search {
+            padding: 0.6em;
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .conv-search input {
+            width: 100%;
+            background: #15291a;
+            border: 1px solid #2d4d2d;
+            border-radius: 8px;
+            padding: 0.45em 0.7em;
+            color: var(--app-text-primary, #e8f5e9);
+            font-size: 0.88em;
+            box-sizing: border-box;
+        }
+        .conv-search input::placeholder { color: #5a8a5a; }
+        .conv-list { flex: 1; overflow-y: auto; }
+        .conv-item {
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            padding: 0.75em 1em;
+            cursor: pointer;
+            border-bottom: 1px solid #1a2d1a;
+            transition: background 0.15s;
+        }
+        .conv-item:hover, .conv-item.active { background: #253d28; }
+        .conv-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2d4d2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--app-accent, #6dba65);
+            font-size: 1.1em;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .conv-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .conv-info { flex: 1; min-width: 0; }
+        .conv-name { font-weight: 600; font-size: 0.9em; color: var(--app-text-primary, #e8f5e9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .conv-last { font-size: 0.78em; color: var(--app-text-secondary, #a8d8a0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .conv-unread {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border-radius: 10px;
+            padding: 0.1em 0.5em;
+            font-size: 0.75em;
+            font-weight: bold;
+            min-width: 1.4em;
+            text-align: center;
+        }
+        /* ── Message Panel ── */
+        .msg-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #121f14;
+            min-width: 0;
+        }
+        .msg-header {
+            padding: 0.85em 1.2em;
+            border-bottom: 1px solid #2d4d2d;
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+            background: var(--app-bg-card, #1e3820);
+        }
+        .msg-header-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2d4d2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            color: var(--app-accent, #6dba65);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .msg-header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .msg-header-name { font-weight: 700; color: var(--app-text-primary, #e8f5e9); font-size: 0.95em; }
+        .msg-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--app-text-secondary, #a8d8a0);
+            gap: 0.6em;
+            font-size: 0.95em;
+        }
+        .msg-empty i { font-size: 2.5em; opacity: 0.5; }
+        .msg-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6em;
+        }
+        .msg-bubble-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5em;
+        }
+        .msg-bubble-wrap.mine { flex-direction: row-reverse; }
+        .bubble-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #2d4d2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            color: var(--app-accent, #6dba65);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .bubble-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .msg-bubble {
+            max-width: 70%;
+            padding: 0.6em 0.9em;
+            border-radius: 14px;
+            font-size: 0.9em;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+        .msg-bubble.mine {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble.theirs {
+            background: var(--app-bg-card, #1e3820);
+            color: var(--app-text-primary, #e8f5e9);
+            border: 1px solid #2d4d2d;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-time {
+            font-size: 0.7em;
+            color: var(--app-text-secondary, #a8d8a0);
+            margin-top: 0.2em;
+            text-align: right;
+        }
+        .msg-bubble-wrap.mine .msg-time { text-align: left; }
+        .msg-input-bar {
+            padding: 0.8em 1em;
+            border-top: 1px solid #2d4d2d;
+            display: flex;
+            gap: 0.6em;
+            background: var(--app-bg-card, #1e3820);
+        }
+        .msg-input-bar textarea {
+            flex: 1;
+            background: #15291a;
+            border: 1px solid #2d4d2d;
+            border-radius: 10px;
+            padding: 0.6em 0.8em;
+            color: var(--app-text-primary, #e8f5e9);
+            font-size: 0.92em;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+        .msg-input-bar textarea:focus { outline: none; border-color: var(--app-accent, #6dba65); }
+        .msg-input-bar textarea::placeholder { color: #5a8a5a; }
+        .btn-send {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border: none;
+            border-radius: 10px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            cursor: pointer;
+            flex-shrink: 0;
+            align-self: flex-end;
+        }
+        .btn-send:hover { background: #5aaa55; }
+        .btn-send:disabled { background: #3a5a3a; cursor: not-allowed; }
+        /* ── User Search Modal ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: var(--app-bg-card, #1e3820);
+            border: 1px solid #2d4d2d;
+            border-radius: 14px;
+            padding: 1.5em;
+            width: 90%;
+            max-width: 380px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-box h4 { margin: 0 0 0.8em; color: var(--app-accent, #6dba65); font-size: 1em; }
+        .modal-search {
+            width: 100%;
+            background: #15291a;
+            border: 1px solid #2d4d2d;
+            border-radius: 8px;
+            padding: 0.6em 0.8em;
+            color: var(--app-text-primary, #e8f5e9);
+            font-size: 0.9em;
+            margin-bottom: 0.8em;
+            box-sizing: border-box;
+        }
+        .modal-user-list { flex: 1; overflow-y: auto; }
+        .modal-user-item {
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            padding: 0.7em 0.3em;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .modal-user-item:hover { background: #253d28; }
+        .modal-user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2d4d2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--app-accent, #6dba65);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .modal-user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .modal-user-name { color: var(--app-text-primary, #e8f5e9); font-size: 0.92em; font-weight: 500; }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--app-text-secondary, #a8d8a0);
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 0.8em;
+            width: 100%;
+            padding: 0.5em;
+        }
+        /* ── Responsive (mobile: hide conv list when chat open) ── */
+        @media (max-width: 600px) {
+            .chat-layout { height: calc(100vh - 100px); }
+            .conv-panel { width: 56px; min-width: 56px; }
+            .conv-panel.open { width: 75vw; min-width: 200px; position: absolute; z-index: 100; height: 100%; }
+            .conv-search, .conv-header h3, .conv-name, .conv-last, .conv-unread, .btn-new-chat { display: none; }
+            .conv-panel.open .conv-search, .conv-panel.open .conv-header h3,
+            .conv-panel.open .conv-name, .conv-panel.open .conv-last,
+            .conv-panel.open .conv-unread, .conv-panel.open .btn-new-chat { display: block; }
+            .conv-header { justify-content: center; }
+            .conv-panel.open .conv-header { justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="content animated-element" style="padding: 0.5em 0.5em 5em;">
+            <div class="chat-layout" id="chat-layout">
+                <!-- 對話列表 -->
+                <div class="conv-panel" id="conv-panel">
+                    <div class="conv-header">
+                        <h3><i class="fas fa-comments"></i> 聊天</h3>
+                        <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
+                    </div>
+                    <div class="conv-search">
+                        <input type="text" id="conv-search-input" placeholder="搜尋對話…" oninput="filterConvList(this.value)">
+                    </div>
+                    <div class="conv-list" id="conv-list">
+                        <div style="padding: 1em; color: #5a8a5a; font-size:0.85em; text-align:center;">載入中…</div>
+                    </div>
+                </div>
+
+                <!-- 訊息區 -->
+                <div class="msg-panel" id="msg-panel">
+                    <div class="msg-empty" id="msg-empty">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>選擇對話或開始新的聊天</span>
+                    </div>
+                    <div class="msg-header" id="msg-header" style="display:none;">
+                        <div class="msg-header-avatar" id="msg-header-avatar"><i class="fas fa-user"></i></div>
+                        <span class="msg-header-name" id="msg-header-name"></span>
+                    </div>
+                    <div class="msg-list" id="msg-list" style="display:none;"></div>
+                    <div class="msg-input-bar" id="msg-input-bar" style="display:none;">
+                        <textarea id="msg-input" placeholder="輸入訊息… (最多 2000 字)" rows="1" maxlength="2000" onkeydown="onMsgKeydown(event)" oninput="autoGrow(this)"></textarea>
+                        <button class="btn-send" id="btn-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
+    </footer>
+
+    <!-- 新對話 Modal -->
+    <div class="modal-overlay" id="new-chat-modal">
+        <div class="modal-box">
+            <h4><i class="fas fa-user-plus"></i> 開始新對話</h4>
+            <input type="text" class="modal-search" id="user-search-input" placeholder="搜尋用戶名稱…" oninput="searchUsers(this.value)">
+            <div class="modal-user-list" id="user-search-results">
+                <div style="color:#5a8a5a;font-size:0.85em;text-align:center;">輸入名稱搜尋用戶</div>
+            </div>
+            <button class="modal-close" onclick="closeNewChatModal()"><i class="fas fa-times"></i> 關閉</button>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (function() {
+        const userData = localStorage.getItem('user');
+        if (!userData) { window.location.replace('/login'); return; }
+        const ME = JSON.parse(userData);
+        const TOKEN = localStorage.getItem('accessToken') || '';
+        let currentPeerId = null;
+        let currentPeerName = '';
+        let currentPeerAvatar = '';
+        let conversations = [];
+        let pollTimer = null;
+        let isLoadingMore = false;
+        let oldestMsgId = null;
+
+        // ── Helpers ────────────────────────────────────────────────────────
+        function apiGet(url) {
+            return fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` } }).then(r => r.json());
+        }
+        function apiPost(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` },
+                body: JSON.stringify(body)
+            }).then(r => r.json());
+        }
+        function timeStr(ts) {
+            const d = new Date(ts);
+            const now = new Date();
+            const diffDays = Math.floor((now - d) / 86400000);
+            if (diffDays === 0) return d.toLocaleTimeString('zh-Hant', { hour: '2-digit', minute: '2-digit' });
+            if (diffDays === 1) return '昨天';
+            return d.toLocaleDateString('zh-Hant', { month: 'numeric', day: 'numeric' });
+        }
+
+        // ── Conversation List ───────────────────────────────────────────────
+        function loadConversations() {
+            apiGet(`/api/chat?action=conversations&user_id=${ME.id}`).then(rows => {
+                conversations = rows || [];
+                renderConvList(conversations);
+            }).catch(() => {});
+        }
+        function renderConvList(list) {
+            const el = document.getElementById('conv-list');
+            if (!list.length) {
+                el.innerHTML = '<div style="padding:1em;color:#5a8a5a;font-size:0.85em;text-align:center;">暫無對話</div>';
+                return;
+            }
+            el.innerHTML = list.map(c => `
+                <div class="conv-item${currentPeerId === c.peer_id ? ' active' : ''}"
+                     onclick="openConversation(${c.peer_id}, ${JSON.stringify(c.peer_name)}, ${JSON.stringify(c.peer_avatar || '')})">
+                    <div class="conv-avatar">${avatarHtml(c.peer_avatar, 40)}</div>
+                    <div class="conv-info">
+                        <div class="conv-name">${escHtml(c.peer_name || '用戶')}</div>
+                        <div class="conv-last">${escHtml((c.last_message || '').slice(0, 30))}</div>
+                    </div>
+                    ${parseInt(c.unread_count, 10) > 0 ? `<span class="conv-unread">${c.unread_count}</span>` : ''}
+                </div>
+            `).join('');
+        }
+        function filterConvList(q) {
+            const filtered = conversations.filter(c => (c.peer_name || '').includes(q));
+            renderConvList(filtered);
+        }
+
+        // ── Open Conversation ───────────────────────────────────────────────
+        window.openConversation = function(peerId, peerName, peerAvatar) {
+            currentPeerId = peerId;
+            currentPeerName = peerName;
+            currentPeerAvatar = peerAvatar;
+            oldestMsgId = null;
+
+            document.getElementById('msg-empty').style.display = 'none';
+            document.getElementById('msg-header').style.display = 'flex';
+            document.getElementById('msg-list').style.display = 'flex';
+            document.getElementById('msg-input-bar').style.display = 'flex';
+            document.getElementById('msg-header-avatar').innerHTML = avatarHtml(peerAvatar, 36);
+            document.getElementById('msg-header-name').textContent = peerName || '用戶';
+
+            renderConvList(conversations); // re-render to highlight active
+            loadMessages(true);
+
+            // Mark as read
+            apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: peerId });
+
+            // Start polling
+            clearInterval(pollTimer);
+            pollTimer = setInterval(pollNewMessages, 3000);
+        };
+
+        function loadMessages(reset) {
+            const params = new URLSearchParams({
+                action: 'messages', user_id: ME.id, peer_id: currentPeerId, limit: '40'
+            });
+            if (!reset && oldestMsgId) params.set('before', oldestMsgId);
+            apiGet(`/api/chat?${params}`).then(msgs => {
+                const list = document.getElementById('msg-list');
+                if (reset) {
+                    list.innerHTML = '';
+                    oldestMsgId = msgs.length ? msgs[0].id : null;
+                } else {
+                    // Prepend older messages
+                    const frag = document.createElement('div');
+                    renderMessages(msgs, frag, true);
+                    list.insertBefore(frag, list.firstChild);
+                    if (msgs.length) oldestMsgId = msgs[0].id;
+                    isLoadingMore = false;
+                    return;
+                }
+                renderMessages(msgs, list, false);
+                list.scrollTop = list.scrollHeight;
+            }).catch(() => { isLoadingMore = false; });
+        }
+
+        function renderMessages(msgs, container, prepend) {
+            const frag = document.createDocumentFragment();
+            msgs.forEach(m => {
+                const mine = m.sender_id === ME.id;
+                const wrap = document.createElement('div');
+                wrap.className = 'msg-bubble-wrap' + (mine ? ' mine' : '');
+                wrap.dataset.msgId = m.id;
+                const avatarUrl = mine ? (ME.avatar_url || '') : (currentPeerAvatar || '');
+                wrap.innerHTML = `
+                    <div class="bubble-avatar">${avatarHtml(avatarUrl, 28)}</div>
+                    <div>
+                        <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(m.content)}</div>
+                        <div class="msg-time">${timeStr(m.created_at)}</div>
+                    </div>
+                `;
+                frag.appendChild(wrap);
+            });
+            if (prepend) container.insertBefore(frag, container.firstChild);
+            else container.appendChild(frag);
+        }
+
+        function pollNewMessages() {
+            if (!currentPeerId) return;
+            const list = document.getElementById('msg-list');
+            const lastEl = list.lastElementChild;
+            const lastId = lastEl ? parseInt(lastEl.dataset.msgId, 10) : 0;
+            const params = new URLSearchParams({ action: 'messages', user_id: ME.id, peer_id: currentPeerId, limit: '20' });
+            apiGet(`/api/chat?${params}`).then(msgs => {
+                const newMsgs = msgs.filter(m => m.id > lastId);
+                if (newMsgs.length) {
+                    renderMessages(newMsgs, list, false);
+                    list.scrollTop = list.scrollHeight;
+                    apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: currentPeerId });
+                    loadConversations(); // refresh unread counts
+                }
+            }).catch(() => {});
+        }
+
+        // Scroll up to load more
+        document.getElementById('msg-list').addEventListener('scroll', function() {
+            if (this.scrollTop < 60 && !isLoadingMore && currentPeerId) {
+                isLoadingMore = true;
+                const savedScroll = this.scrollHeight - this.scrollTop;
+                loadMessages(false);
+                setTimeout(() => {
+                    this.scrollTop = this.scrollHeight - savedScroll;
+                }, 200);
+            }
+        });
+
+        // ── Send Message ────────────────────────────────────────────────────
+        window.sendMessage = function() {
+            const input = document.getElementById('msg-input');
+            const text = (input.value || '').trim();
+            if (!text || !currentPeerId) return;
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true;
+            input.value = '';
+            input.style.height = 'auto';
+            apiPost('/api/chat', {
+                sender_id: ME.id,
+                receiver_id: currentPeerId,
+                content: text
+            }).then(msg => {
+                btn.disabled = false;
+                if (msg && msg.id) {
+                    const list = document.getElementById('msg-list');
+                    renderMessages([{ ...msg, sender_id: ME.id }], list, false);
+                    list.scrollTop = list.scrollHeight;
+                    loadConversations();
+                }
+            }).catch(() => { btn.disabled = false; });
+        };
+
+        window.onMsgKeydown = function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        };
+
+        window.autoGrow = function(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        };
+
+        // ── New Chat Modal ──────────────────────────────────────────────────
+        let userSearchTimer = null;
+        window.openNewChatModal = function() {
+            document.getElementById('new-chat-modal').classList.add('active');
+            document.getElementById('user-search-input').value = '';
+            document.getElementById('user-search-results').innerHTML =
+                '<div style="color:#5a8a5a;font-size:0.85em;text-align:center;">輸入名稱搜尋用戶</div>';
+            loadAllUsers();
+        };
+        window.closeNewChatModal = function() {
+            document.getElementById('new-chat-modal').classList.remove('active');
+        };
+
+        function loadAllUsers() {
+            apiGet(`/api/chat?action=users&user_id=${ME.id}`).then(renderUserResults).catch(() => {});
+        }
+
+        window.searchUsers = function(q) {
+            clearTimeout(userSearchTimer);
+            userSearchTimer = setTimeout(() => {
+                const url = `/api/chat?action=users&user_id=${ME.id}${q ? '&q=' + encodeURIComponent(q) : ''}`;
+                apiGet(url).then(renderUserResults).catch(() => {});
+            }, 300);
+        };
+
+        function renderUserResults(users) {
+            const el = document.getElementById('user-search-results');
+            if (!users || !users.length) {
+                el.innerHTML = '<div style="color:#5a8a5a;font-size:0.85em;text-align:center;">未找到用戶</div>';
+                return;
+            }
+            el.innerHTML = users.map(u => `
+                <div class="modal-user-item" onclick="startChatWith(${u.id}, ${JSON.stringify(u.full_name || '用戶')}, ${JSON.stringify(u.avatar_url || '')})">
+                    <div class="modal-user-avatar">${avatarHtml(u.avatar_url, 36)}</div>
+                    <span class="modal-user-name">${escHtml(u.full_name || '用戶')}</span>
+                </div>
+            `).join('');
+        }
+
+        window.startChatWith = function(peerId, peerName, peerAvatar) {
+            closeNewChatModal();
+            openConversation(peerId, peerName, peerAvatar);
+        };
+
+        // Close modal on overlay click
+        document.getElementById('new-chat-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeNewChatModal();
+        });
+
+        // ── XSS helper ─────────────────────────────────────────────────────
+        function escHtml(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        function escAttr(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function avatarHtml(url, size) {
+            const sz = size || 40;
+            if (url) return `<img src="${escAttr(url)}" alt="頭像" style="width:${sz}px;height:${sz}px;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`;
+            return '<i class="fas fa-user"></i>';
+        }
+
+        // ── Init ───────────────────────────────────────────────────────────
+        loadConversations();
+    })();
+    </script>
+</body>
+</html>

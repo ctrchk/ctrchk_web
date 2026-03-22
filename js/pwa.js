@@ -34,6 +34,17 @@
           console.warn('[PWA] Service Worker 註冊失敗:', err);
         });
     });
+
+    // 監聽 Service Worker 更新通知，自動重載頁面以載入最新版本
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'SW_UPDATED') {
+        // 避免重複重載（同一頁面只重載一次）
+        if (!sessionStorage.getItem('sw-reloaded')) {
+          sessionStorage.setItem('sw-reloaded', '1');
+          window.location.reload();
+        }
+      }
+    });
   }
 
   // ── App bottom navigation bar (injected only in standalone mode) ─────────

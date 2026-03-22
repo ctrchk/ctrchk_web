@@ -227,6 +227,52 @@
         }
         .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
         #notif-perm-status { font-size: 0.8em; margin-top: 0.6em; }
+        /* ── Avatar ──────────────────────────────────────────────────────── */
+        .avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 1.2em;
+            margin-bottom: 1.2em;
+        }
+        .avatar-preview {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #2d4d2d;
+            border: 2px solid var(--app-accent, #6dba65);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: var(--app-accent, #6dba65);
+            overflow: hidden;
+        }
+        .avatar-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .avatar-actions { display: flex; flex-direction: column; gap: 0.5em; }
+        .btn-avatar-upload {
+            background: #1a3820;
+            border: 1px solid var(--app-accent, #6dba65);
+            color: var(--app-accent, #6dba65);
+            padding: 0.5em 1em;
+            border-radius: 8px;
+            font-size: 0.88em;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-avatar-upload:hover { background: #2d4d2d; }
+        .btn-avatar-remove {
+            background: transparent;
+            border: 1px solid #6a2a2a;
+            color: #ef9a9a;
+            padding: 0.4em 1em;
+            border-radius: 8px;
+            font-size: 0.82em;
+            cursor: pointer;
+        }
+        .btn-avatar-remove:hover { background: #2a1010; }
+        .avatar-hint { color: var(--app-text-secondary, #a8d8a0); font-size: 0.8em; margin: 0; }
     </style>
 </head>
 <body>
@@ -267,6 +313,28 @@
                     <i class="fas fa-star" style="color: var(--app-accent, #6dba65);"></i>
                     <strong>升級為高級會員</strong>：填寫電話、騎行經驗及地區即可解鎖 GPX 下載、完整路線資訊等功能。
                     <a href="/profile-setup">立即升級</a>
+                </div>
+
+                <!-- 頭像設定 -->
+                <div class="profile-card">
+                    <h3><i class="fas fa-camera"></i> 個人頭像</h3>
+                    <div class="avatar-section">
+                        <div class="avatar-preview" id="avatar-preview">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="avatar-actions">
+                            <label class="btn-avatar-upload" for="avatar-file-input">
+                                <i class="fas fa-upload"></i> 上傳圖片
+                            </label>
+                            <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="onAvatarFileChange(this)">
+                            <button type="button" class="btn-avatar-remove" id="btn-avatar-remove" onclick="removeAvatar()" style="display:none;">
+                                <i class="fas fa-trash"></i> 移除頭像
+                            </button>
+                            <p class="avatar-hint">支援 JPG、PNG、GIF、WebP，最大 200KB</p>
+                        </div>
+                    </div>
+                    <div id="avatar-alert-success" class="alert-success" style="display:none;"></div>
+                    <div id="avatar-alert-error" class="alert-error" style="display:none;"></div>
                 </div>
 
                 <!-- 修改個人資料 -->
@@ -406,6 +474,8 @@
         // 預填表單
         document.getElementById('pf-fullname').value = user.full_name || '';
         document.getElementById('pf-phone').value = user.phone || '';
+        // 初始化頭像
+        if (user.avatar_url) renderAvatarPreview(user.avatar_url);
         if (user.experience) {
             document.getElementById('pf-experience').value = user.experience;
         }
@@ -437,6 +507,10 @@
                 // 重新填入表單
                 document.getElementById('pf-fullname').value = freshData.full_name || '';
                 document.getElementById('pf-phone').value = freshData.phone || '';
+                // 更新頭像
+                if (freshData.avatar_url) {
+                    renderAvatarPreview(freshData.avatar_url);
+                }
             }).catch(() => {});
         }
 
@@ -561,6 +635,79 @@
     };
 
     document.addEventListener('DOMContentLoaded', function() { initNotifSettings(); });
+
+    // ── 頭像功能 ────────────────────────────────────────────────────────────
+    function renderAvatarPreview(url) {
+        const preview = document.getElementById('avatar-preview');
+        if (!url) {
+            preview.innerHTML = '<i class="fas fa-user"></i>';
+            const removeBtn = document.getElementById('btn-avatar-remove');
+            if (removeBtn) removeBtn.style.display = 'none';
+            return;
+        }
+        const img = document.createElement('img');
+        img.alt = '頭像';
+        img.src = url;
+        img.onerror = function() { preview.innerHTML = '<i class="fas fa-user"></i>'; };
+        preview.innerHTML = '';
+        preview.appendChild(img);
+        const removeBtn = document.getElementById('btn-avatar-remove');
+        if (removeBtn) removeBtn.style.display = '';
+    }
+
+    window.onAvatarFileChange = function(input) {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 204800) {
+            const errEl = document.getElementById('avatar-alert-error');
+            errEl.textContent = '圖片太大，請選擇 200KB 以下的圖片。';
+            errEl.style.display = 'block';
+            input.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            renderAvatarPreview(dataUrl);
+            saveAvatar(dataUrl);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.removeAvatar = function() {
+        renderAvatarPreview(null);
+        saveAvatar(null);
+    };
+
+    async function saveAvatar(avatarUrl) {
+        const successEl = document.getElementById('avatar-alert-success');
+        const errorEl = document.getElementById('avatar-alert-error');
+        successEl.style.display = 'none';
+        errorEl.style.display = 'none';
+        const userData = localStorage.getItem('user');
+        if (!userData) return;
+        const user = JSON.parse(userData);
+        const token = localStorage.getItem('accessToken');
+        try {
+            const res = await fetch('/api/user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ user_id: user.id, avatar_url: avatarUrl })
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message || '更新失敗');
+            const updatedUser = { ...user, avatar_url: avatarUrl };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            successEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + (avatarUrl ? '頭像已更新！' : '頭像已移除。');
+            successEl.style.display = 'block';
+        } catch (err) {
+            errorEl.textContent = '頭像更新失敗：' + err.message;
+            errorEl.style.display = 'block';
+        }
+    }
     </script>
 </body>
 </html>
