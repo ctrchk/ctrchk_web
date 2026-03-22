@@ -107,7 +107,7 @@ export default async function handler(req, res) {
       let params = [limit, offset];
       
       if (search) {
-        whereClause = `WHERE u.email ILIKE $3 OR u.full_name ILIKE $3`;
+        whereClause = `WHERE u.email ILIKE $3 OR u.full_name ILIKE $3 OR u.username ILIKE $3`;
         params.push(`%${search}%`);
       }
 
@@ -116,6 +116,7 @@ export default async function handler(req, res) {
         `SELECT 
           u.id,
           u.email,
+          u.username,
           u.full_name,
           u.user_role,
           u.phone,
@@ -139,7 +140,7 @@ export default async function handler(req, res) {
       // 獲取總用戶數
       const countResult = await query(
         search 
-          ? `SELECT COUNT(*) FROM users WHERE email ILIKE $1 OR full_name ILIKE $1`
+          ? `SELECT COUNT(*) FROM users WHERE email ILIKE $1 OR full_name ILIKE $1 OR username ILIKE $1`
           : `SELECT COUNT(*) FROM users`,
         search ? [`%${search}%`] : []
       );

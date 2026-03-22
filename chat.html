@@ -168,6 +168,9 @@
             font-size: 0.95em;
         }
         .msg-empty i { font-size: 2.5em; opacity: 0.5; }
+        .msg-empty .btn-new-chat {
+            margin-top: 0.4em;
+        }
         .msg-list {
             flex: 1;
             overflow-y: auto;
@@ -369,6 +372,7 @@
                     <div class="msg-empty" id="msg-empty">
                         <i class="fas fa-comment-dots"></i>
                         <span>選擇對話或開始新的聊天</span>
+                        <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
                     </div>
                     <div class="msg-header" id="msg-header" style="display:none;">
                         <div class="msg-header-avatar" id="msg-header-avatar"><i class="fas fa-user"></i></div>
