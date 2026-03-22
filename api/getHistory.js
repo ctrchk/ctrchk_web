@@ -125,6 +125,15 @@ async function ensureGameProfile(userId) {
   return { level: 1, xp: 0, coins: 0 };
 }
 
+async function tableExists(tableName) {
+  try {
+    const { rows } = await query('SELECT to_regclass($1) AS reg', [`public.${tableName}`]);
+    return !!rows[0]?.reg;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
   // CORS headers for PWA
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -138,15 +147,20 @@ export default async function handler(req, res) {
   // ── GET：騎行歷史（含遊戲進度）──────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      const { rows: history } = await query(
-        `SELECT id, ride_date, distance_km, route_name, route_id,
-                start_time, duration_minutes, avg_speed_kmh, stops_reached,
-                stops_count, all_stops, districts_count, xp_earned, source
-         FROM cycling_history
-         WHERE user_id = $1
-         ORDER BY ride_date DESC, created_at DESC`,
-        [userData.userId]
-      );
+      const hasCyclingHistory = await tableExists('cycling_history');
+      const hasDailyCheckins = await tableExists('user_daily_checkins');
+
+      const history = hasCyclingHistory
+        ? (await query(
+            `SELECT id, ride_date, distance_km, route_name, route_id,
+                    start_time, duration_minutes, avg_speed_kmh, stops_reached,
+                    stops_count, all_stops, districts_count, xp_earned, source
+             FROM cycling_history
+             WHERE user_id = $1
+             ORDER BY ride_date DESC, created_at DESC`,
+            [userData.userId]
+          )).rows
+        : [];
       const normalizedHistory = history.map((h) => {
         const stopsArr = Array.isArray(h.stops_reached) ? h.stops_reached : [];
         return {
@@ -162,14 +176,16 @@ export default async function handler(req, res) {
         };
       });
 
-      const { rows: checkins } = await query(
-        `SELECT checkin_date::text AS checkin_date
-         FROM user_daily_checkins
-         WHERE user_id = $1
-         ORDER BY checkin_date DESC
-         LIMIT 90`,
-        [userData.userId]
-      );
+      const checkins = hasDailyCheckins
+        ? (await query(
+            `SELECT checkin_date::text AS checkin_date
+             FROM user_daily_checkins
+             WHERE user_id = $1
+             ORDER BY checkin_date DESC
+             LIMIT 90`,
+            [userData.userId]
+          )).rows
+        : [];
 
       // 附帶遊戲進度（方便前端一次性獲取）
       let gameProfile = null;

@@ -392,7 +392,8 @@
     <div class="modal-overlay" id="new-chat-modal">
         <div class="modal-box">
             <h4><i class="fas fa-user-plus"></i> 開始新對話</h4>
-            <input type="text" class="modal-search" id="user-search-input" placeholder="搜尋用戶名稱…" oninput="searchUsers(this.value)">
+            <input type="text" class="modal-search" id="user-search-input" placeholder="輸入對方用戶名（4-16）" oninput="searchUsers(this.value)">
+            <button class="btn-new-chat" style="width:100%;margin-top:0.6em;" onclick="startChatByUsername()">以用戶名開始對話</button>
             <div class="modal-user-list" id="user-search-results">
                 <div style="color:#5a8a5a;font-size:0.85em;text-align:center;">輸入名稱搜尋用戶</div>
             </div>
@@ -413,8 +414,12 @@
         let currentPeerAvatar = '';
         let conversations = [];
         let pollTimer = null;
+        let convRefreshTimer = null;
+        let unreadPollTimer = null;
         let isLoadingMore = false;
         let oldestMsgId = null;
+        let lastUnreadCount = 0;
+        let lastInboxMessageAt = '';
 
         // ── Helpers ────────────────────────────────────────────────────────
         function apiGet(url) {
@@ -426,6 +431,43 @@
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` },
                 body: JSON.stringify(body)
             }).then(r => r.json());
+        }
+        async function ensureChatUsername() {
+            const current = (ME.username || '').trim();
+            if (/^[A-Za-z0-9_]{4,16}$/.test(current)) return true;
+            let next = '';
+            while (true) {
+                next = (window.prompt('請先設定聊天用戶名（4-16位英數或底線）', current || '') || '').trim();
+                if (!next) return false;
+                if (!/^[A-Za-z0-9_]{4,16}$/.test(next)) {
+                    alert('用戶名格式錯誤，請輸入 4-16 位英數或底線（_）');
+                    continue;
+                }
+                break;
+            }
+            const result = await apiPost('/api/user', { user_id: ME.id, username: next });
+            if (result && result.message && !String(result.message).toLowerCase().includes('updated')) {
+                throw new Error(result.message || '設定用戶名失敗');
+            }
+            ME.username = next;
+            const merged = { ...(JSON.parse(localStorage.getItem('user') || '{}')), username: next };
+            localStorage.setItem('user', JSON.stringify(merged));
+            return true;
+        }
+        function maybeNotifyIncoming(name, content) {
+            if (!('Notification' in window)) return;
+            if (document.visibilityState === 'visible') return;
+            const body = String(content || '').trim().slice(0, 80) || '你有新訊息';
+            if (Notification.permission === 'granted') {
+                new Notification(`來自 ${name || '用戶'} 的新訊息`, {
+                    body,
+                    icon: '/images/icon-192.png',
+                    badge: '/images/icon-192.png',
+                    tag: 'chat-message',
+                });
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().catch(() => {});
+            }
         }
         function timeStr(ts) {
             const d = new Date(ts);
@@ -440,6 +482,9 @@
         function loadConversations() {
             apiGet(`/api/chat?action=conversations&user_id=${ME.id}`).then(rows => {
                 conversations = rows || [];
+                if (conversations.length && !lastInboxMessageAt) {
+                    lastInboxMessageAt = conversations[0].last_at || '';
+                }
                 renderConvList(conversations);
             }).catch(() => {});
         }
@@ -549,6 +594,10 @@
                     list.scrollTop = list.scrollHeight;
                     apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: currentPeerId });
                     loadConversations(); // refresh unread counts
+                    const incoming = newMsgs.filter(m => m.sender_id !== ME.id);
+                    if (incoming.length) {
+                        maybeNotifyIncoming(currentPeerName || '用戶', incoming[incoming.length - 1].content || '');
+                    }
                 }
             }).catch(() => {});
         }
@@ -607,7 +656,7 @@
             document.getElementById('new-chat-modal').classList.add('active');
             document.getElementById('user-search-input').value = '';
             document.getElementById('user-search-results').innerHTML =
-                '<div style="color:#5a8a5a;font-size:0.85em;text-align:center;">輸入名稱搜尋用戶</div>';
+                '<div style="color:#5a8a5a;font-size:0.85em;text-align:center;">輸入用戶名搜尋或直接開始</div>';
             loadAllUsers();
         };
         window.closeNewChatModal = function() {
@@ -633,9 +682,9 @@
                 return;
             }
             el.innerHTML = users.map(u => `
-                <div class="modal-user-item" onclick="startChatWith(${u.id}, ${JSON.stringify(u.full_name || '用戶')}, ${JSON.stringify(u.avatar_url || '')})">
+                <div class="modal-user-item" onclick="startChatWith(${u.id}, ${JSON.stringify(u.username || u.full_name || '用戶')}, ${JSON.stringify(u.avatar_url || '')})">
                     <div class="modal-user-avatar">${avatarHtml(u.avatar_url, 36)}</div>
-                    <span class="modal-user-name">${escHtml(u.full_name || '用戶')}</span>
+                    <span class="modal-user-name">${escHtml(u.username || u.full_name || '用戶')}</span>
                 </div>
             `).join('');
         }
@@ -643,6 +692,21 @@
         window.startChatWith = function(peerId, peerName, peerAvatar) {
             closeNewChatModal();
             openConversation(peerId, peerName, peerAvatar);
+        };
+        window.startChatByUsername = function() {
+            const input = document.getElementById('user-search-input');
+            const target = (input?.value || '').trim();
+            if (!/^[A-Za-z0-9_]{4,16}$/.test(target)) {
+                alert('請輸入 4-16 位有效用戶名');
+                return;
+            }
+            apiGet(`/api/chat?action=start_chat&user_id=${ME.id}&target=${encodeURIComponent(target)}`).then((u) => {
+                if (!u || !u.id) {
+                    alert('找不到該用戶名');
+                    return;
+                }
+                startChatWith(u.id, u.username || u.full_name || '用戶', u.avatar_url || '');
+            }).catch(() => alert('找不到該用戶名'));
         };
 
         // Close modal on overlay click
@@ -668,7 +732,28 @@
         }
 
         // ── Init ───────────────────────────────────────────────────────────
-        loadConversations();
+        (async function initChat() {
+            try {
+                const ok = await ensureChatUsername();
+                if (!ok) { window.location.replace('/dashboard'); return; }
+            } catch (e) {
+                alert(e.message || '請先設定用戶名');
+                window.location.replace('/dashboard');
+                return;
+            }
+            loadConversations();
+            convRefreshTimer = setInterval(loadConversations, 6000);
+            unreadPollTimer = setInterval(() => {
+                apiGet(`/api/chat?action=unread&user_id=${ME.id}`).then((v) => {
+                    const unread = parseInt(v?.unread || 0, 10);
+                    if (unread > lastUnreadCount && conversations.length) {
+                        const latestPeer = conversations[0]?.peer_name || '用戶';
+                        maybeNotifyIncoming(latestPeer, '你有新訊息');
+                    }
+                    lastUnreadCount = unread;
+                }).catch(() => {});
+            }, 5000);
+        })();
     })();
     </script>
 </body>

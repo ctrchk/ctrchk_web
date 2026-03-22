@@ -161,6 +161,11 @@
                             <label for="register-fullname">姓名 *</label>
                             <input type="text" id="register-fullname" name="full_name" required>
                         </div>
+                        <div class="form-group">
+                            <label for="register-username">用戶名 *</label>
+                            <input type="text" id="register-username" name="username" required minlength="4" maxlength="16" pattern="[A-Za-z0-9_]{4,16}" placeholder="4-16位英數或底線">
+                            <small>聊天功能使用，不能重複</small>
+                        </div>
                     </div>
 
                     <!-- 高級會員資料（選填） -->

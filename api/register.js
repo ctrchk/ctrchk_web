@@ -14,6 +14,7 @@ export default async function handler(req, res) {
     const { 
       email, 
       password, 
+      username,
       full_name, 
       phone, 
       experience, 
@@ -29,6 +30,10 @@ export default async function handler(req, res) {
 
     if (!full_name) {
       return res.status(400).json({ message: 'Full name is required' });
+    }
+    const normalizedUsername = String(username || '').trim();
+    if (!/^[A-Za-z0-9_]{4,16}$/.test(normalizedUsername)) {
+      return res.status(400).json({ message: 'Username must be 4-16 characters and only include letters, numbers, underscore' });
     }
 
     // 確定高級會員資料欄位是否有填寫
@@ -55,11 +60,12 @@ export default async function handler(req, res) {
 
     // 檢查用戶是否已存在
     const { rows } = await query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
+      'SELECT id, email, username FROM users WHERE email = $1 OR LOWER(username) = LOWER($2)',
+      [email, normalizedUsername]
     );
     if (rows.length > 0) {
-      return res.status(409).json({ message: 'Email already exists' });
+      const emailExists = rows.some((r) => r.email === email);
+      return res.status(409).json({ message: emailExists ? 'Email already exists' : 'Username already exists' });
     }
 
     // 將密碼加密 (hashing)
@@ -77,15 +83,15 @@ export default async function handler(req, res) {
     // 插入新用戶
     const insertResult = await query(
       `INSERT INTO users (
-        email, password_hash, user_role, full_name, phone,
+        email, password_hash, username, user_role, full_name, phone,
         experience, preferred_area, birthdate, bike_type,
         profile_completed, profile_completion_date, auth_provider,
         email_verified, verification_token, verification_token_expiry
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${profileCompleted ? 'NOW()' : 'NULL'}, 'email', false, $11, $12
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, ${profileCompleted ? 'NOW()' : 'NULL'}, 'email', false, $12, $13
       ) RETURNING id`,
       [
-        email, password_hash, userRole, full_name, phone || null,
+        email, password_hash, normalizedUsername, userRole, full_name, phone || null,
         experience || null, preferredAreaStr || null,
         birthdate || null, bike_type || null,
         profileCompleted,
@@ -127,6 +133,7 @@ export default async function handler(req, res) {
       user: {
         id: newUserId,
         email: email,
+        username: normalizedUsername,
         full_name: full_name,
         user_role: userRole,
         role: userRole,
