@@ -759,6 +759,44 @@
         localStorage.setItem('dailyCheckins', JSON.stringify(data));
     }
 
+    async function syncProgressFromServer() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        try {
+            const resp = await fetch('/api/getHistory', {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const checkins = Array.isArray(data.checkins) ? data.checkins : [];
+            const local = getCheckinData();
+            checkins.forEach((c) => {
+                const d = (c && c.checkin_date ? String(c.checkin_date) : '').slice(0, 10);
+                if (!d) return;
+                if (!local[d]) local[d] = `${d}T00:00:00.000Z`;
+            });
+            saveCheckinData(local);
+            const serverHistory = Array.isArray(data.normalized_history) ? data.normalized_history : [];
+            if (serverHistory.length) {
+                const localHistory = getRideHistory();
+                const merged = [...localHistory];
+                const seen = new Set(localHistory.map(r =>
+                    `${r.route_id || ''}|${r.date || ''}|${r.start_time || ''}|${r.duration_minutes || 0}|${r.distance_km || 0}`
+                ));
+                serverHistory.forEach((r) => {
+                    const key = `${r.route_id || ''}|${r.date || ''}|${r.start_time || ''}|${r.duration_minutes || 0}|${r.distance_km || 0}`;
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    merged.push(r);
+                });
+                if (merged.length > 200) merged.splice(0, merged.length - 200);
+                localStorage.setItem('rideHistory', JSON.stringify(merged));
+            }
+        } catch (e) {
+            console.warn('[Tasks] syncProgressFromServer failed:', e);
+        }
+    }
+
     function getCheckinStreak(data) {
         const today = getTodayKey();
         if (!Object.keys(data).length) return 0;
@@ -1280,7 +1318,8 @@
     });
 
     // ── Init ──────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        await syncProgressFromServer();
         renderCheckin();
         initNotifToggle();
         render();

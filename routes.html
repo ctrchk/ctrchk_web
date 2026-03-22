@@ -539,9 +539,9 @@
     <div id="app-dept-select">
         <div class="app-dept-header">
             <h2>🗺️ 選擇騎行部門</h2>
-            <button onclick="hideDeptSheet()" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em;font-size:1.1em;margin-left:auto;"><i class="fas fa-times"></i></button>
+            <button id="app-dept-close-btn" type="button" aria-label="關閉部門選單" onclick="hideDeptSheet()" style="background:none;border:none;color:#a8d8a0;cursor:pointer;padding:0.2em;font-size:1.1em;margin-left:auto;"><i class="fas fa-times"></i></button>
         </div>
-        <div class="app-dept-subtitle">選擇部門，即可查看對應地圖及路線</div>
+        <div class="app-dept-subtitle">選擇部門即可查看地圖及路線，或點擊 × 關閉</div>
         <div id="app-dept-list"></div>
     </div>
 
@@ -635,6 +635,11 @@ const TERMINALS = [
     { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724  },
     { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331 }, // TIK 04
     { id: 'po_shun',     name: '寶順路轉乘站',          lat: 22.31793, lng: 114.26225 }, // HAH 02
+    // HKI terminal stations
+    { id: 'np_pier',     name: '北角碼頭',              lat: 22.29356, lng: 114.20105 },
+    { id: 'np_bus_term', name: '北角碼頭巴士總站',      lat: 22.29343, lng: 114.20151 },
+    { id: 'east_walk_e', name: '東岸板道 (東)',         lat: 22.29225, lng: 114.20991 },
+    { id: 'east_walk_w', name: '東岸板道 (西)',         lat: 22.2914,  lng: 114.19247 },
 ];
 
 // Map of terminal name to terminal ID for route matching
@@ -1156,9 +1161,11 @@ function showDeptSheet() {
             ? `${dept.routeCount} 條路線`
             : '載入中...';
 
-        const costBadge = dept.is_promo
-            ? `<span class="app-dept-promo-badge"><s style="opacity:0.7;font-weight:normal;">🪙${dept.unlock_cost}</s> 限時優惠 <span style="font-size:1.25em;font-weight:900;">🪙${dept.promo_cost}</span></span>`
-            : (dept.unlock_cost ? `<span style="color:#888;font-size:0.82em;">🪙${dept.unlock_cost}</span>` : '');
+        const costBadge = !isDeptUnlocked
+            ? (dept.is_promo
+                ? `<span class="app-dept-promo-badge"><s style="opacity:0.7;font-weight:normal;">🪙${dept.unlock_cost}</s> 限時優惠 <span style="font-size:1.25em;font-weight:900;">🪙${dept.promo_cost}</span></span>`
+                : (dept.unlock_cost ? `<span style="color:#888;font-size:0.82em;">🪙${dept.unlock_cost}</span>` : ''))
+            : '';
 
         card.innerHTML = `
             <div class="app-dept-card-title">
@@ -1408,6 +1415,14 @@ else document.addEventListener('DOMContentLoaded', initAppRidePage);
 
 // Re-run after PWA class is confirmed (pwa.js sets body.is-pwa on DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('app-dept-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            hideDeptSheet();
+        });
+    }
     setTimeout(initAppRidePage, 150);
 });
 

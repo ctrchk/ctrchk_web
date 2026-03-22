@@ -41,7 +41,11 @@
         // 避免重複重載（同一頁面只重載一次）
         if (!sessionStorage.getItem('sw-reloaded')) {
           sessionStorage.setItem('sw-reloaded', '1');
-          window.location.reload();
+          const toast = document.createElement('div');
+          toast.textContent = '✨ 新版本已準備好，正在更新...';
+          toast.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:5.8em;z-index:2000;background:#6dba65;color:#121f14;padding:0.55em 1em;border-radius:999px;font-size:0.82em;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.3);';
+          document.body.appendChild(toast);
+          setTimeout(() => window.location.reload(), 700);
         }
       }
     });

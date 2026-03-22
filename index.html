@@ -211,6 +211,12 @@
     padding: 0 1em;
     margin-bottom: 0.5em;
 }
+body.is-pwa #app-home {
+    padding-bottom: calc(4.8em + env(safe-area-inset-bottom));
+}
+@media (display-mode: standalone) {
+    #app-home { padding-bottom: calc(4.8em + env(safe-area-inset-bottom)); }
+}
 .app-quick-item {
     display: flex;
     flex-direction: column;
@@ -605,6 +611,10 @@ button.app-quick-item {
             <a href="/tasks" class="app-quick-item">
                 <i class="fas fa-tasks"></i>
                 <span>任務</span>
+            </a>
+            <a href="/chat" class="app-quick-item app-only">
+                <i class="fas fa-comments"></i>
+                <span>聊天</span>
             </a>
             <button class="app-quick-item" id="app-tutorial-btn" onclick="showAppTutorial()">
                 <i class="fas fa-question-circle"></i>

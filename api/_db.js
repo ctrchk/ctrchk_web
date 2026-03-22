@@ -85,6 +85,9 @@ const schemaReady = pool.query(`
   ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
   ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS avg_speed_kmh DECIMAL(5,2);
   ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_reached JSONB;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_count INTEGER DEFAULT 0;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS all_stops BOOLEAN DEFAULT FALSE;
+  ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS districts_count INTEGER DEFAULT 0;
   ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS xp_earned INTEGER DEFAULT 0;
   ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS gpx_track TEXT;
   ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web';

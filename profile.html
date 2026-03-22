@@ -330,7 +330,7 @@
                             <button type="button" class="btn-avatar-remove" id="btn-avatar-remove" onclick="removeAvatar()" style="display:none;">
                                 <i class="fas fa-trash"></i> 移除頭像
                             </button>
-                            <p class="avatar-hint">支援 JPG、PNG、GIF、WebP，最大 200KB</p>
+                            <p class="avatar-hint">支援 JPG、PNG、GIF、WebP，最大 1MB</p>
                         </div>
                     </div>
                     <div id="avatar-alert-success" class="alert-success" style="display:none;"></div>
@@ -658,9 +658,9 @@
     window.onAvatarFileChange = function(input) {
         const file = input.files && input.files[0];
         if (!file) return;
-        if (file.size > 204800) {
+        if (file.size > 1048576) {
             const errEl = document.getElementById('avatar-alert-error');
-            errEl.textContent = '圖片太大，請選擇 200KB 以下的圖片。';
+            errEl.textContent = '圖片太大，請選擇 1MB 以下的圖片。';
             errEl.style.display = 'block';
             input.value = '';
             return;
