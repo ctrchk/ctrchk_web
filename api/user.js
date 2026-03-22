@@ -16,6 +16,12 @@ export default async function handler(req, res) {
 
   // ── GET → fetch user info ───────────────────────────────────────────────
   if (req.method === 'GET') {
+    // action=config → return public config (replaces config.js)
+    if (req.query.action === 'config') {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      return res.status(200).json({ googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
+    }
+
     try {
       const { google_id, email, user_id } = req.query;
 
