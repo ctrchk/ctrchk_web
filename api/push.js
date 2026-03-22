@@ -150,7 +150,7 @@ export default async function handler(req, res) {
       console.error('push send role check error:', err);
       return res.status(500).json({ message: '伺服器錯誤' });
     }
-    const { title, body: msgBody, url, target_user_id, target_category } = req.body || {};
+    const { title, body: msgBody, url, target_user_id, target_category, target_dept_id, target_route_id } = req.body || {};
     if (!title || !msgBody) {
       return res.status(400).json({ message: '標題和內容為必填' });
     }
@@ -169,6 +169,24 @@ export default async function handler(req, res) {
              JOIN users u ON u.id = ps.user_id
             WHERE u.user_role = $1`,
           [target_category]
+        );
+        subs = rows;
+      } else if (target_dept_id) {
+        const { rows } = await query(
+          `SELECT ps.endpoint, ps.p256dh, ps.auth
+             FROM push_subscriptions ps
+             JOIN user_unlocked_departments ud ON ud.user_id = ps.user_id
+            WHERE ud.dept_id = $1`,
+          [target_dept_id]
+        );
+        subs = rows;
+      } else if (target_route_id) {
+        const { rows } = await query(
+          `SELECT ps.endpoint, ps.p256dh, ps.auth
+             FROM push_subscriptions ps
+             JOIN user_unlocked_routes ur ON ur.user_id = ps.user_id
+            WHERE ur.route_id = $1`,
+          [target_route_id]
         );
         subs = rows;
       } else {

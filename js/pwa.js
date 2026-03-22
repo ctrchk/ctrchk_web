@@ -45,40 +45,25 @@
 
     const isLoggedIn = !!localStorage.getItem('accessToken');
 
+    // New nav order: 主頁 | 任務 | 騎行 | 導航 | 我的
     const links = isEn
       ? [
-          { href: '/en',        icon: 'fa-home',           label: 'Home' },
-          { href: '/en/routes', icon: 'fa-biking',          label: 'Ride' },
-          { href: '/tasks',     icon: 'fa-tasks',           label: 'Tasks' },
+          { href: '/en',        icon: 'fa-home',            label: 'Home' },
+          { href: '/tasks',     icon: 'fa-tasks',            label: 'Tasks' },
+          { href: '/en/routes', icon: 'fa-biking',           label: 'Ride' },
+          { href: '/nav',       icon: 'fa-map-marked-alt',   label: 'Nav' },
           isLoggedIn
-            ? { href: '/dashboard', icon: 'fa-chart-bar', label: 'Progress' }
-            : { href: '/login',     icon: 'fa-sign-in-alt',    label: 'Sign In' },
-          { href: '#more',      icon: 'fa-ellipsis-h',     label: 'More', isMore: true },
+            ? { href: '/dashboard', icon: 'fa-user-circle', label: 'My' }
+            : { href: '/login',     icon: 'fa-sign-in-alt',  label: 'Sign In' },
         ]
       : [
-          { href: '/',             icon: 'fa-home',           label: '首頁' },
-          { href: '/routes',       icon: 'fa-biking',          label: '騎行' },
-          { href: '/tasks',        icon: 'fa-tasks',           label: '任務' },
+          { href: '/',             icon: 'fa-home',            label: '主頁' },
+          { href: '/tasks',        icon: 'fa-tasks',            label: '任務' },
+          { href: '/routes',       icon: 'fa-biking',           label: '騎行' },
+          { href: '/nav',          icon: 'fa-map-marked-alt',   label: '導航' },
           isLoggedIn
-            ? { href: '/dashboard',    icon: 'fa-chart-bar', label: '進度' }
-            : { href: '/login',        icon: 'fa-sign-in-alt',    label: '登入' },
-          { href: '#more',         icon: 'fa-ellipsis-h',     label: '更多', isMore: true },
-        ];
-
-    const moreItems = isEn
-      ? [
-          { href: '/en/about',      icon: 'fa-info-circle',   label: 'About' },
-          { href: '/en/membership', icon: 'fa-star',          label: 'Membership' },
-          { href: '/en/blog',       icon: 'fa-newspaper',     label: 'Blog' },
-          { href: '/en/contact',    icon: 'fa-envelope',      label: 'Contact' },
-          { href: '/',              icon: 'fa-language',      label: '繁體中文' },
-        ]
-      : [
-          { href: '/about',        icon: 'fa-info-circle',   label: '關於我們' },
-          { href: '/membership',   icon: 'fa-star',          label: '會員計劃' },
-          { href: '/blog',         icon: 'fa-newspaper',     label: '部落格' },
-          { href: '/contact',      icon: 'fa-envelope',      label: '聯絡我們' },
-          { href: '/en',           icon: 'fa-language',      label: 'English' },
+            ? { href: '/dashboard',    icon: 'fa-user-circle', label: '我的' }
+            : { href: '/login',        icon: 'fa-sign-in-alt',  label: '登入' },
         ];
 
     const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
@@ -87,106 +72,18 @@
     nav.id = 'app-bottom-nav';
     nav.setAttribute('aria-label', isEn ? 'App navigation' : 'App 導航');
 
-    links.forEach(({ href, icon, label, isMore }) => {
+    links.forEach(({ href, icon, label }) => {
       const a = document.createElement('a');
-      a.href = isMore ? '#' : href;
-      if (!isMore) {
-        const normalised = href.replace(/\/$/, '') || '/';
-        if (currentPath === normalised || (normalised !== '/' && currentPath.startsWith(normalised))) {
-          a.classList.add('active');
-        }
+      a.href = href;
+      const normalised = href.replace(/\/$/, '') || '/';
+      if (currentPath === normalised || (normalised !== '/' && currentPath.startsWith(normalised))) {
+        a.classList.add('active');
       }
       a.innerHTML = `<i class="fas ${icon}"></i><span>${label}</span>`;
-      if (isMore) {
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          toggleMoreSheet();
-        });
-      }
       nav.appendChild(a);
     });
 
     document.body.appendChild(nav);
-
-    // ── Inject "More" slide-up sheet ──────────────────────────────────────
-    const overlay = document.createElement('div');
-    overlay.id = 'app-more-overlay';
-    Object.assign(overlay.style, {
-      position: 'fixed', inset: '0', background: 'rgba(0,0,0,0.5)',
-      zIndex: '1998', display: 'none',
-    });
-    overlay.addEventListener('click', () => toggleMoreSheet(false));
-
-    const sheet = document.createElement('div');
-    sheet.id = 'app-more-sheet';
-    Object.assign(sheet.style, {
-      position: 'fixed', bottom: '0', left: '0', right: '0',
-      background: '#1a2e1a', borderRadius: '16px 16px 0 0',
-      padding: '1.2em 1em', zIndex: '1999', display: 'none',
-      paddingBottom: 'calc(5em + env(safe-area-inset-bottom))',
-    });
-
-    const sheetTitle = document.createElement('p');
-    sheetTitle.textContent = isEn ? 'More' : '更多';
-    Object.assign(sheetTitle.style, {
-      margin: '0 0 0.8em 0.5em', fontWeight: 'bold', color: '#a8d8a0', fontSize: '1.1em',
-    });
-    sheet.appendChild(sheetTitle);
-
-    const grid = document.createElement('div');
-    Object.assign(grid.style, {
-      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8em',
-    });
-
-    moreItems.forEach(({ href, icon, label }) => {
-      const item = document.createElement('a');
-      item.href = href;
-      Object.assign(item.style, {
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4em',
-        padding: '0.8em 0.5em', borderRadius: '10px', background: '#243824',
-        color: '#a8d8a0', textDecoration: 'none', fontSize: '0.75em', fontWeight: 'bold',
-      });
-      item.innerHTML = `<i class="fas ${icon}" style="font-size:1.5em; color:#6dba65;"></i><span>${label}</span>`;
-      grid.appendChild(item);
-    });
-
-    // Auth row (login / logout)
-    const authItem = document.createElement('a');
-    authItem.id = 'app-more-auth-btn';
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      authItem.href = '#';
-      authItem.innerHTML = `<i class="fas fa-sign-out-alt" style="font-size:1.5em; color:#e74c3c;"></i><span>${isEn ? 'Sign Out' : '登出'}</span>`;
-      authItem.addEventListener('click', (e) => {
-        e.preventDefault();
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-      });
-    } else {
-      authItem.href = '/login';
-      authItem.innerHTML = `<i class="fas fa-sign-in-alt" style="font-size:1.5em; color:#6dba65;"></i><span>${isEn ? 'Sign In' : '登入'}</span>`;
-    }
-    Object.assign(authItem.style, {
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4em',
-      padding: '0.8em 0.5em', borderRadius: '10px', background: '#243824',
-      color: '#a8d8a0', textDecoration: 'none', fontSize: '0.75em', fontWeight: 'bold',
-    });
-    grid.appendChild(authItem);
-
-    sheet.appendChild(grid);
-    document.body.appendChild(overlay);
-    document.body.appendChild(sheet);
-  }
-
-  function toggleMoreSheet(forceOpen) {
-    const sheet = document.getElementById('app-more-sheet');
-    const overlay = document.getElementById('app-more-overlay');
-    if (!sheet || !overlay) return;
-    const isOpen = sheet.style.display !== 'none';
-    const open = forceOpen !== undefined ? forceOpen : !isOpen;
-    sheet.style.display = open ? 'block' : 'none';
-    overlay.style.display = open ? 'block' : 'none';
   }
 
   // ── iOS Liquid Glass detection ──────────────────────────────────────────

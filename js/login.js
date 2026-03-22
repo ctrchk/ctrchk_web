@@ -76,7 +76,7 @@ async function handleGoogleCredentialResponse(response) {
                 window.location.href = '/profile-setup.html';
             } else {
                 alert('Google 登入成功！');
-                window.location.href = '/dashboard.html';
+                window.location.href = '/dashboard';
             }
         } else {
             alert('Google 登入失敗：' + (data.message || '未知錯誤'));
@@ -159,15 +159,10 @@ async function handleRegister(e) {
         const data = await response.json();
 
         if (response.ok) {
-            // 自動登入
-            if (data.token && data.user) {
-                localStorage.setItem('accessToken', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-            }
-
+            // 新用戶需要驗證電郵，不進行自動登入
             const successMsg = data.message || '註冊成功！';
-            alert(successMsg + '\n\n正在跳轉至你的帳戶...');
-            window.location.href = '/dashboard.html';
+            alert(successMsg + '\n\n請先查閱你的郵箱並點擊驗證連結，完成驗證後再登入。');
+            window.location.href = '/verify-email?pending=1';
         } else {
             let errorMessage = data.message || '註冊失敗';
             
@@ -213,12 +208,18 @@ async function handleLogin(e) {
         const data = await response.json();
 
         if (response.ok) {
+            // 未完成電郵驗證的帳戶不允許登入
+            if (data.user && data.user.email_verified === false) {
+                alert('你的電子郵件尚未驗證。\n請先查閱你的郵箱，點擊驗證連結後再登入。');
+                window.location.href = '/verify-email?pending=1';
+                return;
+            }
             localStorage.setItem('accessToken', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             
             const name = data.user?.full_name || data.user?.email || '用戶';
             alert(`歡迎回來，${name}！`);
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
         } else {
             throw new Error(data.message || '登入失敗');
         }

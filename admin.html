@@ -469,6 +469,8 @@
                             <option value="all">所有訂閱者</option>
                             <option value="user">指定用戶 ID</option>
                             <option value="role">指定角色（user / senior / admin）</option>
+                            <option value="dept">已解鎖指定部門的用戶</option>
+                            <option value="route">已解鎖指定路線的用戶</option>
                         </select>
                     </div>
                     <div id="push-target-user" style="margin-bottom:1em; display:none;">
@@ -479,6 +481,16 @@
                     <div id="push-target-role" style="margin-bottom:1em; display:none;">
                         <label style="display:block; font-weight:bold; margin-bottom:0.3em;">角色</label>
                         <input type="text" id="push-role" placeholder="user / senior / admin"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <div id="push-target-dept" style="margin-bottom:1em; display:none;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">部門 ID</label>
+                        <input type="text" id="push-dept-id" placeholder="e.g. tko / st / hki"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <div id="push-target-route" style="margin-bottom:1em; display:none;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">路線 ID</label>
+                        <input type="text" id="push-route-id" placeholder="e.g. 900 / 914B"
                                style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
                     </div>
                     <button type="submit" class="cta-button" id="push-submit-btn">
@@ -941,8 +953,10 @@
         // ── 推送通知功能 ─────────────────────────────────────────────────────
         function togglePushTarget() {
             const type = document.getElementById('push-target-type').value;
-            document.getElementById('push-target-user').style.display = type === 'user' ? 'block' : 'none';
-            document.getElementById('push-target-role').style.display = type === 'role' ? 'block' : 'none';
+            document.getElementById('push-target-user').style.display  = type === 'user'  ? 'block' : 'none';
+            document.getElementById('push-target-role').style.display  = type === 'role'  ? 'block' : 'none';
+            document.getElementById('push-target-dept').style.display  = type === 'dept'  ? 'block' : 'none';
+            document.getElementById('push-target-route').style.display = type === 'route' ? 'block' : 'none';
         }
 
         async function sendAdminPush(e) {
@@ -967,6 +981,14 @@
                 const role = document.getElementById('push-role').value.trim();
                 if (!role) { resultEl.textContent = '請填寫角色'; btn.disabled = false; btn.textContent = '發送通知'; return; }
                 payload.target_category = role;
+            } else if (type === 'dept') {
+                const deptId = document.getElementById('push-dept-id').value.trim();
+                if (!deptId) { resultEl.textContent = '請填寫部門 ID'; btn.disabled = false; btn.textContent = '發送通知'; return; }
+                payload.target_dept_id = deptId;
+            } else if (type === 'route') {
+                const routeId = document.getElementById('push-route-id').value.trim();
+                if (!routeId) { resultEl.textContent = '請填寫路線 ID'; btn.disabled = false; btn.textContent = '發送通知'; return; }
+                payload.target_route_id = routeId;
             }
 
             try {
