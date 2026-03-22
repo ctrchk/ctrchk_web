@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="/images/icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>單車徑導航 - 城市運輸單車</title>
+  <link rel="stylesheet" href="/css/main.css">
   <!-- MapLibre GL JS (free, open-source Mapbox GL fork) -->
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" crossorigin="">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
@@ -79,6 +80,9 @@
       transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
     }
     #planner-panel.collapsed { transform: translateY(calc(100% - 3.8em)); }
+    body.is-pwa #planner-panel {
+      bottom: calc(4.5em + env(safe-area-inset-bottom));
+    }
 
     /* drag handle */
     .panel-handle {
@@ -166,6 +170,9 @@
     }
     #gps-dot-indicator.good { background: #04D93C; animation: pulse 1.5s infinite; }
     #gps-dot-indicator.searching { background: #f39c12; }
+    body.is-pwa #gps-dot {
+      bottom: calc(4.8em + env(safe-area-inset-bottom));
+    }
     @keyframes pulse {
       0%,100% { opacity: 1; } 50% { opacity: 0.4; }
     }
@@ -285,16 +292,13 @@
     <div id="planner-form">
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#04D93C;">📍</span>
-        <select class="plan-input" id="sel-from" aria-label="選擇起點">
-          <option value="">─ 選擇起點 ─</option>
-        </select>
+        <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" placeholder="輸入或選擇起點">
       </div>
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#e74c3c;">🏁</span>
-        <select class="plan-input" id="sel-to" aria-label="選擇終點">
-          <option value="">─ 選擇終點 ─</option>
-        </select>
+        <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" placeholder="輸入或選擇終點">
       </div>
+      <datalist id="landmark-options"></datalist>
       <button id="btn-plan-route" disabled>🔍 規劃路線</button>
 
       <!-- Route summary (after planning) -->
@@ -784,13 +788,30 @@
     }
 
     // ── Route planning ────────────────────────────────────────────────────
-    async function planRoute() {
-      const fromId = document.getElementById('sel-from').value;
-      const toId   = document.getElementById('sel-to').value;
-      if (!fromId || !toId) return;
+    function resolveLandmark(rawValue) {
+      const v = (rawValue || '').trim();
+      if (!v) return null;
+      if (v === '__gps__' || v === '📍 使用目前位置') return { id: '__gps__' };
+      return LANDMARKS.find(l => l.id === v || l.name === v) || null;
+    }
 
-      let from = LANDMARKS.find(l => l.id === fromId);
-      let to   = LANDMARKS.find(l => l.id === toId);
+    async function planRoute() {
+      const fromRaw = document.getElementById('sel-from').value;
+      const toRaw   = document.getElementById('sel-to').value;
+      if (!fromRaw || !toRaw) return;
+      if (fromRaw.trim() === toRaw.trim()) return;
+
+      const fromResolved = resolveLandmark(fromRaw);
+      const toResolved = resolveLandmark(toRaw);
+      if (!fromResolved || !toResolved) {
+        alert('請從清單選擇有效的起點及終點。');
+        return;
+      }
+
+      const fromId = fromResolved.id;
+      const toId = toResolved.id;
+      let from = fromResolved.id === '__gps__' ? null : fromResolved;
+      let to   = toResolved.id === '__gps__' ? null : toResolved;
 
       // Handle GPS-based locations
       if (fromId === '__gps__' || toId === '__gps__') {
@@ -1102,34 +1123,32 @@
       history.back();
     };
 
-    // ── Populate selects ──────────────────────────────────────────────────
-    function populateSelects() {
-      const fromSel = document.getElementById('sel-from');
-      const toSel   = document.getElementById('sel-to');
+      // ── Populate landmark options ─────────────────────────────────────────
+      function populateSelects() {
+      const list = document.getElementById('landmark-options');
+      if (!list) return;
+      list.innerHTML = '';
 
-      // Add "Use current GPS location" option at the top
-      const gpsOpt1 = new Option('📍 使用目前位置', '__gps__');
-      const gpsOpt2 = new Option('📍 使用目前位置', '__gps__');
-      fromSel.appendChild(gpsOpt1);
-      toSel.appendChild(gpsOpt2);
+      const gpsOpt = document.createElement('option');
+      gpsOpt.value = '📍 使用目前位置';
+      list.appendChild(gpsOpt);
 
       LANDMARKS.forEach(l => {
-        const opt1 = new Option(l.name, l.id);
-        const opt2 = new Option(l.name, l.id);
-        fromSel.appendChild(opt1);
-        toSel.appendChild(opt2);
+        const opt = document.createElement('option');
+        opt.value = l.name;
+        list.appendChild(opt);
       });
     }
 
     function checkPlanBtn() {
-      const from = document.getElementById('sel-from').value;
-      const to   = document.getElementById('sel-to').value;
+      const from = (document.getElementById('sel-from').value || '').trim();
+      const to   = (document.getElementById('sel-to').value || '').trim();
       document.getElementById('btn-plan-route').disabled = !from || !to || from === to;
     }
 
     // ── Event listeners ───────────────────────────────────────────────────
-    document.getElementById('sel-from').addEventListener('change', checkPlanBtn);
-    document.getElementById('sel-to').addEventListener('change', checkPlanBtn);
+    document.getElementById('sel-from').addEventListener('input', checkPlanBtn);
+    document.getElementById('sel-to').addEventListener('input', checkPlanBtn);
     document.getElementById('btn-plan-route').addEventListener('click', planRoute);
     document.getElementById('btn-start-nav').addEventListener('click', startNavigation);
     document.getElementById('btn-end-nav').addEventListener('click', () => {

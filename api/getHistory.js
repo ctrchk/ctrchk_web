@@ -140,10 +140,34 @@ export default async function handler(req, res) {
     try {
       const { rows: history } = await query(
         `SELECT id, ride_date, distance_km, route_name, route_id,
-                duration_minutes, avg_speed_kmh, stops_reached, xp_earned, source
+                start_time, duration_minutes, avg_speed_kmh, stops_reached,
+                stops_count, all_stops, districts_count, xp_earned, source
          FROM cycling_history
          WHERE user_id = $1
          ORDER BY ride_date DESC, created_at DESC`,
+        [userData.userId]
+      );
+      const normalizedHistory = history.map((h) => {
+        const stopsArr = Array.isArray(h.stops_reached) ? h.stops_reached : [];
+        return {
+          route_id: h.route_id,
+          date: h.ride_date,
+          start_time: h.start_time || null,
+          duration_minutes: h.duration_minutes || 0,
+          distance_km: Number(h.distance_km || 0),
+          stops_count: Number.isFinite(h.stops_count) ? h.stops_count : stopsArr.length,
+          stops_reached: stopsArr,
+          all_stops: !!h.all_stops,
+          districts_count: Number.isFinite(h.districts_count) ? h.districts_count : 0,
+        };
+      });
+
+      const { rows: checkins } = await query(
+        `SELECT checkin_date::text AS checkin_date
+         FROM user_daily_checkins
+         WHERE user_id = $1
+         ORDER BY checkin_date DESC
+         LIMIT 90`,
         [userData.userId]
       );
 
@@ -155,7 +179,7 @@ export default async function handler(req, res) {
         // game tables 可能尚未建立；忽略錯誤
       }
 
-      return res.status(200).json({ history, gameProfile });
+      return res.status(200).json({ history, normalized_history: normalizedHistory, checkins, gameProfile });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Failed to fetch history' });
@@ -360,6 +384,9 @@ export default async function handler(req, res) {
         duration_minutes,
         avg_speed_kmh,
         stops_reached,
+        stops_count,
+        all_stops,
+        districts_count,
         gpx_track,
         source = 'pwa',
         xp_earned_override,   // per-stop + district-change XP calculated client-side
@@ -418,12 +445,12 @@ export default async function handler(req, res) {
 
       // 2. 插入騎行記錄
       const { rows: newRide } = await query(
-        `INSERT INTO cycling_history
-           (user_id, ride_date, distance_km, route_name, route_id,
-            start_time, end_time, duration_minutes, avg_speed_kmh,
-            stops_reached, xp_earned, gpx_track, source)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-         RETURNING id`,
+          `INSERT INTO cycling_history
+            (user_id, ride_date, distance_km, route_name, route_id,
+             start_time, end_time, duration_minutes, avg_speed_kmh,
+             stops_reached, stops_count, all_stops, districts_count, xp_earned, gpx_track, source)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+          RETURNING id`,
         [
           userData.userId,
           ride_date,
@@ -435,6 +462,9 @@ export default async function handler(req, res) {
           duration_minutes || null,
           avg_speed_kmh || null,
           stops_reached ? JSON.stringify(stops_reached) : null,
+          Number.isFinite(stops_count) ? Math.max(0, parseInt(stops_count, 10)) : (Array.isArray(stops_reached) ? stops_reached.length : 0),
+          !!all_stops,
+          Number.isFinite(districts_count) ? Math.max(0, parseInt(districts_count, 10)) : 0,
           xpReward,
           gpx_track || null,
           source,
