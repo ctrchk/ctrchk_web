@@ -1,6 +1,6 @@
 {
-  "name": "香港城市運輸單車",
-  "description": "香港城市運輸單車路線資訊、GPX 導航及騎行記錄平台",
+  "name": "城市運輸單車",
+  "description": "城市運輸單車路線資訊、GPX 導航、騎行記錄及遊戲化挑戰平台",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

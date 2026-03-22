@@ -1,9 +1,9 @@
 // CTRC HK Service Worker — PWA 離線緩存
-// Version: 2.1.0
+// Version: 2.2.0
 
-const CACHE_NAME = 'ctrchk-v3';
-const STATIC_CACHE = 'ctrchk-static-v3';
-const DYNAMIC_CACHE = 'ctrchk-dynamic-v3';
+const CACHE_NAME = 'ctrchk-v4';
+const STATIC_CACHE = 'ctrchk-static-v4';
+const DYNAMIC_CACHE = 'ctrchk-dynamic-v4';
 
 // 預緩存的靜態資源（核心 shell）
 const PRECACHE_URLS = [
@@ -35,7 +35,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// ── 啟動階段：清理舊緩存 ──────────────────────────────────────────────────
+// ── 啟動階段：清理舊緩存並通知所有客戶端更新 ────────────────────────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -44,6 +44,11 @@ self.addEventListener('activate', (event) => {
           .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
           .map((name) => caches.delete(name))
       );
+    }).then(() => {
+      // 通知所有客戶端新版本已就緒，觸發頁面重載
+      return self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    }).then((clients) => {
+      clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
     })
   );
   self.clients.claim();

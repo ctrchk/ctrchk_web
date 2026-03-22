@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
       let result;
       const SELECT = `SELECT u.id, u.email, u.user_role, u.full_name, u.phone, u.profile_completed,
-                             u.auth_provider, u.created_at, u.email_verified,
+                             u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
                              gp.level, gp.xp, gp.coins
                         FROM users u
                         LEFT JOIN user_game_profile gp ON gp.user_id = u.id`;
@@ -91,9 +91,10 @@ export default async function handler(req, res) {
         preferred_area,
         birthdate,
         bike_type,
+        avatar_url,
       } = req.body;
 
-      if (!full_name) {
+      if (!full_name && !Object.prototype.hasOwnProperty.call(req.body, 'avatar_url')) {
         return res.status(400).json({ message: 'Full name is required' });
       }
 
@@ -140,29 +141,67 @@ export default async function handler(req, res) {
       const userId = checkResult.rows[0].id;
       const hasFullProfile = experience && preferredAreaStr;
 
+      // Validate avatar_url if provided (must be http/https URL or data: URL, max 200KB base64)
+      let sanitizedAvatarUrl = undefined;
+      if (Object.prototype.hasOwnProperty.call(req.body, 'avatar_url')) {
+        if (!avatar_url) {
+          sanitizedAvatarUrl = null;
+        } else if (/^https?:\/\//i.test(avatar_url)) {
+          sanitizedAvatarUrl = avatar_url.slice(0, 2048);
+        } else if (/^data:image\/(jpeg|png|gif|webp);base64,/i.test(avatar_url)) {
+          if (avatar_url.length > 204800) {
+            return res.status(400).json({ message: 'Avatar image too large (max 200KB)' });
+          }
+          sanitizedAvatarUrl = avatar_url;
+        } else {
+          return res.status(400).json({ message: 'Invalid avatar URL format' });
+        }
+      }
+
+      // If only updating avatar, allow without full_name requirement
+      if (!full_name && sanitizedAvatarUrl !== undefined) {
+        await query(
+          `UPDATE users SET avatar_url = $1 WHERE id = $2`,
+          [sanitizedAvatarUrl, userId]
+        );
+        return res.status(200).json({ message: 'Avatar updated', user_role: currentRole });
+      }
+
       if (hasFullProfile) {
         const newRole = currentRole === 'admin' ? 'admin' : 'senior';
         const profileCompleted = newRole !== 'admin';
+        const params = [newRole, full_name, phone || null, experience, preferredAreaStr,
+                        birthdate || null, bike_type || null, profileCompleted, userId];
+        let avatarClause = '';
+        if (sanitizedAvatarUrl !== undefined) {
+          avatarClause = `, avatar_url = $${params.push(sanitizedAvatarUrl)}`;
+        }
         await query(
           `UPDATE users
            SET user_role = $1, full_name = $2, phone = $3, experience = $4,
                preferred_area = $5, birthdate = $6, bike_type = $7,
                profile_completed = $8,
                profile_completion_date = CASE WHEN $8 AND profile_completion_date IS NULL THEN NOW() ELSE profile_completion_date END
+               ${avatarClause}
            WHERE id = $9`,
-          [newRole, full_name, phone || null, experience, preferredAreaStr,
-           birthdate || null, bike_type || null, profileCompleted, userId]
+          params
         );
         return res.status(200).json({
           message: newRole === 'senior' ? 'Profile updated and upgraded to senior member' : 'Profile updated',
           user_role: newRole,
         });
       } else {
+        const params = [full_name, phone || null, birthdate || null, bike_type || null, userId];
+        let avatarClause = '';
+        if (sanitizedAvatarUrl !== undefined) {
+          avatarClause = `, avatar_url = $${params.push(sanitizedAvatarUrl)}`;
+        }
         await query(
           `UPDATE users
            SET full_name = $1, phone = $2, birthdate = $3, bike_type = $4
+               ${avatarClause}
            WHERE id = $5`,
-          [full_name, phone || null, birthdate || null, bike_type || null, userId]
+          params
         );
         return res.status(200).json({ message: 'Profile updated', user_role: currentRole });
       }
