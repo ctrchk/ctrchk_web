@@ -367,6 +367,9 @@
     // ── OSRM Demo API (public, free, no API key needed) ───────────────────
     // Routing profile: bike
     const OSRM_BASE = 'https://router.project-osrm.org/route/v1/bike';
+    const ADDRESS_SUGGEST_MIN_CHARS = 2;
+    const ADDRESS_SUGGEST_DEBOUNCE_MS = 250;
+    const NOMINATIM_LIMIT = 5;
 
     // Maximum time (ms) to wait for map initial load before hiding the overlay
     const MAP_LOADING_TIMEOUT_MS = 12000;
@@ -798,7 +801,7 @@
     async function geocodeAddress(rawValue) {
       const q = String(rawValue || '').trim();
       if (!q) return null;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&email=support@ctrchk.hk&q=${encodeURIComponent(q + ', Hong Kong')}`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q + ', Hong Kong')}`;
       const resp = await fetch(url, {
         headers: { 'Accept': 'application/json' }
       });
@@ -828,7 +831,7 @@
     let suggestionSeq = 0;
     async function fetchAddressSuggestions(rawValue) {
       const q = String(rawValue || '').trim();
-      if (q.length < 2) {
+      if (q.length < ADDRESS_SUGGEST_MIN_CHARS) {
         populateSelects();
         return;
       }
@@ -837,7 +840,7 @@
       const seq = ++suggestionSeq;
       if (suggestionAbortController) suggestionAbortController.abort();
       suggestionAbortController = new AbortController();
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&email=support@ctrchk.hk&q=${encodeURIComponent(q + ', Hong Kong')}`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=${NOMINATIM_LIMIT}&q=${encodeURIComponent(q + ', Hong Kong')}`;
       try {
         const resp = await fetch(url, {
           headers: { 'Accept': 'application/json' },
@@ -1228,7 +1231,7 @@
       checkPlanBtn();
       if (suggestionTimer) clearTimeout(suggestionTimer);
       const value = e && e.target ? e.target.value : '';
-      suggestionTimer = setTimeout(() => { fetchAddressSuggestions(value); }, 250);
+      suggestionTimer = setTimeout(() => { fetchAddressSuggestions(value); }, ADDRESS_SUGGEST_DEBOUNCE_MS);
     }
     document.getElementById('sel-from').addEventListener('input', handleAddressInput);
     document.getElementById('sel-to').addEventListener('input', handleAddressInput);

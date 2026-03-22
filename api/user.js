@@ -8,9 +8,18 @@
 //
 import { query } from './_db.js';
 
+let _ensureUsersUsernameColumnPromise = null;
 async function ensureUsersUsernameColumn() {
-  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(16);');
-  await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users ((LOWER(username))) WHERE username IS NOT NULL;');
+  if (!_ensureUsersUsernameColumnPromise) {
+    _ensureUsersUsernameColumnPromise = (async () => {
+      await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(16);');
+      await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users ((LOWER(username))) WHERE username IS NOT NULL;');
+    })().catch((err) => {
+      _ensureUsersUsernameColumnPromise = null;
+      throw err;
+    });
+  }
+  await _ensureUsersUsernameColumnPromise;
 }
 
 export default async function handler(req, res) {
