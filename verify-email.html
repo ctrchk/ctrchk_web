@@ -17,6 +17,14 @@
                     <i class="fas fa-spinner fa-spin" style="font-size: 3em; color: #04D93C;"></i>
                     <h2>正在驗證您的電郵...</h2>
                 </div>
+                <div id="verify-pending" style="display:none;">
+                    <i class="fas fa-envelope-open-text" style="font-size: 4em; color: #ff9800; margin-bottom: 0.5em;"></i>
+                    <h2 style="color: #2c3e50;">請先驗證你的電郵</h2>
+                    <p style="color: #555;">你的帳戶尚未完成電郵驗證。<br>請查閱你的電子郵箱，點擊驗證連結後再重新登入。</p>
+                    <a href="/login" class="cta-button" style="display: inline-block; margin-top: 1.5em;">
+                        返回登入頁面
+                    </a>
+                </div>
                 <div id="verify-success" style="display:none;">
                     <i class="fas fa-check-circle" style="font-size: 4em; color: #04D93C; margin-bottom: 0.5em;"></i>
                     <h2 style="color: #2c3e50;">電郵驗證成功！</h2>
@@ -58,11 +66,20 @@
         document.addEventListener('DOMContentLoaded', async function() {
             const params = new URLSearchParams(window.location.search);
             const token = params.get('token');
+            const pending = params.get('pending');
 
             const loadingEl = document.getElementById('verify-loading');
             const successEl = document.getElementById('verify-success');
             const errorEl = document.getElementById('verify-error');
             const alreadyEl = document.getElementById('verify-already');
+            const pendingEl = document.getElementById('verify-pending');
+
+            // Redirected here because account is not yet verified
+            if (pending === '1' && !token) {
+                loadingEl.style.display = 'none';
+                pendingEl.style.display = 'block';
+                return;
+            }
 
             if (!token) {
                 loadingEl.style.display = 'none';

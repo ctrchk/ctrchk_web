@@ -232,6 +232,32 @@
             color: #f3a0ef;
             border-radius: 8px;
         }
+
+        /* ── 更多快速連結 ────────────────────────────── */
+        .more-links-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8em;
+            margin-top: 0.8em;
+        }
+        .more-link-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4em;
+            padding: 0.8em 0.5em;
+            border-radius: 10px;
+            background: #243824;
+            color: #a8d8a0;
+            text-decoration: none;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        .more-link-item i {
+            font-size: 1.5em;
+            color: #6dba65;
+        }
+        .more-link-item.danger i { color: #e74c3c; }
     </style>
     
     <script>
@@ -305,7 +331,35 @@
             <div id="admin-section" style="display:none; margin-top: 3em;">
                 <h2>管理員面板</h2>
                 <p>你可以管理網站用戶及查看資料。</p>
-                <a href="/admin.html" class="cta-button">前往管理員後台</a>
+                <a href="/admin" class="cta-button">前往管理員後台</a>
+            </div>
+        </section>
+
+        <!-- 更多連結（整合自原底部「更多」選單） -->
+        <section class="content app-only" style="padding-bottom:6em;">
+            <h2 style="font-size:1em; color:var(--app-text-secondary,#a8d8a0); border-bottom:1px solid #2d4d2d; padding-bottom:0.4em;">更多</h2>
+            <div class="more-links-grid">
+                <a href="/about" class="more-link-item">
+                    <i class="fas fa-info-circle"></i><span>關於我們</span>
+                </a>
+                <a href="/membership" class="more-link-item">
+                    <i class="fas fa-star"></i><span>會員計劃</span>
+                </a>
+                <a href="/blog" class="more-link-item">
+                    <i class="fas fa-newspaper"></i><span>部落格</span>
+                </a>
+                <a href="/contact" class="more-link-item">
+                    <i class="fas fa-envelope"></i><span>聯絡我們</span>
+                </a>
+                <a href="/en" class="more-link-item">
+                    <i class="fas fa-language"></i><span>English</span>
+                </a>
+                <a href="/profile" class="more-link-item">
+                    <i class="fas fa-user-edit"></i><span>編輯資料</span>
+                </a>
+                <a href="#" id="dashboard-logout-btn" class="more-link-item danger">
+                    <i class="fas fa-sign-out-alt"></i><span>登出</span>
+                </a>
             </div>
         </section>
     </main>
@@ -344,6 +398,12 @@
                 
                 if (!user) {
                     window.location.href = '/login';
+                    return;
+                }
+
+                // 未驗證電郵的帳戶不允許使用此頁面
+                if (user.email_verified === false) {
+                    window.location.href = '/verify-email?pending=1';
                     return;
                 }
 
@@ -529,6 +589,19 @@
                 container.textContent = `載入失敗: ${error.message}`;
             }
         }
+
+        // 登出按鈕
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('dashboard-logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                });
+            }
+        });
     </script>
     <script src="/js/pwa.js"></script>
 </body>

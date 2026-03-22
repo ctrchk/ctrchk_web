@@ -768,10 +768,13 @@ button.app-quick-item {
                       document.body.classList.contains('is-pwa');
         if (!isPwa) return;
 
-        // Show splash on first (non-silent) init
+        // Show splash only on cold start (first page load of this app session)
+        // sessionStorage is cleared when the app is closed/killed and reopened.
         const splashEl = document.getElementById('app-splash');
-        if (!silent && splashEl) {
+        const isColdStart = !sessionStorage.getItem('appSplashShown');
+        if (!silent && isColdStart && splashEl) {
             splashEl.style.display = 'flex';
+            sessionStorage.setItem('appSplashShown', '1');
         }
 
         if (_appHomeInited && !silent) return;
@@ -786,6 +789,16 @@ button.app-quick-item {
             _hideSplash(splashEl);
             return;
         }
+
+        // 未驗證電郵的帳戶重定向至驗證頁面
+        try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            if (storedUser.email_verified === false) {
+                _hideSplash(splashEl);
+                window.location.href = '/verify-email?pending=1';
+                return;
+            }
+        } catch (_) {}
 
         try {
             const res = await fetch('/api/getHistory', {
