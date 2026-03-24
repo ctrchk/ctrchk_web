@@ -1056,21 +1056,23 @@ export default async function handler(req, res) {
   ❌ 超過免費配額後需付費或自架
 ```
 
-#### 方案 C：Brouter 純前端離線路由（長期目標）
+#### 方案 C：Brouter 路由引擎（✅ 已實施 — 2026-03-24）
 
-**原理**：Brouter 是專為單車設計的路由引擎，可完全在瀏覽器內運行（WebAssembly），無需伺服器。
+**原理**：Brouter 是專為單車設計的路由引擎，優先選擇單車徑及低流量道路。
+目前 `nav.html` 使用 Brouter 公開 API（`brouter.de/brouter`）作為主路由引擎，OSRM 作為備援。
+長期目標是整合 Brouter WebAssembly 版本，實現完全離線路由。
 
 ```
 優點：
-  ✅ 完全離線（路線數據預先下載到 Service Worker 緩存）
   ✅ 專為單車優化（偏好單車徑、避免主幹道）
   ✅ 無 API 費用
-  ✅ 香港地區 OSM 數據包體積約 30-50 MB（可接受）
+  ✅ 四種路線偏好：safety | trekking | fastbike | shortest
+  ✅ 香港地區路線品質優於 OSRM
+  ✅（長期）WASM 版可完全離線（路線數據預先下載到 Service Worker 緩存）
 
-缺點：
-  ❌ 首次下載地圖數據較大
-  ❌ 整合較複雜，需要 WebAssembly 支援
-  ❌ 適合長期版本，不適合 MVP
+目前限制：
+  ⚠️ 目前使用線上 API（非完全離線），需要網絡連接
+  📋 WASM 離線版為下一階段目標
 ```
 
 ---
@@ -1682,13 +1684,14 @@ MapLibre GL JS（開源 WebGL 地圖渲染）
 
 ### 13.2 我需要自己建立路由模型（建模）嗎？
 
-**簡短回答：初期不需要。**
+**簡短回答：不需要。**
 
-`nav.html` 目前使用 **OSRM 公開示範 API**（`router.project-osrm.org`）作為路由引擎，無需任何設置即可使用。這個 API 是免費的，適合開發和測試階段。
+`nav.html` 目前使用 **Brouter 公開 API**（`brouter.de/brouter`）作為主路由引擎，專為單車路線優化。OSRM 公開 API 作為備援。兩者均免費，無需任何設置即可使用。
 
 | 方案 | 需要自建？ | 適合階段 | 限制 |
 |------|-----------|---------|------|
-| **OSRM 公開 Demo API**（現用） | ❌ 不需要 | 開發 / 測試 | 官方不建議生產使用，偶爾回應較慢，無 SLA 保障 |
+| **Brouter 公開 API**（✅ 現用） | ❌ 不需要 | 生產使用 | 網絡連接必需；官方允許合理非商業使用 |
+| **OSRM 公開 Demo API**（備援） | ❌ 不需要 | 開發 / 測試 | 官方不建議生產使用，偶爾回應較慢，無 SLA 保障 |
 | **GraphHopper 免費 API** | ❌ 不需要 | MVP / 早期生產 | 每日 500 次免費路由請求，超出需付費 |
 | **Brouter（純前端 WASM）** | ❌ 不需要 | 長期 / 離線 | 需下載路由數據（約幾十 MB），首次加載較慢 |
 | **OSRM 自架伺服器** | ✅ 需要自架 | 大規模生產 | 需要 VPS 並自行處理 OpenStreetMap 數據提取 |

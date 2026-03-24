@@ -299,6 +299,15 @@
         <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" placeholder="輸入或選擇終點（可自訂地址）">
       </div>
       <datalist id="landmark-options"></datalist>
+      <div class="plan-row">
+        <span class="plan-row-icon">🚴</span>
+        <select id="sel-profile" class="plan-input" aria-label="路線偏好">
+          <option value="safety">安全路線（優先單車徑）</option>
+          <option value="trekking">遠足路線（混合路面）</option>
+          <option value="fastbike">快速路線（最快到達）</option>
+          <option value="shortest">最短路線（最短距離）</option>
+        </select>
+      </div>
       <button id="btn-plan-route" disabled>🔍 規劃路線</button>
 
       <!-- Route summary (after planning) -->
@@ -364,9 +373,12 @@
       { id: 'tkoi',  name: '將軍澳創新園',       lat: 22.28570, lon: 114.27240 },
     ];
 
-    // ── OSRM Demo API (public, free, no API key needed) ───────────────────
-    // Routing profile: bike
-    const OSRM_BASE = 'https://router.project-osrm.org/route/v1/bike';
+    // ── Routing engines ────────────────────────────────────────────────────
+    // Plan C: Brouter — cycling-optimised, free, no API key required
+    // Returns GeoJSON; profiles: safety | trekking | fastbike | shortest
+    const BROUTER_BASE = 'https://brouter.de/brouter';
+    // Fallback: OSRM public demo (online, free, generic bike profile)
+    const OSRM_FALLBACK = 'https://router.project-osrm.org/route/v1/bike';
     const ADDRESS_SUGGEST_MIN_CHARS = 2;
     const ADDRESS_SUGGEST_DEBOUNCE_MS = 250;
     const NOMINATIM_LIMIT = 5;
@@ -387,7 +399,7 @@
 
     // Navigation state
     let isNavigating = false;
-    let plannedRoute = null;       // decoded route from OSRM
+    let plannedRoute = null;       // route coords [[lon,lat],…]
     let plannedSteps = [];         // turn-by-turn steps
     let currentStepIdx = 0;
     let navStartTime = null;
@@ -493,6 +505,63 @@
       if (type === 'roundabout' || type === 'rotary') return `進入迴旋處${road}`;
       if (type === 'fork') return `保持${modifier === 'right' ? '右側' : '左側'}分叉${road}`;
       return `繼續前行${road}`;
+    }
+
+    /** Convert bearing-change degrees to turn modifier string */
+    function turnModifier(delta) {
+      if (delta >  90) return 'sharp right';
+      if (delta >  45) return 'right';
+      if (delta >   0) return 'slight right';
+      if (delta === 0) return 'straight';
+      if (delta < -90) return 'sharp left';
+      if (delta < -45) return 'left';
+      return 'slight left';
+    }
+
+    /**
+     * Derive turn-by-turn navigation steps from a coordinate array.
+     * Each step has { maneuver: { type, modifier }, name, pt: [lon, lat] }
+     * where pt is the endpoint of that leg (the turn / destination position).
+     */
+    function computeNavSteps(coords) {
+      if (!coords || coords.length < 2) return [];
+      const TURN_THRESH_DEG = 30;  // min bearing change to count as a turn
+      const MIN_SEP_M = 30;        // min distance between consecutive turns
+      const steps = [];
+      let prevTurnIdx = 0;
+
+      for (let i = 1; i < coords.length - 1; i++) {
+        const bPrev = bearingDeg(coords[i-1][1], coords[i-1][0], coords[i][1], coords[i][0]);
+        const bNext = bearingDeg(coords[i][1],   coords[i][0],   coords[i+1][1], coords[i+1][0]);
+        const delta = ((bNext - bPrev + 540) % 360) - 180; // normalise to -180..180
+        if (Math.abs(delta) < TURN_THRESH_DEG) continue;
+        const d = haversineM(coords[prevTurnIdx][1], coords[prevTurnIdx][0], coords[i][1], coords[i][0]);
+        if (d < MIN_SEP_M) continue; // merge turns that are too close together
+        steps.push({
+          maneuver: { type: 'turn', modifier: turnModifier(delta) },
+          name: '',
+          pt: coords[i],
+        });
+        prevTurnIdx = i;
+      }
+
+      // Prepend depart step.
+      // pt points to the first turn (or destination on a straight route) so that
+      // updateNavProgress advances the step when the rider reaches that waypoint.
+      steps.unshift({
+        maneuver: { type: 'depart', modifier: 'straight' },
+        name: '出發',
+        pt: steps.length ? steps[0].pt : coords[coords.length - 1],
+      });
+
+      // Append arrive step
+      steps.push({
+        maneuver: { type: 'arrive', modifier: '' },
+        name: '目的地',
+        pt: coords[coords.length - 1],
+      });
+
+      return steps;
     }
 
     // ── Map initialisation ────────────────────────────────────────────────
@@ -914,34 +983,45 @@
       // Remove any existing planned route layer
       clearRouteLayers();
 
-      try {
-        const url = `${OSRM_BASE}/${from.lon},${from.lat};${to.lon},${to.lat}` +
-          `?overview=full&geometries=polyline6&steps=true&annotations=false`;
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error('OSRM returned ' + resp.status);
-        const data = await resp.json();
-        if (data.code !== 'Ok' || !data.routes || !data.routes.length) {
-          throw new Error('No route found');
-        }
-        const route = data.routes[0];
-        const coords = decodePolyline(route.geometry, 6); // polyline6
+      const profile = document.getElementById('sel-profile').value || 'safety';
+      let routeSuccess = false;
 
-        plannedRoute = coords;
-        plannedSteps = route.legs[0].steps || [];
-        navTotalDistM = route.distance;
+      // ── Try Brouter first (Plan C: cycling-optimised routing) ─────────────
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const brouterUrl = `${BROUTER_BASE}?lonlat=${from.lon},${from.lat}|${to.lon},${to.lat}` +
+          `&profile=${encodeURIComponent(profile)}&alternativeidx=0&format=geojson`;
+        let resp;
+        try {
+          resp = await fetch(brouterUrl, { signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+        if (!resp.ok) throw new Error('Brouter HTTP ' + resp.status);
+        const data = await resp.json();
+        if (!data.features || !data.features.length) throw new Error('Brouter: no route found');
+
+        const feature = data.features[0];
+        const coords = feature.geometry.coordinates.map(c => [c[0], c[1]]);
+        const distM  = parseFloat(feature.properties['track-length'] || 0);
+        const timeS  = parseFloat(feature.properties['total-time'] || 0);
+
+        plannedRoute  = coords;
+        plannedSteps  = computeNavSteps(coords);
+        navTotalDistM = distM;
 
         drawPlannedRoute(coords, from, to);
 
-        // Summary
-        const distKm = (route.distance / 1000).toFixed(1);
-        const mins   = Math.round(route.duration / 60);
+        const distKm = (distM / 1000).toFixed(1);
+        const mins   = Math.round(timeS / 60);
         document.getElementById('rs-dist').textContent = `${distKm} km`;
         document.getElementById('rs-time').textContent = formatMinutes(mins);
-        document.getElementById('rs-turns').textContent = `${plannedSteps.filter(s => s.maneuver && s.maneuver.type !== 'depart' && s.maneuver.type !== 'arrive').length} 個`;
+        document.getElementById('rs-turns').textContent =
+          `${plannedSteps.filter(s => s.maneuver.type === 'turn').length} 個`;
         document.getElementById('route-summary').classList.add('show');
         document.getElementById('btn-start-nav').classList.add('show');
 
-        // Fit map to route
         const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
         map.fitBounds([
           [Math.min(...lngs), Math.min(...lats)],
@@ -949,9 +1029,50 @@
         ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
 
         expandPanel();
-      } catch (e) {
-        console.error('[Nav] Route planning failed', e);
-        alert('路線規劃失敗，請檢查網絡連接後再試。\n（如問題持續，可嘗試更換起點/終點。）');
+        routeSuccess = true;
+      } catch (brouterErr) {
+        console.warn('[Nav] Brouter failed, falling back to OSRM:', brouterErr.message);
+      }
+
+      // ── OSRM fallback (generic bike routing) ─────────────────────────────
+      if (!routeSuccess) {
+        try {
+          const url = `${OSRM_FALLBACK}/${from.lon},${from.lat};${to.lon},${to.lat}` +
+            // steps=false: turn instructions are derived by computeNavSteps() from geometry
+            `?overview=full&geometries=polyline6&steps=false&annotations=false`;
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error('OSRM returned ' + resp.status);
+          const data = await resp.json();
+          if (data.code !== 'Ok' || !data.routes || !data.routes.length) throw new Error('No route found');
+          const route  = data.routes[0];
+          const coords = decodePolyline(route.geometry, 6);
+
+          plannedRoute  = coords;
+          plannedSteps  = computeNavSteps(coords);
+          navTotalDistM = route.distance;
+
+          drawPlannedRoute(coords, from, to);
+
+          const distKm = (route.distance / 1000).toFixed(1);
+          const mins   = Math.round(route.duration / 60);
+          document.getElementById('rs-dist').textContent = `${distKm} km`;
+          document.getElementById('rs-time').textContent = formatMinutes(mins);
+          document.getElementById('rs-turns').textContent =
+            `${plannedSteps.filter(s => s.maneuver.type === 'turn').length} 個`;
+          document.getElementById('route-summary').classList.add('show');
+          document.getElementById('btn-start-nav').classList.add('show');
+
+          const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+          map.fitBounds([
+            [Math.min(...lngs), Math.min(...lats)],
+            [Math.max(...lngs), Math.max(...lats)],
+          ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
+
+          expandPanel();
+        } catch (osrmErr) {
+          console.error('[Nav] Both Brouter and OSRM failed:', osrmErr);
+          alert('路線規劃失敗，請檢查網絡連接後再試。\n（如問題持續，可嘗試更換起點/終點。）');
+        }
       }
 
       btn.disabled = false;
@@ -1076,10 +1197,9 @@
 
       // Find next waypoint in current step
       const step = plannedSteps[currentStepIdx];
-      if (!step) return;
+      if (!step || !step.pt) return;
 
-      const stepCoords = decodePolyline(step.geometry, 6);
-      const lastPt = stepCoords[stepCoords.length - 1];
+      const lastPt = step.pt;  // [lon, lat] — endpoint of this leg
       const distToEnd = haversineM(lat, lon, lastPt[1], lastPt[0]);
 
       // Advance step when within 20 m of step end
