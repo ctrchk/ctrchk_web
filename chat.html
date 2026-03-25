@@ -333,17 +333,60 @@
             width: 100%;
             padding: 0.5em;
         }
-        /* ── Responsive (mobile: hide conv list when chat open) ── */
+        /* ── Mobile panel toggle button ── */
+        .btn-panel-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--app-accent, #6dba65);
+            font-size: 1.3em;
+            cursor: pointer;
+            padding: 0.2em 0.3em;
+            flex-shrink: 0;
+        }
+        .btn-back-to-list {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--app-accent, #6dba65);
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 0.2em 0.4em;
+            flex-shrink: 0;
+        }
+        /* ── Conv panel overlay backdrop ── */
+        .conv-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99;
+            background: rgba(0,0,0,0.45);
+        }
+        .conv-overlay.show { display: block; }
+        /* ── Responsive (mobile) ── */
         @media (max-width: 600px) {
             .chat-layout { height: calc(100vh - 100px); }
-            .conv-panel { width: 56px; min-width: 56px; }
-            .conv-panel.open { width: 75vw; min-width: 200px; position: absolute; z-index: 100; height: 100%; }
+            /* Collapsed sidebar: hide completely, show as overlay when .open */
+            .conv-panel {
+                width: 0;
+                min-width: 0;
+                overflow: hidden;
+                position: absolute;
+                z-index: 100;
+                height: 100%;
+                transition: width 0.25s ease;
+            }
+            .conv-panel.open { width: 80vw; min-width: 220px; overflow: visible; }
+            /* Hide text-only elements inside collapsed panel */
             .conv-search, .conv-header h3, .conv-name, .conv-last, .conv-unread, .btn-new-chat { display: none; }
             .conv-panel.open .conv-search, .conv-panel.open .conv-header h3,
             .conv-panel.open .conv-name, .conv-panel.open .conv-last,
             .conv-panel.open .conv-unread, .conv-panel.open .btn-new-chat { display: block; }
-            .conv-header { justify-content: center; }
+            .conv-header { justify-content: flex-start; }
             .conv-panel.open .conv-header { justify-content: space-between; }
+            /* Show toggle/back buttons on mobile only */
+            .btn-panel-toggle { display: flex; align-items: center; }
+            .btn-back-to-list { display: flex; align-items: center; }
         }
     </style>
 </head>
@@ -352,10 +395,13 @@
 
     <main>
         <section class="content animated-element" style="padding: 0.5em 0.5em 5em;">
+            <!-- Mobile overlay backdrop -->
+            <div class="conv-overlay" id="conv-overlay" onclick="closeConvPanel()"></div>
             <div class="chat-layout" id="chat-layout">
                 <!-- 對話列表 -->
                 <div class="conv-panel" id="conv-panel">
                     <div class="conv-header">
+                        <button class="btn-panel-toggle" id="btn-panel-toggle" onclick="toggleConvPanel()" title="對話列表"><i class="fas fa-bars"></i></button>
                         <h3><i class="fas fa-comments"></i> 聊天</h3>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
                     </div>
@@ -373,8 +419,10 @@
                         <i class="fas fa-comment-dots"></i>
                         <span>選擇對話或開始新的聊天</span>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
+                        <button class="btn-new-chat" style="margin-top:0.3em;" onclick="openConvPanel()"><i class="fas fa-list"></i> 查看對話</button>
                     </div>
                     <div class="msg-header" id="msg-header" style="display:none;">
+                        <button class="btn-back-to-list" onclick="openConvPanel()" title="返回列表"><i class="fas fa-chevron-left"></i></button>
                         <div class="msg-header-avatar" id="msg-header-avatar"><i class="fas fa-user"></i></div>
                         <span class="msg-header-name" id="msg-header-name"></span>
                     </div>
@@ -424,6 +472,27 @@
         let oldestMsgId = null;
         let lastUnreadCount = 0;
         let lastInboxMessageAt = '';
+
+        // ── Mobile conv-panel helpers ──────────────────────────────────────
+        function isMobile() { return window.innerWidth <= 600; }
+        function openConvPanel() {
+            document.getElementById('conv-panel').classList.add('open');
+            document.getElementById('conv-overlay').classList.add('show');
+        }
+        function closeConvPanel() {
+            document.getElementById('conv-panel').classList.remove('open');
+            document.getElementById('conv-overlay').classList.remove('show');
+        }
+        window.openConvPanel = openConvPanel;
+        window.closeConvPanel = closeConvPanel;
+        window.toggleConvPanel = function() {
+            const panel = document.getElementById('conv-panel');
+            if (panel.classList.contains('open')) {
+                closeConvPanel();
+            } else {
+                openConvPanel();
+            }
+        };
 
         // ── Helpers ────────────────────────────────────────────────────────
         function apiGet(url) {
@@ -528,6 +597,9 @@
             document.getElementById('msg-input-bar').style.display = 'flex';
             document.getElementById('msg-header-avatar').innerHTML = avatarHtml(peerAvatar, 36);
             document.getElementById('msg-header-name').textContent = peerName || '用戶';
+
+            // On mobile, close the side panel so the message area is fully visible
+            if (isMobile()) closeConvPanel();
 
             renderConvList(conversations); // re-render to highlight active
             loadMessages(true);
@@ -747,6 +819,8 @@
             }
             loadConversations();
             convRefreshTimer = setInterval(loadConversations, 6000);
+            // On mobile, open the conversation panel on first load so users can see their conversations
+            if (isMobile()) openConvPanel();
             unreadPollTimer = setInterval(() => {
                 apiGet(`/api/chat?action=unread&user_id=${ME.id}`).then((v) => {
                     const unread = parseInt(v?.unread || 0, 10);

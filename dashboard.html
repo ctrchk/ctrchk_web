@@ -407,6 +407,15 @@
                     return;
                 }
 
+                // 立即從快取渲染遊戲進度（減少感知載入時間）
+                if (user.level !== undefined) {
+                    renderGameProfile(user.level, user.xp, user.coins);
+                }
+
+                // 立即顯示基本資料（不等 API 回應）
+                const displayName = user.full_name || user.email;
+                document.getElementById('welcome-email').textContent = `你好, ${displayName}`;
+
                 // 從後端取得最新的用戶角色及遊戲進度
                 try {
                     const token = localStorage.getItem('accessToken');
@@ -440,9 +449,6 @@
                     console.error('Error fetching user from database:', error);
                     userRole = user.user_role || user.role || 'junior';
                 }
-                
-                const displayName = user.full_name || user.email;
-                document.getElementById('welcome-email').textContent = `你好, ${displayName}`;
 
                 // 顯示電郵未驗證提醒
                 if (user.email_verified === false) {
