@@ -1319,12 +1319,27 @@
 
     // ── Init ──────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
-        await syncProgressFromServer();
+        // Render immediately from local cache so the page is usable right away
         renderCheckin();
         initNotifToggle();
         render();
         updateDailyCountdown();
         setInterval(updateDailyCountdown, 1000);
+
+        // Show a loading state on the check-in button while syncing with the
+        // server, so users don't see a premature "Day 1" before real data arrives
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            const checkinData = getCheckinData();
+            const btn = document.getElementById('checkin-btn');
+            if (btn && !checkinData[getTodayKey()]) {
+                btn.disabled = true;
+                btn.textContent = '載入中…';
+            }
+            await syncProgressFromServer();
+            renderCheckin();
+            render();
+        }
     });
 
     })();
