@@ -365,25 +365,22 @@
         .conv-overlay.show { display: block; }
         /* ── Responsive (mobile) ── */
         @media (max-width: 600px) {
-            .chat-layout { height: calc(100vh - 100px); }
-            /* Collapsed sidebar: hide completely, show as overlay when .open */
+            .chat-layout { height: calc(100vh - 100px); position: relative; }
+            /* Full-screen slide-in panel: slides in from the left */
             .conv-panel {
-                width: 0;
+                width: 100%;
                 min-width: 0;
                 overflow: hidden;
                 position: absolute;
-                z-index: 100;
+                left: 0; top: 0;
                 height: 100%;
-                transition: width 0.25s ease;
+                z-index: 10;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
             }
-            .conv-panel.open { width: 80vw; min-width: 220px; overflow: visible; }
-            /* Hide text-only elements inside collapsed panel */
-            .conv-search, .conv-header h3, .conv-name, .conv-last, .conv-unread, .btn-new-chat { display: none; }
-            .conv-panel.open .conv-search, .conv-panel.open .conv-header h3,
-            .conv-panel.open .conv-name, .conv-panel.open .conv-last,
-            .conv-panel.open .conv-unread, .conv-panel.open .btn-new-chat { display: block; }
-            .conv-header { justify-content: flex-start; }
-            .conv-panel.open .conv-header { justify-content: space-between; }
+            .conv-panel.open { transform: translateX(0); }
+            /* Hide overlay on mobile (panel is full-screen, no backdrop needed) */
+            .conv-overlay { display: none !important; }
             /* Show toggle/back buttons on mobile only */
             .btn-panel-toggle { display: flex; align-items: center; }
             .btn-back-to-list { display: flex; align-items: center; }
@@ -569,7 +566,7 @@
             }
             el.innerHTML = list.map(c => `
                 <div class="conv-item${currentPeerId === c.peer_id ? ' active' : ''}"
-                     onclick="openConversation(${c.peer_id}, ${JSON.stringify(c.peer_name)}, ${JSON.stringify(c.peer_avatar || '')})">
+                     onclick="openConversation(${c.peer_id}, ${JSON.stringify(c.peer_name || '用戶').replace(/"/g, '&quot;')}, ${JSON.stringify(c.peer_avatar || '').replace(/"/g, '&quot;')})">
                     <div class="conv-avatar">${avatarHtml(c.peer_avatar, 40)}</div>
                     <div class="conv-info">
                         <div class="conv-name">${escHtml(c.peer_name || '用戶')}</div>
@@ -583,6 +580,7 @@
             const filtered = conversations.filter(c => (c.peer_name || '').includes(q));
             renderConvList(filtered);
         }
+        window.filterConvList = filterConvList;
 
         // ── Open Conversation ───────────────────────────────────────────────
         window.openConversation = function(peerId, peerName, peerAvatar) {
@@ -758,7 +756,7 @@
                 return;
             }
             el.innerHTML = users.map(u => `
-                <div class="modal-user-item" onclick="startChatWith(${u.id}, ${JSON.stringify(u.username || u.full_name || '用戶')}, ${JSON.stringify(u.avatar_url || '')})">
+                <div class="modal-user-item" onclick="startChatWith(${u.id}, ${JSON.stringify(u.username || u.full_name || '用戶').replace(/"/g, '&quot;')}, ${JSON.stringify(u.avatar_url || '').replace(/"/g, '&quot;')})">
                     <div class="modal-user-avatar">${avatarHtml(u.avatar_url, 36)}</div>
                     <span class="modal-user-name">${escHtml(u.username || u.full_name || '用戶')}</span>
                 </div>
