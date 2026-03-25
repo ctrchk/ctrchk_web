@@ -199,13 +199,17 @@
             overflow: hidden;
         }
         .bubble-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-        .msg-bubble {
+        .msg-inner {
             max-width: 70%;
+            min-width: 0;
+        }
+        .msg-bubble {
             padding: 0.6em 0.9em;
             border-radius: 14px;
             font-size: 0.9em;
             line-height: 1.45;
             word-break: break-word;
+            overflow-wrap: break-word;
         }
         .msg-bubble.mine {
             background: var(--app-accent, #6dba65);
@@ -469,6 +473,7 @@
         let oldestMsgId = null;
         let lastUnreadCount = 0;
         let lastInboxMessageAt = '';
+        const msgCache = {};
 
         // ── Mobile conv-panel helpers ──────────────────────────────────────
         function isMobile() { return window.innerWidth <= 600; }
@@ -611,26 +616,40 @@
         };
 
         function loadMessages(reset) {
+            const peerId = currentPeerId;
             const params = new URLSearchParams({
-                action: 'messages', user_id: ME.id, peer_id: currentPeerId, limit: '40'
+                action: 'messages', user_id: ME.id, peer_id: peerId, limit: '40'
             });
             if (!reset && oldestMsgId) params.set('before', oldestMsgId);
+
+            // Show cached messages instantly when switching conversations
+            if (reset && msgCache[peerId] && msgCache[peerId].length) {
+                const list = document.getElementById('msg-list');
+                list.innerHTML = '';
+                oldestMsgId = msgCache[peerId][0].id;
+                renderMessages(msgCache[peerId], list, false);
+                list.scrollTop = list.scrollHeight;
+            }
+
             apiGet(`/api/chat?${params}`).then(msgs => {
+                if (currentPeerId !== peerId) return; // user switched away, discard
                 const list = document.getElementById('msg-list');
                 if (reset) {
+                    msgCache[peerId] = msgs;
                     list.innerHTML = '';
                     oldestMsgId = msgs.length ? msgs[0].id : null;
+                    renderMessages(msgs, list, false);
+                    list.scrollTop = list.scrollHeight;
                 } else {
-                    // Prepend older messages
                     const frag = document.createElement('div');
                     renderMessages(msgs, frag, true);
                     list.insertBefore(frag, list.firstChild);
-                    if (msgs.length) oldestMsgId = msgs[0].id;
+                    if (msgs.length) {
+                        oldestMsgId = msgs[0].id;
+                        msgCache[peerId] = [...msgs, ...(msgCache[peerId] || [])];
+                    }
                     isLoadingMore = false;
-                    return;
                 }
-                renderMessages(msgs, list, false);
-                list.scrollTop = list.scrollHeight;
             }).catch(() => { isLoadingMore = false; });
         }
 
@@ -644,7 +663,7 @@
                 const avatarUrl = mine ? (ME.avatar_url || '') : (currentPeerAvatar || '');
                 wrap.innerHTML = `
                     <div class="bubble-avatar">${avatarHtml(avatarUrl, 28)}</div>
-                    <div>
+                    <div class="msg-inner">
                         <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(m.content)}</div>
                         <div class="msg-time">${timeStr(m.created_at)}</div>
                     </div>
@@ -657,16 +676,19 @@
 
         function pollNewMessages() {
             if (!currentPeerId) return;
+            const peerId = currentPeerId;
             const list = document.getElementById('msg-list');
             const lastEl = list.lastElementChild;
             const lastId = lastEl ? parseInt(lastEl.dataset.msgId, 10) : 0;
-            const params = new URLSearchParams({ action: 'messages', user_id: ME.id, peer_id: currentPeerId, limit: '20' });
+            const params = new URLSearchParams({ action: 'messages', user_id: ME.id, peer_id: peerId, limit: '20' });
             apiGet(`/api/chat?${params}`).then(msgs => {
+                if (currentPeerId !== peerId) return;
                 const newMsgs = msgs.filter(m => m.id > lastId);
                 if (newMsgs.length) {
                     renderMessages(newMsgs, list, false);
+                    msgCache[peerId] = [...(msgCache[peerId] || []), ...newMsgs];
                     list.scrollTop = list.scrollHeight;
-                    apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: currentPeerId });
+                    apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: peerId });
                     loadConversations(); // refresh unread counts
                     const incoming = newMsgs.filter(m => m.sender_id !== ME.id);
                     if (incoming.length) {
