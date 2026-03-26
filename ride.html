@@ -316,14 +316,12 @@
       100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
     }
     /* Stars burst around badge */
-    .levelup-star {
-      position: absolute; font-size: 1.4em; pointer-events: none;
-      animation: starBurst 0.8s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
-    }
-    @keyframes starBurst {
-      from { transform: translate(0,0) scale(0); opacity: 1; }
-      to   { opacity: 0; }
-    }
+    @keyframes starFloat0 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-80px,-70px) scale(1); opacity:0; } }
+    @keyframes starFloat1 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(80px,-70px) scale(1); opacity:0; } }
+    @keyframes starFloat2 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-90px,0px) scale(1); opacity:0; } }
+    @keyframes starFloat3 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(90px,0px) scale(1); opacity:0; } }
+    @keyframes starFloat4 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-60px,70px) scale(1); opacity:0; } }
+    @keyframes starFloat5 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(60px,70px) scale(1); opacity:0; } }
     /* XP count-up animation in summary */
     #summary-xp-badge {
       transition: transform 0.15s;
@@ -1125,42 +1123,23 @@
     }
 
     function launchStars() {
-      const inner = document.getElementById('levelup-inner');
-      const emojis = ['⭐','✨','💫','🌟'];
-      const positions = [
-        { top: '-0.5em', left: '-1em' }, { top: '-0.5em', right: '-1em' },
-        { top: '50%', left: '-1.5em' },  { top: '50%', right: '-1.5em' },
-        { bottom: '0', left: '-0.5em' }, { bottom: '0', right: '-0.5em' },
-      ];
-      positions.forEach((pos, i) => {
+      const overlay = document.getElementById('levelup-overlay');
+      const emojis = ['⭐','✨','💫','🌟','⭐','✨'];
+      for (let i = 0; i < emojis.length; i++) {
         const s = document.createElement('span');
-        s.className = 'levelup-star';
-        s.textContent = emojis[i % emojis.length];
-        const angle = (i / positions.length) * 360;
-        const dist = 60 + Math.random() * 30;
-        const rad = angle * Math.PI / 180;
-        Object.assign(s.style, {
-          position: 'absolute',
-          top: '50%', left: '50%',
-          '--tx': `${Math.cos(rad) * dist}px`,
-          '--ty': `${Math.sin(rad) * dist}px`,
-        });
-        s.style.animationName = 'none';
-        inner.style.position = 'relative';
-        inner.appendChild(s);
-        // Use CSS custom properties for direction
-        s.style.cssText += `;animation: starBurst 0.8s ${0.3 + i * 0.05}s cubic-bezier(0.34,1.56,0.64,1) both;
-          transform-origin: center;`;
+        s.style.cssText = `position:absolute;font-size:1.6em;pointer-events:none;z-index:2;` +
+          `top:50%;left:50%;animation:starFloat${i} 1s ${0.3 + i * 0.06}s cubic-bezier(0.34,1.56,0.64,1) both;`;
+        s.textContent = emojis[i];
+        overlay.appendChild(s);
         s.addEventListener('animationend', () => s.remove());
-      });
+      }
     }
 
     window.closeLevelUp = function () {
       const overlay = document.getElementById('levelup-overlay');
       overlay.classList.remove('show');
       // Clean up any remaining confetti/star elements
-      overlay.querySelectorAll('.confetti-piece').forEach(el => el.remove());
-      document.getElementById('levelup-inner').querySelectorAll('.levelup-star').forEach(el => el.remove());
+      overlay.querySelectorAll('.confetti-piece, span[style*="starFloat"]').forEach(el => el.remove());
       if (pendingSummary) showSummary(pendingSummary);
     };
 

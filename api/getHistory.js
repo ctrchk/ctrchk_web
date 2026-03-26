@@ -214,11 +214,13 @@ export default async function handler(req, res) {
           let rankQuery, rankParams;
           if (routeId) {
             rankQuery = `
-              SELECT COUNT(DISTINCT user_id)::int AS rank_above
-              FROM cycling_history
-              WHERE route_id = $1 AND distance_km > 0
-              GROUP BY user_id
-              HAVING SUM(distance_km) > $2`;
+              SELECT COUNT(*)::int AS rank_above FROM (
+                SELECT user_id, SUM(distance_km) AS td
+                FROM cycling_history
+                WHERE route_id = $1 AND distance_km > 0
+                GROUP BY user_id
+                HAVING SUM(distance_km) > $2
+              ) ranked`;
             rankParams = [routeId, myDist];
           } else {
             rankQuery = `
