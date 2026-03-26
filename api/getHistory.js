@@ -144,6 +144,118 @@ export default async function handler(req, res) {
   const userData = await authenticate(req, res);
   if (!userData) return;
 
+  // ── GET：排行榜 ──────────────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'leaderboard') {
+    try {
+      const routeId = req.query.route_id || null;
+      const hasCyclingHistory = await tableExists('cycling_history');
+      if (!hasCyclingHistory) {
+        return res.status(200).json({ rankings: [], my_rank: null });
+      }
+
+      let rankingsQuery, rankingsParams;
+      if (routeId) {
+        rankingsQuery = `
+          SELECT u.id AS user_id,
+                 COALESCE(u.username, u.full_name, '匿名騎手') AS display_name,
+                 COUNT(*)::int AS rides,
+                 ROUND(SUM(ch.distance_km)::numeric, 1) AS total_distance,
+                 ROUND(AVG(ch.avg_speed_kmh)::numeric, 1) AS avg_speed
+          FROM cycling_history ch
+          JOIN users u ON ch.user_id = u.id
+          WHERE ch.route_id = $1
+            AND ch.distance_km > 0
+          GROUP BY u.id, u.username, u.full_name
+          ORDER BY total_distance DESC
+          LIMIT 20`;
+        rankingsParams = [routeId];
+      } else {
+        rankingsQuery = `
+          SELECT u.id AS user_id,
+                 COALESCE(u.username, u.full_name, '匿名騎手') AS display_name,
+                 COUNT(*)::int AS rides,
+                 ROUND(SUM(ch.distance_km)::numeric, 1) AS total_distance,
+                 ROUND(AVG(ch.avg_speed_kmh)::numeric, 1) AS avg_speed
+          FROM cycling_history ch
+          JOIN users u ON ch.user_id = u.id
+          WHERE ch.distance_km > 0
+          GROUP BY u.id, u.username, u.full_name
+          ORDER BY total_distance DESC
+          LIMIT 20`;
+        rankingsParams = [];
+      }
+
+      const { rows: rankings } = await query(rankingsQuery, rankingsParams);
+
+      // Find current user's rank
+      let myRank = null;
+      const myIdx = rankings.findIndex(r => r.user_id === userData.userId);
+      if (myIdx >= 0) {
+        myRank = myIdx + 1;
+      } else {
+        // User not in top 20 – compute their actual rank
+        let myStatsQuery, myStatsParams;
+        if (routeId) {
+          myStatsQuery = `
+            SELECT ROUND(SUM(distance_km)::numeric, 1) AS total_distance
+            FROM cycling_history
+            WHERE user_id = $1 AND route_id = $2 AND distance_km > 0`;
+          myStatsParams = [userData.userId, routeId];
+        } else {
+          myStatsQuery = `
+            SELECT ROUND(SUM(distance_km)::numeric, 1) AS total_distance
+            FROM cycling_history
+            WHERE user_id = $1 AND distance_km > 0`;
+          myStatsParams = [userData.userId];
+        }
+        const { rows: myStats } = await query(myStatsQuery, myStatsParams);
+        const myDist = parseFloat(myStats[0]?.total_distance || 0);
+        if (myDist > 0) {
+          let rankQuery, rankParams;
+          if (routeId) {
+            rankQuery = `
+              SELECT COUNT(*)::int AS rank_above FROM (
+                SELECT user_id, SUM(distance_km) AS td
+                FROM cycling_history
+                WHERE route_id = $1 AND distance_km > 0
+                GROUP BY user_id
+                HAVING SUM(distance_km) > $2
+              ) ranked`;
+            rankParams = [routeId, myDist];
+          } else {
+            rankQuery = `
+              SELECT COUNT(*)::int AS rank_above FROM (
+                SELECT user_id, SUM(distance_km) AS td
+                FROM cycling_history
+                WHERE distance_km > 0
+                GROUP BY user_id
+                HAVING SUM(distance_km) > $1
+              ) ranked`;
+            rankParams = [myDist];
+          }
+          const { rows: rankRows } = await query(rankQuery, rankParams);
+          myRank = (rankRows[0]?.rank_above || 0) + 1;
+        }
+      }
+
+      return res.status(200).json({
+        rankings: rankings.map((r, i) => ({
+          rank: i + 1,
+          user_id: r.user_id,
+          display_name: r.display_name,
+          rides: r.rides,
+          total_distance: parseFloat(r.total_distance) || 0,
+          avg_speed: parseFloat(r.avg_speed) || null,
+          is_me: r.user_id === userData.userId,
+        })),
+        my_rank: myRank,
+      });
+    } catch (error) {
+      console.error('[leaderboard] error:', error);
+      return res.status(500).json({ message: 'Failed to fetch leaderboard' });
+    }
+  }
+
   // ── GET：騎行歷史（含遊戲進度）──────────────────────────────────────
   if (req.method === 'GET') {
     try {

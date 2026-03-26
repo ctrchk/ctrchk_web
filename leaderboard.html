@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#121f14">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排行榜 - 城市運輸單車</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+            min-height: 100vh;
+        }
+        .lb-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: calc(env(safe-area-inset-top) + 0.5em) 0 calc(env(safe-area-inset-bottom) + 5em) 0;
+        }
+        /* ── Header ── */
+        .lb-hero {
+            background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+            padding: calc(env(safe-area-inset-top) + 1em) 1.2em 1.2em;
+            border-bottom: 1px solid #2d4d2d;
+        }
+        .lb-hero h1 {
+            margin: 0 0 0.2em 0;
+            font-size: 1.4em;
+            color: #e8f5e9;
+        }
+        .lb-hero p {
+            margin: 0;
+            font-size: 0.85em;
+            color: #a8d8a0;
+        }
+        /* ── Filter bar ── */
+        .lb-filter {
+            padding: 0.8em 1em;
+            background: #1a2d1c;
+            border-bottom: 1px solid #2d4d2d;
+            display: flex;
+            align-items: center;
+            gap: 0.6em;
+        }
+        .lb-filter label {
+            font-size: 0.82em;
+            color: #a8d8a0;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .lb-filter select {
+            flex: 1;
+            background: #243827;
+            color: #e8f5e9;
+            border: 1px solid #2d4d2d;
+            border-radius: 8px;
+            padding: 0.4em 0.7em;
+            font-size: 0.88em;
+            outline: none;
+            cursor: pointer;
+        }
+        .lb-filter select:focus {
+            border-color: #6dba65;
+        }
+        /* ── Podium (top 3) ── */
+        .lb-podium {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 0.5em;
+            padding: 1.5em 1em 0.5em;
+        }
+        .lb-podium-item {
+            flex: 1;
+            max-width: 120px;
+            text-align: center;
+        }
+        .lb-podium-item.rank-1 .podium-block { background: linear-gradient(180deg,#BFE340,#8cb020); height: 80px; }
+        .lb-podium-item.rank-2 .podium-block { background: linear-gradient(180deg,#c0c0c0,#808080); height: 60px; }
+        .lb-podium-item.rank-3 .podium-block { background: linear-gradient(180deg,#cd7f32,#8b5010); height: 46px; }
+        .podium-block {
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #121f14;
+        }
+        .podium-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #2d4d2d;
+            margin: 0 auto 0.3em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6em;
+            border: 2px solid #2d4d2d;
+        }
+        .lb-podium-item.rank-1 .podium-avatar { border-color: #BFE340; }
+        .lb-podium-item.rank-2 .podium-avatar { border-color: #c0c0c0; }
+        .lb-podium-item.rank-3 .podium-avatar { border-color: #cd7f32; }
+        .podium-name {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #e8f5e9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 2px;
+        }
+        .podium-dist {
+            font-size: 0.7em;
+            color: #a8d8a0;
+            margin-top: 0.15em;
+        }
+        /* ── Rankings list ── */
+        .lb-list {
+            padding: 0 0.8em 1em;
+        }
+        .lb-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+            padding: 0.75em 0.8em;
+            border-bottom: 1px solid #1e3020;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+        .lb-row:hover { background: rgba(255,255,255,0.03); }
+        .lb-row.is-me {
+            background: rgba(109,186,101,0.12);
+            border: 1px solid #6dba65;
+            border-radius: 10px;
+            margin: 0.25em 0;
+        }
+        .lb-rank {
+            font-size: 1em;
+            font-weight: bold;
+            width: 2em;
+            text-align: center;
+            flex-shrink: 0;
+            color: #a8d8a0;
+        }
+        .lb-rank.top-1 { color: #BFE340; font-size: 1.2em; }
+        .lb-rank.top-2 { color: #c0c0c0; font-size: 1.15em; }
+        .lb-rank.top-3 { color: #cd7f32; font-size: 1.1em; }
+        .lb-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2d4d2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        .lb-info { flex: 1; min-width: 0; }
+        .lb-name {
+            font-size: 0.92em;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lb-name.is-me::after {
+            content: ' （我）';
+            color: #6dba65;
+            font-size: 0.85em;
+            font-weight: normal;
+        }
+        .lb-sub {
+            font-size: 0.72em;
+            color: #a8d8a0;
+            margin-top: 0.15em;
+        }
+        .lb-dist {
+            font-size: 1em;
+            font-weight: bold;
+            color: #BFE340;
+            flex-shrink: 0;
+            white-space: nowrap;
+            text-align: right;
+        }
+        .lb-dist-unit {
+            font-size: 0.7em;
+            color: #a8d8a0;
+            display: block;
+        }
+        /* My rank banner */
+        .lb-my-rank-banner {
+            display: none;
+            background: rgba(109,186,101,0.12);
+            border: 1px solid #6dba65;
+            border-radius: 10px;
+            padding: 0.6em 1em;
+            margin: 0.8em;
+            text-align: center;
+            font-size: 0.88em;
+            color: #a8d8a0;
+        }
+        .lb-my-rank-banner b { color: #6dba65; }
+        /* States */
+        .lb-empty {
+            text-align: center;
+            padding: 3em 2em;
+            color: #a8d8a0;
+        }
+        .lb-empty i { font-size: 2.5em; display: block; margin-bottom: 0.5em; opacity: 0.4; }
+        .lb-loading {
+            text-align: center;
+            padding: 3em 2em;
+            color: #a8d8a0;
+        }
+        .lb-spinner {
+            width: 32px; height: 32px;
+            border: 3px solid rgba(255,255,255,0.15);
+            border-top-color: #6dba65;
+            border-radius: 50%;
+            animation: lbSpin 0.8s linear infinite;
+            margin: 0 auto 1em;
+        }
+        @keyframes lbSpin { to { transform: rotate(360deg); } }
+        /* Login required */
+        .lb-login-prompt {
+            text-align: center;
+            padding: 3em 2em;
+            color: #a8d8a0;
+        }
+        .lb-login-prompt i { font-size: 2.5em; display: block; margin-bottom: 0.5em; opacity: 0.4; }
+        .lb-login-prompt a {
+            display: inline-block;
+            margin-top: 1em;
+            padding: 0.6em 1.5em;
+            background: #6dba65;
+            color: #121f14;
+            border-radius: 20px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header-placeholder" class="web-only"></div>
+
+    <div class="lb-container">
+        <div class="lb-hero">
+            <h1>🏆 排行榜</h1>
+            <p>查看同路線其他騎手的里程排名</p>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="lb-filter">
+            <label for="lb-route-select"><i class="fas fa-filter"></i> 路線：</label>
+            <select id="lb-route-select" onchange="loadLeaderboard()">
+                <option value="">全部路線（總里程）</option>
+            </select>
+        </div>
+
+        <!-- My rank banner (shown when user is outside top 20) -->
+        <div class="lb-my-rank-banner" id="lb-my-rank-banner"></div>
+
+        <!-- Podium (top 3) -->
+        <div class="lb-podium" id="lb-podium"></div>
+
+        <!-- Rankings list (4th place onwards) -->
+        <div class="lb-list" id="lb-list">
+            <div class="lb-loading" id="lb-loading">
+                <div class="lb-spinner"></div>
+                <p>正在載入排行榜...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (function() {
+    'use strict';
+
+    const token = localStorage.getItem('accessToken');
+
+    // Populate route selector from routes.json
+    async function loadRoutes() {
+        try {
+            const res = await fetch('/routes.json');
+            const data = await res.json();
+            const sel = document.getElementById('lb-route-select');
+            (data.routes || []).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = `${r.id} ${r.alias || ''}`.trim();
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            console.warn('[Leaderboard] routes.json load failed', e);
+        }
+    }
+
+    // Medal emoji for top 3
+    function rankEmoji(rank) {
+        if (rank === 1) return '🥇';
+        if (rank === 2) return '🥈';
+        if (rank === 3) return '🥉';
+        return rank;
+    }
+
+    function rankClass(rank) {
+        if (rank === 1) return 'top-1';
+        if (rank === 2) return 'top-2';
+        if (rank === 3) return 'top-3';
+        return '';
+    }
+
+    function initials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return name.slice(0, 2).toUpperCase();
+    }
+
+    window.loadLeaderboard = async function() {
+        if (!token) {
+            document.getElementById('lb-list').innerHTML = `
+                <div class="lb-login-prompt">
+                    <i class="fas fa-lock"></i>
+                    <p>請先登入以查看排行榜</p>
+                    <a href="/login">登入</a>
+                </div>`;
+            document.getElementById('lb-podium').innerHTML = '';
+            document.getElementById('lb-my-rank-banner').style.display = 'none';
+            return;
+        }
+
+        const routeId = document.getElementById('lb-route-select').value;
+        document.getElementById('lb-list').innerHTML = `
+            <div class="lb-loading" id="lb-loading">
+                <div class="lb-spinner"></div>
+                <p>正在載入排行榜...</p>
+            </div>`;
+        document.getElementById('lb-podium').innerHTML = '';
+        document.getElementById('lb-my-rank-banner').style.display = 'none';
+
+        try {
+            const url = routeId
+                ? `/api/getHistory?action=leaderboard&route_id=${encodeURIComponent(routeId)}`
+                : '/api/getHistory?action=leaderboard';
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const { rankings, my_rank } = await res.json();
+
+            if (!rankings || rankings.length === 0) {
+                document.getElementById('lb-list').innerHTML = `
+                    <div class="lb-empty">
+                        <i class="fas fa-trophy"></i>
+                        <p>此路線暫無騎行記錄<br>成為第一個上榜的騎手！</p>
+                    </div>`;
+                return;
+            }
+
+            // Render podium (top 3)
+            const podiumEl = document.getElementById('lb-podium');
+            const top3 = rankings.slice(0, 3);
+            // Reorder: 2nd, 1st, 3rd for visual podium
+            const podiumOrder = [
+                top3[1] || null,
+                top3[0] || null,
+                top3[2] || null,
+            ];
+            const podiumRanks = [2, 1, 3];
+            podiumEl.innerHTML = '';
+            podiumOrder.forEach((r, i) => {
+                if (!r) return;
+                const rank = podiumRanks[i];
+                const div = document.createElement('div');
+                div.className = `lb-podium-item rank-${rank}`;
+                div.innerHTML = `
+                    <div class="podium-avatar">${initials(r.display_name)}</div>
+                    <div class="podium-name">${escHtml(r.display_name)}${r.is_me ? ' 👤' : ''}</div>
+                    <div class="podium-dist">${r.total_distance} km</div>
+                    <div class="podium-block">${rankEmoji(rank)}</div>`;
+                podiumEl.appendChild(div);
+            });
+
+            // Render list (4th onwards)
+            const listEl = document.getElementById('lb-list');
+            listEl.innerHTML = '';
+            rankings.slice(3).forEach(r => {
+                const row = document.createElement('div');
+                row.className = 'lb-row' + (r.is_me ? ' is-me' : '');
+                row.innerHTML = `
+                    <div class="lb-rank ${rankClass(r.rank)}">${r.rank}</div>
+                    <div class="lb-avatar">${initials(r.display_name)}</div>
+                    <div class="lb-info">
+                        <div class="lb-name${r.is_me ? ' is-me' : ''}">${escHtml(r.display_name)}</div>
+                        <div class="lb-sub">${r.rides} 次騎行${r.avg_speed ? '　均速 ' + r.avg_speed + ' km/h' : ''}</div>
+                    </div>
+                    <div class="lb-dist">
+                        ${r.total_distance}
+                        <span class="lb-dist-unit">km</span>
+                    </div>`;
+                listEl.appendChild(row);
+            });
+
+            // My rank banner (if outside top 20)
+            const myInList = rankings.some(r => r.is_me);
+            const bannerEl = document.getElementById('lb-my-rank-banner');
+            if (!myInList && my_rank) {
+                bannerEl.innerHTML = `您目前排名第 <b>#${my_rank}</b>，繼續騎行衝上榜單！`;
+                bannerEl.style.display = 'block';
+            } else if (!myInList) {
+                bannerEl.innerHTML = '開始騎行即可上榜！';
+                bannerEl.style.display = 'block';
+            }
+
+        } catch (e) {
+            console.error('[Leaderboard] fetch error', e);
+            document.getElementById('lb-list').innerHTML = `
+                <div class="lb-empty">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>載入失敗，請稍後再試</p>
+                </div>`;
+        }
+    };
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Init
+    loadRoutes().then(() => loadLeaderboard());
+
+    })();
+    </script>
+</body>
+</html>

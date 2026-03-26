@@ -273,14 +273,15 @@
     /* ── Level-up overlay ── */
     #levelup-overlay {
       display: none; position: fixed; inset: 0; z-index: 700;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.88);
       align-items: center; justify-content: center; flex-direction: column;
-      text-align: center; padding: 2em;
+      text-align: center; padding: 2em; overflow: hidden;
     }
-    #levelup-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+    #levelup-overlay.show { display: flex; animation: fadeIn 0.35s ease; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     #levelup-inner {
-      animation: slideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+      animation: slideUp 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+      position: relative; z-index: 1;
     }
     @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     #levelup-badge {
@@ -288,14 +289,45 @@
       font-size: 2.5em; font-weight: bold;
       padding: 0.4em 1em; border-radius: 16px; margin-bottom: 0.5em;
       display: inline-block;
+      animation: badgePulse 0.7s 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes badgePulse {
+      0%   { transform: scale(0.7); }
+      60%  { transform: scale(1.15); }
+      100% { transform: scale(1); }
     }
     #levelup-title { color: #fff; font-size: 1.4em; margin-bottom: 0.3em; }
     #levelup-coins { color: #BFE340; font-size: 1.1em; margin-bottom: 1.5em; }
     #levelup-overlay h2 { color: #BFE340; font-size: 2.2em; margin-bottom: 0.3em; }
+    #levelup-unlocked { color: #a8d8a0; font-size: 0.9em; margin-bottom: 1.2em; display: none; }
     #btn-levelup-close {
       background: #BFE340; color: #1a252f; border: none;
       padding: 0.8em 2em; border-radius: 10px; font-size: 1em; font-weight: bold;
       cursor: pointer;
+    }
+    /* Confetti particles */
+    .confetti-piece {
+      position: absolute; width: 10px; height: 10px; border-radius: 2px;
+      animation: confettiFall linear forwards;
+      pointer-events: none; z-index: 0;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+    /* Stars burst around badge */
+    @keyframes starFloat0 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-80px,-70px) scale(1); opacity:0; } }
+    @keyframes starFloat1 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(80px,-70px) scale(1); opacity:0; } }
+    @keyframes starFloat2 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-90px,0px) scale(1); opacity:0; } }
+    @keyframes starFloat3 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(90px,0px) scale(1); opacity:0; } }
+    @keyframes starFloat4 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-60px,70px) scale(1); opacity:0; } }
+    @keyframes starFloat5 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(60px,70px) scale(1); opacity:0; } }
+    /* XP count-up animation in summary */
+    #summary-xp-badge {
+      transition: transform 0.15s;
+    }
+    #summary-xp-badge.count-tick {
+      transform: scale(1.05);
     }
   </style>
 </head>
@@ -421,6 +453,7 @@
       <div id="levelup-badge">Lv.2</div>
       <div id="levelup-title">街坊騎手</div>
       <div id="levelup-coins">💰 +100 里程幣</div>
+      <div id="levelup-unlocked"></div>
       <button id="btn-levelup-close" onclick="closeLevelUp()">太棒了！</button>
     </div>
   </div>
@@ -1052,11 +1085,61 @@
       document.getElementById('levelup-title').textContent = LEVEL_TITLES[newLevel] || '';
       document.getElementById('levelup-coins').textContent =
         coins > 0 ? `💰 +${coins} 里程幣` : '';
+
+      // Show newly unlocked routes (if any)
+      const unlockedEl = document.getElementById('levelup-unlocked');
+      const newlyUnlocked = Object.entries(ROUTE_UNLOCK)
+        .filter(([, lvl]) => lvl === newLevel)
+        .map(([id]) => id);
+      if (newlyUnlocked.length > 0) {
+        unlockedEl.textContent = `🔓 解鎖新路線：${newlyUnlocked.join('、')}`;
+        unlockedEl.style.display = '';
+      } else {
+        unlockedEl.style.display = 'none';
+      }
+
       document.getElementById('levelup-overlay').classList.add('show');
+      launchConfetti();
+      launchStars();
+    }
+
+    function launchConfetti() {
+      const overlay = document.getElementById('levelup-overlay');
+      const colors = ['#BFE340','#04D93C','#FFD700','#FF6B6B','#4FC3F7','#CE93D8','#fff'];
+      for (let i = 0; i < 60; i++) {
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.top = '-12px';
+        el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.width = (6 + Math.random() * 8) + 'px';
+        el.style.height = (6 + Math.random() * 8) + 'px';
+        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        el.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+        el.style.animationDelay = (Math.random() * 0.6) + 's';
+        overlay.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+      }
+    }
+
+    function launchStars() {
+      const overlay = document.getElementById('levelup-overlay');
+      const emojis = ['⭐','✨','💫','🌟','⭐','✨'];
+      for (let i = 0; i < emojis.length; i++) {
+        const s = document.createElement('span');
+        s.style.cssText = `position:absolute;font-size:1.6em;pointer-events:none;z-index:2;` +
+          `top:50%;left:50%;animation:starFloat${i} 1s ${0.3 + i * 0.06}s cubic-bezier(0.34,1.56,0.64,1) both;`;
+        s.textContent = emojis[i];
+        overlay.appendChild(s);
+        s.addEventListener('animationend', () => s.remove());
+      }
     }
 
     window.closeLevelUp = function () {
-      document.getElementById('levelup-overlay').classList.remove('show');
+      const overlay = document.getElementById('levelup-overlay');
+      overlay.classList.remove('show');
+      // Clean up any remaining confetti/star elements
+      overlay.querySelectorAll('.confetti-piece, span[style*="starFloat"]').forEach(el => el.remove());
       if (pendingSummary) showSummary(pendingSummary);
     };
 
@@ -1069,8 +1152,11 @@
         bonusCoinsEl.textContent = '⚠️ 行程過短（少於2站且少於1公里），未計入歷史記錄';
         bonusCoinsEl.style.display = '';
       } else {
-        document.getElementById('summary-xp-badge').textContent =
-          `+${apiResult.xp_earned || 0} XP`;
+        // Animate XP count-up
+        const xpEarned = apiResult.xp_earned || 0;
+        const xpBadge = document.getElementById('summary-xp-badge');
+        animateCountUp(xpBadge, 0, xpEarned, 800, v => `+${v} XP`);
+
         // Show bonus coins if earned
         const bonusCoinsEl = document.getElementById('summary-bonus-coins');
         const bc = apiResult.bonus_coins_earned || 0;
@@ -1096,19 +1182,38 @@
         avgSpeed > 0 ? `${avgSpeed} km/h` : '--';
 
       // XP bar
-      const lvl = Math.min(apiResult.level || 1, 20);
-      const xpCur = LEVEL_XP[lvl - 1] || 0;
-      const xpNext = LEVEL_XP[lvl];
+      const lvl = apiResult.level || 1;
+      const xpCur = LEVEL_XP[Math.min(lvl - 1, LEVEL_XP.length - 2)] || 0;
+      const xpNext = LEVEL_XP[Math.min(lvl, LEVEL_XP.length - 1)];
       const totalXp = apiResult.xp || 0;
-      const pct = lvl >= 20 ? 100 :
+      const pct = (!xpNext || xpNext === Infinity) ? 100 :
         Math.min(100, Math.max(0, (totalXp - xpCur) / Math.max(1, xpNext - xpCur) * 100));
       document.getElementById('s-xp-cur').textContent = `Lv.${lvl}  ${totalXp} XP`;
       document.getElementById('s-xp-next').textContent =
-        lvl >= 20 ? '最高等級' : `下一級 ${xpNext} XP`;
+        (!xpNext || xpNext === Infinity) ? '最高等級' : `下一級 ${xpNext} XP`;
       document.getElementById('ride-summary').classList.add('show');
       setTimeout(() => {
         document.getElementById('summary-xp-bar-fill').style.width = pct + '%';
-      }, 400);
+      }, 300);
+    }
+
+    // Animate a numeric count-up in an element
+    function animateCountUp(el, from, to, durationMs, formatter) {
+      if (to === 0) { el.textContent = formatter(0); return; }
+      const start = performance.now();
+      function step(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / durationMs, 1);
+        // Ease out
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(from + (to - from) * eased);
+        el.textContent = formatter(current);
+        // Tick pulse
+        el.classList.toggle('count-tick', progress < 0.95);
+        if (progress < 1) requestAnimationFrame(step);
+        else el.classList.remove('count-tick');
+      }
+      requestAnimationFrame(step);
     }
 
     // ── Confirm leave ─────────────────────────────────────────────────────
