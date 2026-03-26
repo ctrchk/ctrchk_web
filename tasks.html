@@ -459,6 +459,49 @@
             font-size: 0.7em;
             color: var(--app-text-secondary, #a8d8a0);
         }
+        /* ── Level-up overlay (tasks page) ──────────────────────────── */
+        #tasks-levelup-overlay {
+            display: none; position: fixed; inset: 0; z-index: 800;
+            background: rgba(0,0,0,0.88);
+            align-items: center; justify-content: center; flex-direction: column;
+            text-align: center; padding: 2em; overflow: hidden;
+        }
+        #tasks-levelup-overlay.show { display: flex; animation: tlFadeIn 0.35s ease; }
+        @keyframes tlFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #tasks-levelup-inner {
+            animation: tlSlideUp 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+            position: relative; z-index: 1;
+        }
+        @keyframes tlSlideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        #tasks-levelup-overlay h2 { color: #BFE340; font-size: 2.2em; margin-bottom: 0.3em; }
+        #tasks-levelup-badge {
+            background: #BFE340; color: #1a252f;
+            font-size: 2.5em; font-weight: bold;
+            padding: 0.4em 1em; border-radius: 16px; margin-bottom: 0.5em;
+            display: inline-block;
+            animation: tlBadgePulse 0.7s 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes tlBadgePulse {
+            0%   { transform: scale(0.7); }
+            60%  { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        #tasks-levelup-title { color: #fff; font-size: 1.4em; margin-bottom: 0.3em; }
+        #tasks-levelup-coins { color: #BFE340; font-size: 1.1em; margin-bottom: 1.5em; }
+        #tasks-levelup-btn {
+            background: #BFE340; color: #1a252f; border: none;
+            padding: 0.8em 2em; border-radius: 10px; font-size: 1em; font-weight: bold;
+            cursor: pointer;
+        }
+        .tasks-confetti-piece {
+            position: absolute; border-radius: 2px;
+            animation: tasksConfettiFall linear forwards;
+            pointer-events: none; z-index: 0;
+        }
+        @keyframes tasksConfettiFall {
+            0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -548,6 +591,17 @@
         <!-- Achievement medals -->
         <div class="tab-content" id="tab-medals">
             <div class="medals-grid" id="medals-grid"></div>
+        </div>
+    </div>
+
+    <!-- Level-up overlay for tasks page -->
+    <div id="tasks-levelup-overlay">
+        <div id="tasks-levelup-inner">
+            <h2>🎊 升級了！</h2>
+            <div id="tasks-levelup-badge">Lv.2</div>
+            <div id="tasks-levelup-title">街坊騎手</div>
+            <div id="tasks-levelup-coins"></div>
+            <button id="tasks-levelup-btn" onclick="closeTasksLevelUp()">太棒了！</button>
         </div>
     </div>
 
@@ -967,9 +1021,13 @@
             const coinsMsg = coins > 0 ? ` + ${coins} 🪙` : '';
             const streakMsg = streak > 1 ? `（連續 ${streak} 天）` : '';
             showCheckinToast(`🗓️ 簽到成功！+${xp} XP${coinsMsg} ${streakMsg}`);
+            launchCheckinConfetti();
 
             if (result.gameProfile) {
                 localStorage.setItem('gameProfile', JSON.stringify(result.gameProfile));
+            }
+            if (result.level_up && result.gameProfile) {
+                setTimeout(() => showTasksLevelUp(result.gameProfile.level, coins), 600);
             }
         } catch (e) {
             console.warn('[doCheckin] API call failed:', e);
@@ -1343,6 +1401,72 @@
     });
 
     })();
+
+    // ── Level-up & confetti animations ───────────────────────────────────
+    const TASKS_LEVEL_TITLES = {
+        1:'新手騎士',2:'新手騎士',3:'新手騎士',4:'新手騎士',5:'新手騎士',
+        6:'新手騎士',7:'新手騎士',8:'新手騎士',9:'新手騎士',10:'新手騎士',
+        11:'城市騎手',12:'城市騎手',13:'城市騎手',14:'城市騎手',15:'城市騎手',
+        16:'城市騎手',17:'城市騎手',18:'城市騎手',19:'城市騎手',20:'城市騎手',
+        21:'路線達人',22:'路線達人',23:'路線達人',24:'路線達人',25:'路線達人',
+        26:'路線達人',27:'路線達人',28:'路線達人',29:'路線達人',30:'路線達人',
+        31:'都市傳奇',32:'都市傳奇',33:'都市傳奇',34:'都市傳奇',35:'都市傳奇',
+        36:'都市傳奇',37:'都市傳奇',38:'都市傳奇',39:'都市傳奇',40:'都市傳奇',
+        41:'殿堂騎士',42:'殿堂騎士',43:'殿堂騎士',44:'殿堂騎士',45:'殿堂騎士',
+        46:'殿堂騎士',47:'殿堂騎士',48:'殿堂騎士',49:'殿堂騎士',50:'殿堂騎士',
+    };
+
+    function showTasksLevelUp(newLevel, coins) {
+        document.getElementById('tasks-levelup-badge').textContent = `Lv.${newLevel}`;
+        document.getElementById('tasks-levelup-title').textContent = TASKS_LEVEL_TITLES[newLevel] || '';
+        document.getElementById('tasks-levelup-coins').textContent =
+            coins > 0 ? `💰 +${coins} 里程幣` : '';
+        document.getElementById('tasks-levelup-overlay').classList.add('show');
+        launchTasksConfetti(document.getElementById('tasks-levelup-overlay'));
+    }
+
+    window.closeTasksLevelUp = function() {
+        const overlay = document.getElementById('tasks-levelup-overlay');
+        overlay.classList.remove('show');
+        overlay.querySelectorAll('.tasks-confetti-piece').forEach(el => el.remove());
+    };
+
+    function launchCheckinConfetti() {
+        const container = document.body;
+        const colors = ['#BFE340','#04D93C','#FFD700','#FF6B6B','#4FC3F7','#CE93D8','#fff'];
+        for (let i = 0; i < 40; i++) {
+            const el = document.createElement('div');
+            el.className = 'tasks-confetti-piece';
+            el.style.cssText = `position:fixed;top:-12px;z-index:999;pointer-events:none;` +
+                `left:${Math.random() * 100}vw;` +
+                `width:${6 + Math.random() * 8}px;height:${6 + Math.random() * 8}px;` +
+                `background:${colors[Math.floor(Math.random() * colors.length)]};` +
+                `border-radius:${Math.random() > 0.5 ? '50%' : '2px'};` +
+                `animation-duration:${1.5 + Math.random() * 1.5}s;` +
+                `animation-delay:${Math.random() * 0.5}s;` +
+                `animation-name:tasksConfettiFall;animation-timing-function:linear;animation-fill-mode:forwards;`;
+            document.body.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
+    }
+
+    function launchTasksConfetti(container) {
+        const colors = ['#BFE340','#04D93C','#FFD700','#FF6B6B','#4FC3F7','#CE93D8','#fff'];
+        for (let i = 0; i < 55; i++) {
+            const el = document.createElement('div');
+            el.className = 'tasks-confetti-piece';
+            el.style.left = Math.random() * 100 + 'vw';
+            el.style.top = '-12px';
+            el.style.background = colors[Math.floor(Math.random() * colors.length)];
+            el.style.width = (6 + Math.random() * 8) + 'px';
+            el.style.height = (6 + Math.random() * 8) + 'px';
+            el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            el.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+            el.style.animationDelay = (Math.random() * 0.6) + 's';
+            container.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
+    }
     </script>
 </body>
 </html>
