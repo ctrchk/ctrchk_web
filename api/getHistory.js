@@ -158,6 +158,7 @@ export default async function handler(req, res) {
         rankingsQuery = `
           SELECT u.id AS user_id,
                  COALESCE(u.username, u.full_name, '匿名騎手') AS display_name,
+                 u.avatar_url,
                  COUNT(*)::int AS rides,
                  ROUND(SUM(ch.distance_km)::numeric, 1) AS total_distance,
                  ROUND(AVG(ch.avg_speed_kmh)::numeric, 1) AS avg_speed
@@ -165,7 +166,7 @@ export default async function handler(req, res) {
           JOIN users u ON ch.user_id = u.id
           WHERE ch.route_id = $1
             AND ch.distance_km > 0
-          GROUP BY u.id, u.username, u.full_name
+          GROUP BY u.id, u.username, u.full_name, u.avatar_url
           ORDER BY total_distance DESC
           LIMIT 20`;
         rankingsParams = [routeId];
@@ -173,13 +174,14 @@ export default async function handler(req, res) {
         rankingsQuery = `
           SELECT u.id AS user_id,
                  COALESCE(u.username, u.full_name, '匿名騎手') AS display_name,
+                 u.avatar_url,
                  COUNT(*)::int AS rides,
                  ROUND(SUM(ch.distance_km)::numeric, 1) AS total_distance,
                  ROUND(AVG(ch.avg_speed_kmh)::numeric, 1) AS avg_speed
           FROM cycling_history ch
           JOIN users u ON ch.user_id = u.id
           WHERE ch.distance_km > 0
-          GROUP BY u.id, u.username, u.full_name
+          GROUP BY u.id, u.username, u.full_name, u.avatar_url
           ORDER BY total_distance DESC
           LIMIT 20`;
         rankingsParams = [];
@@ -243,6 +245,7 @@ export default async function handler(req, res) {
           rank: i + 1,
           user_id: r.user_id,
           display_name: r.display_name,
+          avatar_url: r.avatar_url || null,
           rides: r.rides,
           total_distance: parseFloat(r.total_distance) || 0,
           avg_speed: parseFloat(r.avg_speed) || null,

@@ -58,7 +58,8 @@ export default async function handler(req, res) {
         user_role: user.user_role || 'junior',
         role: user.user_role || user.role,
         profile_completed: user.profile_completed || false,
-        email_verified: user.email_verified || false
+        email_verified: user.email_verified || false,
+        avatar_url: user.avatar_url || null
       }
     });
 

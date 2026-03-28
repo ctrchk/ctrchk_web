@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     // 2. 查詢資料庫是否已有此用戶
     const { rows } = await query(
-      'SELECT id, email, username, user_role, full_name, profile_completed, google_id, email_verified FROM users WHERE google_id = $1 OR email = $2',
+      'SELECT id, email, username, user_role, full_name, profile_completed, google_id, email_verified, avatar_url FROM users WHERE google_id = $1 OR email = $2',
       [google_id, email]
     );
 
@@ -161,7 +161,8 @@ export default async function handler(req, res) {
         user_role: user.user_role,
         role: user.user_role,
         profile_completed: user.profile_completed,
-        email_verified: true // Google 帳號視為已驗證
+        email_verified: true, // Google 帳號視為已驗證
+        avatar_url: user.avatar_url || null
       }
     });
 
