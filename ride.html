@@ -996,8 +996,9 @@
       const completionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
       const bonusCoins = fastFinishCoins + completionCoins;
 
-      // 過短行程（少於2個車站且少於1公里）不計算進歷史
-      const rideTooShort = reachedStops.size < 2 && distKm < 1;
+      // 過短行程（少於2個車站且少於0.5公里且少於3分鐘）不計算進歷史
+      // 放寬條件：GPS精度差時距離可能不準，加入時間因素避免誤判
+      const rideTooShort = reachedStops.size < 2 && distKm < 0.5 && durationMins < 3;
 
       // Submit to API
       let apiResult = { xp_earned: 0, level: 1, xp: 0, coins: 0, level_up: false, coins_earned: 0, bonus_coins_earned: 0 };
@@ -1149,7 +1150,7 @@
       if (rideTooShort) {
         document.getElementById('summary-xp-badge').textContent = '行程未記錄';
         const bonusCoinsEl = document.getElementById('summary-bonus-coins');
-        bonusCoinsEl.textContent = '⚠️ 行程過短（少於2站且少於1公里），未計入歷史記錄';
+        bonusCoinsEl.textContent = '⚠️ 行程過短（少於2站且少於0.5公里且少於3分鐘），未計入歷史記錄';
         bonusCoinsEl.style.display = '';
       } else {
         // Animate XP count-up

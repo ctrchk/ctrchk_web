@@ -227,6 +227,25 @@
         }
         .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
         #notif-perm-status { font-size: 0.8em; margin-top: 0.6em; }
+        /* ── Settings card (theme toggle + logout) ────────────────────── */
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5em;
+            width: 100%;
+            margin-top: 1.2em;
+            padding: 0.75em 1em;
+            background: transparent;
+            border: 1px solid rgba(239, 154, 154, 0.5);
+            color: #ef9a9a;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .btn-logout:hover { background: rgba(239, 154, 154, 0.12); border-color: #ef9a9a; }
         /* ── Avatar ──────────────────────────────────────────────────────── */
         .avatar-section {
             display: flex;
@@ -424,6 +443,27 @@
                         </label>
                     </div>
                     <p id="notif-perm-status"></p>
+                </div>
+
+                <!-- 顯示設定 -->
+                <div class="profile-card">
+                    <h3><i class="fas fa-cog"></i> 顯示設定</h3>
+                    <div class="notif-setting-row">
+                        <div class="notif-setting-info">
+                            <strong>亮色模式</strong>
+                            <span>切換應用程式顯示主題（預設跟隨系統）</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="light-theme-toggle" onchange="onThemeToggle(this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p style="color: var(--app-text-secondary, #a8d8a0); font-size: 0.82em; margin: 0.6em 0 0;">
+                        <i class="fas fa-info-circle"></i> 若未手動設定，將自動跟隨手機系統的深淺色設定
+                    </p>
+                    <button class="btn-logout" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i> 登出
+                    </button>
                 </div>
             </div>
         </section>
@@ -634,7 +674,21 @@
         updateNotifStatus();
     };
 
-    document.addEventListener('DOMContentLoaded', function() { initNotifSettings(); });
+    document.addEventListener('DOMContentLoaded', function() {
+        initNotifSettings();
+        // Initialise theme toggle
+        const themeToggle = document.getElementById('light-theme-toggle');
+        if (themeToggle) {
+            const stored = localStorage.getItem('appTheme');
+            const isLight = stored === 'light' ||
+                (!stored && window.matchMedia('(prefers-color-scheme: light)').matches);
+            themeToggle.checked = isLight;
+        }
+    });
+
+    window.onThemeToggle = function(isLight) {
+        setAppTheme(isLight ? 'light' : 'dark');
+    };
 
     // ── 頭像功能 ────────────────────────────────────────────────────────────
     function renderAvatarPreview(url) {

@@ -8,6 +8,64 @@ console.log('--- main.js 檔案已成功載入並開始執行！ ---');
  */
 
 // =========================================================================
+// 主題 (深色/淺色) 初始化
+// =========================================================================
+(function initAppTheme() {
+    const stored = localStorage.getItem('appTheme'); // 'dark' | 'light' | null
+    if (stored === 'dark') {
+        document.body.classList.add('app-theme-explicit');
+        document.body.classList.remove('app-light-theme');
+    } else if (stored === 'light') {
+        document.body.classList.add('app-theme-explicit', 'app-light-theme');
+    } else {
+        // No explicit preference — let CSS @media prefers-color-scheme decide
+        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+    }
+})();
+
+/**
+ * 切換主題並儲存設定
+ * @param {'dark'|'light'|'auto'} theme
+ */
+function setAppTheme(theme) {
+    localStorage.setItem('appTheme', theme);
+    if (theme === 'light') {
+        document.body.classList.add('app-theme-explicit', 'app-light-theme');
+    } else if (theme === 'dark') {
+        document.body.classList.add('app-theme-explicit');
+        document.body.classList.remove('app-light-theme');
+    } else {
+        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+    }
+}
+
+// =========================================================================
+// 語言偏好持久化
+// =========================================================================
+(function applyLangPreference() {
+    const lang = localStorage.getItem('appLang'); // 'en' | 'zh' | null
+    if (!lang) return;
+    const path = window.location.pathname;
+    const isEnPage = path.startsWith('/en/') || path === '/en';
+    if (lang === 'en' && !isEnPage) {
+        // Map to English equivalent
+        const enPath = (path === '/') ? '/en/index' : '/en' + path;
+        const enUrl = enPath + window.location.search;
+        // Only redirect if the English page is likely to exist
+        const enPages = ['/en/index','/en/about','/en/blog','/en/contact',
+                         '/en/membership','/en/routes','/en/route_detail'];
+        if (enPages.some(p => enUrl.startsWith(p))) {
+            window.location.replace(enUrl);
+        }
+    } else if (lang === 'zh' && isEnPage) {
+        // Map back to Chinese equivalent
+        const stripped = path.replace(/^\/en(\/|$)/, '/');
+        const zhPath = (stripped === '/index') ? '/' : stripped;
+        window.location.replace(zhPath + window.location.search);
+    }
+})();
+
+// =========================================================================
 // 登入/登出 UI 處理 (新加入的程式碼)
 // =========================================================================
 
@@ -209,6 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * 初始化語言切換下拉選單（點擊地球圖示展開）
+     * 點擊語言連結時，儲存偏好到 localStorage 並導向對應語言頁面
      */
     function initLangSwitcher() {
         const btn = document.getElementById('lang-switcher-btn');
@@ -227,6 +286,21 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.addEventListener('click', function(e) {
             e.stopPropagation();
         });
+
+        // Attach lang preference handler to EN link
+        const enLink = document.getElementById('lang-en-link');
+        if (enLink) {
+            enLink.addEventListener('click', function() {
+                localStorage.setItem('appLang', 'en');
+            });
+        }
+        // Attach lang preference handler to ZH link
+        const zhLink = document.getElementById('lang-zh-link');
+        if (zhLink) {
+            zhLink.addEventListener('click', function() {
+                localStorage.setItem('appLang', 'zh');
+            });
+        }
     }
 
     /**
