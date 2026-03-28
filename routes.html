@@ -624,22 +624,22 @@ const ROUTE_XP = {
 
 // TKO terminal stations — coordinates verified from routes.json stop data
 const TERMINALS = [
-    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696 }, // POA 01
-    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.32058,  lng: 114.26181 },
-    { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248,  lng: 114.2490  },
-    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607 }, // TIK 06
-    { id: 'tseung_exit', name: '調景嶺站-出口',         lat: 22.30465, lng: 114.25305 }, // TIK 13 (966T start)
-    { id: 'hang_hau',    name: '坑口站',                lat: 22.3170474,  lng: 114.2631152 },
-    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.30738, lng: 114.25666 }, // TIK 11
-    { id: 'lohas',       name: '康城站',                lat: 22.29626, lng: 114.26692 }, // LHP 06 (966T end)
-    { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724  },
-    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331 }, // TIK 04
-    { id: 'po_shun',     name: '寶順路轉乘站',          lat: 22.31793, lng: 114.26225 }, // HAH 02
+    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696, dept: 'tko' }, // POA 01
+    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.32058,  lng: 114.26181, dept: 'tko' },
+    { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248,  lng: 114.2490, dept: 'tko'  },
+    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607, dept: 'tko' }, // TIK 06
+    { id: 'tseung_exit', name: '調景嶺站-出口',         lat: 22.30465, lng: 114.25305, dept: 'tko' }, // TIK 13 (966T start)
+    { id: 'hang_hau',    name: '坑口站',                lat: 22.3170474,  lng: 114.2631152, dept: 'tko' },
+    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.30738, lng: 114.25666, dept: 'tko' }, // TIK 11
+    { id: 'lohas',       name: '康城站',                lat: 22.29626, lng: 114.26692, dept: 'tko' }, // LHP 06 (966T end)
+    { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724, dept: 'tko'  },
+    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331, dept: 'tko' }, // TIK 04
+    { id: 'po_shun',     name: '寶順路轉乘站',          lat: 22.31793, lng: 114.26225, dept: 'tko' }, // HAH 02
     // HKI terminal stations
-    { id: 'np_pier',     name: '北角碼頭',              lat: 22.29356, lng: 114.20105 },
-    { id: 'np_bus_term', name: '北角碼頭巴士總站',      lat: 22.29343, lng: 114.20151 },
-    { id: 'east_walk_e', name: '東岸板道 (東)',         lat: 22.29225, lng: 114.20991 },
-    { id: 'east_walk_w', name: '東岸板道 (西)',         lat: 22.2914,  lng: 114.19247 },
+    { id: 'np_pier',     name: '北角碼頭',              lat: 22.29356, lng: 114.20105, dept: 'hki' },
+    { id: 'np_bus_term', name: '北角碼頭巴士總站',      lat: 22.29343, lng: 114.20151, dept: 'hki' },
+    { id: 'east_walk_e', name: '東岸板道 (東)',         lat: 22.29225, lng: 114.20991, dept: 'hki' },
+    { id: 'east_walk_w', name: '東岸板道 (西)',         lat: 22.2914,  lng: 114.19247, dept: 'hki' },
 ];
 
 // Map of terminal name to terminal ID for route matching
@@ -657,6 +657,7 @@ let activeFilter = 'all';
 let searchTerm = '';
 let userLevel = 1;
 let isLoggedIn = false;
+const terminalMarkers = new Map(); // terminal id → Leaflet marker
 
 function getUserLevel() {
     try {
@@ -708,7 +709,7 @@ function initMap() {
     // Add zoom control (top-right)
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Add terminal markers
+    // Add terminal markers (initially all hidden; shown when dept is selected)
     TERMINALS.forEach(terminal => {
         const icon = L.divIcon({
             className: '',
@@ -717,9 +718,10 @@ function initMap() {
             tooltipAnchor: [8, 0]
         });
         const marker = L.marker([terminal.lat, terminal.lng], { icon })
-            .addTo(map)
             .bindTooltip(terminal.name, { permanent: false, direction: 'right', className: 'app-map-tooltip' });
         marker.on('click', () => selectTerminal(terminal));
+        terminalMarkers.set(terminal.id, marker);
+        // Only add to map if no dept selected yet (handled in enterDepartment)
     });
 }
 
@@ -1286,6 +1288,25 @@ function enterDepartment(dept, pushState) {
     // Recenter map on department (initMap is idempotent; ensures map exists)
     initMap();
     map.setView(dept.mapCenter, dept.mapZoom, { animate: !!pushState });
+
+    // Show only the terminal markers for the selected department
+    TERMINALS.forEach(terminal => {
+        const marker = terminalMarkers.get(terminal.id);
+        if (!marker) return;
+        if (terminal.dept === dept.id) {
+            if (!map.hasLayer(marker)) marker.addTo(map);
+        } else {
+            if (map.hasLayer(marker)) map.removeLayer(marker);
+        }
+    });
+    // Clear terminal selection if the selected terminal belongs to another dept
+    if (selectedTerminalId) {
+        const selTerminal = TERMINALS.find(t => t.id === selectedTerminalId);
+        if (selTerminal && selTerminal.dept !== dept.id) {
+            clearTerminal();
+        }
+    }
+
     renderRoutes();
 }
 

@@ -752,7 +752,7 @@ body.is-pwa #app-ride-page { display: flex !important; }
 }
 
 /* ── App Bottom Navigation Bar (app-only) ─────────────────────────────────── */
-/* Dark green theme for PWA app */
+/* Dark green theme for PWA app (default) */
 :root {
     --app-bg-primary: #121f14;
     --app-bg-secondary: #1a2e1a;
@@ -764,6 +764,35 @@ body.is-pwa #app-ride-page { display: flex !important; }
     --app-text-primary: #e8f5e9;
     --app-text-secondary: #a8d8a0;
     --app-border: #2d4d2d;
+}
+
+/* Light theme — applied when body has .app-light-theme class */
+body.app-light-theme {
+    --app-bg-primary: #f5faf5;
+    --app-bg-secondary: #eaf4ea;
+    --app-bg-card: #ffffff;
+    --app-bg-card2: #f0f8f0;
+    --app-accent: #2e7d32;
+    --app-accent-light: #388e3c;
+    --app-accent-bright: #4caf50;
+    --app-text-primary: #1b3a1f;
+    --app-text-secondary: #2e7d32;
+    --app-border: #c8e6c9;
+}
+/* Light theme applied via system preference if user hasn't set explicit choice */
+@media (prefers-color-scheme: light) {
+    body:not(.app-theme-explicit) {
+        --app-bg-primary: #f5faf5;
+        --app-bg-secondary: #eaf4ea;
+        --app-bg-card: #ffffff;
+        --app-bg-card2: #f0f8f0;
+        --app-accent: #2e7d32;
+        --app-accent-light: #388e3c;
+        --app-accent-bright: #4caf50;
+        --app-text-primary: #1b3a1f;
+        --app-text-secondary: #2e7d32;
+        --app-border: #c8e6c9;
+    }
 }
 #app-bottom-nav {
     position: fixed;

@@ -1393,6 +1393,8 @@
             if (btn && !checkinData[getTodayKey()]) {
                 btn.disabled = true;
                 btn.textContent = '載入中…';
+                const rewardEl = document.getElementById('checkin-today-reward');
+                if (rewardEl) rewardEl.textContent = '獎勵載入中…';
             }
             await syncProgressFromServer();
             renderCheckin();

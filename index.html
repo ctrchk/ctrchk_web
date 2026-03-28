@@ -59,6 +59,41 @@
     border: 1px solid #2d5028;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
+.app-user-header {
+    display: flex;
+    align-items: center;
+    gap: 0.9em;
+    margin-bottom: 0.8em;
+}
+.app-user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #2d4d2d;
+    border: 2px solid var(--app-accent, #6dba65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3em;
+    color: var(--app-accent, #6dba65);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.app-user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.app-top-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #2d4d2d;
+    border: 2px solid var(--app-accent, #6dba65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9em;
+    color: var(--app-accent, #6dba65);
+    overflow: hidden;
+}
+.app-top-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .app-user-greeting {
     font-size: 0.85em;
     color: var(--app-text-secondary, #a8d8a0);
@@ -68,7 +103,6 @@
     font-size: 1.4em;
     font-weight: bold;
     color: #fff;
-    margin-bottom: 0.8em;
 }
 .app-level-row {
     display: flex;
@@ -542,15 +576,20 @@ button.app-quick-item {
             <div class="app-logo">
                 <i class="fas fa-biking"></i> 城市運輸單車
             </div>
-            <a href="/profile" class="app-notif-btn" aria-label="個人資料">
-                <i class="fas fa-user"></i>
+            <a href="/profile" class="app-notif-btn" aria-label="個人資料" id="app-top-avatar-btn">
+                <span class="app-top-avatar" id="app-top-avatar"><i class="fas fa-user"></i></span>
             </a>
         </div>
 
         <!-- User stats card (shown when logged in) -->
         <div id="app-user-card" class="app-user-card" style="display:none;">
-            <div class="app-user-greeting">歡迎回來，</div>
-            <div class="app-user-name" id="app-home-name">騎士</div>
+            <div class="app-user-header">
+                <div class="app-user-avatar" id="app-user-avatar"><i class="fas fa-user"></i></div>
+                <div>
+                    <div class="app-user-greeting">歡迎回來，</div>
+                    <div class="app-user-name" id="app-home-name">騎士</div>
+                </div>
+            </div>
             <div class="app-level-row">
                 <span class="app-level-badge" id="app-home-level">Lv.1</span>
                 <span class="app-title-text" id="app-home-title">新手騎士</span>
@@ -603,6 +642,10 @@ button.app-quick-item {
             <a href="/dashboard" class="app-quick-item">
                 <i class="fas fa-chart-bar"></i>
                 <span>我的進度</span>
+            </a>
+            <a href="/leaderboard" class="app-quick-item">
+                <i class="fas fa-trophy"></i>
+                <span>排行榜</span>
             </a>
             <a href="/profile" class="app-quick-item">
                 <i class="fas fa-user-circle"></i>
@@ -743,6 +786,26 @@ button.app-quick-item {
         document.getElementById('app-home-xp-total').textContent = formatNum(xp);
         document.getElementById('app-home-rides').textContent = history.length;
         document.getElementById('app-home-coins').textContent = formatNum(coins);
+
+        // Avatar
+        const avatarUrl = userData.avatar_url;
+        const avatarEl = document.getElementById('app-user-avatar');
+        const topAvatarEl = document.getElementById('app-top-avatar');
+        function setAvatar(el, url) {
+            if (!el) return;
+            if (url) {
+                const img = document.createElement('img');
+                img.alt = '頭像';
+                img.src = url;
+                img.onerror = function() { el.innerHTML = '<i class="fas fa-user"></i>'; };
+                el.innerHTML = '';
+                el.appendChild(img);
+            } else {
+                el.innerHTML = '<i class="fas fa-user"></i>';
+            }
+        }
+        setAvatar(avatarEl, avatarUrl);
+        setAvatar(topAvatarEl, avatarUrl);
 
         // Recent rides
         const container = document.getElementById('app-recent-rides');
