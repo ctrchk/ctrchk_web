@@ -24,20 +24,22 @@
     </script>
     <style>
         /* ── App Profile Theme ─────────────────────────────────── */
-        /* Dark theme applied only in app (PWA) mode */
-        body.is-pwa {
+        /* Theme applies in app (PWA) mode and when explicitly set */
+        body.is-pwa,
+        body.app-theme-explicit {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-primary, #e8f5e9);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
         }
-        body.is-pwa footer {
+        body.is-pwa footer,
+        body.app-theme-explicit footer {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-secondary, #a8d8a0);
-            border-top: 1px solid #2d4d2d;
+            border-top: 1px solid var(--app-border, #2d4d2d);
         }
         @media (display-mode: standalone) {
             body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); }
-            footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
+            footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid var(--app-border, #2d4d2d); }
         }
         .content { padding: 1em 1em 5em; }
         .profile-container {
@@ -53,7 +55,7 @@
         .profile-card {
             background: var(--app-bg-card, #1e3820);
             border-radius: 12px;
-            border: 1px solid #2d4d2d;
+            border: 1px solid var(--app-border, #2d4d2d);
             box-shadow: 0 4px 16px rgba(0,0,0,0.3);
             padding: 1.4em;
             margin-bottom: 1em;
@@ -61,7 +63,7 @@
         .profile-card h3 {
             margin-top: 0;
             color: var(--app-accent, #6dba65);
-            border-bottom: 1px solid #2d4d2d;
+            border-bottom: 1px solid var(--app-border, #2d4d2d);
             padding-bottom: 0.5em;
             display: flex;
             align-items: center;
@@ -83,7 +85,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.6em 0;
-            border-bottom: 1px solid #2d4d2d;
+            border-bottom: 1px solid var(--app-border, #2d4d2d);
             font-size: 0.92em;
         }
         .profile-info-row:last-child { border-bottom: none; }
@@ -103,8 +105,8 @@
         .form-group select {
             width: 100%;
             padding: 0.7em 0.9em;
-            background: #15291a;
-            border: 1px solid #2d4d2d;
+            background: var(--app-bg-card2, #15291a);
+            border: 1px solid var(--app-border, #2d4d2d);
             border-radius: 8px;
             box-sizing: border-box;
             font-size: 0.95em;
@@ -116,7 +118,7 @@
             outline: none;
             border-color: var(--app-accent, #6dba65);
         }
-        .form-group select option { background: #1e3820; color: #e8f5e9; }
+        .form-group select option { background: var(--app-bg-card, #1e3820); color: var(--app-text-primary, #e8f5e9); }
         .area-checkboxes {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -148,9 +150,9 @@
         .btn-save:hover { background: #5aaa55; }
         .btn-save:disabled { background: #3a5a3a; color: #6a8a6a; cursor: not-allowed; }
         .alert-success {
-            background: #1a3820;
-            color: #a8d8a0;
-            border: 1px solid #2d4d2d;
+            background: var(--app-bg-card, #1a3820);
+            color: var(--app-accent-light, #a8d8a0);
+            border: 1px solid var(--app-border, #2d4d2d);
             padding: 0.8em 1em;
             border-radius: 8px;
             margin-bottom: 1em;
@@ -166,7 +168,7 @@
             display: none;
         }
         .upgrade-notice {
-            background: #1a2a10;
+            background: var(--app-bg-card2, #1a2a10);
             border-left: 3px solid var(--app-accent, #6dba65);
             padding: 1em 1.2em;
             border-radius: 0 8px 8px 0;
@@ -205,7 +207,7 @@
             position: absolute;
             cursor: pointer;
             inset: 0;
-            background: #2d4d2d;
+            background: var(--app-border, #2d4d2d);
             border-radius: 24px;
             transition: background 0.2s;
         }
@@ -424,9 +426,26 @@
                 <div class="profile-card">
                     <h3><i class="fas fa-shield-alt"></i> 帳戶安全</h3>
                     <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.9em;">如需更改密碼，請使用「忘記密碼」功能重設。</p>
-                    <a href="/forgot-password" class="cta-button" style="font-size:0.85em; padding:0.6em 1.5em; display:inline-block; margin-top:0.5em;">
-                        <i class="fas fa-key"></i> 重設密碼
-                    </a>
+                    <div id="pw-reset-section">
+                        <button onclick="showPwReset()" class="cta-button" style="font-size:0.85em; padding:0.6em 1.5em; display:inline-block; margin-top:0.5em; background:none; border:1px solid var(--app-accent,#6dba65); color:var(--app-accent,#6dba65); cursor:pointer;">
+                            <i class="fas fa-key"></i> 重設密碼
+                        </button>
+                    </div>
+                    <div id="pw-reset-inline" style="display:none; margin-top:1em;">
+                        <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.85em; margin-bottom:0.8em;">重設連結將發送至您的電郵地址。</p>
+                        <div id="pw-reset-email-row" style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.8em;">
+                            <span id="pw-reset-email-display" style="color:var(--app-text-primary,#e8f5e9); font-size:0.9em; flex:1;"></span>
+                        </div>
+                        <div style="display:flex;gap:0.5em;flex-wrap:wrap;">
+                            <button id="pw-reset-send-btn" onclick="sendPwReset()" class="cta-button" style="font-size:0.85em; padding:0.6em 1.2em;">
+                                <i class="fas fa-paper-plane"></i> 發送重設郵件
+                            </button>
+                            <button onclick="hidePwReset()" style="font-size:0.85em; padding:0.6em 1em; background:transparent; border:1px solid var(--app-border,#2d4d2d); color:var(--app-text-secondary,#a8d8a0); border-radius:8px; cursor:pointer;">
+                                取消
+                            </button>
+                        </div>
+                        <p id="pw-reset-msg" style="display:none; margin-top:0.8em; font-size:0.85em; color:var(--app-accent,#6dba65);"></p>
+                    </div>
                 </div>
 
                 <!-- 通知設置 -->
@@ -688,6 +707,51 @@
 
     window.onThemeToggle = function(isLight) {
         setAppTheme(isLight ? 'light' : 'dark');
+    };
+
+    // ── 密碼重設 (inline) ─────────────────────────────────────────────────────
+    window.showPwReset = function() {
+        const userData = localStorage.getItem('user');
+        const email = userData ? (JSON.parse(userData).email || '') : '';
+        const emailDisplay = document.getElementById('pw-reset-email-display');
+        if (emailDisplay) emailDisplay.textContent = email || '（未知電郵）';
+        document.getElementById('pw-reset-section').style.display = 'none';
+        document.getElementById('pw-reset-inline').style.display = '';
+        const msg = document.getElementById('pw-reset-msg');
+        if (msg) msg.style.display = 'none';
+    };
+
+    window.hidePwReset = function() {
+        document.getElementById('pw-reset-inline').style.display = 'none';
+        document.getElementById('pw-reset-section').style.display = '';
+    };
+
+    window.sendPwReset = async function() {
+        const userData = localStorage.getItem('user');
+        const email = userData ? (JSON.parse(userData).email || '') : '';
+        if (!email) { alert('找不到電郵地址，請重新登入後再試。'); return; }
+        const btn = document.getElementById('pw-reset-send-btn');
+        const msg = document.getElementById('pw-reset-msg');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
+        try {
+            const res = await fetch('/api/password-reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            msg.textContent = data.message || '如果此電郵已註冊，您將收到重設郵件。';
+            msg.style.color = 'var(--app-accent, #6dba65)';
+            msg.style.display = 'block';
+            btn.style.display = 'none';
+        } catch (e) {
+            msg.textContent = '發送失敗，請稍後再試。';
+            msg.style.color = '#ef9a9a';
+            msg.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送重設郵件';
+        }
     };
 
     // ── 頭像功能 ────────────────────────────────────────────────────────────

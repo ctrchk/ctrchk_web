@@ -47,6 +47,17 @@ function setAppTheme(theme) {
     if (!lang) return;
     const path = window.location.pathname;
     const isEnPage = path.startsWith('/en/') || path === '/en';
+
+    // App-only pages that exist only in one version and support both languages.
+    // Do NOT redirect these between Chinese/English — they are language-neutral.
+    const appOnlyPages = ['/tasks', '/nav', '/dashboard', '/profile', '/leaderboard',
+                          '/ride', '/routes', '/login', '/register', '/forgot-password',
+                          '/reset-password', '/profile-setup', '/verify-email',
+                          '/auth-callback', '/admin', '/weather', '/chat', '/forum',
+                          '/route_detail', '/gpx', '/sw.js'];
+    const isAppOnlyPage = appOnlyPages.some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '?'));
+    if (isAppOnlyPage) return;
+
     if (lang === 'en' && !isEnPage) {
         // Map to English equivalent
         const enPath = (path === '/') ? '/en/index' : '/en' + path;

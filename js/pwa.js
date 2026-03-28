@@ -68,8 +68,8 @@
           { href: '/en/routes', icon: 'fa-biking',           label: 'Ride' },
           { href: '/nav',       icon: 'fa-map-marked-alt',   label: 'Nav' },
           isLoggedIn
-            ? { href: '/dashboard', icon: 'fa-user-circle', label: 'My' }
-            : { href: '/login',     icon: 'fa-sign-in-alt',  label: 'Sign In' },
+            ? { href: '/profile', icon: 'fa-user-circle', label: 'My' }
+            : { href: '/login',   icon: 'fa-sign-in-alt',  label: 'Sign In' },
         ]
       : [
           { href: '/',             icon: 'fa-home',            label: '主頁' },
@@ -77,7 +77,7 @@
           { href: '/routes',       icon: 'fa-biking',           label: '騎行' },
           { href: '/nav',          icon: 'fa-map-marked-alt',   label: '導航' },
           isLoggedIn
-            ? { href: '/dashboard',    icon: 'fa-user-circle', label: '我的' }
+            ? { href: '/profile',      icon: 'fa-user-circle', label: '我的' }
             : { href: '/login',        icon: 'fa-sign-in-alt',  label: '登入' },
         ];
 
