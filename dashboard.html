@@ -3,614 +3,730 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#121f14">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="城市運輸單車">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用戶儀表板 - 城市運輸單車</title>
+    <title>我的 - 城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ── App Dashboard Theme (PWA/standalone mode only) ──────────── */
-        body.is-pwa {
-            background: var(--app-bg-primary, #121f14);
-            color: var(--app-text-primary, #e8f5e9);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
-        }
-        body.is-pwa footer {
-            background: var(--app-bg-primary, #121f14);
-            color: var(--app-text-secondary, #a8d8a0);
-            border-top: 1px solid #2d4d2d;
-        }
-        @media (display-mode: standalone) {
-            body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); }
-            footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
-        }
+    /* ──────────────────────────────────────────────────────────────
+       Dashboard styles
+    ────────────────────────────────────────────────────────────── */
+    body.is-pwa,
+    body.is-pwa footer {
+        background: var(--app-bg-primary, #121f14);
+        color: var(--app-text-primary, #e8f5e9);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+    }
+    @media (display-mode: standalone) {
+        body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif; }
+        footer { background: var(--app-bg-primary, #121f14); border-top: 1px solid var(--app-border, #2d4d2d); }
+    }
 
-        /* ── Hero section ──────────────────────────────────────────── */
-        body.is-pwa .hero {
-            background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
-            padding: calc(env(safe-area-inset-top) + 1.5em) 1.4em 1.5em;
-            border-bottom: 1px solid #2d4d2d;
-        }
-        @media (display-mode: standalone) {
-            .hero {
-                background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
-                border-bottom: 1px solid #2d4d2d;
-            }
-        }
-        body.is-pwa .hero h1 {
-            color: var(--app-text-primary, #e8f5e9);
-            margin: 0 0 0.3em 0;
-            font-size: 1.5em;
-        }
-        .hero {
-            padding: 1.5em 1.4em;
-        }
-        .hero h1 {
-            margin: 0 0 0.3em 0;
-            font-size: 1.5em;
-        }
-        body.is-pwa #welcome-email {
-            color: var(--app-accent, #6dba65);
-        }
-        #welcome-email {
-            font-weight: 600;
-            margin: 0;
-        }
-        #membership-status {
-            margin-top: 0.3em;
-            font-size: 0.9em;
-        }
+    /* ── Top bar (app/PWA only) ── */
+    .db-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: calc(env(safe-area-inset-top) + 0.8em) 1.2em 0.7em;
+        background: var(--app-bg-primary, #121f14);
+    }
+    .db-top-title {
+        font-size: 1.25em;
+        font-weight: bold;
+        color: var(--app-text-primary, #e8f5e9);
+    }
+    .db-settings-btn {
+        width: 38px; height: 38px;
+        border-radius: 50%;
+        background: var(--app-bg-card, #1e3820);
+        border: 1px solid var(--app-border, #2d4d2d);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--app-text-secondary, #a8d8a0);
+        font-size: 1em;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .db-settings-btn:hover { background: var(--app-bg-card2, #243824); }
 
-        /* ── 電郵未驗證提醒 ──────────────────────────────── */
-        #email-verify-notice {
-            border: 1px solid #ff9800;
-            color: #7a4000;
-            margin: 1em;
-            border-radius: 10px;
-            padding: 1em 1.2em;
-        }
-        body.is-pwa #email-verify-notice {
-            background: #2a1f0a;
-            color: #ffcc80;
-        }
-        #email-verify-notice p { margin: 0; }
+    /* ── Profile card ── */
+    .db-profile-card {
+        margin: 0 1em 0.8em;
+        background: linear-gradient(135deg, var(--app-bg-card, #1e3820) 0%, var(--app-bg-card2, #243824) 100%);
+        border-radius: 16px;
+        padding: 1.2em 1.4em;
+        border: 1px solid var(--app-border, #2d4d2d);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        gap: 1em;
+    }
+    .db-avatar {
+        width: 60px; height: 60px;
+        border-radius: 50%;
+        background: var(--app-bg-card2, #243824);
+        border: 2px solid var(--app-accent, #6dba65);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5em;
+        color: var(--app-accent, #6dba65);
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .db-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .db-user-meta { flex: 1; min-width: 0; }
+    .db-user-name {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: var(--app-text-primary, #e8f5e9);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.3em;
+    }
+    .db-role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3em;
+        font-size: 0.78em;
+        font-weight: bold;
+        padding: 0.2em 0.65em;
+        border-radius: 20px;
+    }
+    .db-role-admin  { background: #4a1942; color: #f3a0ef; }
+    .db-role-senior { background: rgba(255,213,79,0.15); color: #ffd54f; border: 1px solid rgba(255,213,79,0.3); }
+    .db-role-junior { background: var(--app-bg-card2, #243824); color: var(--app-text-secondary, #a8d8a0); border: 1px solid var(--app-border, #2d4d2d); }
+    .db-profile-edit-btn {
+        flex-shrink: 0;
+        color: var(--app-text-secondary, #a8d8a0);
+        text-decoration: none;
+        font-size: 1.1em;
+        padding: 0.4em;
+    }
+    .db-profile-edit-btn:hover { color: var(--app-accent, #6dba65); }
 
-        /* ── 遊戲進度卡片 ──────────────────────────────── */
-        #game-profile-card {
-            display: none;
-            margin: 1em;
-            background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
-            color: var(--app-text-primary, #e8f5e9);
-            border-radius: 14px;
-            padding: 1.2em 1.4em;
-            border: 1px solid #2d4d2d;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-        }
-        .game-card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.8em;
-            margin-bottom: 0.9em;
-            flex-wrap: wrap;
-        }
-        .game-level-badge {
-            background: var(--app-accent, #6dba65);
-            color: #121f14;
-            font-size: 1.2em;
-            font-weight: bold;
-            padding: 0.2em 0.7em;
-            border-radius: 8px;
-        }
-        .game-title {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        .game-coins {
-            margin-left: auto;
-            font-size: 0.9em;
-            background: rgba(255,255,255,0.1);
-            padding: 0.3em 0.8em;
-            border-radius: 6px;
-            color: #ffd54f;
-        }
-        .xp-bar-container {
-            background: rgba(255,255,255,0.15);
-            border-radius: 6px;
-            height: 8px;
-            overflow: hidden;
-            margin: 0.4em 0;
-        }
-        .xp-bar-fill {
-            background: var(--app-accent, #6dba65);
-            height: 100%;
-            border-radius: 6px;
-            transition: width 0.8s ease;
-        }
-        .xp-label {
-            font-size: 0.8em;
-            color: var(--app-text-secondary, #a8d8a0);
-        }
+    /* Web hero */
+    body:not(.is-pwa) .db-top-bar { display: none; }
+    body.is-pwa .db-web-hero { display: none; }
+    @media (display-mode: standalone) { .db-web-hero { display: none; } }
+    .db-web-hero { padding: 1.5em 1.4em 1em; }
+    .db-web-hero h1 { margin: 0 0 0.2em; font-size: 1.6em; }
 
-        /* ── 升級提醒 ─────────────────────────────────── */
-        body.is-pwa #upgrade-notice {
-            background: #1a2a0a;
-            border: 1px solid #6dba65;
-        }
-        #upgrade-notice {
-            border: 1px solid #6dba65;
-            margin: 1em;
-            border-radius: 10px;
-            padding: 1.2em;
-            text-align: center;
-        }
-        #upgrade-notice h3 {
-            color: var(--app-accent, #6dba65);
-            margin-top: 0;
-            font-size: 1em;
-        }
-        body.is-pwa #upgrade-notice p {
-            color: var(--app-text-secondary, #a8d8a0);
-        }
-        #upgrade-notice p {
-            font-size: 0.9em;
-        }
-        #upgrade-notice .cta-button {
-            background: var(--app-accent, #6dba65);
-            color: #121f14;
-            font-weight: bold;
-            border-radius: 8px;
-        }
+    /* ── Level & XP card ── */
+    .db-level-card {
+        margin: 0 1em 0.8em;
+        background: linear-gradient(135deg, #1a3a1a 0%, #2d5028 60%, #1e3820 100%);
+        border-radius: 16px;
+        padding: 1.1em 1.4em 1.2em;
+        border: 1px solid var(--app-border, #2d4d2d);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .db-level-header {
+        display: flex;
+        align-items: center;
+        gap: 0.7em;
+        margin-bottom: 0.8em;
+        flex-wrap: wrap;
+    }
+    .db-level-badge {
+        background: var(--app-accent, #6dba65);
+        color: #121f14;
+        font-size: 1em;
+        font-weight: bold;
+        padding: 0.25em 0.8em;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+    .db-level-title {
+        font-size: 1em;
+        font-weight: bold;
+        color: var(--app-text-primary, #e8f5e9);
+        flex: 1;
+    }
+    .db-coins-display {
+        font-size: 0.85em;
+        background: rgba(255,213,79,0.12);
+        color: #ffd54f;
+        padding: 0.25em 0.7em;
+        border-radius: 20px;
+        border: 1px solid rgba(255,213,79,0.25);
+        white-space: nowrap;
+    }
+    .db-xp-bar-wrap {
+        background: rgba(255,255,255,0.12);
+        border-radius: 6px;
+        height: 9px;
+        overflow: hidden;
+        margin-bottom: 0.45em;
+    }
+    .db-xp-bar-fill {
+        background: var(--app-accent, #6dba65);
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.9s ease;
+        min-width: 4px;
+    }
+    .db-xp-label {
+        font-size: 0.78em;
+        color: var(--app-text-secondary, #a8d8a0);
+    }
 
-        /* ── 騎行歷史 ────────────────────────────────── */
-        .content {
-            padding: 0.5em 1em 5em;
-        }
-        body.is-pwa .content h2 {
-            color: var(--app-text-primary, #e8f5e9);
-            border-bottom: 1px solid #2d4d2d;
-        }
-        .content h2 {
-            font-size: 1.1em;
-            margin-bottom: 0.8em;
-            padding-bottom: 0.4em;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        body.is-pwa .ride-item {
-            background: var(--app-bg-card, #1e3820);
-            border: 1px solid #2d4d2d;
-            border-left: 3px solid var(--app-accent, #6dba65);
-        }
-        .ride-item {
-            border-radius: 10px;
-            padding: 0.9em 1em;
-            margin-bottom: 0.7em;
-            border: 1px solid #e0e0e0;
-            border-left: 3px solid #6dba65;
-        }
-        .ride-item .ride-main {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.4em;
-        }
-        body.is-pwa .ride-route-name {
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        .ride-route-name {
-            font-weight: bold;
-            font-size: 0.95em;
-        }
-        .ride-xp {
-            font-size: 0.82em;
-            color: #121f14;
-            background: var(--app-accent, #6dba65);
-            padding: 0.2em 0.6em;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        body.is-pwa .ride-details {
-            color: var(--app-text-secondary, #a8d8a0);
-        }
-        .ride-details {
-            font-size: 0.82em;
-            margin-top: 0.25em;
-            color: #555;
-        }
+    /* ── Stats pills ── */
+    .db-pills-row {
+        display: flex;
+        gap: 0.7em;
+        padding: 0 1em;
+        margin-bottom: 1em;
+    }
+    .db-pill {
+        flex: 1;
+        background: var(--app-bg-card, #1e3820);
+        border: 1px solid var(--app-border, #2d4d2d);
+        border-radius: 12px;
+        padding: 0.7em 0.5em;
+        text-align: center;
+    }
+    .db-pill-val {
+        display: block;
+        font-size: 1.2em;
+        font-weight: bold;
+        color: var(--app-accent, #6dba65);
+        margin-bottom: 0.15em;
+    }
+    .db-pill-lbl { font-size: 0.68em; color: var(--app-text-secondary, #a8d8a0); }
 
-        /* ── 管理員面板 ─────────────────────────────── */
-        body.is-pwa #admin-section h2 {
-            color: var(--app-text-primary, #e8f5e9);
-        }
-        body.is-pwa #admin-section .cta-button {
-            background: #4a1942;
-            color: #f3a0ef;
-            border-radius: 8px;
-        }
+    /* ── Section title ── */
+    .db-section-title {
+        font-size: 0.82em;
+        font-weight: bold;
+        color: var(--app-text-secondary, #a8d8a0);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        padding: 0 1em;
+        margin: 0.2em 0 0.5em;
+    }
 
-        /* ── 更多快速連結 ────────────────────────────── */
-        .more-links-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.8em;
-            margin-top: 0.8em;
+    /* ── Notices ── */
+    #email-verify-notice {
+        margin: 0 1em 0.8em;
+        background: #2a1f0a;
+        border: 1px solid #ff9800;
+        border-radius: 12px;
+        padding: 0.9em 1.1em;
+        color: #ffcc80;
+        font-size: 0.88em;
+        display: flex;
+        gap: 0.6em;
+        align-items: flex-start;
+    }
+    #email-verify-notice i { font-size: 1.2em; margin-top: 0.1em; flex-shrink: 0; }
+    #upgrade-notice {
+        margin: 0 1em 0.8em;
+        background: rgba(109,186,101,0.08);
+        border: 1px solid var(--app-accent, #6dba65);
+        border-radius: 12px;
+        padding: 1em 1.2em;
+        text-align: center;
+    }
+    #upgrade-notice h3 { color: var(--app-accent, #6dba65); margin: 0 0 0.4em; font-size: 0.95em; }
+    #upgrade-notice p { font-size: 0.84em; color: var(--app-text-secondary, #a8d8a0); margin: 0 0 0.8em; }
+    .db-cta-btn {
+        display: inline-block;
+        background: var(--app-accent, #6dba65);
+        color: #121f14;
+        font-weight: bold;
+        font-size: 0.88em;
+        padding: 0.45em 1.4em;
+        border-radius: 20px;
+        text-decoration: none;
+    }
+
+    /* ── Ride history ── */
+    .db-history-list {
+        padding: 0 1em;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        margin-bottom: 0.5em;
+    }
+    .db-ride-item {
+        background: var(--app-bg-card, #1e3820);
+        border: 1px solid var(--app-border, #2d4d2d);
+        border-left: 3px solid var(--app-accent, #6dba65);
+        border-radius: 10px;
+        padding: 0.85em 1em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5em;
+        flex-wrap: wrap;
+    }
+    .db-ride-main { flex: 1; min-width: 0; }
+    .db-ride-name {
+        font-weight: bold;
+        font-size: 0.9em;
+        color: var(--app-text-primary, #e8f5e9);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .db-ride-meta { font-size: 0.76em; color: var(--app-text-secondary, #a8d8a0); margin-top: 0.15em; }
+    .db-ride-xp {
+        font-size: 0.8em;
+        font-weight: bold;
+        color: #121f14;
+        background: var(--app-accent, #6dba65);
+        padding: 0.2em 0.55em;
+        border-radius: 8px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    #db-history-empty {
+        padding: 1.8em 1em;
+        text-align: center;
+        color: var(--app-text-secondary, #a8d8a0);
+        font-size: 0.9em;
+    }
+    #db-history-empty i { font-size: 2.5em; display: block; margin-bottom: 0.4em; opacity: 0.35; }
+
+    /* ── Admin card ── */
+    .db-admin-card {
+        margin: 0 1em 0.8em;
+        background: rgba(74,25,66,0.3);
+        border: 1px solid #6a2a60;
+        border-radius: 12px;
+        padding: 1em 1.2em;
+    }
+    .db-admin-card h3 { color: #f3a0ef; margin: 0 0 0.4em; font-size: 0.95em; }
+    .db-admin-card p { font-size: 0.84em; color: var(--app-text-secondary, #a8d8a0); margin: 0 0 0.8em; }
+    .db-admin-btn {
+        display: inline-block;
+        background: #4a1942;
+        color: #f3a0ef;
+        font-size: 0.85em;
+        font-weight: bold;
+        padding: 0.4em 1.2em;
+        border-radius: 8px;
+        text-decoration: none;
+    }
+
+    /* ── More links grid ── */
+    .db-more-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.7em;
+        padding: 0 1em;
+        margin-bottom: 0.5em;
+    }
+    .db-more-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35em;
+        padding: 0.8em 0.4em;
+        background: var(--app-bg-card, #1e3820);
+        border: 1px solid var(--app-border, #2d4d2d);
+        border-radius: 12px;
+        color: var(--app-text-secondary, #a8d8a0);
+        text-decoration: none;
+        font-size: 0.72em;
+        font-weight: bold;
+        text-align: center;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-family: inherit;
+        width: 100%;
+    }
+    .db-more-item:active, button.db-more-item:active { background: var(--app-bg-card2, #243824); }
+    .db-more-item i { font-size: 1.5em; color: var(--app-accent, #6dba65); }
+    .db-more-item.danger { color: #ef9a9a; }
+    .db-more-item.danger i { color: #ef9a9a; }
+
+    /* ── Bottom spacer ── */
+    body.is-pwa .db-content,
+    body.is-pwa footer { padding-bottom: calc(5em + env(safe-area-inset-bottom)); }
+    @media (display-mode: standalone) {
+        .db-content { padding-bottom: calc(5em + env(safe-area-inset-bottom)); }
+    }
+
+    /* ── Light theme overrides ── */
+    body.app-light-theme .db-profile-card {
+        background: linear-gradient(135deg, #f0f8f0 0%, #e0f2e0 100%);
+        border-color: var(--app-border, #c8e6c9);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    body.app-light-theme .db-level-card {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 60%, #dcedc8 100%);
+        border-color: var(--app-border, #c8e6c9);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    body.app-light-theme .db-xp-bar-wrap { background: rgba(0,0,0,0.1); }
+    body.app-light-theme #email-verify-notice { background: #fff8e1; color: #7a4000; }
+    body.app-light-theme #upgrade-notice { background: rgba(46,125,50,0.06); }
+    @media (prefers-color-scheme: light) {
+        body:not(.app-theme-explicit) .db-profile-card {
+            background: linear-gradient(135deg, #f0f8f0 0%, #e0f2e0 100%);
+            border-color: var(--app-border, #c8e6c9);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
-        .more-link-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.4em;
-            padding: 0.8em 0.5em;
-            border-radius: 10px;
-            background: #243824;
-            color: #a8d8a0;
-            text-decoration: none;
-            font-size: 0.75em;
-            font-weight: bold;
+        body:not(.app-theme-explicit) .db-level-card {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 60%, #dcedc8 100%);
+            border-color: var(--app-border, #c8e6c9);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
-        .more-link-item i {
-            font-size: 1.5em;
-            color: #6dba65;
-        }
-        .more-link-item.danger i { color: #e74c3c; }
+        body:not(.app-theme-explicit) .db-xp-bar-wrap { background: rgba(0,0,0,0.1); }
+        body:not(.app-theme-explicit) #email-verify-notice { background: #fff8e1; color: #7a4000; }
+        body:not(.app-theme-explicit) #upgrade-notice { background: rgba(46,125,50,0.06); }
+    }
     </style>
-    
+
     <script>
-        // 這是「頁面守衛」，它會在頁面渲染前執行
-        // 檢查是否有 Supabase session 或傳統 token
-        function checkAuth() {
-            const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
-                window.location.replace('/login'); 
-                return false;
+        // 頁面守衛：在渲染前確認已登入
+        (function checkAuth() {
+            if (!localStorage.getItem('accessToken')) {
+                window.location.replace('/login');
+                throw new Error('未授權訪問');
             }
-            return true;
-        }
-        
-        // 立即檢查
-        if (!checkAuth()) {
-            // 如果檢查失敗，停止執行
-            throw new Error('未授權訪問');
-        }
+        })();
     </script>
 </head>
 <body>
     <div id="header-placeholder"></div>
 
-    <main>
-        <section class="hero">
-            <h1>歡迎回來！</h1>
-            <p id="welcome-email">正在載入你的資料...</p>
-            <p id="membership-status" style="font-size: 0.9em;"></p>
-        </section>
-
-        <!-- 電郵未驗證提醒 -->
-        <div id="email-verify-notice" style="display: none;">
-            <p>
-                <i class="fas fa-envelope" style="color: #ff9800;"></i>
-                <strong>請驗證你的電子郵件！</strong>
-                我們已向你的電郵發送了驗證連結，請查收並點擊連結以完成驗證。
-            </p>
-        </div>
-
-        <!-- 遊戲進度卡片 -->
-        <div id="game-profile-card">
-            <div class="game-card-header">
-                <span class="game-level-badge" id="game-level-badge">Lv.1</span>
-                <span class="game-title" id="game-title">新手騎士</span>
-                <span class="game-coins" id="game-coins">💰 0 里程幣</span>
-            </div>
-            <div class="xp-bar-container">
-                <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
-            </div>
-            <div class="xp-label" id="xp-label">XP: 0 / 300</div>
-        </div>
-
-        <div id="upgrade-notice" style="display: none;">
-            <h3>
-                <i class="fas fa-star" style="color: #6dba65;"></i>
-                升級為高級會員以享受完整功能
-            </h3>
-            <p>完善您的個人資料即可升級為高級會員，解鎖所有功能！</p>
-            <a href="/profile-setup.html" class="cta-button" style="display: inline-block; margin-top: 0.8em;">
-                <i class="fas fa-arrow-right"></i> 立即升級
+    <div class="db-content">
+        <!-- App top bar (PWA/standalone only) -->
+        <div class="db-top-bar app-only">
+            <span class="db-top-title">我的</span>
+            <a href="/profile" class="db-settings-btn" aria-label="設置">
+                <i class="fas fa-cog"></i>
             </a>
         </div>
 
-        <section class="content animated-element">
-            <h2>你的騎行歷史</h2>
-            <div id="history-container">
-            </div>
-            
-            <div id="admin-section" style="display:none; margin-top: 3em;">
-                <h2>管理員面板</h2>
-                <p>你可以管理網站用戶及查看資料。</p>
-                <a href="/admin" class="cta-button">前往管理員後台</a>
-            </div>
-        </section>
+        <!-- Web-only hero -->
+        <div class="db-web-hero web-only">
+            <h1>我的進度</h1>
+        </div>
 
-        <!-- 更多連結（整合自原底部「更多」選單） -->
-        <section class="content app-only" style="padding-bottom:6em;">
-            <h2 style="font-size:1em; color:var(--app-text-secondary,#a8d8a0); border-bottom:1px solid #2d4d2d; padding-bottom:0.4em;">更多</h2>
-            <div class="more-links-grid">
-                <a href="/leaderboard" class="more-link-item">
-                    <i class="fas fa-trophy"></i><span>排行榜</span>
-                </a>
-                <a href="/about" class="more-link-item">
-                    <i class="fas fa-info-circle"></i><span>關於我們</span>
-                </a>
-                <a href="/membership" class="more-link-item">
-                    <i class="fas fa-star"></i><span>會員計劃</span>
-                </a>
-                <a href="/blog" class="more-link-item">
-                    <i class="fas fa-newspaper"></i><span>部落格</span>
-                </a>
-                <a href="/contact" class="more-link-item">
-                    <i class="fas fa-envelope"></i><span>聯絡我們</span>
-                </a>
-                <a href="/en" class="more-link-item">
-                    <i class="fas fa-language"></i><span>English</span>
-                </a>
-                <a href="/profile" class="more-link-item">
-                    <i class="fas fa-user-edit"></i><span>編輯資料</span>
-                </a>
-                <a href="#" id="dashboard-logout-btn" class="more-link-item danger">
-                    <i class="fas fa-sign-out-alt"></i><span>登出</span>
-                </a>
+        <!-- Profile card -->
+        <div class="db-profile-card">
+            <div class="db-avatar" id="db-avatar"><i class="fas fa-user"></i></div>
+            <div class="db-user-meta">
+                <div class="db-user-name" id="db-user-name">正在載入...</div>
+                <span class="db-role-badge db-role-junior" id="db-role-badge">
+                    <i class="fas fa-user"></i> 初級會員
+                </span>
             </div>
-        </section>
-    </main>
+            <a href="/profile" class="db-profile-edit-btn web-only" aria-label="設置">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
 
-    <footer>
+        <!-- Level & XP card -->
+        <div class="db-level-card" id="db-level-card" style="display:none;">
+            <div class="db-level-header">
+                <span class="db-level-badge" id="db-level-badge">Lv.1</span>
+                <span class="db-level-title" id="db-level-title">新手騎士</span>
+                <span class="db-coins-display" id="db-coins-display">💰 0 里程幣</span>
+            </div>
+            <div class="db-xp-bar-wrap">
+                <div class="db-xp-bar-fill" id="db-xp-bar" style="width:0%"></div>
+            </div>
+            <div class="db-xp-label" id="db-xp-label">XP: 0 / 80</div>
+        </div>
+
+        <!-- Stats pills -->
+        <div class="db-pills-row" id="db-pills-row" style="display:none;">
+            <div class="db-pill">
+                <span class="db-pill-val" id="db-rides-count">0</span>
+                <span class="db-pill-lbl">次騎行</span>
+            </div>
+            <div class="db-pill">
+                <span class="db-pill-val" id="db-total-xp">0</span>
+                <span class="db-pill-lbl">總 XP</span>
+            </div>
+            <div class="db-pill">
+                <span class="db-pill-val" id="db-coins-pill">0</span>
+                <span class="db-pill-lbl">里程幣</span>
+            </div>
+        </div>
+
+        <!-- Email verify notice -->
+        <div id="email-verify-notice" style="display:none;">
+            <i class="fas fa-envelope" style="color:#ff9800;"></i>
+            <span><strong>請驗證你的電子郵件！</strong> 我們已發送了驗證連結，請查收並點擊連結完成驗證。</span>
+        </div>
+
+        <!-- Upgrade notice -->
+        <div id="upgrade-notice" style="display:none;">
+            <h3><i class="fas fa-star"></i> 升級為高級會員</h3>
+            <p>完善你的個人資料即可升級，解鎖所有功能！</p>
+            <a href="/profile" class="db-cta-btn"><i class="fas fa-arrow-right"></i> 立即完善資料</a>
+        </div>
+
+        <!-- Ride history -->
+        <div class="db-section-title" style="margin-top:0.4em;">騎行記錄</div>
+        <div class="db-history-list" id="db-history-list">
+            <div id="db-history-empty" style="display:none;">
+                <i class="fas fa-biking"></i>
+                尚無騎行記錄，<a href="/routes" style="color:var(--app-accent,#6dba65);">去選一條路線</a>出發吧！
+            </div>
+        </div>
+
+        <!-- Admin panel -->
+        <div id="admin-section" class="db-admin-card" style="display:none;">
+            <h3><i class="fas fa-shield-alt"></i> 管理員面板</h3>
+            <p>你可以管理網站用戶及查看資料。</p>
+            <a href="/admin" class="db-admin-btn"><i class="fas fa-tools"></i> 前往管理員後台</a>
+        </div>
+
+        <!-- More links (app only) -->
+        <div class="db-section-title app-only" style="margin-top:1em;">更多</div>
+        <div class="db-more-grid app-only">
+            <a href="/leaderboard" class="db-more-item">
+                <i class="fas fa-trophy"></i><span>排行榜</span>
+            </a>
+            <a href="/tasks" class="db-more-item">
+                <i class="fas fa-tasks"></i><span>任務</span>
+            </a>
+            <a href="/chat" class="db-more-item">
+                <i class="fas fa-comments"></i><span>聊天</span>
+            </a>
+            <a href="/blog" class="db-more-item">
+                <i class="fas fa-newspaper"></i><span>部落格</span>
+            </a>
+            <a href="/about" class="db-more-item">
+                <i class="fas fa-info-circle"></i><span>關於我們</span>
+            </a>
+            <a href="/en" class="db-more-item">
+                <i class="fas fa-language"></i><span>English</span>
+            </a>
+            <button id="db-logout-btn" class="db-more-item danger">
+                <i class="fas fa-sign-out-alt"></i><span>登出</span>
+            </button>
+        </div>
+    </div><!-- /.db-content -->
+
+    <footer class="web-only">
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
 
     <script src="/js/main.js"></script>
-    <script src="/js/login.js"></script> 
-    
+    <script src="/js/login.js"></script>
     <script>
-        // ── 工具函數：清除登入狀態並顯示重新登入提示 ──────────────────────────
-        function showSessionExpired(container) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('user');
-            if (container) {
-                container.innerHTML = `<p style="color: var(--app-text-secondary, #a8d8a0);">
-                    <i class="fas fa-lock" style="color:#ef9a9a;"></i>
-                    登入已過期，請
-                    <a href="/login" style="color: var(--app-accent, #6dba65);">重新登入</a>
-                    以載入進度。
-                </p>`;
-            }
-            // Also update the welcome text
-            const welcomeEl = document.getElementById('welcome-email');
-            if (welcomeEl) welcomeEl.textContent = '登入已過期';
+    // ── Level config ──────────────────────────────────────────────────────────
+    var LEVEL_TITLES = {
+        1:'新手騎士',2:'新手騎士',3:'新手騎士',4:'新手騎士',5:'新手騎士',
+        6:'城市騎手',7:'城市騎手',8:'城市騎手',9:'城市騎手',10:'城市騎手',
+        11:'路線達人',12:'路線達人',13:'路線達人',14:'路線達人',15:'路線達人',
+        16:'都市傳奇',17:'都市傳奇',18:'都市傳奇',19:'都市傳奇',20:'都市傳奇'
+    };
+    var LEVEL_XP = [
+        0,80,200,380,620,950,1400,1980,2700,3600,
+        4000,5100,6500,8100,10000,12200,14800,17800,21200,25200,
+        Infinity
+    ];
+
+    function formatNum(n) {
+        if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+        return String(n);
+    }
+
+    function renderGameProfile(level, xp, coins, ridesCount) {
+        var lvl = Math.max(1, Math.min(level || 1, 20));
+        var currentXp = xp || 0;
+        var currentCoins = coins || 0;
+        var xpCurrent = LEVEL_XP[lvl - 1] || 0;
+        var xpNext = LEVEL_XP[lvl];
+        var xpBar = lvl >= 20 ? 100 : Math.round(Math.max(0, Math.min(100,
+            (currentXp - xpCurrent) / Math.max(1, xpNext - xpCurrent) * 100)));
+
+        document.getElementById('db-level-badge').textContent = 'Lv.' + lvl;
+        document.getElementById('db-level-title').textContent = LEVEL_TITLES[lvl] || '殿堂騎士';
+        document.getElementById('db-coins-display').textContent = '💰 ' + currentCoins.toLocaleString() + ' 里程幣';
+        document.getElementById('db-xp-bar').style.width = xpBar + '%';
+        document.getElementById('db-xp-label').textContent = lvl >= 20
+            ? 'XP: ' + currentXp.toLocaleString() + '（已達最高等級）'
+            : 'XP: ' + currentXp.toLocaleString() + ' / ' + xpNext.toLocaleString() + '（還需 ' + (xpNext - currentXp).toLocaleString() + ' XP）';
+        document.getElementById('db-level-card').style.display = '';
+
+        if (typeof ridesCount !== 'undefined') {
+            document.getElementById('db-rides-count').textContent = ridesCount;
         }
+        document.getElementById('db-total-xp').textContent = formatNum(currentXp);
+        document.getElementById('db-coins-pill').textContent = formatNum(currentCoins);
+        document.getElementById('db-pills-row').style.display = '';
+    }
 
-        // 等待所有東西載入完畢
-        document.addEventListener('DOMContentLoaded', async function() {
+    // ── Shared auth helpers ───────────────────────────────────────────────────
+    function _clearAuth() {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+    }
+
+    // ── Main init ─────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            var user;
             try {
-                // 從 localStorage 取得 JWT 登入的用戶資料
-                const user = getUserData();
-                let userRole = 'junior';
-                
-                if (!user) {
-                    window.location.href = '/login';
-                    return;
-                }
+                user = (typeof getUserData === 'function') ? getUserData() : null;
+            } catch (e) {
+                console.error('無法讀取登入資料:', e);
+                user = null;
+            }
+            if (!user) { window.location.href = '/login'; return; }
 
-                // 未驗證電郵的帳戶不允許使用此頁面
-                if (user.email_verified === false) {
-                    window.location.href = '/verify-email?pending=1';
-                    return;
-                }
+            if (user.email_verified === false) {
+                window.location.href = '/verify-email?pending=1';
+                return;
+            }
 
-                // 立即從快取渲染遊戲進度（減少感知載入時間）
-                if (user.level !== undefined) {
-                    renderGameProfile(user.level, user.xp, user.coins);
-                }
+            _applyUserUI(user);
+            if (user.level !== undefined) {
+                renderGameProfile(user.level, user.xp, user.coins);
+            }
 
-                // 立即顯示基本資料（不等 API 回應）
-                const displayName = user.full_name || user.email;
-                document.getElementById('welcome-email').textContent = `你好, ${displayName}`;
+            var userRole = user.user_role || user.role || 'junior';
 
-                // 從後端取得最新的用戶角色及遊戲進度
-                try {
-                    const token = localStorage.getItem('accessToken');
-                    const dbResponse = await fetch(`/api/user?user_id=${user.id}`, {
-                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                    });
-                    if (dbResponse.ok) {
-                        const dbUser = await dbResponse.json();
-                        userRole = dbUser.user_role || user.user_role || 'junior';
-                        // 更新本地快取
-                        user.user_role = userRole;
-                        // Merge game data + unlocked coin routes into user object
-                        if (dbUser.level !== undefined) {
-                            user.level = dbUser.level;
-                            user.xp = dbUser.xp;
-                            user.coins = dbUser.coins;
-                        }
-                        localStorage.setItem('user', JSON.stringify(user));
-                        // 同步已購買的里程幣路線
-                        if (Array.isArray(dbUser.unlocked_coin_routes)) {
-                            localStorage.setItem('unlockedCoinRoutes', JSON.stringify(dbUser.unlocked_coin_routes));
-                        }
-                        // 顯示遊戲進度卡片
-                        if (dbUser.level !== undefined) {
-                            renderGameProfile(dbUser.level, dbUser.xp, dbUser.coins);
-                        }
-                    } else {
-                        userRole = user.user_role || user.role || 'junior';
+            try {
+                var token = localStorage.getItem('accessToken');
+                var res = await fetch('/api/user?user_id=' + user.id, {
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                });
+                if (res.ok) {
+                    var dbUser = await res.json();
+                    userRole = dbUser.user_role || userRole;
+                    user.user_role = userRole;
+                    if (dbUser.level !== undefined) {
+                        user.level = dbUser.level;
+                        user.xp = dbUser.xp;
+                        user.coins = dbUser.coins;
                     }
-                } catch (error) {
-                    console.error('Error fetching user from database:', error);
-                    userRole = user.user_role || user.role || 'junior';
+                    if (Array.isArray(dbUser.unlocked_coin_routes)) {
+                        localStorage.setItem('unlockedCoinRoutes', JSON.stringify(dbUser.unlocked_coin_routes));
+                    }
+                    localStorage.setItem('user', JSON.stringify(user));
+                    _applyUserUI(user);
                 }
+            } catch (e) { /* use cached data */ }
 
-                // 顯示電郵未驗證提醒
-                if (user.email_verified === false) {
-                    document.getElementById('email-verify-notice').style.display = 'block';
-                }
-                
-                // Display membership status
-                const statusElement = document.getElementById('membership-status');
-                if (userRole === 'admin') {
-                    statusElement.innerHTML = '<i class="fas fa-shield-alt" style="color: #f3a0ef;"></i> 管理員';
-                    statusElement.style.color = '#f3a0ef';
-                } else if (userRole === 'senior') {
-                    statusElement.innerHTML = '<i class="fas fa-star" style="color: #ffd54f;"></i> 高級會員';
-                    statusElement.style.color = '#ffd54f';
-                } else {
-                    statusElement.innerHTML = '<i class="fas fa-user" style="color: #666;"></i> 初級會員';
-                    // Show upgrade notice for junior members
-                    document.getElementById('upgrade-notice').style.display = 'block';
-                }
-                
-                // 檢查是否為管理員
-                if (userRole === 'admin' || user.role === 'admin') {
-                    document.getElementById('admin-section').style.display = 'block';
-                }
-            
-            // 載入騎行歷史
-            loadCyclingHistory();
-            
-            } catch (error) {
-                console.error('獲取用戶資料失敗:', error);
-            }
-        });
+            _applyRoleUI(userRole);
+            await loadHistory();
 
-        // 等級稱號對照表（與 routes_config / level_config 同步）
-        // 每5級更換一個稱號：Lv1-5 新手騎士，Lv6-10 城市騎手，Lv11-15 路線達人，Lv16-20 都市傳奇
-        const LEVEL_TITLES = {
-            1: '新手騎士', 2: '新手騎士', 3: '新手騎士', 4: '新手騎士', 5: '新手騎士',
-            6: '城市騎手', 7: '城市騎手', 8: '城市騎手', 9: '城市騎手', 10: '城市騎手',
-            11: '路線達人', 12: '路線達人', 13: '路線達人', 14: '路線達人', 15: '路線達人',
-            16: '都市傳奇', 17: '都市傳奇', 18: '都市傳奇', 19: '都市傳奇', 20: '都市傳奇'
-        };
-        // 累計 XP 以達到對應等級（後期升級要求已適當降低）
-        const LEVEL_XP = [
-            0,      // Lv1
-            80,     // Lv2
-            200,    // Lv3
-            380,    // Lv4
-            620,    // Lv5
-            950,    // Lv6
-            1400,   // Lv7
-            1980,   // Lv8
-            2700,   // Lv9
-            3600,   // Lv10
-            4000,   // Lv11
-            5100,   // Lv12
-            6500,   // Lv13
-            8100,   // Lv14
-            10000,  // Lv15
-            12200,  // Lv16
-            14800,  // Lv17
-            17800,  // Lv18
-            21200,  // Lv19
-            25200,  // Lv20
-            Infinity
-        ];
-
-        function renderGameProfile(level, xp, coins) {
-            const card = document.getElementById('game-profile-card');
-            if (!card) return;
-            const lvl = Math.max(1, Math.min(level || 1, 20));
-            const currentXp = xp || 0;
-            const currentCoins = coins || 0;
-            const xpCurrent = LEVEL_XP[lvl - 1] || 0;
-            const xpNext = LEVEL_XP[lvl];
-            const xpBar = lvl >= 20 ? 100 : Math.round(Math.max(0, Math.min(100, (currentXp - xpCurrent) / Math.max(1, xpNext - xpCurrent) * 100)));
-
-            document.getElementById('game-level-badge').textContent = `Lv.${lvl}`;
-            document.getElementById('game-title').textContent = LEVEL_TITLES[lvl] || '';
-            document.getElementById('game-coins').textContent = `💰 ${currentCoins.toLocaleString()} 里程幣`;
-            document.getElementById('xp-bar').style.width = xpBar + '%';
-            document.getElementById('xp-label').textContent = lvl >= 20
-                ? `XP: ${currentXp.toLocaleString()}（已達最高等級）`
-                : `XP: ${currentXp.toLocaleString()} / ${xpNext.toLocaleString()}（下一級需 ${(xpNext - currentXp).toLocaleString()} XP）`;
-            card.style.display = 'block';
+        } catch (e) {
+            console.error('儀表板初始化失敗:', e);
         }
+    });
 
-        async function loadCyclingHistory() {
-            const container = document.getElementById('history-container');
-            container.textContent = '正在載入歷史紀錄...';
-            
-            try {
-                const token = localStorage.getItem('accessToken');
-                const response = await fetch('/api/getHistory', {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-                if (response.status === 401) {
-                    showSessionExpired(container);
-                    return;
-                }
-                if (!response.ok) throw new Error('Server error ' + response.status);
-                const data = await response.json();
-
-                // 同步遊戲進度（若 /api/user 未能先取得最新數值，則以此補充）
-                if (data.gameProfile) {
-                    renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins);
-                }
-
-                const historyData = Array.isArray(data) ? data : (data.history || []);
-
-                if (historyData.length === 0) {
-                    container.innerHTML = '<p style="color: var(--app-text-secondary, #a8d8a0);">你目前沒有任何騎行歷史。<br><a href="/routes" style="color: var(--app-accent, #6dba65);">瀏覽路線</a>開始你的第一次騎行吧！</p>';
-                    return;
-                }
-
-                container.innerHTML = '';
-                historyData.forEach(ride => {
-                    const div = document.createElement('div');
-                    div.className = 'ride-item';
-                    const routeLabel = ride.route_name || '未命名路線';
-                    const dateStr = ride.ride_date ? ride.ride_date.slice(0, 10) : '';
-                    const distStr = ride.distance_km ? `${ride.distance_km} km` : '';
-                    const durStr = ride.duration_minutes ? `${ride.duration_minutes} 分鐘` : '';
-                    const speedStr = ride.avg_speed_kmh ? `${ride.avg_speed_kmh} km/h` : '';
-                    const xpStr = ride.xp_earned ? `+${ride.xp_earned} XP` : '';
-                    const sourceIcon = { pwa: '📱', app: '📲', gpx: '📂' }[ride.source] || '🌐';
-
-                    div.innerHTML = `
-                        <div class="ride-main">
-                            <span class="ride-route-name">${sourceIcon} ${routeLabel}</span>
-                            ${xpStr ? `<span class="ride-xp">${xpStr}</span>` : ''}
-                        </div>
-                        <div class="ride-details">
-                            📅 ${dateStr}
-                            ${distStr ? ` &nbsp;|&nbsp; 🚴 ${distStr}` : ''}
-                            ${durStr ? ` &nbsp;|&nbsp; ⏱ ${durStr}` : ''}
-                            ${speedStr ? ` &nbsp;|&nbsp; 💨 平均 ${speedStr}` : ''}
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-                
-            } catch (error) {
-                console.error('載入歷史失敗:', error);
-                container.textContent = `載入失敗: ${error.message}`;
-            }
+    function _applyUserUI(user) {
+        document.getElementById('db-user-name').textContent =
+            user.full_name || user.username || user.email || '騎士';
+        var avatarEl = document.getElementById('db-avatar');
+        if (user.avatar_url) {
+            var img = document.createElement('img');
+            img.alt = '頭像';
+            img.src = user.avatar_url;
+            img.onerror = function () { avatarEl.innerHTML = '<i class="fas fa-user"></i>'; };
+            avatarEl.innerHTML = '';
+            avatarEl.appendChild(img);
         }
+        if (user.email_verified === false) {
+            document.getElementById('email-verify-notice').style.display = '';
+        }
+    }
 
-        // 登出按鈕
-        document.addEventListener('DOMContentLoaded', () => {
-            const logoutBtn = document.getElementById('dashboard-logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('user');
-                    window.location.href = '/login';
-                });
+    function _applyRoleUI(role) {
+        var badge = document.getElementById('db-role-badge');
+        badge.className = 'db-role-badge';
+        if (role === 'admin') {
+            badge.classList.add('db-role-admin');
+            badge.innerHTML = '<i class="fas fa-shield-alt"></i> 管理員';
+            document.getElementById('admin-section').style.display = '';
+        } else if (role === 'senior') {
+            badge.classList.add('db-role-senior');
+            badge.innerHTML = '<i class="fas fa-star"></i> 高級會員';
+        } else {
+            badge.classList.add('db-role-junior');
+            badge.innerHTML = '<i class="fas fa-user"></i> 初級會員';
+            document.getElementById('upgrade-notice').style.display = '';
+        }
+    }
+
+    function _sessionExpired(container) {
+        _clearAuth();
+        container.innerHTML = '<div style="padding:1.5em;text-align:center;color:var(--app-text-secondary,#a8d8a0);">' +
+            '<i class="fas fa-lock" style="font-size:2em;opacity:0.4;display:block;margin-bottom:0.4em;"></i>' +
+            '登入已過期，請 <a href="/login" style="color:var(--app-accent,#6dba65);">重新登入</a>。</div>';
+    }
+
+    async function loadHistory() {
+        var list = document.getElementById('db-history-list');
+        list.innerHTML = '<div style="padding:1.5em;text-align:center;color:var(--app-text-secondary,#a8d8a0);"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
+        try {
+            var token = localStorage.getItem('accessToken');
+            var res = await fetch('/api/getHistory', {
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            });
+            if (res.status === 401) { _sessionExpired(list); return; }
+            if (!res.ok) throw new Error('server ' + res.status);
+
+            var data = await res.json();
+            if (data.gameProfile) {
+                var histArr = Array.isArray(data) ? data : (data.history || []);
+                renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length);
             }
-        });
+
+            var history = Array.isArray(data) ? data : (data.history || []);
+            list.innerHTML = '';
+
+            if (history.length === 0) {
+                var emptyEl = document.getElementById('db-history-empty');
+                emptyEl.style.display = '';
+                list.appendChild(emptyEl);
+                return;
+            }
+
+            var sourceIcon = { pwa: '📱', app: '📲', gpx: '📂' };
+            history.forEach(function (ride) {
+                var dateStr = ride.ride_date ? ride.ride_date.slice(0, 10) : '';
+                var icon = sourceIcon[ride.source] || '🌐';
+                var metaParts = [];
+                if (dateStr) metaParts.push('📅 ' + dateStr);
+                if (ride.distance_km) metaParts.push('🚴 ' + parseFloat(ride.distance_km).toFixed(1) + ' km');
+                if (ride.duration_minutes) metaParts.push('⏱ ' + ride.duration_minutes + ' 分鐘');
+                if (ride.avg_speed_kmh) metaParts.push('💨 ' + ride.avg_speed_kmh + ' km/h');
+                var meta = metaParts.join('  ');
+
+                var item = document.createElement('div');
+                item.className = 'db-ride-item';
+                item.innerHTML =
+                    '<div class="db-ride-main">' +
+                        '<div class="db-ride-name">' + icon + ' ' + (ride.route_name || '未命名路線') + '</div>' +
+                        '<div class="db-ride-meta">' + meta + '</div>' +
+                    '</div>' +
+                    (ride.xp_earned ? '<span class="db-ride-xp">+' + ride.xp_earned + ' XP</span>' : '');
+                list.appendChild(item);
+            });
+        } catch (e) {
+            console.error('載入歷史失敗:', e);
+            list.innerHTML = '<div style="padding:1em;color:var(--app-text-secondary,#a8d8a0);font-size:0.88em;">載入失敗，請稍後再試。</div>';
+        }
+    }
+
+    // Logout
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('db-logout-btn');
+        if (btn) {
+            btn.addEventListener('click', function () {
+                _clearAuth();
+                window.location.href = '/login';
+            });
+        }
+    });
     </script>
     <script src="/js/pwa.js"></script>
 </body>

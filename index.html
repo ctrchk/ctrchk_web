@@ -467,10 +467,22 @@ button.app-quick-item {
 @keyframes splash-spin { to { transform: rotate(360deg); } }
 
 /* ── Light theme overrides ─────────────────────────────────────── */
+body.app-light-theme .app-user-card {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-color: #a5d6a7;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+body.app-light-theme .app-user-name { color: var(--app-text-primary, #1b3a1f); }
 body.app-light-theme .app-xp-bar-wrap { background: rgba(0,0,0,0.08); }
 body.app-light-theme .app-stat-pill { background: rgba(0,0,0,0.06); }
 body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1f); }
 @media (prefers-color-scheme: light) {
+    body:not(.app-theme-explicit) .app-user-card {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        border-color: #a5d6a7;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    body:not(.app-theme-explicit) .app-user-name { color: var(--app-text-primary, #1b3a1f); }
     body:not(.app-theme-explicit) .app-xp-bar-wrap { background: rgba(0,0,0,0.08); }
     body:not(.app-theme-explicit) .app-stat-pill { background: rgba(0,0,0,0.06); }
     body:not(.app-theme-explicit) .app-stat-pill .val { color: var(--app-text-primary, #1b3a1f); }

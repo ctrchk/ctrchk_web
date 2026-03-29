@@ -368,6 +368,18 @@
   </style>
 </head>
 <body>
+<script>
+// Inline theme init — ride.html does not load main.js so we apply the stored
+// theme preference immediately to avoid flash and ensure correct map tiles.
+(function () {
+  var s = localStorage.getItem('appTheme');
+  if (s === 'dark') {
+    document.body.classList.add('app-theme-explicit');
+  } else if (s === 'light') {
+    document.body.classList.add('app-theme-explicit', 'app-light-theme');
+  }
+})();
+</script>
 
   <!-- Loading screen -->
   <div id="ride-loading">
