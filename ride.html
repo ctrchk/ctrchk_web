@@ -329,6 +329,42 @@
     #summary-xp-badge.count-tick {
       transform: scale(1.05);
     }
+    /* ── Light theme overrides ────────────────────────────────────── */
+    body.app-light-theme { background: var(--app-bg-primary, #f5faf5) !important; }
+    body.app-light-theme #ride-map { background: #e8f5e9; }
+    body.app-light-theme #ride-bottom-sheet,
+    body.app-light-theme #go-to-start-banner {
+        background: rgba(245,250,245,0.96);
+        color: var(--app-text-primary, #1b3a1f);
+    }
+    body.app-light-theme #go-to-start-banner h3 { color: var(--app-accent, #2e7d32); }
+    body.app-light-theme .rbs-stats-row { color: var(--app-text-primary, #1b3a1f); }
+    body.app-light-theme .rbs-stat .val { color: var(--app-accent, #2e7d32); }
+    body.app-light-theme .rbs-handle-bar { background: rgba(0,0,0,0.15); }
+    body.app-light-theme .rbs-divider { background: rgba(0,0,0,0.1); }
+    body.app-light-theme #rbs-toggle-btn {
+        background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); color: var(--app-text-secondary, #2e7d32);
+    }
+    body.app-light-theme #next-stop-card {
+        background: rgba(245,250,245,0.95);
+        color: var(--app-text-primary, #1b3a1f);
+    }
+    body.app-light-theme #next-stop-dist { color: var(--app-accent, #2e7d32); }
+    body.app-light-theme #ride-timer-display { background: rgba(0,0,0,0.08); color: var(--app-text-primary, #1b3a1f); }
+    @media (prefers-color-scheme: light) {
+        body:not(.app-theme-explicit) { background: var(--app-bg-primary, #f5faf5) !important; }
+        body:not(.app-theme-explicit) #ride-map { background: #e8f5e9; }
+        body:not(.app-theme-explicit) #ride-bottom-sheet,
+        body:not(.app-theme-explicit) #go-to-start-banner { background: rgba(245,250,245,0.96); color: var(--app-text-primary, #1b3a1f); }
+        body:not(.app-theme-explicit) #go-to-start-banner h3 { color: var(--app-accent, #2e7d32); }
+        body:not(.app-theme-explicit) .rbs-stat .val { color: var(--app-accent, #2e7d32); }
+        body:not(.app-theme-explicit) .rbs-handle-bar { background: rgba(0,0,0,0.15); }
+        body:not(.app-theme-explicit) .rbs-divider { background: rgba(0,0,0,0.1); }
+        body:not(.app-theme-explicit) #rbs-toggle-btn { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); color: var(--app-text-secondary, #2e7d32); }
+        body:not(.app-theme-explicit) #next-stop-card { background: rgba(245,250,245,0.95); color: var(--app-text-primary, #1b3a1f); }
+        body:not(.app-theme-explicit) #next-stop-dist { color: var(--app-accent, #2e7d32); }
+        body:not(.app-theme-explicit) #ride-timer-display { background: rgba(0,0,0,0.08); color: var(--app-text-primary, #1b3a1f); }
+    }
   </style>
 </head>
 <body>
@@ -649,8 +685,14 @@
       if (map) return;
       map = L.map('ride-map', { zoomControl: false, attributionControl: false })
              .setView([lat, lon], 15);
-      // Dark map theme for better ride visibility
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      // Choose map tile based on current theme
+      const isLightTheme = document.body.classList.contains('app-light-theme') ||
+        (!document.body.classList.contains('app-theme-explicit') &&
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+      const tileUrl = isLightTheme
+        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+      L.tileLayer(tileUrl, {
         maxZoom: 19,
         attribution: '© OpenStreetMap © CartoDB'
       }).addTo(map);
