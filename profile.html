@@ -534,6 +534,20 @@
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
     <script>
+    const PROVIDER_MAP = { email: '電子郵件', google: 'Google' };
+
+    function applyAuthProvider(authProvider) {
+        document.getElementById('info-provider').textContent = PROVIDER_MAP[authProvider] || authProvider || '電子郵件';
+        if (authProvider === 'google') {
+            const pwSection = document.getElementById('pw-reset-section');
+            const pwInline = document.getElementById('pw-reset-inline');
+            const pwHint = document.querySelector('[data-i18n="pw_hint"]');
+            if (pwSection) pwSection.style.display = 'none';
+            if (pwInline) pwInline.style.display = 'none';
+            if (pwHint) pwHint.style.display = 'none';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const userData = localStorage.getItem('user');
         if (!userData) {
@@ -556,18 +570,8 @@
             ? '<span style="color: var(--app-accent, #6dba65);"><i class="fas fa-check-circle"></i> 已驗證</span>'
             : '<span style="color:#ef9a9a;"><i class="fas fa-exclamation-circle"></i> 未驗證</span>';
 
-        const providerMap = { email: '電子郵件', google: 'Google' };
-        document.getElementById('info-provider').textContent = providerMap[user.auth_provider] || user.auth_provider || '電子郵件';
-
         // 如果使用 Google 登入，不顯示重設密碼
-        if (user.auth_provider === 'google') {
-            const pwSection = document.getElementById('pw-reset-section');
-            const pwInline = document.getElementById('pw-reset-inline');
-            const pwHint = document.querySelector('[data-i18n="pw_hint"]');
-            if (pwSection) pwSection.style.display = 'none';
-            if (pwInline) pwInline.style.display = 'none';
-            if (pwHint) pwHint.style.display = 'none';
-        }
+        applyAuthProvider(user.auth_provider);
 
         if (user.created_at) {
             const d = new Date(user.created_at);
@@ -618,6 +622,10 @@
                 // 更新頭像
                 if (freshData.avatar_url) {
                     renderAvatarPreview(freshData.avatar_url);
+                }
+                // 更新登入方式顯示，並重新判斷是否隱藏密碼重設區塊
+                if (freshData.auth_provider) {
+                    applyAuthProvider(freshData.auth_provider);
                 }
             }).catch(() => {});
         }
