@@ -580,7 +580,7 @@
             if (/^[A-Za-z0-9_]{4,16}$/.test(current)) return true;
             // Try refreshing user data from server – DB migration auto-assigns usernames
             try {
-                const freshUser = await apiGet(`/api/user?user_id=${ME.id}`);
+                const freshUser = await apiGet(`/api/user?user_id=${parseInt(ME.id, 10)}`);
                 if (freshUser && /^[A-Za-z0-9_]{4,16}$/.test((freshUser.username || '').trim())) {
                     ME.username = freshUser.username.trim();
                     const merged = { ...(JSON.parse(localStorage.getItem('user') || '{}')), username: ME.username };

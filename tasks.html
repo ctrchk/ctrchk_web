@@ -1482,15 +1482,20 @@
             const xpFill = document.getElementById('hero-xpfill');
             const xpLabel = document.getElementById('hero-xplabel');
             if (avatarEl) {
-                if (heroUser.avatar_url) {
-                    avatarEl.innerHTML = `<img src="${heroUser.avatar_url}" alt="頭像" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user\\'></i>'">`;
+                if (heroUser.avatar_url && /^(https?:\/\/|data:image\/)/i.test(heroUser.avatar_url)) {
+                    const img = document.createElement('img');
+                    img.alt = '頭像';
+                    img.onerror = function() { this.parentElement.innerHTML = '<i class="fas fa-user"></i>'; };
+                    img.src = heroUser.avatar_url;
+                    avatarEl.innerHTML = '';
+                    avatarEl.appendChild(img);
                 } else {
                     avatarEl.innerHTML = '<i class="fas fa-user"></i>';
                 }
             }
             if (nameEl) nameEl.textContent = heroUser.full_name || heroUser.username || '—';
-            const level = parseInt(gp.level, 10) || 1;
-            const xp = parseInt(gp.xp, 10) || 0;
+            const level = Math.max(1, parseInt(gp.level, 10) || 1);
+            const xp = Math.max(0, parseInt(gp.xp, 10) || 0);
             if (levelBadge) levelBadge.textContent = `Lv.${level}`;
             const curThresh = HERO_XP_THRESHOLDS[Math.min(level - 1, HERO_XP_THRESHOLDS.length - 1)] || 0;
             const nextThresh = HERO_XP_THRESHOLDS[Math.min(level, HERO_XP_THRESHOLDS.length - 1)] || HERO_XP_THRESHOLDS[HERO_XP_THRESHOLDS.length - 1];
