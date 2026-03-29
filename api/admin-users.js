@@ -321,7 +321,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'create_admin') {
-        const { email, full_name, password, role = 'admin' } = req.body;
+        const { email, full_name, password, username, role = 'admin' } = req.body;
 
         if (!email || !full_name || !password) {
           return res.status(400).json({ message: 'Email, name, and password are required' });
@@ -334,6 +334,22 @@ export default async function handler(req, res) {
           return res.status(400).json({ message: 'Invalid role' });
         }
 
+        // Validate username if provided
+        let normalizedUsername = null;
+        if (username) {
+          normalizedUsername = String(username).trim();
+          if (!/^[A-Za-z0-9_]{4,16}$/.test(normalizedUsername)) {
+            return res.status(400).json({ message: 'Username must be 4-16 characters (letters, numbers, underscore)' });
+          }
+          const { rows: uRows } = await query(
+            'SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1',
+            [normalizedUsername]
+          );
+          if (uRows.length > 0) {
+            return res.status(409).json({ message: 'Username already taken' });
+          }
+        }
+
         const { rows: existing } = await query('SELECT id FROM users WHERE email = $1', [email]);
         if (existing.length > 0) {
           return res.status(409).json({ message: 'Email already exists' });
@@ -344,10 +360,10 @@ export default async function handler(req, res) {
 
         await query(
           `INSERT INTO users (
-            email, password_hash, user_role, full_name, profile_completed,
+            email, password_hash, user_role, full_name, username, profile_completed,
             auth_provider, email_verified
-          ) VALUES ($1, $2, $3, $4, true, 'email', true)`,
-          [email, password_hash, role, full_name]
+          ) VALUES ($1, $2, $3, $4, $5, true, 'email', true)`,
+          [email, password_hash, role, full_name, normalizedUsername]
         );
 
         return res.status(201).json({

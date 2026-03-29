@@ -330,6 +330,10 @@
                             <input type="text" id="admin-name" required>
                         </div>
                         <div class="form-group">
+                            <label>用戶名（4-16位英數或底線，可選）</label>
+                            <input type="text" id="admin-username" placeholder="例：admin_hk" minlength="4" maxlength="16" pattern="[A-Za-z0-9_]{4,16}">
+                        </div>
+                        <div class="form-group">
                             <label>密碼 *（至少 12 個字元）</label>
                             <input type="password" id="admin-password" required minlength="12">
                         </div>
@@ -771,6 +775,7 @@
                 e.preventDefault();
                 const email = document.getElementById('admin-email').value;
                 const name = document.getElementById('admin-name').value;
+                const username = document.getElementById('admin-username').value.trim() || undefined;
                 const password = document.getElementById('admin-password').value;
                 const confirmPw = document.getElementById('admin-confirm-password').value;
 
@@ -781,13 +786,15 @@
 
                 const token = localStorage.getItem('accessToken');
                 try {
+                    const body = { action: 'create_admin', email, full_name: name, password, role: 'admin' };
+                    if (username) body.username = username;
                     const response = await fetch('/api/admin-users', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ action: 'create_admin', email, full_name: name, password, role: 'admin' })
+                        body: JSON.stringify(body)
                     });
                     const data = await response.json();
                     if (response.ok) {

@@ -69,6 +69,8 @@ export default async function handler(req, res) {
       // （Google 帳號代表 Google 已驗證此電郵，無需再次驗證）
       const needsGoogleId    = !rows[0].google_id;
       const needsVerification = !rows[0].email_verified;
+      // 若用戶沒有頭像，使用 Google 頭像
+      const needsAvatar = !rows[0].avatar_url && payload.picture;
       // 若該電郵屬於已知管理員但資料庫角色尚未設為 admin，自動修正
       const needsAdminRole   = ADMIN_EMAILS.includes(email.toLowerCase()) && rows[0].user_role !== 'admin';
 
@@ -90,6 +92,11 @@ export default async function handler(req, res) {
            WHERE id = $1`,
           [user.id]
         );
+      }
+
+      if (needsAvatar) {
+        await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [payload.picture, user.id]);
+        user.avatar_url = payload.picture;
       }
 
       if (needsAdminRole) {
@@ -126,11 +133,12 @@ export default async function handler(req, res) {
         }
         if (!found) finalUsername = `u${Date.now()}`.slice(0, 16);
       }
+      const googleAvatarUrl = payload.picture || null;
       const insertResult = await query(
-        `INSERT INTO users (email, google_id, username, full_name, user_role, auth_provider, profile_completed, email_verified)
-         VALUES ($1, $2, $3, $4, $5, 'google', false, true)
-         RETURNING id, email, username, user_role, full_name, profile_completed`,
-        [email, google_id, finalUsername, full_name, newRole]
+        `INSERT INTO users (email, google_id, username, full_name, user_role, auth_provider, profile_completed, email_verified, avatar_url)
+         VALUES ($1, $2, $3, $4, $5, 'google', false, true, $6)
+         RETURNING id, email, username, user_role, full_name, profile_completed, avatar_url`,
+        [email, google_id, finalUsername, full_name, newRole, googleAvatarUrl]
       );
       user = insertResult.rows[0];
     }
@@ -162,6 +170,7 @@ export default async function handler(req, res) {
         role: user.user_role,
         profile_completed: user.profile_completed,
         email_verified: true, // Google 帳號視為已驗證
+        auth_provider: 'google',
         avatar_url: user.avatar_url || null
       }
     });

@@ -390,7 +390,7 @@
                             <button type="button" class="btn-avatar-remove" id="btn-avatar-remove" onclick="removeAvatar()" style="display:none;">
                                 <i class="fas fa-trash"></i> <span data-i18n="avatar_remove">移除頭像</span>
                             </button>
-                            <p class="avatar-hint" data-i18n="avatar_hint">支援 JPG、PNG、GIF、WebP，最大 1MB</p>
+                            <p class="avatar-hint" data-i18n="avatar_hint">支援 JPG、PNG、GIF、WebP，最大 3MB</p>
                         </div>
                     </div>
                     <div id="avatar-alert-success" class="alert-success" style="display:none;"></div>
@@ -825,9 +825,9 @@
     window.onAvatarFileChange = function(input) {
         const file = input.files && input.files[0];
         if (!file) return;
-        if (file.size > 1048576) {
+        if (file.size > 3145728) {
             const errEl = document.getElementById('avatar-alert-error');
-            errEl.textContent = '圖片太大，請選擇 1MB 以下的圖片。';
+            errEl.textContent = '圖片太大，請選擇 3MB 以下的圖片。';
             errEl.style.display = 'block';
             input.value = '';
             return;
@@ -888,7 +888,7 @@
             upgrade_btn: '立即升級',
             avatar_title: '個人頭像', avatar_upload: '上傳圖片',
             avatar_remove: '移除頭像',
-            avatar_hint: '支援 JPG、PNG、GIF、WebP，最大 1MB',
+            avatar_hint: '支援 JPG、PNG、GIF、WebP，最大 3MB',
             edit_profile: '修改個人資料',
             label_fullname: '姓名 *', ph_fullname: '請輸入姓名',
             label_phone: '聯絡電話', ph_phone: '例：9123 4567',
@@ -923,7 +923,7 @@
             upgrade_btn: 'Upgrade Now',
             avatar_title: 'Profile Picture', avatar_upload: 'Upload Image',
             avatar_remove: 'Remove Avatar',
-            avatar_hint: 'Supports JPG, PNG, GIF, WebP, max 1MB',
+            avatar_hint: 'Supports JPG, PNG, GIF, WebP, max 3MB',
             edit_profile: 'Edit Profile',
             label_fullname: 'Full Name *', ph_fullname: 'Enter your name',
             label_phone: 'Phone', ph_phone: 'e.g. 9123 4567',

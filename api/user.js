@@ -184,7 +184,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // Validate avatar_url if provided (must be http/https URL or data: URL, max 1MB base64)
+      // Validate avatar_url if provided (must be http/https URL or data: URL, max 3MB original / ~4MB base64)
       let sanitizedAvatarUrl = undefined;
       if (Object.prototype.hasOwnProperty.call(req.body, 'avatar_url')) {
         if (!avatar_url) {
@@ -192,8 +192,8 @@ export default async function handler(req, res) {
         } else if (/^https?:\/\//i.test(avatar_url)) {
           sanitizedAvatarUrl = avatar_url.slice(0, 2048);
         } else if (/^data:image\/(jpeg|png|gif|webp);base64,/i.test(avatar_url)) {
-          if (avatar_url.length > 1048576) {
-            return res.status(400).json({ message: 'Avatar image too large (max 1MB)' });
+          if (avatar_url.length > 4194304) {
+            return res.status(400).json({ message: 'Avatar image too large (max 3MB)' });
           }
           sanitizedAvatarUrl = avatar_url;
         } else {
