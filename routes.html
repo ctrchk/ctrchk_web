@@ -507,6 +507,19 @@
     background: currentColor;
     opacity: 0.4;
 }
+/* ── Light theme overrides ──────────────────────────────────── */
+body.app-light-theme .app-filter-chip.random-btn {
+    background: var(--app-bg-card, #ffffff);
+    border-color: var(--app-border, #c8e6c9);
+    color: var(--app-text-secondary, #2e7d32);
+}
+@media (prefers-color-scheme: light) {
+    body:not(.app-theme-explicit) .app-filter-chip.random-btn {
+        background: var(--app-bg-card, #ffffff);
+        border-color: var(--app-border, #c8e6c9);
+        color: var(--app-text-secondary, #2e7d32);
+    }
+}
 </style>
 </head>
 <body>

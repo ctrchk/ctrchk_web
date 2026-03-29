@@ -391,6 +391,7 @@
         }
         /* ── Light theme overrides ──────────────────────────────── */
         body.app-light-theme .conv-panel { background: var(--app-bg-secondary, #eaf4ea); }
+        body.app-light-theme .msg-panel { background: var(--app-bg-primary, #f5faf5); }
         body.app-light-theme .conv-search input {
             background: var(--app-bg-card, #ffffff);
             border-color: var(--app-border, #c8e6c9);
@@ -425,6 +426,7 @@
         body.app-light-theme .btn-send:disabled { background: var(--app-border, #c8e6c9); }
         @media (prefers-color-scheme: light) {
             body:not(.app-theme-explicit) .conv-panel { background: var(--app-bg-secondary, #eaf4ea); }
+            body:not(.app-theme-explicit) .msg-panel { background: var(--app-bg-primary, #f5faf5); }
             body:not(.app-theme-explicit) .conv-search input { background: var(--app-bg-card, #ffffff); border-color: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
             body:not(.app-theme-explicit) .conv-item:hover,
             body:not(.app-theme-explicit) .conv-item.active { background: var(--app-bg-card, #ffffff); }
