@@ -56,7 +56,8 @@
     if (document.getElementById('app-bottom-nav')) return; // already injected
 
     const isEn = window.location.pathname.startsWith('/en') ||
-                 document.documentElement.lang === 'en';
+                 document.documentElement.lang === 'en' ||
+                 localStorage.getItem('appLang') === 'en';
 
     const isLoggedIn = !!localStorage.getItem('accessToken');
 
@@ -141,7 +142,8 @@
 
     // URL path is the primary signal; HTML lang attribute is a fallback
     const isEn = window.location.pathname.startsWith('/en') ||
-                 document.documentElement.lang === 'en';
+                 document.documentElement.lang === 'en' ||
+                 localStorage.getItem('appLang') === 'en';
     const bannerText = isEn
       ? '📱 Add 城市運輸單車 to your home screen for an app experience!'
       : '📱 將城市運輸單車加至主屏幕，享受 App 體驗！';

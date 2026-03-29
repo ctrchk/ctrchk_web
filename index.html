@@ -881,6 +881,16 @@ button.app-quick-item {
             const data = await res.json();
             const profile = data.gameProfile || { level: 1, xp: 0, coins: 0 };
             const history = data.history || [];
+            // Update cached avatar_url in localStorage if API returned a fresh value
+            if (typeof data.avatar_url !== 'undefined') {
+                try {
+                    const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    if (cachedUser.avatar_url !== data.avatar_url) {
+                        cachedUser.avatar_url = data.avatar_url;
+                        localStorage.setItem('user', JSON.stringify(cachedUser));
+                    }
+                } catch (_) {}
+            }
             renderAppHome(profile, history);
         } catch (e) {
             console.warn('[app-home] getHistory failed:', e);
