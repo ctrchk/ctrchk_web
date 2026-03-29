@@ -294,6 +294,21 @@
         }
         .btn-avatar-remove:hover { background: #2a1010; }
         .avatar-hint { color: var(--app-text-secondary, #a8d8a0); font-size: 0.8em; margin: 0; }
+        /* ── Password reset button: always use accent color (override !important) ── */
+        #pw-reset-section .cta-button {
+            color: var(--app-accent, #6dba65) !important;
+            background: none !important;
+            border: 1px solid var(--app-accent, #6dba65) !important;
+        }
+        /* ── Light theme overrides ──────────────────────────────── */
+        body.app-light-theme .alert-error { background: #fff3f3; color: #c62828; border-left: 3px solid #c62828; }
+        body.app-light-theme .alert-success { background: #f0fdf0; }
+        body.app-light-theme .btn-avatar-remove { border-color: #c62828; color: #c62828; }
+        body.app-light-theme .btn-avatar-remove:hover { background: #fff3f3; }
+        @media (prefers-color-scheme: light) {
+            body:not(.app-theme-explicit) .alert-error { background: #fff3f3; color: #c62828; }
+            body:not(.app-theme-explicit) .btn-avatar-remove { border-color: #c62828; color: #c62828; }
+        }
     </style>
 </head>
 <body>
@@ -303,6 +318,11 @@
         <section class="content animated-element">
             <div class="profile-container">
                 <h2><i class="fas fa-user-circle" style="color: var(--app-accent, #6dba65);"></i> <span data-i18n="profile_title">我的帳戶</span></h2>
+                <div style="display:flex;gap:0.6em;flex-wrap:wrap;margin-bottom:0.8em;">
+                    <a href="#settings-section" style="display:inline-flex;align-items:center;gap:0.4em;padding:0.45em 1.1em;background:var(--app-bg-card,#1e3820);border:1px solid var(--app-border,#2d4d2d);color:var(--app-text-secondary,#a8d8a0);border-radius:20px;font-size:0.85em;text-decoration:none;font-weight:600;transition:border-color 0.2s,color 0.2s;" onmouseover="this.style.borderColor='var(--app-accent,#6dba65)';this.style.color='var(--app-accent,#6dba65)';" onmouseout="this.style.borderColor='';this.style.color='';">
+                        <i class="fas fa-cog"></i> <span data-i18n="profile_btn_settings">設定</span>
+                    </a>
+                </div>
 
                 <!-- 帳戶概覽 -->
                 <div class="profile-card">
@@ -465,7 +485,7 @@
                 </div>
 
                 <!-- 顯示設定 -->
-                <div class="profile-card">
+                <div class="profile-card" id="settings-section">
                     <h3><i class="fas fa-cog"></i> <span data-i18n="display_settings">顯示設定</span></h3>
                     <div class="notif-setting-row">
                         <div class="notif-setting-info">
@@ -519,6 +539,16 @@
 
         const providerMap = { email: '電子郵件', google: 'Google' };
         document.getElementById('info-provider').textContent = providerMap[user.auth_provider] || user.auth_provider || '電子郵件';
+
+        // 如果使用 Google 登入，不顯示重設密碼
+        if (user.auth_provider === 'google') {
+            const pwSection = document.getElementById('pw-reset-section');
+            const pwInline = document.getElementById('pw-reset-inline');
+            const pwHint = document.querySelector('[data-i18n="pw_hint"]');
+            if (pwSection) pwSection.style.display = 'none';
+            if (pwInline) pwInline.style.display = 'none';
+            if (pwHint) pwHint.style.display = 'none';
+        }
 
         if (user.created_at) {
             const d = new Date(user.created_at);
@@ -862,7 +892,7 @@
             display_settings: '顯示設定', light_mode: '亮色模式',
             light_mode_desc: '切換應用程式顯示主題（預設跟隨系統）',
             theme_auto_hint: 'ℹ 若未手動設定，將自動跟隨手機系統的深淺色設定',
-            btn_logout: '登出',
+            btn_logout: '登出', profile_btn_settings: '設定',
         },
         en: {
             profile_title: 'My Account', account_info: 'Account Info',
@@ -897,7 +927,7 @@
             display_settings: 'Display Settings', light_mode: 'Light Mode',
             light_mode_desc: 'Toggle app theme (default follows system setting)',
             theme_auto_hint: 'ℹ If not manually set, follows device system theme automatically',
-            btn_logout: 'Log Out',
+            btn_logout: 'Log Out', profile_btn_settings: 'Settings',
         }
     };
     (function applyProfileLang() {

@@ -451,6 +451,9 @@
     let navStartTime = null;
     let navDistTravelledM = 0;
     let navTotalDistM = 0;
+    let plannedFrom = null;        // start point for re-draw after style change
+    let plannedTo = null;          // end point for re-draw after style change
+    let tkoGeoJsonData = null;     // cached TKO GeoJSON data
 
     // ── Helpers ──────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -707,16 +710,33 @@
           layers: [{ id: 'osm-raster', type: 'raster', source: 'osm-raster' }],
         });
         map.once('styledata', () => {
-          addTkoLocalLayer();
+          addTkoLocalLayer(tkoGeoJsonData);
+          // Re-draw planned route if one was active before the style reset
+          if (plannedRoute && plannedRoute.length && plannedFrom && plannedTo) {
+            drawPlannedRoute(plannedRoute, plannedFrom, plannedTo);
+          }
         });
       } catch (e) { console.warn('[Nav] Fallback raster also failed', e); }
     }
 
     /** Add custom cycleway style layers on top of the vector basemap */
     function addCyclewayLayers() {
-      // Only add if transportation source exists (OpenMapTiles schema)
-      if (!map.getSource('openmaptiles') && !map.getSource('maptiler_planet')) return;
-      const src = map.getSource('openmaptiles') ? 'openmaptiles' : 'maptiler_planet';
+      // Find transportation source by checking common source IDs and any vector source with transportation layer
+      const candidateIds = ['openmaptiles', 'maptiler_planet', 'planet', 'openfreemap', 'vectorTiles'];
+      let src = null;
+      for (const id of candidateIds) {
+        if (map.getSource(id)) { src = id; break; }
+      }
+      // Fallback: scan all sources for a vector type
+      if (!src) {
+        const style = map.getStyle();
+        if (style && style.sources) {
+          for (const [id, s] of Object.entries(style.sources)) {
+            if (s.type === 'vector') { src = id; break; }
+          }
+        }
+      }
+      if (!src) return;
 
       // Layer 1: Cycleway background fill (wide green strip)
       if (!map.getLayer('ctrc-cycleway-fill')) {
@@ -775,6 +795,7 @@
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
+          tkoGeoJsonData = data; // cache for re-use after style change
           addTkoLocalLayer(data);
         })
         .catch(e => console.warn('[Nav] TKO GeoJSON load failed', e));
@@ -782,7 +803,11 @@
 
     function addTkoLocalLayer(data) {
       if (!map) return;
-      if (map.getSource('tko-cycleways')) return; // already added
+      if (map.getSource('tko-cycleways')) {
+        // Source already exists — just update the data if we have real data
+        if (data) map.getSource('tko-cycleways').setData(data);
+        return;
+      }
 
       map.addSource('tko-cycleways', {
         type: 'geojson',
@@ -1141,6 +1166,9 @@
 
     function drawPlannedRoute(coords, from, to) {
       if (!map) return;
+      // Save for re-draw after potential style change (e.g. fallback to raster)
+      plannedFrom = from;
+      plannedTo = to;
 
       // Route polyline source
       if (!map.getSource('planned-route')) {
@@ -1341,6 +1369,8 @@
       expandPanel();
       clearRouteLayers();
       plannedRoute = null;
+      plannedFrom = null;
+      plannedTo = null;
       plannedSteps = [];
       document.getElementById('sel-from').value = '';
       document.getElementById('sel-to').value = '';

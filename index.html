@@ -465,6 +465,16 @@ button.app-quick-item {
     animation: splash-spin 0.8s linear infinite;
 }
 @keyframes splash-spin { to { transform: rotate(360deg); } }
+
+/* ── Light theme overrides ─────────────────────────────────────── */
+body.app-light-theme .app-xp-bar-wrap { background: rgba(0,0,0,0.08); }
+body.app-light-theme .app-stat-pill { background: rgba(0,0,0,0.06); }
+body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1f); }
+@media (prefers-color-scheme: light) {
+    body:not(.app-theme-explicit) .app-xp-bar-wrap { background: rgba(0,0,0,0.08); }
+    body:not(.app-theme-explicit) .app-stat-pill { background: rgba(0,0,0,0.06); }
+    body:not(.app-theme-explicit) .app-stat-pill .val { color: var(--app-text-primary, #1b3a1f); }
+}
 </style>
 
 <body>

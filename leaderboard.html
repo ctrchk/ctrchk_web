@@ -250,6 +250,43 @@
             font-weight: bold;
             text-decoration: none;
         }
+        /* ── Light theme overrides ──────────────────────────────── */
+        body.app-light-theme .lb-hero {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-bottom-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .lb-hero h1,
+        body.app-light-theme .lb-hero p { color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .lb-container { background: var(--app-bg-primary, #f5faf5); }
+        body.app-light-theme .lb-filter select {
+            background: var(--app-bg-card, #ffffff);
+            color: var(--app-text-primary, #1b3a1f);
+            border-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .podium-avatar { background: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .podium-name { color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .podium-dist { color: var(--app-text-secondary, #2e7d32); }
+        body.app-light-theme .lb-row { border-bottom-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .lb-row:hover { background: rgba(0,0,0,0.03); }
+        body.app-light-theme .lb-row.me { background: rgba(46,125,50,0.08); }
+        body.app-light-theme .lb-name { color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .lb-dist { color: var(--app-text-secondary, #2e7d32); }
+        body.app-light-theme .lb-avatar { background: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .lb-spinner { border-top-color: var(--app-accent, #2e7d32); border-color: rgba(0,0,0,0.1); border-top-color: var(--app-accent, #2e7d32); }
+        body.app-light-theme .lb-my-rank-banner { background: rgba(46,125,50,0.08); border-top-color: var(--app-accent, #2e7d32); }
+        @media (prefers-color-scheme: light) {
+            body:not(.app-theme-explicit) .lb-hero { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
+            body:not(.app-theme-explicit) .lb-hero h1,
+            body:not(.app-theme-explicit) .lb-hero p { color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .lb-container { background: var(--app-bg-primary, #f5faf5); }
+            body:not(.app-theme-explicit) .lb-filter select { background: var(--app-bg-card, #ffffff); color: var(--app-text-primary, #1b3a1f); border-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .podium-avatar { background: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .podium-name { color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .lb-row:hover { background: rgba(0,0,0,0.03); }
+            body:not(.app-theme-explicit) .lb-row.me { background: rgba(46,125,50,0.08); }
+            body:not(.app-theme-explicit) .lb-name { color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .lb-avatar { background: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
+        }
     </style>
 </head>
 <body>

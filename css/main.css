@@ -767,6 +767,30 @@ body.is-pwa #app-ride-page { display: flex !important; }
 }
 
 /* Light theme — applied when body has .app-light-theme class */
+body.app-light-theme .filter-button {
+    background-color: var(--app-bg-card, #ffffff);
+    color: var(--app-text-primary, #1b3a1f);
+    border: 1px solid var(--app-border, #c8e6c9);
+}
+body.app-light-theme .filter-button:hover,
+body.app-light-theme .filter-button.active {
+    background-color: var(--app-accent, #2e7d32);
+    color: #fff;
+    border-color: var(--app-accent, #2e7d32);
+}
+@media (prefers-color-scheme: light) {
+    body:not(.app-theme-explicit) .filter-button {
+        background-color: var(--app-bg-card, #ffffff);
+        color: var(--app-text-primary, #1b3a1f);
+        border: 1px solid var(--app-border, #c8e6c9);
+    }
+    body:not(.app-theme-explicit) .filter-button:hover,
+    body:not(.app-theme-explicit) .filter-button.active {
+        background-color: var(--app-accent, #2e7d32);
+        color: #fff;
+        border-color: var(--app-accent, #2e7d32);
+    }
+}
 body.app-light-theme {
     --app-bg-primary: #f5faf5;
     --app-bg-secondary: #eaf4ea;
@@ -851,6 +875,20 @@ body.is-pwa .cta-button {
     border: none;
 }
 body.is-pwa .cta-button:hover { background: var(--app-accent); }
+
+/* ── Light theme map tooltip ── */
+body.app-light-theme .app-map-tooltip {
+    background: rgba(240,248,240,0.95) !important;
+    border: 1px solid #c8e6c9 !important;
+    color: #1b3a1f !important;
+}
+@media (prefers-color-scheme: light) {
+    body:not(.app-theme-explicit) .app-map-tooltip {
+        background: rgba(240,248,240,0.95) !important;
+        border: 1px solid #c8e6c9 !important;
+        color: #1b3a1f !important;
+    }
+}
 
 /* ── Leaflet tooltip styling for dark app theme ── */
 .app-map-tooltip {

@@ -530,6 +530,48 @@
             border-color: var(--app-border, #c8e6c9);
         }
         body.app-light-theme .checkin-table-toggle { border-color: var(--app-border, #c8e6c9); }
+        /* ── Additional light theme overrides ───────────────────── */
+        body.app-light-theme .checkin-card {
+            background: linear-gradient(135deg, #e8f5e9, #f0f8f0);
+        }
+        body.app-light-theme .checkin-streak { color: #e65100; }
+        body.app-light-theme .checkin-today-reward { color: var(--app-accent, #2e7d32); }
+        body.app-light-theme .checkin-btn:disabled {
+            background: var(--app-border, #c8e6c9);
+            color: var(--app-text-secondary, #2e7d32);
+        }
+        body.app-light-theme .crt-xp { color: var(--app-accent, #2e7d32); }
+        body.app-light-theme .crt-coins { color: #e65100; }
+        body.app-light-theme .tasks-summary {
+            background: var(--app-bg-secondary, #eaf4ea);
+            border-bottom-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .all-tasks-bonus {
+            background: linear-gradient(135deg, #e8f5e9, #f0f8f0);
+            border-color: var(--app-accent, #2e7d32);
+        }
+        body.app-light-theme .all-tasks-bonus .atb-reward {
+            color: var(--app-accent, #2e7d32);
+            background: rgba(46,125,50,0.1);
+        }
+        body.app-light-theme .medal-card {
+            background: var(--app-bg-card, #ffffff);
+            border-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .toggle-slider { background: #b0c4b1; }
+        @media (prefers-color-scheme: light) {
+            body:not(.app-theme-explicit) .checkin-card { background: linear-gradient(135deg, #e8f5e9, #f0f8f0); }
+            body:not(.app-theme-explicit) .checkin-streak { color: #e65100; }
+            body:not(.app-theme-explicit) .checkin-today-reward { color: var(--app-accent, #2e7d32); }
+            body:not(.app-theme-explicit) .checkin-btn:disabled { background: var(--app-border, #c8e6c9); color: var(--app-text-secondary, #2e7d32); }
+            body:not(.app-theme-explicit) .crt-xp { color: var(--app-accent, #2e7d32); }
+            body:not(.app-theme-explicit) .crt-coins { color: #e65100; }
+            body:not(.app-theme-explicit) .tasks-summary { background: var(--app-bg-secondary, #eaf4ea); border-bottom-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .all-tasks-bonus { background: linear-gradient(135deg, #e8f5e9, #f0f8f0); border-color: var(--app-accent, #2e7d32); }
+            body:not(.app-theme-explicit) .all-tasks-bonus .atb-reward { color: var(--app-accent, #2e7d32); background: rgba(46,125,50,0.1); }
+            body:not(.app-theme-explicit) .medal-card { background: var(--app-bg-card, #ffffff); border-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .toggle-slider { background: #b0c4b1; }
+        }
     </style>
 </head>
 <body>
