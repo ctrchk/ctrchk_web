@@ -284,6 +284,23 @@
     }
     body.app-light-theme .panel-handle { background: rgba(0,0,0,0.15); }
     body.app-light-theme #panel-collapsed-title { color: #2e7d32; }
+    @media (prefers-color-scheme: light) {
+        body:not(.app-theme-explicit) #nav-topbar { background: linear-gradient(to bottom, rgba(240,248,240,0.97) 75%, transparent); color: #1b3a1f; }
+        body:not(.app-theme-explicit) #btn-nav-back { background: rgba(0,0,0,0.08); }
+        body:not(.app-theme-explicit) .plan-input { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.18); color: var(--app-text-primary, #1b3a1f); }
+        body:not(.app-theme-explicit) .plan-input option { background: var(--app-bg-secondary, #eaf4ea); }
+        body:not(.app-theme-explicit) #turn-banner { background: rgba(240,248,240,0.97); border-bottom-color: #2e7d32; color: #1b3a1f; }
+        body:not(.app-theme-explicit) #turn-dist { color: #2e7d32; }
+        body:not(.app-theme-explicit) #nav-stats-bar { border-color: rgba(0,0,0,0.12); }
+        body:not(.app-theme-explicit) .nav-stat { background: rgba(0,0,0,0.04); border-right-color: rgba(0,0,0,0.08); }
+        body:not(.app-theme-explicit) .nav-stat .val { color: #2e7d32; }
+        body:not(.app-theme-explicit) #btn-plan-route:disabled { background: rgba(0,0,0,0.1); color: rgba(0,0,0,0.35); }
+        body:not(.app-theme-explicit) #nav-loading { background: var(--app-bg-primary, #f5faf5); color: var(--app-text-primary, #1b3a1f); }
+        body:not(.app-theme-explicit) #gps-dot { background: rgba(240,248,240,0.9); color: #1b3a1f; }
+        body:not(.app-theme-explicit) #arrived-overlay { background: rgba(240,248,240,0.97); color: #1b3a1f; }
+        body:not(.app-theme-explicit) .panel-handle { background: rgba(0,0,0,0.15); }
+        body:not(.app-theme-explicit) #panel-collapsed-title { color: #2e7d32; }
+    }
   </style>
 </head>
 <body>

@@ -61,6 +61,9 @@ const schemaReady = pool.query(`
   ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry TIMESTAMP;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(16);
+  -- 為沒有 username 的舊有帳戶自動分配一個預設用戶名（可後續修改）
+  UPDATE users SET username = CONCAT('user', CAST(id AS TEXT))
+    WHERE username IS NULL OR LENGTH(TRIM(username)) = 0;
   CREATE TABLE IF NOT EXISTS chat_messages (
     id SERIAL PRIMARY KEY,
     sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

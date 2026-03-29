@@ -390,14 +390,21 @@
             .btn-back-to-list { display: flex; align-items: center; }
         }
         /* ── Light theme overrides ──────────────────────────────── */
-        body.app-light-theme .conv-panel { background: var(--app-bg-secondary, #eaf4ea); }
+        body.app-light-theme .chat-layout { border-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .conv-panel { background: var(--app-bg-secondary, #eaf4ea); border-right-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .conv-header { border-bottom-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .conv-search { border-bottom-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .conv-item { border-bottom-color: var(--app-border, #c8e6c9); }
         body.app-light-theme .msg-panel { background: var(--app-bg-primary, #f5faf5); }
+        body.app-light-theme .msg-header { background: var(--app-bg-card, #ffffff); border-bottom-color: var(--app-border, #c8e6c9); }
         body.app-light-theme .conv-search input {
             background: var(--app-bg-card, #ffffff);
             border-color: var(--app-border, #c8e6c9);
             color: var(--app-text-primary, #1b3a1f);
         }
         body.app-light-theme .conv-search input::placeholder { color: var(--app-text-secondary, #2e7d32); opacity: 0.7; }
+        body.app-light-theme .conv-avatar,
+        body.app-light-theme .msg-header-avatar { background: var(--app-border, #c8e6c9); }
         body.app-light-theme .conv-item:hover,
         body.app-light-theme .conv-item.active { background: var(--app-bg-card, #ffffff); }
         body.app-light-theme .bubble-avatar,
@@ -413,6 +420,7 @@
             border-color: var(--app-border, #c8e6c9);
             color: var(--app-text-primary, #1b3a1f);
         }
+        body.app-light-theme .msg-input-bar textarea::placeholder { color: var(--app-text-secondary, #2e7d32); opacity: 0.7; }
         body.app-light-theme .modal-box {
             background: var(--app-bg-card, #ffffff);
             border-color: var(--app-border, #c8e6c9);
@@ -425,9 +433,17 @@
         body.app-light-theme .modal-user-item:hover { background: var(--app-bg-secondary, #eaf4ea); }
         body.app-light-theme .btn-send:disabled { background: var(--app-border, #c8e6c9); }
         @media (prefers-color-scheme: light) {
-            body:not(.app-theme-explicit) .conv-panel { background: var(--app-bg-secondary, #eaf4ea); }
+            body:not(.app-theme-explicit) .chat-layout { border-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .conv-panel { background: var(--app-bg-secondary, #eaf4ea); border-right-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .conv-header { border-bottom-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .conv-search { border-bottom-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .conv-item { border-bottom-color: var(--app-border, #c8e6c9); }
             body:not(.app-theme-explicit) .msg-panel { background: var(--app-bg-primary, #f5faf5); }
+            body:not(.app-theme-explicit) .msg-header { background: var(--app-bg-card, #ffffff); border-bottom-color: var(--app-border, #c8e6c9); }
             body:not(.app-theme-explicit) .conv-search input { background: var(--app-bg-card, #ffffff); border-color: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .conv-search input::placeholder { color: var(--app-text-secondary, #2e7d32); opacity: 0.7; }
+            body:not(.app-theme-explicit) .conv-avatar,
+            body:not(.app-theme-explicit) .msg-header-avatar { background: var(--app-border, #c8e6c9); }
             body:not(.app-theme-explicit) .conv-item:hover,
             body:not(.app-theme-explicit) .conv-item.active { background: var(--app-bg-card, #ffffff); }
             body:not(.app-theme-explicit) .bubble-avatar,
@@ -435,6 +451,7 @@
             body:not(.app-theme-explicit) .msg-bubble.theirs { background: var(--app-bg-card2, #f0f8f0); border-color: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
             body:not(.app-theme-explicit) .msg-input-bar { background: var(--app-bg-card, #ffffff); border-top-color: var(--app-border, #c8e6c9); }
             body:not(.app-theme-explicit) .msg-input-bar textarea { background: var(--app-bg-secondary, #eaf4ea); border-color: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .msg-input-bar textarea::placeholder { color: var(--app-text-secondary, #2e7d32); opacity: 0.7; }
             body:not(.app-theme-explicit) .modal-box { background: var(--app-bg-card, #ffffff); border-color: var(--app-border, #c8e6c9); }
             body:not(.app-theme-explicit) .modal-search { background: var(--app-bg-secondary, #eaf4ea); border-color: var(--app-border, #c8e6c9); color: var(--app-text-primary, #1b3a1f); }
             body:not(.app-theme-explicit) .modal-user-item:hover { background: var(--app-bg-secondary, #eaf4ea); }
@@ -561,6 +578,17 @@
         async function ensureChatUsername() {
             const current = (ME.username || '').trim();
             if (/^[A-Za-z0-9_]{4,16}$/.test(current)) return true;
+            // Try refreshing user data from server – DB migration auto-assigns usernames
+            try {
+                const freshUser = await apiGet(`/api/user?user_id=${ME.id}`);
+                if (freshUser && /^[A-Za-z0-9_]{4,16}$/.test((freshUser.username || '').trim())) {
+                    ME.username = freshUser.username.trim();
+                    const merged = { ...(JSON.parse(localStorage.getItem('user') || '{}')), username: ME.username };
+                    localStorage.setItem('user', JSON.stringify(merged));
+                    return true;
+                }
+            } catch (_) { /* continue to prompt */ }
+            // Fall back to prompt if still no valid username
             let next = '';
             while (true) {
                 next = (window.prompt('請先設定聊天用戶名（4-16位英數或底線）', current || '') || '').trim();
@@ -880,6 +908,10 @@
 
         // ── Init ───────────────────────────────────────────────────────────
         (async function initChat() {
+            // Request notification permission proactively for incoming message alerts
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
+            }
             try {
                 const ok = await ensureChatUsername();
                 if (!ok) { window.location.replace('/dashboard'); return; }
