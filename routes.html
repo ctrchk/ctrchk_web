@@ -714,7 +714,14 @@ function initMap() {
         attributionControl: false,
     }).setView([22.308, 114.262], 13);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    const isLightTheme = document.body.classList.contains('app-light-theme') ||
+        (!document.body.classList.contains('app-theme-explicit') &&
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+    const tileUrl = isLightTheme
+        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(tileUrl, {
         maxZoom: 18,
         attribution: '© OpenStreetMap © CartoDB'
     }).addTo(map);

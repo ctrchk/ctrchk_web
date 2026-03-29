@@ -199,8 +199,20 @@ export default async function handler(req, res) {
 
       const { user_id, new_role } = body;
 
-      if (!action || !user_id) {
-        return res.status(400).json({ message: 'action and user_id are required' });
+      if (!action) {
+        return res.status(400).json({ message: 'action is required' });
+      }
+
+      const actionsRequiringUserId = new Set([
+        'set_role',
+        'delete_user',
+        'get_game_profile',
+        'set_game_stats',
+        'grant_route',
+        'revoke_route',
+      ]);
+      if (actionsRequiringUserId.has(action) && !user_id) {
+        return res.status(400).json({ message: 'user_id is required' });
       }
 
       if (action === 'set_role') {
