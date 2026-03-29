@@ -562,10 +562,22 @@
         document.getElementById('db-pills-row').style.display = '';
     }
 
+    // ── Shared auth helpers ───────────────────────────────────────────────────
+    function _clearAuth() {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+    }
+
     // ── Main init ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async function () {
         try {
-            var user = (typeof getUserData === 'function') ? getUserData() : null;
+            var user;
+            try {
+                user = (typeof getUserData === 'function') ? getUserData() : null;
+            } catch (e) {
+                console.error('無法讀取登入資料:', e);
+                user = null;
+            }
             if (!user) { window.location.href = '/login'; return; }
 
             if (user.email_verified === false) {
@@ -645,8 +657,7 @@
     }
 
     function _sessionExpired(container) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
+        _clearAuth();
         container.innerHTML = '<div style="padding:1.5em;text-align:center;color:var(--app-text-secondary,#a8d8a0);">' +
             '<i class="fas fa-lock" style="font-size:2em;opacity:0.4;display:block;margin-bottom:0.4em;"></i>' +
             '登入已過期，請 <a href="/login" style="color:var(--app-accent,#6dba65);">重新登入</a>。</div>';
@@ -711,8 +722,7 @@
         var btn = document.getElementById('db-logout-btn');
         if (btn) {
             btn.addEventListener('click', function () {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('user');
+                _clearAuth();
                 window.location.href = '/login';
             });
         }
