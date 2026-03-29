@@ -88,7 +88,7 @@ export default async function handler(req, res) {
             [resetToken, resetExpiry, user.id]
           );
 
-          sendPasswordResetEmail(user.email, user.full_name, resetToken).catch(err => {
+          await sendPasswordResetEmail(user.email, user.full_name, resetToken).catch(err => {
             console.error('發送密碼重設郵件失敗:', err);
           });
         }
