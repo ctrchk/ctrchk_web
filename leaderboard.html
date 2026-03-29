@@ -325,6 +325,13 @@
         return '';
     }
 
+    function initials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return name.slice(0, 2).toUpperCase();
+    }
+
     function renderAvatar(el, avatarUrl, name) {
         if (avatarUrl) {
             const img = document.createElement('img');
@@ -337,11 +344,6 @@
         } else {
             el.innerHTML = initials(name);
         }
-    }
-        if (!name) return '?';
-        const parts = name.trim().split(/\s+/);
-        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-        return name.slice(0, 2).toUpperCase();
     }
 
     window.loadLeaderboard = async function() {

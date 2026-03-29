@@ -310,7 +310,17 @@ export default async function handler(req, res) {
         // game tables 可能尚未建立；忽略錯誤
       }
 
-      return res.status(200).json({ history, normalized_history: normalizedHistory, checkins, gameProfile });
+      // 附帶最新用戶頭像（前端可用於更新 localStorage 快取）
+      let avatar_url = null;
+      try {
+        const { rows: avatarRows } = await query(
+          'SELECT avatar_url FROM users WHERE id = $1',
+          [userData.userId]
+        );
+        avatar_url = avatarRows[0]?.avatar_url || null;
+      } catch (e) { /* 忽略 */ }
+
+      return res.status(200).json({ history, normalized_history: normalizedHistory, checkins, gameProfile, avatar_url });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Failed to fetch history' });

@@ -19,9 +19,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       height: 100%; overflow: hidden;
-      background: #121f14;
+      background: var(--app-bg-primary, #121f14);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
-      color: #e8f5e9;
+      color: var(--app-text-primary, #e8f5e9);
     }
 
     /* ── Full-screen map ── */
@@ -248,6 +248,42 @@
     .user-dot-wrap {
       position: relative; width: 18px; height: 18px;
     }
+
+    /* ── Light theme overrides ── */
+    body.app-light-theme .plan-input,
+    body:not(.app-theme-explicit):not(.app-light-theme) .plan-input {
+      /* only dark fallback; light applied below */
+    }
+    body.app-light-theme .plan-input {
+      background: rgba(0,0,0,0.06);
+      border-color: rgba(0,0,0,0.18);
+      color: var(--app-text-primary, #1b3a1f);
+    }
+    body.app-light-theme .plan-input option { background: var(--app-bg-secondary, #eaf4ea); }
+    body.app-light-theme #turn-banner {
+      background: rgba(240,248,240,0.97);
+      border-bottom-color: #2e7d32;
+      color: #1b3a1f;
+    }
+    body.app-light-theme #turn-dist { color: #2e7d32; }
+    body.app-light-theme #nav-stats-bar {
+      border-color: rgba(0,0,0,0.12);
+    }
+    body.app-light-theme .nav-stat {
+      background: rgba(0,0,0,0.04);
+      border-right-color: rgba(0,0,0,0.08);
+    }
+    body.app-light-theme .nav-stat .val { color: #2e7d32; }
+    body.app-light-theme #btn-plan-route:disabled {
+      background: rgba(0,0,0,0.1);
+      color: rgba(0,0,0,0.35);
+    }
+    body.app-light-theme #nav-loading {
+      background: var(--app-bg-primary, #f5faf5);
+      color: var(--app-text-primary, #1b3a1f);
+    }
+    body.app-light-theme .panel-handle { background: rgba(0,0,0,0.15); }
+    body.app-light-theme #panel-collapsed-title { color: #2e7d32; }
   </style>
 </head>
 <body>
@@ -255,7 +291,7 @@
   <!-- Loading -->
   <div id="nav-loading">
     <div class="spinner"></div>
-    <p>正在載入地圖...</p>
+    <p data-i18n="nav_loading">正在載入地圖...</p>
   </div>
 
   <!-- Full-screen map -->
@@ -266,7 +302,7 @@
     <a href="javascript:navBack()" id="btn-nav-back" aria-label="返回">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <span id="nav-title">🗺️ 單車徑導航</span>
+    <span id="nav-title" data-i18n="nav_title">🗺️ 單車徑導航</span>
     <button id="btn-heading-up" title="切換地圖方向" aria-label="切換地圖方向">
       <i class="fas fa-compass"></i>
     </button>
@@ -277,7 +313,7 @@
     <div id="turn-icon">↑</div>
     <div id="turn-text-wrap">
       <div id="turn-dist">-- m</div>
-      <div id="turn-instruction">沿單車徑繼續前行</div>
+      <div id="turn-instruction" data-i18n="nav_continue">沿單車徑繼續前行</div>
     </div>
   </div>
 
@@ -294,77 +330,78 @@
     <!-- Collapsed title (only visible when panel is collapsed) -->
     <div id="panel-collapsed-title">
       <i class="fas fa-map-marked-alt"></i>
-      <span id="collapsed-summary-text">規劃單車路線</span>
+      <span id="collapsed-summary-text" data-i18n="nav_plan">規劃單車路線</span>
     </div>
 
     <!-- Full planner form -->
     <div id="planner-form">
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#04D93C;">📍</span>
-        <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" placeholder="輸入或選擇起點（可自訂地址）">
+        <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" data-i18n-placeholder="from_placeholder" placeholder="輸入或選擇起點（可自訂地址）">
       </div>
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#e74c3c;">🏁</span>
-        <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" placeholder="輸入或選擇終點（可自訂地址）">
+        <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" data-i18n-placeholder="to_placeholder" placeholder="輸入或選擇終點（可自訂地址）">
       </div>
       <datalist id="landmark-options"></datalist>
       <div class="plan-row">
         <span class="plan-row-icon">🚴</span>
         <select id="sel-profile" class="plan-input" aria-label="路線偏好">
-          <option value="safety">安全路線（優先單車徑）</option>
-          <option value="trekking">遠足路線（混合路面）</option>
-          <option value="fastbike">快速路線（最快到達）</option>
-          <option value="shortest">最短路線（最短距離）</option>
+          <option value="safety" data-i18n="profile_safety">安全路線（優先單車徑）</option>
+          <option value="trekking" data-i18n="profile_trekking">遠足路線（混合路面）</option>
+          <option value="fastbike" data-i18n="profile_fastbike">快速路線（最快到達）</option>
+          <option value="shortest" data-i18n="profile_shortest">最短路線（最短距離）</option>
         </select>
       </div>
-      <button id="btn-plan-route" disabled>🔍 規劃路線</button>
+      <button id="btn-plan-route" disabled data-i18n="btn_plan">🔍 規劃路線</button>
 
       <!-- Route summary (after planning) -->
       <div id="route-summary">
         <div class="route-summary-row">
-          <span>路線長度</span><strong id="rs-dist">--</strong>
+          <span data-i18n="rs_dist">路線長度</span><strong id="rs-dist">--</strong>
         </div>
         <div class="route-summary-row">
-          <span>預計時間</span><strong id="rs-time">--</strong>
+          <span data-i18n="rs_time">預計時間</span><strong id="rs-time">--</strong>
         </div>
         <div class="route-summary-row">
-          <span>轉向次數</span><strong id="rs-turns">--</strong>
+          <span data-i18n="rs_turns">轉向次數</span><strong id="rs-turns">--</strong>
         </div>
       </div>
-      <button id="btn-start-nav">🚴 開始導航</button>
+      <button id="btn-start-nav" data-i18n="btn_start">🚴 開始導航</button>
 
       <!-- Active navigation stats -->
       <div id="nav-stats-bar">
         <div class="nav-stat">
           <div class="val" id="nav-stat-dist">0 m</div>
-          <div class="lbl">已行距離</div>
+          <div class="lbl" data-i18n="stat_dist">已行距離</div>
         </div>
         <div class="nav-stat">
           <div class="val" id="nav-stat-remain">--</div>
-          <div class="lbl">剩餘距離</div>
+          <div class="lbl" data-i18n="stat_remain">剩餘距離</div>
         </div>
         <div class="nav-stat">
           <div class="val" id="nav-stat-eta">--</div>
-          <div class="lbl">預計到達</div>
+          <div class="lbl" data-i18n="stat_eta">預計到達</div>
         </div>
         <div class="nav-stat">
           <div class="val" id="nav-stat-speed">--</div>
-          <div class="lbl">速度 km/h</div>
+          <div class="lbl" data-i18n="stat_speed">速度 km/h</div>
         </div>
       </div>
-      <button id="btn-end-nav" style="display:none;">⏹ 結束導航</button>
+      <button id="btn-end-nav" style="display:none;" data-i18n="btn_end">⏹ 結束導航</button>
     </div>
   </div>
 
   <!-- Arrived overlay -->
   <div id="arrived-overlay">
     <div id="arrived-emoji">🎉</div>
-    <div id="arrived-title">已到達目的地！</div>
+    <div id="arrived-title" data-i18n="arrived_title">已到達目的地！</div>
     <div id="arrived-stats"></div>
-    <button id="btn-arrived-done">完成</button>
+    <button id="btn-arrived-done" data-i18n="btn_done">完成</button>
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+  <script src="/js/main.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
   (function () {
@@ -1417,6 +1454,75 @@
       }
     }
 
+  })();
+
+  // ── i18n translations for nav page ───────────────────────────────────
+  const NAV_I18N = {
+    zh: {
+      nav_loading: '正在載入地圖...',
+      nav_title: '🗺️ 單車徑導航',
+      nav_continue: '沿單車徑繼續前行',
+      nav_plan: '規劃單車路線',
+      from_placeholder: '輸入或選擇起點（可自訂地址）',
+      to_placeholder: '輸入或選擇終點（可自訂地址）',
+      profile_safety: '安全路線（優先單車徑）',
+      profile_trekking: '遠足路線（混合路面）',
+      profile_fastbike: '快速路線（最快到達）',
+      profile_shortest: '最短路線（最短距離）',
+      btn_plan: '🔍 規劃路線',
+      rs_dist: '路線長度',
+      rs_time: '預計時間',
+      rs_turns: '轉向次數',
+      btn_start: '🚴 開始導航',
+      stat_dist: '已行距離',
+      stat_remain: '剩餘距離',
+      stat_eta: '預計到達',
+      stat_speed: '速度 km/h',
+      btn_end: '⏹ 結束導航',
+      arrived_title: '已到達目的地！',
+      btn_done: '完成',
+    },
+    en: {
+      nav_loading: 'Loading map...',
+      nav_title: '🗺️ Cycling Navigation',
+      nav_continue: 'Continue along the cycle path',
+      nav_plan: 'Plan a Cycle Route',
+      from_placeholder: 'Enter or select start point',
+      to_placeholder: 'Enter or select destination',
+      profile_safety: 'Safe Route (cycle paths preferred)',
+      profile_trekking: 'Trekking Route (mixed surfaces)',
+      profile_fastbike: 'Fast Route (fastest arrival)',
+      profile_shortest: 'Shortest Route (minimum distance)',
+      btn_plan: '🔍 Plan Route',
+      rs_dist: 'Distance',
+      rs_time: 'Est. Time',
+      rs_turns: 'Turns',
+      btn_start: '🚴 Start Navigation',
+      stat_dist: 'Travelled',
+      stat_remain: 'Remaining',
+      stat_eta: 'ETA',
+      stat_speed: 'Speed km/h',
+      btn_end: '⏹ End Navigation',
+      arrived_title: 'Arrived at Destination!',
+      btn_done: 'Done',
+    }
+  };
+  (function applyNavLang() {
+    const lang = localStorage.getItem('appLang') === 'en' ? 'en' : 'zh';
+    const t = NAV_I18N[lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.dataset.i18nPlaceholder;
+      if (t[key] !== undefined) el.placeholder = t[key];
+    });
+    // Translate select options
+    document.querySelectorAll('option[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
   })();
   </script>
 </body>

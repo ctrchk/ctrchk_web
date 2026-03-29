@@ -260,7 +260,7 @@
             height: 72px;
             border-radius: 50%;
             object-fit: cover;
-            background: #2d4d2d;
+            background: var(--app-bg-card2, #2d4d2d);
             border: 2px solid var(--app-accent, #6dba65);
             flex-shrink: 0;
             display: flex;
@@ -273,7 +273,7 @@
         .avatar-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .avatar-actions { display: flex; flex-direction: column; gap: 0.5em; }
         .btn-avatar-upload {
-            background: #1a3820;
+            background: var(--app-bg-card2, #1a3820);
             border: 1px solid var(--app-accent, #6dba65);
             color: var(--app-accent, #6dba65);
             padding: 0.5em 1em;
@@ -282,7 +282,7 @@
             cursor: pointer;
             font-weight: 600;
         }
-        .btn-avatar-upload:hover { background: #2d4d2d; }
+        .btn-avatar-upload:hover { background: var(--app-border, #2d4d2d); }
         .btn-avatar-remove {
             background: transparent;
             border: 1px solid #6a2a2a;
@@ -302,29 +302,29 @@
     <main>
         <section class="content animated-element">
             <div class="profile-container">
-                <h2><i class="fas fa-user-circle" style="color: var(--app-accent, #6dba65);"></i> 我的帳戶</h2>
+                <h2><i class="fas fa-user-circle" style="color: var(--app-accent, #6dba65);"></i> <span data-i18n="profile_title">我的帳戶</span></h2>
 
                 <!-- 帳戶概覽 -->
                 <div class="profile-card">
-                    <h3><i class="fas fa-id-card"></i> 帳戶資訊</h3>
+                    <h3><i class="fas fa-id-card"></i> <span data-i18n="account_info">帳戶資訊</span></h3>
                     <div class="profile-info-row">
-                        <span class="profile-info-label">電子郵件</span>
+                        <span class="profile-info-label" data-i18n="label_email">電子郵件</span>
                         <span class="profile-info-value" id="info-email">—</span>
                     </div>
                     <div class="profile-info-row">
-                        <span class="profile-info-label">會員等級</span>
+                        <span class="profile-info-label" data-i18n="label_role">會員等級</span>
                         <span class="profile-info-value" id="info-role">—</span>
                     </div>
                     <div class="profile-info-row">
-                        <span class="profile-info-label">電郵驗證</span>
+                        <span class="profile-info-label" data-i18n="label_verified">電郵驗證</span>
                         <span class="profile-info-value" id="info-verified">—</span>
                     </div>
                     <div class="profile-info-row">
-                        <span class="profile-info-label">登入方式</span>
+                        <span class="profile-info-label" data-i18n="label_provider">登入方式</span>
                         <span class="profile-info-value" id="info-provider">—</span>
                     </div>
                     <div class="profile-info-row">
-                        <span class="profile-info-label">帳戶建立</span>
+                        <span class="profile-info-label" data-i18n="label_created">帳戶建立</span>
                         <span class="profile-info-value" id="info-created">—</span>
                     </div>
                 </div>
@@ -332,26 +332,26 @@
                 <!-- 升級提示（只對 junior 顯示） -->
                 <div id="upgrade-notice" class="upgrade-notice" style="display:none;">
                     <i class="fas fa-star" style="color: var(--app-accent, #6dba65);"></i>
-                    <strong>升級為高級會員</strong>：填寫電話、騎行經驗及地區即可解鎖 GPX 下載、完整路線資訊等功能。
-                    <a href="/profile-setup">立即升級</a>
+                    <strong data-i18n="upgrade_title">升級為高級會員</strong><span data-i18n="upgrade_desc">：填寫電話、騎行經驗及地區即可解鎖 GPX 下載、完整路線資訊等功能。</span>
+                    <a href="/profile-setup" data-i18n="upgrade_btn">立即升級</a>
                 </div>
 
                 <!-- 頭像設定 -->
                 <div class="profile-card">
-                    <h3><i class="fas fa-camera"></i> 個人頭像</h3>
+                    <h3><i class="fas fa-camera"></i> <span data-i18n="avatar_title">個人頭像</span></h3>
                     <div class="avatar-section">
                         <div class="avatar-preview" id="avatar-preview">
                             <i class="fas fa-user"></i>
                         </div>
                         <div class="avatar-actions">
                             <label class="btn-avatar-upload" for="avatar-file-input">
-                                <i class="fas fa-upload"></i> 上傳圖片
+                                <i class="fas fa-upload"></i> <span data-i18n="avatar_upload">上傳圖片</span>
                             </label>
                             <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="onAvatarFileChange(this)">
                             <button type="button" class="btn-avatar-remove" id="btn-avatar-remove" onclick="removeAvatar()" style="display:none;">
-                                <i class="fas fa-trash"></i> 移除頭像
+                                <i class="fas fa-trash"></i> <span data-i18n="avatar_remove">移除頭像</span>
                             </button>
-                            <p class="avatar-hint">支援 JPG、PNG、GIF、WebP，最大 1MB</p>
+                            <p class="avatar-hint" data-i18n="avatar_hint">支援 JPG、PNG、GIF、WebP，最大 1MB</p>
                         </div>
                     </div>
                     <div id="avatar-alert-success" class="alert-success" style="display:none;"></div>
@@ -360,32 +360,32 @@
 
                 <!-- 修改個人資料 -->
                 <div class="profile-card">
-                    <h3><i class="fas fa-edit"></i> 修改個人資料</h3>
+                    <h3><i class="fas fa-edit"></i> <span data-i18n="edit_profile">修改個人資料</span></h3>
 
                     <div id="alert-success" class="alert-success"></div>
                     <div id="alert-error" class="alert-error"></div>
 
                     <form id="profile-form">
                         <div class="form-group">
-                            <label for="pf-fullname">姓名 *</label>
-                            <input type="text" id="pf-fullname" name="full_name" required placeholder="請輸入姓名">
+                            <label for="pf-fullname" data-i18n="label_fullname">姓名 *</label>
+                            <input type="text" id="pf-fullname" name="full_name" required data-i18n-placeholder="ph_fullname" placeholder="請輸入姓名">
                         </div>
                         <div class="form-group">
-                            <label for="pf-phone">聯絡電話</label>
-                            <input type="tel" id="pf-phone" name="phone" placeholder="例：9123 4567">
+                            <label for="pf-phone" data-i18n="label_phone">聯絡電話</label>
+                            <input type="tel" id="pf-phone" name="phone" data-i18n-placeholder="ph_phone" placeholder="例：9123 4567">
                         </div>
                         <div class="form-group">
-                            <label for="pf-experience">騎行經驗</label>
+                            <label for="pf-experience" data-i18n="label_exp">騎行經驗</label>
                             <select id="pf-experience" name="experience">
-                                <option value="">請選擇</option>
-                                <option value="beginner">初學者 (1年以下)</option>
-                                <option value="intermediate">中級 (1-3年)</option>
-                                <option value="advanced">高級 (3-5年)</option>
-                                <option value="expert">專家級 (5年以上)</option>
+                                <option value="" data-i18n="opt_select">請選擇</option>
+                                <option value="beginner" data-i18n="exp_beginner">初學者 (1年以下)</option>
+                                <option value="intermediate" data-i18n="exp_intermediate">中級 (1-3年)</option>
+                                <option value="advanced" data-i18n="exp_advanced">高級 (3-5年)</option>
+                                <option value="expert" data-i18n="exp_expert">專家級 (5年以上)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>主要騎行地區（可多選）</label>
+                            <label data-i18n="label_area">主要騎行地區（可多選）</label>
                             <div class="area-checkboxes" id="pf-area-checkboxes">
                                 <label><input type="checkbox" name="preferred_area" value="港島海濱"> 港島海濱</label>
                                 <label><input type="checkbox" name="preferred_area" value="九龍東"> 九龍東</label>
@@ -401,46 +401,46 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="pf-birthdate">出生日期</label>
+                            <label for="pf-birthdate" data-i18n="label_birthdate">出生日期</label>
                             <input type="date" id="pf-birthdate" name="birthdate">
                         </div>
                         <div class="form-group">
-                            <label for="pf-biketype">主要使用單車類型</label>
+                            <label for="pf-biketype" data-i18n="label_biketype">主要使用單車類型</label>
                             <select id="pf-biketype" name="bike_type">
-                                <option value="">請選擇</option>
-                                <option value="road">公路車</option>
-                                <option value="mountain">山地車</option>
-                                <option value="hybrid">混合車</option>
-                                <option value="electric">電動單車</option>
-                                <option value="folding">摺疊車</option>
+                                <option value="" data-i18n="opt_select">請選擇</option>
+                                <option value="road" data-i18n="bike_road">公路車</option>
+                                <option value="mountain" data-i18n="bike_mountain">山地車</option>
+                                <option value="hybrid" data-i18n="bike_hybrid">混合車</option>
+                                <option value="electric" data-i18n="bike_electric">電動單車</option>
+                                <option value="folding" data-i18n="bike_folding">摺疊車</option>
                             </select>
                         </div>
 
                         <button type="submit" class="btn-save" id="btn-save">
-                            <i class="fas fa-save"></i> 儲存變更
+                            <i class="fas fa-save"></i> <span data-i18n="btn_save">儲存變更</span>
                         </button>
                     </form>
                 </div>
 
                 <!-- 帳戶安全 -->
                 <div class="profile-card">
-                    <h3><i class="fas fa-shield-alt"></i> 帳戶安全</h3>
-                    <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.9em;">如需更改密碼，請使用「忘記密碼」功能重設。</p>
+                    <h3><i class="fas fa-shield-alt"></i> <span data-i18n="account_security">帳戶安全</span></h3>
+                    <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.9em;" data-i18n="pw_hint">如需更改密碼，請使用「忘記密碼」功能重設。</p>
                     <div id="pw-reset-section">
                         <button onclick="showPwReset()" class="cta-button" style="font-size:0.85em; padding:0.6em 1.5em; display:inline-block; margin-top:0.5em; background:none; border:1px solid var(--app-accent,#6dba65); color:var(--app-accent,#6dba65); cursor:pointer;">
-                            <i class="fas fa-key"></i> 重設密碼
+                            <i class="fas fa-key"></i> <span data-i18n="btn_reset_pw">重設密碼</span>
                         </button>
                     </div>
                     <div id="pw-reset-inline" style="display:none; margin-top:1em;">
-                        <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.85em; margin-bottom:0.8em;">重設連結將發送至您的電郵地址。</p>
+                        <p style="color: var(--app-text-secondary, #a8d8a0); font-size:0.85em; margin-bottom:0.8em;" data-i18n="pw_reset_hint">重設連結將發送至您的電郵地址。</p>
                         <div id="pw-reset-email-row" style="display:flex;gap:0.5em;align-items:center;margin-bottom:0.8em;">
                             <span id="pw-reset-email-display" style="color:var(--app-text-primary,#e8f5e9); font-size:0.9em; flex:1;"></span>
                         </div>
                         <div style="display:flex;gap:0.5em;flex-wrap:wrap;">
                             <button id="pw-reset-send-btn" onclick="sendPwReset()" class="cta-button" style="font-size:0.85em; padding:0.6em 1.2em;">
-                                <i class="fas fa-paper-plane"></i> 發送重設郵件
+                                <i class="fas fa-paper-plane"></i> <span data-i18n="btn_send_email">發送重設郵件</span>
                             </button>
-                            <button onclick="hidePwReset()" style="font-size:0.85em; padding:0.6em 1em; background:transparent; border:1px solid var(--app-border,#2d4d2d); color:var(--app-text-secondary,#a8d8a0); border-radius:8px; cursor:pointer;">
+                            <button onclick="hidePwReset()" style="font-size:0.85em; padding:0.6em 1em; background:transparent; border:1px solid var(--app-border,#2d4d2d); color:var(--app-text-secondary,#a8d8a0); border-radius:8px; cursor:pointer;" data-i18n="btn_cancel">
                                 取消
                             </button>
                         </div>
@@ -450,11 +450,11 @@
 
                 <!-- 通知設置 -->
                 <div class="profile-card" id="notif-settings-card">
-                    <h3><i class="fas fa-bell"></i> 通知設置</h3>
+                    <h3><i class="fas fa-bell"></i> <span data-i18n="notif_title">通知設置</span></h3>
                     <div class="notif-setting-row">
                         <div class="notif-setting-info">
-                            <strong>接收所有通知</strong>
-                            <span>包括每日簽到提醒及系統消息</span>
+                            <strong data-i18n="notif_all">接收所有通知</strong>
+                            <span data-i18n="notif_all_desc">包括每日簽到提醒及系統消息</span>
                         </div>
                         <label class="toggle-switch">
                             <input type="checkbox" id="notif-all-toggle" onchange="onAllNotifToggle(this.checked)">
@@ -466,22 +466,22 @@
 
                 <!-- 顯示設定 -->
                 <div class="profile-card">
-                    <h3><i class="fas fa-cog"></i> 顯示設定</h3>
+                    <h3><i class="fas fa-cog"></i> <span data-i18n="display_settings">顯示設定</span></h3>
                     <div class="notif-setting-row">
                         <div class="notif-setting-info">
-                            <strong>亮色模式</strong>
-                            <span>切換應用程式顯示主題（預設跟隨系統）</span>
+                            <strong data-i18n="light_mode">亮色模式</strong>
+                            <span data-i18n="light_mode_desc">切換應用程式顯示主題（預設跟隨系統）</span>
                         </div>
                         <label class="toggle-switch">
                             <input type="checkbox" id="light-theme-toggle" onchange="onThemeToggle(this.checked)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <p style="color: var(--app-text-secondary, #a8d8a0); font-size: 0.82em; margin: 0.6em 0 0;">
+                    <p style="color: var(--app-text-secondary, #a8d8a0); font-size: 0.82em; margin: 0.6em 0 0;" data-i18n="theme_auto_hint">
                         <i class="fas fa-info-circle"></i> 若未手動設定，將自動跟隨手機系統的深淺色設定
                     </p>
                     <button class="btn-logout" onclick="handleLogout()">
-                        <i class="fas fa-sign-out-alt"></i> 登出
+                        <i class="fas fa-sign-out-alt"></i> <span data-i18n="btn_logout">登出</span>
                     </button>
                 </div>
             </div>
@@ -826,6 +826,92 @@
             errorEl.style.display = 'block';
         }
     }
+
+    // ── i18n translations for profile page ───────────────────────────────
+    const PROFILE_I18N = {
+        zh: {
+            profile_title: '我的帳戶', account_info: '帳戶資訊',
+            label_email: '電子郵件', label_role: '會員等級',
+            label_verified: '電郵驗證', label_provider: '登入方式',
+            label_created: '帳戶建立',
+            upgrade_title: '升級為高級會員',
+            upgrade_desc: '：填寫電話、騎行經驗及地區即可解鎖 GPX 下載、完整路線資訊等功能。',
+            upgrade_btn: '立即升級',
+            avatar_title: '個人頭像', avatar_upload: '上傳圖片',
+            avatar_remove: '移除頭像',
+            avatar_hint: '支援 JPG、PNG、GIF、WebP，最大 1MB',
+            edit_profile: '修改個人資料',
+            label_fullname: '姓名 *', ph_fullname: '請輸入姓名',
+            label_phone: '聯絡電話', ph_phone: '例：9123 4567',
+            label_exp: '騎行經驗', opt_select: '請選擇',
+            exp_beginner: '初學者 (1年以下)', exp_intermediate: '中級 (1-3年)',
+            exp_advanced: '高級 (3-5年)', exp_expert: '專家級 (5年以上)',
+            label_area: '主要騎行地區（可多選）',
+            label_birthdate: '出生日期',
+            label_biketype: '主要使用單車類型',
+            bike_road: '公路車', bike_mountain: '山地車', bike_hybrid: '混合車',
+            bike_electric: '電動單車', bike_folding: '摺疊車',
+            btn_save: '儲存變更',
+            account_security: '帳戶安全',
+            pw_hint: '如需更改密碼，請使用「忘記密碼」功能重設。',
+            btn_reset_pw: '重設密碼',
+            pw_reset_hint: '重設連結將發送至您的電郵地址。',
+            btn_send_email: '發送重設郵件', btn_cancel: '取消',
+            notif_title: '通知設置', notif_all: '接收所有通知',
+            notif_all_desc: '包括每日簽到提醒及系統消息',
+            display_settings: '顯示設定', light_mode: '亮色模式',
+            light_mode_desc: '切換應用程式顯示主題（預設跟隨系統）',
+            theme_auto_hint: 'ℹ 若未手動設定，將自動跟隨手機系統的深淺色設定',
+            btn_logout: '登出',
+        },
+        en: {
+            profile_title: 'My Account', account_info: 'Account Info',
+            label_email: 'Email', label_role: 'Member Level',
+            label_verified: 'Email Verified', label_provider: 'Login Method',
+            label_created: 'Account Created',
+            upgrade_title: 'Upgrade to Premium',
+            upgrade_desc: ': Fill in phone, experience and area to unlock GPX downloads and full route info.',
+            upgrade_btn: 'Upgrade Now',
+            avatar_title: 'Profile Picture', avatar_upload: 'Upload Image',
+            avatar_remove: 'Remove Avatar',
+            avatar_hint: 'Supports JPG, PNG, GIF, WebP, max 1MB',
+            edit_profile: 'Edit Profile',
+            label_fullname: 'Full Name *', ph_fullname: 'Enter your name',
+            label_phone: 'Phone', ph_phone: 'e.g. 9123 4567',
+            label_exp: 'Cycling Experience', opt_select: 'Select',
+            exp_beginner: 'Beginner (< 1 year)', exp_intermediate: 'Intermediate (1–3 years)',
+            exp_advanced: 'Advanced (3–5 years)', exp_expert: 'Expert (5+ years)',
+            label_area: 'Preferred Cycling Areas (multi-select)',
+            label_birthdate: 'Date of Birth',
+            label_biketype: 'Primary Bike Type',
+            bike_road: 'Road Bike', bike_mountain: 'Mountain Bike', bike_hybrid: 'Hybrid Bike',
+            bike_electric: 'Electric Bike', bike_folding: 'Folding Bike',
+            btn_save: 'Save Changes',
+            account_security: 'Account Security',
+            pw_hint: 'To change your password, use the "Reset Password" feature.',
+            btn_reset_pw: 'Reset Password',
+            pw_reset_hint: 'A reset link will be sent to your email address.',
+            btn_send_email: 'Send Reset Email', btn_cancel: 'Cancel',
+            notif_title: 'Notifications', notif_all: 'Receive All Notifications',
+            notif_all_desc: 'Including daily check-in reminders and system messages',
+            display_settings: 'Display Settings', light_mode: 'Light Mode',
+            light_mode_desc: 'Toggle app theme (default follows system setting)',
+            theme_auto_hint: 'ℹ If not manually set, follows device system theme automatically',
+            btn_logout: 'Log Out',
+        }
+    };
+    (function applyProfileLang() {
+        const lang = localStorage.getItem('appLang') === 'en' ? 'en' : 'zh';
+        const t = PROFILE_I18N[lang];
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (t[key] !== undefined) el.textContent = t[key];
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.dataset.i18nPlaceholder;
+            if (t[key] !== undefined) el.placeholder = t[key];
+        });
+    })();
     </script>
 </body>
 </html>

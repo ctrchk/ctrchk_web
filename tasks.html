@@ -502,6 +502,34 @@
             0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
             100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
         }
+
+        /* ── Light theme overrides ───────────────────────────────────── */
+        body.app-light-theme .tasks-hero {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-bottom-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .tasks-tabs {
+            background: var(--app-bg-secondary, #eaf4ea);
+            border-bottom-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .task-card {
+            background: var(--app-bg-card, #ffffff);
+            border-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .checkin-reward-table { border-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .crt-cell {
+            background: var(--app-bg-card, #ffffff);
+            border-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .crt-cell.special-7 { background: rgba(46,125,50,0.08); }
+        body.app-light-theme .crt-cell.special-14 { background: rgba(245,175,0,0.12); }
+        body.app-light-theme .crt-cell.special-21 { background: rgba(30,130,220,0.1); }
+        body.app-light-theme .crt-cell.special-28 { background: linear-gradient(135deg, rgba(245,175,0,0.18), rgba(230,100,30,0.18)); }
+        body.app-light-theme .notif-toggle-wrap {
+            background: var(--app-bg-card, #ffffff);
+            border-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .checkin-table-toggle { border-color: var(--app-border, #c8e6c9); }
     </style>
 </head>
 <body>
@@ -510,31 +538,31 @@
 
     <div class="tasks-container">
         <div class="tasks-hero">
-            <h1>🎯 任務與成就</h1>
-            <p>完成任務獲取 XP 及里程幣，解鎖成就獎牌</p>
+            <h1 data-i18n="tasks_title">🎯 任務與成就</h1>
+            <p data-i18n="tasks_subtitle">完成任務獲取 XP 及里程幣，解鎖成就獎牌</p>
         </div>
 
         <!-- Summary bar -->
         <div class="tasks-summary" id="tasks-summary" style="display:none;">
             <div class="summary-item">
                 <div class="summary-value" id="summary-daily-done">0/0</div>
-                <div class="summary-label">今日任務</div>
+                <div class="summary-label" data-i18n="summary_daily">今日任務</div>
             </div>
             <div class="summary-item">
                 <div class="summary-value" id="summary-weekly-done">0/0</div>
-                <div class="summary-label">本週任務</div>
+                <div class="summary-label" data-i18n="summary_weekly">本週任務</div>
             </div>
             <div class="summary-item">
                 <div class="summary-value" id="summary-medals">0</div>
-                <div class="summary-label">成就獎牌</div>
+                <div class="summary-label" data-i18n="summary_medals">成就獎牌</div>
             </div>
         </div>
 
         <!-- Tabs -->
         <div class="tasks-tabs">
-            <div class="tasks-tab active" data-tab="daily">📅 每日任務</div>
-            <div class="tasks-tab" data-tab="weekly">📆 每週任務</div>
-            <div class="tasks-tab" data-tab="medals">🏅 成就獎牌</div>
+            <div class="tasks-tab active" data-tab="daily" data-i18n="tab_daily">📅 每日任務</div>
+            <div class="tasks-tab" data-tab="weekly" data-i18n="tab_weekly">📆 每週任務</div>
+            <div class="tasks-tab" data-tab="medals" data-i18n="tab_medals">🏅 成就獎牌</div>
         </div>
 
         <!-- Daily tasks -->
@@ -544,17 +572,17 @@
             <div class="checkin-card" id="checkin-card">
                 <div class="checkin-icon">🗓️</div>
                 <div class="checkin-info">
-                    <div class="checkin-title">每日簽到</div>
-                    <div class="checkin-subtitle">連續簽到可獲得更豐厚獎勵</div>
+                    <div class="checkin-title" data-i18n="checkin_title">每日簽到</div>
+                    <div class="checkin-subtitle" data-i18n="checkin_subtitle">連續簽到可獲得更豐厚獎勵</div>
                     <div class="checkin-streak" id="checkin-streak"></div>
                     <div class="checkin-today-reward" id="checkin-today-reward"></div>
                 </div>
-                <button class="checkin-btn" id="checkin-btn" onclick="doCheckin()">簽到</button>
+                <button class="checkin-btn" id="checkin-btn" onclick="doCheckin()" data-i18n="checkin_btn">簽到</button>
             </div>
             <!-- Reward table toggle -->
             <div class="checkin-table-wrap">
                 <button class="checkin-table-toggle" id="checkin-table-toggle" onclick="toggleCheckinTable()">
-                    <span>📋 查看 28 天獎勵表</span>
+                    <span data-i18n="reward_table_btn">📋 查看 28 天獎勵表</span>
                     <span class="arrow">▼</span>
                 </button>
                 <div class="checkin-reward-table" id="checkin-reward-table">
@@ -564,8 +592,8 @@
             <!-- Notification reminder toggle -->
             <div class="notif-toggle-wrap" id="notif-toggle-wrap">
                 <div class="notif-toggle-label">
-                    <strong>🔔 每日簽到提醒</strong>
-                    每天提醒您別忘簽到
+                    <strong data-i18n="notif_label_title">🔔 每日簽到提醒</strong>
+                    <span data-i18n="notif_label_desc">每天提醒您別忘簽到</span>
                 </div>
                 <label class="toggle-switch">
                     <input type="checkbox" id="notif-toggle" onchange="onNotifToggle(this.checked)">
@@ -582,8 +610,8 @@
             <div class="tasks-section">
                 <div class="coming-soon-card">
                     <div class="coming-soon-icon">🚧</div>
-                    <div class="coming-soon-title">每週任務即將推出</div>
-                    <div class="coming-soon-desc">由於路線數量仍在持續增加，<br>每週任務將於更多路線上線後開放。<br>敬請期待！</div>
+                    <div class="coming-soon-title" data-i18n="weekly_soon_title">每週任務即將推出</div>
+                    <div class="coming-soon-desc" data-i18n="weekly_soon_desc">由於路線數量仍在持續增加，<br>每週任務將於更多路線上線後開放。<br>敬請期待！</div>
                 </div>
             </div>
         </div>
@@ -597,11 +625,11 @@
     <!-- Level-up overlay for tasks page -->
     <div id="tasks-levelup-overlay">
         <div id="tasks-levelup-inner">
-            <h2>🎊 升級了！</h2>
+            <h2 data-i18n="levelup_title">🎊 升級了！</h2>
             <div id="tasks-levelup-badge">Lv.2</div>
             <div id="tasks-levelup-title">街坊騎手</div>
             <div id="tasks-levelup-coins"></div>
-            <button id="tasks-levelup-btn" onclick="closeTasksLevelUp()">太棒了！</button>
+            <button id="tasks-levelup-btn" onclick="closeTasksLevelUp()" data-i18n="levelup_btn">太棒了！</button>
         </div>
     </div>
 
@@ -610,6 +638,9 @@
     <script>
     (function() {
     'use strict';
+
+    // ── Language helper ───────────────────────────────────────────────
+    const isEn = () => localStorage.getItem('appLang') === 'en';
 
     // ── Task and achievement definitions ──────────────────────────────
     const DAILY_TASKS = [
@@ -900,7 +931,7 @@
             btn.textContent = '簽到';
         }
         if (streak > 0) {
-            streakEl.textContent = `🔥 連續 ${streak} 天`;
+            streakEl.textContent = isEn() ? `🔥 ${streak}-day streak` : `🔥 連續 ${streak} 天`;
         } else {
             streakEl.textContent = '';
         }
@@ -910,9 +941,13 @@
         const [xp, coins] = getCheckinReward(cycleDay);
         const coinsStr = coins > 0 ? ` + ${coins} 🪙` : '';
         if (!doneTodayStr) {
-            rewardEl.textContent = `今日獎勵（第 ${cycleDay} 天）：+${xp} XP${coinsStr}`;
+            rewardEl.textContent = isEn()
+                ? `Today's Reward (Day ${cycleDay}): +${xp} XP${coinsStr}`
+                : `今日獎勵（第 ${cycleDay} 天）：+${xp} XP${coinsStr}`;
         } else {
-            rewardEl.textContent = `已獲得第 ${cycleDay} 天獎勵 ✓`;
+            rewardEl.textContent = isEn()
+                ? `Day ${cycleDay} Reward Claimed ✓`
+                : `已獲得第 ${cycleDay} 天獎勵 ✓`;
         }
         renderCheckinTable();
     }
@@ -952,7 +987,7 @@
             cell.className = cls;
 
             const coinsHtml = coins > 0 ? `<div class="crt-coins">${coins} 🪙</div>` : '';
-            const label = d === 28 ? '🏆 終極大獎' : (d === 7 || d === 14 || d === 21) ? `第 ${d} 天 ★` : `第 ${d} 天`;
+            const label = d === 28 ? (isEn() ? '🏆 Grand Prize' : '🏆 終極大獎') : (d === 7 || d === 14 || d === 21) ? `${isEn() ? 'Day' : '第'} ${d} ★` : `${isEn() ? 'Day' : '第'} ${d}${isEn() ? '' : ' 天'}`;
             cell.innerHTML = `<div class="crt-day">${label}</div><div class="crt-xp">+${xp} XP</div>${coinsHtml}`;
             grid.appendChild(cell);
         }
@@ -1303,8 +1338,8 @@
             bonusDiv.innerHTML = `
                 <div class="atb-icon">🎁</div>
                 <div class="atb-info">
-                    <div class="atb-name">完成所有任務</div>
-                    <div class="atb-desc">完成今日全部四個任務即可獲得額外獎勵</div>
+                    <div class="atb-name">${isEn() ? 'Complete All Tasks' : '完成所有任務'}</div>
+                    <div class="atb-desc">${isEn() ? 'Complete all 4 daily tasks for bonus rewards' : '完成今日全部四個任務即可獲得額外獎勵'}</div>
                 </div>
                 <div class="atb-reward">+80 XP +5 🪙</div>
                 <div class="atb-check">${(allDone || bonusClaimed) ? '✅' : '⬜'}</div>
@@ -1334,7 +1369,7 @@
         if (isLoggedIn) {
             const dailyDone = DAILY_TASKS.filter(t => computeDailyProgress(t).done).length;
             document.getElementById('summary-daily-done').textContent = `${dailyDone}/${DAILY_TASKS.length}`;
-            document.getElementById('summary-weekly-done').textContent = '即將推出';
+            document.getElementById('summary-weekly-done').textContent = isEn() ? 'Coming Soon' : '即將推出';
             const medalCount = ACHIEVEMENTS.filter(a => computeAchievementProgress(a).earned).length;
             document.getElementById('summary-medals').textContent = medalCount;
             document.getElementById('tasks-summary').style.display = '';
@@ -1346,8 +1381,9 @@
         const dailyMsLeft = tomorrow - now;
         const dailyHrsLeft = Math.ceil(dailyMsLeft / 3600000);
 
-        document.getElementById('daily-reset-info').textContent =
-            `每日任務每天午夜重置 · 剩餘 ${dailyHrsLeft} 小時`;
+        document.getElementById('daily-reset-info').textContent = isEn()
+            ? `Daily tasks reset at midnight · ${dailyHrsLeft}h left`
+            : `每日任務每天午夜重置 · 剩餘 ${dailyHrsLeft} 小時`;
     }
 
     // ── Daily countdown (precise to seconds) ──────────────────────────
@@ -1361,7 +1397,9 @@
         const m = Math.floor((ms % 3600000) / 60000);
         const s = Math.floor((ms % 60000) / 1000);
         const pad = n => String(n).padStart(2, '0');
-        el.textContent = `每日任務每天午夜重置 · 剩餘 ${pad(h)}:${pad(m)}:${pad(s)}`;
+        el.textContent = isEn()
+            ? `Daily tasks reset at midnight · ${pad(h)}:${pad(m)}:${pad(s)} left`
+            : `每日任務每天午夜重置 · 剩餘 ${pad(h)}:${pad(m)}:${pad(s)}`;
     }
 
     // ── Tabs ──────────────────────────────────────────────────────────
@@ -1392,9 +1430,9 @@
             const btn = document.getElementById('checkin-btn');
             if (btn && !checkinData[getTodayKey()]) {
                 btn.disabled = true;
-                btn.textContent = '載入中…';
+                btn.textContent = isEn() ? 'Loading…' : '載入中…';
                 const rewardEl = document.getElementById('checkin-today-reward');
-                if (rewardEl) rewardEl.textContent = '獎勵載入中…';
+                if (rewardEl) rewardEl.textContent = isEn() ? 'Loading reward…' : '獎勵載入中…';
             }
             await syncProgressFromServer();
             renderCheckin();
@@ -1422,7 +1460,7 @@
         document.getElementById('tasks-levelup-badge').textContent = `Lv.${newLevel}`;
         document.getElementById('tasks-levelup-title').textContent = TASKS_LEVEL_TITLES[newLevel] || '';
         document.getElementById('tasks-levelup-coins').textContent =
-            coins > 0 ? `💰 +${coins} 里程幣` : '';
+            coins > 0 ? (localStorage.getItem('appLang') === 'en' ? `💰 +${coins} Miles` : `💰 +${coins} 里程幣`) : '';
         document.getElementById('tasks-levelup-overlay').classList.add('show');
         launchTasksConfetti(document.getElementById('tasks-levelup-overlay'));
     }
@@ -1469,6 +1507,58 @@
             el.addEventListener('animationend', () => el.remove());
         }
     }
+
+    // ── i18n translations for tasks page ─────────────────────────────────
+    const TASKS_I18N = {
+        zh: {
+            tasks_title: '🎯 任務與成就',
+            tasks_subtitle: '完成任務獲取 XP 及里程幣，解鎖成就獎牌',
+            summary_daily: '今日任務',
+            summary_weekly: '本週任務',
+            summary_medals: '成就獎牌',
+            tab_daily: '📅 每日任務',
+            tab_weekly: '📆 每週任務',
+            tab_medals: '🏅 成就獎牌',
+            checkin_title: '每日簽到',
+            checkin_subtitle: '連續簽到可獲得更豐厚獎勵',
+            checkin_btn: '簽到',
+            reward_table_btn: '📋 查看 28 天獎勵表',
+            notif_label_title: '🔔 每日簽到提醒',
+            notif_label_desc: '每天提醒您別忘簽到',
+            weekly_soon_title: '每週任務即將推出',
+            weekly_soon_desc: '由於路線數量仍在持續增加，<br>每週任務將於更多路線上線後開放。<br>敬請期待！',
+            levelup_title: '🎊 升級了！',
+            levelup_btn: '太棒了！',
+        },
+        en: {
+            tasks_title: '🎯 Tasks & Achievements',
+            tasks_subtitle: 'Complete tasks for XP & coins, unlock achievement medals',
+            summary_daily: 'Daily',
+            summary_weekly: 'Weekly',
+            summary_medals: 'Medals',
+            tab_daily: '📅 Daily',
+            tab_weekly: '📆 Weekly',
+            tab_medals: '🏅 Medals',
+            checkin_title: 'Daily Check-in',
+            checkin_subtitle: 'Consecutive check-ins earn better rewards',
+            checkin_btn: 'Check In',
+            reward_table_btn: '📋 View 28-day Reward Table',
+            notif_label_title: '🔔 Check-in Reminder',
+            notif_label_desc: 'Daily reminder to check in',
+            weekly_soon_title: 'Weekly Tasks Coming Soon',
+            weekly_soon_desc: 'Weekly tasks will be available when more routes are added.<br>Stay tuned!',
+            levelup_title: '🎊 Level Up!',
+            levelup_btn: 'Awesome!',
+        }
+    };
+    (function applyTasksLang() {
+        const lang = localStorage.getItem('appLang') === 'en' ? 'en' : 'zh';
+        const t = TASKS_I18N[lang];
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (t[key] !== undefined) el.innerHTML = t[key];
+        });
+    })();
     </script>
 </body>
 </html>
