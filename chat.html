@@ -539,7 +539,7 @@
         let isLoadingMore = false;
         let oldestMsgId = null;
         let newestMsgId = null;
-        let lastUnreadCount = 0;
+        let lastUnreadCount = -1; // -1 = not yet loaded; avoids false notification on first fetch
         let lastInboxMessageAt = '';
         let convRefreshPending = false;
         const msgCache = {};
@@ -650,7 +650,9 @@
             }).catch(() => {});
         }
         // Throttled version: schedules at most one refresh per tick to avoid
-        // multiple back-to-back calls (e.g. after send + poll both fire at once)
+        // multiple back-to-back calls (e.g. after send + poll both fire at once).
+        // setTimeout(..., 0) defers execution to the next event-loop tick so that
+        // any other synchronous callers within the same frame are coalesced.
         function scheduleConvRefresh() {
             if (convRefreshPending) return;
             convRefreshPending = true;

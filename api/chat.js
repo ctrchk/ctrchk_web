@@ -107,6 +107,8 @@ export default async function handler(req, res) {
         }
 
         const { rows } = await query(sql, params);
+        // afterId (polling) path returns rows already in ASC order from the DB.
+        // Initial/before-load path fetches DESC then reverses to give ASC to the caller.
         return res.status(200).json(afterId ? rows : rows.reverse());
       }
 
