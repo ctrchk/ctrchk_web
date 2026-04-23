@@ -9,6 +9,7 @@
 //   GET  /api/chat?action=users&user_id=X[&q=keyword]  → 搜尋可聊天用戶
 
 import { query } from './_db.js';
+import { sendPushToUser } from './_push_helper.js';
 
 // Simple JWT decode (no crypto verification; auth is expected on trusted infra)
 function getUserIdFromToken(req) {
@@ -198,6 +199,23 @@ export default async function handler(req, res) {
          RETURNING id, sender_id, receiver_id, content, is_read, created_at`,
         [sid, rid, text]
       );
+
+      // Fire push notification to receiver (non-blocking)
+      const MAX_PUSH_PREVIEW_LENGTH = 80;
+      query(
+        `SELECT COALESCE(username, full_name, email) AS display_name FROM users WHERE id = $1`,
+        [sid]
+      ).then(({ rows: senderRows }) => {
+        const senderName = senderRows[0]?.display_name || '新訊息';
+        const preview = text.length > MAX_PUSH_PREVIEW_LENGTH ? text.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : text;
+        return sendPushToUser(rid, {
+          title: senderName,
+          body: preview,
+          url: `/chat?peer=${sid}`,
+          tag: `ctrc-chat-${sid}`,
+        });
+      }).catch(() => {});
+
       return res.status(201).json(rows[0]);
     } catch (err) {
       console.error('Chat POST error:', err);
