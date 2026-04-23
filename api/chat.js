@@ -9,6 +9,7 @@
 //   GET  /api/chat?action=users&user_id=X[&q=keyword]  → 搜尋可聊天用戶
 
 import { query } from './_db.js';
+import { sendPushToUser } from './_push_helper.js';
 
 // Simple JWT decode (no crypto verification; auth is expected on trusted infra)
 function getUserIdFromToken(req) {
@@ -39,25 +40,34 @@ export default async function handler(req, res) {
       // ── 對話列表（最近聯絡人 + 最後一條訊息 + 未讀數）
       if (!action || action === 'conversations') {
         const { rows } = await query(
-           `SELECT
-              peer_id,
-              COALESCE(u.username, u.full_name, u.email) AS peer_name,
-              u.avatar_url AS peer_avatar,
-              last_message,
-              last_at,
-             unread_count
+          `SELECT
+             peers.peer_id,
+             COALESCE(u.username, u.full_name, u.email) AS peer_name,
+             u.avatar_url AS peer_avatar,
+             last_msg.content AS last_message,
+             last_msg.created_at AS last_at,
+             COALESCE(unread.cnt, 0) AS unread_count
            FROM (
-             SELECT
-               CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END AS peer_id,
-               (ARRAY_AGG(content ORDER BY created_at DESC))[1] AS last_message,
-               MAX(created_at) AS last_at,
-               COUNT(*) FILTER (WHERE receiver_id = $1 AND is_read = FALSE) AS unread_count
+             SELECT DISTINCT
+               CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END AS peer_id
              FROM chat_messages
              WHERE sender_id = $1 OR receiver_id = $1
-             GROUP BY peer_id
-           ) c
-           JOIN users u ON u.id = c.peer_id
-           ORDER BY last_at DESC
+           ) peers
+           JOIN LATERAL (
+             SELECT content, created_at
+             FROM chat_messages
+             WHERE (sender_id = $1 AND receiver_id = peers.peer_id)
+                OR (sender_id = peers.peer_id AND receiver_id = $1)
+             ORDER BY created_at DESC
+             LIMIT 1
+           ) last_msg ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT COUNT(*) AS cnt
+             FROM chat_messages
+             WHERE receiver_id = $1 AND sender_id = peers.peer_id AND is_read = FALSE
+           ) unread ON TRUE
+           JOIN users u ON u.id = peers.peer_id
+           ORDER BY last_msg.created_at DESC
            LIMIT 50`,
           [uid]
         );
@@ -70,19 +80,37 @@ export default async function handler(req, res) {
         if (!pid) return res.status(400).json({ message: 'peer_id required' });
         const msgLimit = Math.min(parseInt(limit, 10) || 40, 100);
         const beforeId = parseInt(before, 10) || null;
+        const afterId = parseInt(req.query.after, 10) || null;
 
-        const { rows } = await query(
-           `SELECT m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at,
-                  COALESCE(su.username, su.full_name, su.email) AS sender_name, su.avatar_url AS sender_avatar
-            FROM chat_messages m
-            JOIN users su ON su.id = m.sender_id
-           WHERE ((m.sender_id = $1 AND m.receiver_id = $2) OR (m.sender_id = $2 AND m.receiver_id = $1))
-             ${beforeId ? 'AND m.id < $4' : ''}
-           ORDER BY m.created_at DESC
-           LIMIT $3`,
-          beforeId ? [uid, pid, msgLimit, beforeId] : [uid, pid, msgLimit]
-        );
-        return res.status(200).json(rows.reverse());
+        let sql, params;
+        if (afterId) {
+          // Polling path: only return messages newer than afterId (already in ASC order)
+          sql = `SELECT m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at,
+                        COALESCE(su.username, su.full_name, su.email) AS sender_name, su.avatar_url AS sender_avatar
+                 FROM chat_messages m
+                 JOIN users su ON su.id = m.sender_id
+                WHERE ((m.sender_id = $1 AND m.receiver_id = $2) OR (m.sender_id = $2 AND m.receiver_id = $1))
+                  AND m.id > $3
+                ORDER BY m.created_at ASC
+                LIMIT $4`;
+          params = [uid, pid, afterId, msgLimit];
+        } else {
+          // Initial load / load-more path: return newest N messages in ASC order
+          sql = `SELECT m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at,
+                        COALESCE(su.username, su.full_name, su.email) AS sender_name, su.avatar_url AS sender_avatar
+                 FROM chat_messages m
+                 JOIN users su ON su.id = m.sender_id
+                WHERE ((m.sender_id = $1 AND m.receiver_id = $2) OR (m.sender_id = $2 AND m.receiver_id = $1))
+                  ${beforeId ? 'AND m.id < $4' : ''}
+                ORDER BY m.created_at DESC
+                LIMIT $3`;
+          params = beforeId ? [uid, pid, msgLimit, beforeId] : [uid, pid, msgLimit];
+        }
+
+        const { rows } = await query(sql, params);
+        // afterId (polling) path returns rows already in ASC order from the DB.
+        // Initial/before-load path fetches DESC then reverses to give ASC to the caller.
+        return res.status(200).json(afterId ? rows : rows.reverse());
       }
 
       // ── 未讀訊息數
@@ -171,6 +199,23 @@ export default async function handler(req, res) {
          RETURNING id, sender_id, receiver_id, content, is_read, created_at`,
         [sid, rid, text]
       );
+
+      // Fire push notification to receiver (non-blocking)
+      const MAX_PUSH_PREVIEW_LENGTH = 80;
+      query(
+        `SELECT COALESCE(username, full_name, email) AS display_name FROM users WHERE id = $1`,
+        [sid]
+      ).then(({ rows: senderRows }) => {
+        const senderName = senderRows[0]?.display_name || '新訊息';
+        const preview = text.length > MAX_PUSH_PREVIEW_LENGTH ? text.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : text;
+        return sendPushToUser(rid, {
+          title: senderName,
+          body: preview,
+          url: `/chat?peer=${sid}`,
+          tag: `ctrc-chat-${sid}`,
+        });
+      }).catch(() => {});
+
       return res.status(201).json(rows[0]);
     } catch (err) {
       console.error('Chat POST error:', err);

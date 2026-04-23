@@ -536,11 +536,12 @@
         let conversations = [];
         let pollTimer = null;
         let convRefreshTimer = null;
-        let unreadPollTimer = null;
         let isLoadingMore = false;
         let oldestMsgId = null;
-        let lastUnreadCount = 0;
+        let newestMsgId = null;
+        let lastUnreadCount = -1; // -1 = not yet loaded; avoids false notification on first fetch
         let lastInboxMessageAt = '';
+        let convRefreshPending = false;
         const msgCache = {};
 
         // ── Mobile conv-panel helpers ──────────────────────────────────────
@@ -639,8 +640,26 @@
                 if (conversations.length && !lastInboxMessageAt) {
                     lastInboxMessageAt = conversations[0].last_at || '';
                 }
+                const unread = conversations.reduce((s, c) => s + (parseInt(c.unread_count, 10) || 0), 0);
+                if (unread > lastUnreadCount && lastUnreadCount >= 0) {
+                    const latestPeer = conversations[0]?.peer_name || '用戶';
+                    maybeNotifyIncoming(latestPeer, '你有新訊息');
+                }
+                lastUnreadCount = unread;
                 renderConvList(conversations);
             }).catch(() => {});
+        }
+        // Throttled version: schedules at most one refresh per tick to avoid
+        // multiple back-to-back calls (e.g. after send + poll both fire at once).
+        // setTimeout(..., 0) defers execution to the next event-loop tick so that
+        // any other synchronous callers within the same frame are coalesced.
+        function scheduleConvRefresh() {
+            if (convRefreshPending) return;
+            convRefreshPending = true;
+            setTimeout(() => {
+                convRefreshPending = false;
+                loadConversations();
+            }, 0);
         }
         function renderConvList(list) {
             const el = document.getElementById('conv-list');
@@ -672,6 +691,7 @@
             currentPeerName = peerName;
             currentPeerAvatar = peerAvatar;
             oldestMsgId = null;
+            newestMsgId = null;
 
             document.getElementById('msg-empty').style.display = 'none';
             document.getElementById('msg-header').style.display = 'flex';
@@ -706,6 +726,7 @@
                 const list = document.getElementById('msg-list');
                 list.innerHTML = '';
                 oldestMsgId = msgCache[peerId][0].id;
+                newestMsgId = msgCache[peerId][msgCache[peerId].length - 1].id;
                 renderMessages(msgCache[peerId], list, false);
                 list.scrollTop = list.scrollHeight;
             }
@@ -717,6 +738,7 @@
                     msgCache[peerId] = msgs;
                     list.innerHTML = '';
                     oldestMsgId = msgs.length ? msgs[0].id : null;
+                    newestMsgId = msgs.length ? msgs[msgs.length - 1].id : null;
                     renderMessages(msgs, list, false);
                     list.scrollTop = list.scrollHeight;
                 } else {
@@ -757,22 +779,25 @@
             if (!currentPeerId) return;
             const peerId = currentPeerId;
             const list = document.getElementById('msg-list');
-            const lastEl = list.lastElementChild;
-            const lastId = lastEl ? parseInt(lastEl.dataset.msgId, 10) : 0;
-            const params = new URLSearchParams({ action: 'messages', user_id: ME.id, peer_id: peerId, limit: '20' });
+            // Use after=newestMsgId so the server only returns truly new messages;
+            // fall back to 0 so we get the latest batch on first poll.
+            const afterId = newestMsgId || 0;
+            const params = new URLSearchParams({
+                action: 'messages', user_id: ME.id, peer_id: peerId,
+                after: afterId, limit: '20'
+            });
             apiGet(`/api/chat?${params}`).then(msgs => {
                 if (currentPeerId !== peerId) return;
-                const newMsgs = msgs.filter(m => m.id > lastId);
-                if (newMsgs.length) {
-                    renderMessages(newMsgs, list, false);
-                    msgCache[peerId] = [...(msgCache[peerId] || []), ...newMsgs];
-                    list.scrollTop = list.scrollHeight;
-                    apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: peerId });
-                    loadConversations(); // refresh unread counts
-                    const incoming = newMsgs.filter(m => m.sender_id !== ME.id);
-                    if (incoming.length) {
-                        maybeNotifyIncoming(currentPeerName || '用戶', incoming[incoming.length - 1].content || '');
-                    }
+                if (!msgs.length) return; // nothing new — common case, no extra work
+                newestMsgId = msgs[msgs.length - 1].id;
+                renderMessages(msgs, list, false);
+                msgCache[peerId] = [...(msgCache[peerId] || []), ...msgs];
+                list.scrollTop = list.scrollHeight;
+                apiPost('/api/chat', { action: 'read', user_id: ME.id, peer_id: peerId });
+                scheduleConvRefresh();
+                const incoming = msgs.filter(m => m.sender_id !== ME.id);
+                if (incoming.length) {
+                    maybeNotifyIncoming(currentPeerName || '用戶', incoming[incoming.length - 1].content || '');
                 }
             }).catch(() => {});
         }
@@ -806,9 +831,11 @@
                 btn.disabled = false;
                 if (msg && msg.id) {
                     const list = document.getElementById('msg-list');
-                    renderMessages([{ ...msg, sender_id: ME.id }], list, false);
+                    const newMsg = { ...msg, sender_id: ME.id };
+                    renderMessages([newMsg], list, false);
                     list.scrollTop = list.scrollHeight;
-                    loadConversations();
+                    newestMsgId = msg.id;
+                    scheduleConvRefresh();
                 }
             }).catch(() => { btn.disabled = false; });
         };
@@ -921,19 +948,10 @@
                 return;
             }
             loadConversations();
+            // Single conversation-list refresh timer (also handles unread badge updates)
             convRefreshTimer = setInterval(loadConversations, 6000);
             // On mobile, open the conversation panel on first load so users can see their conversations
             if (isMobile()) openConvPanel();
-            unreadPollTimer = setInterval(() => {
-                apiGet(`/api/chat?action=unread&user_id=${ME.id}`).then((v) => {
-                    const unread = parseInt(v?.unread || 0, 10);
-                    if (unread > lastUnreadCount && conversations.length) {
-                        const latestPeer = conversations[0]?.peer_name || '用戶';
-                        maybeNotifyIncoming(latestPeer, '你有新訊息');
-                    }
-                    lastUnreadCount = unread;
-                }).catch(() => {});
-            }, 5000);
         })();
     })();
     </script>

@@ -75,6 +75,8 @@ const schemaReady = pool.query(`
   CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id);
   CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver ON chat_messages(receiver_id);
   CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id));
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_conv_created ON chat_messages(LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id), created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_unread ON chat_messages(receiver_id) WHERE is_read = FALSE;
   CREATE TABLE IF NOT EXISTS cycling_history (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
