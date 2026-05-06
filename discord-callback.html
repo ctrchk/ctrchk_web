@@ -159,7 +159,7 @@
 
         // 3. 呼叫後端 callback API
         try {
-            var resp = await fetch('/api/discord-auth?action=callback', {
+            var resp = await fetch('/api/oauth?action=callback', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

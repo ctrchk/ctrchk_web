@@ -142,16 +142,16 @@ https://ctrchk.com/discord-callback
 
 ## 8. API 說明
 
-所有端點均位於 `/api/discord-auth`。
+所有端點均位於 `/api/oauth`。
 
-### GET `/api/discord-auth?action=url`
+### GET `/api/oauth?action=url`
 
 取得 Discord OAuth2 授權 URL。
 
 - **需要**：`Authorization: Bearer <accessToken>` 標頭
 - **回應**：`{ "url": "https://discord.com/oauth2/authorize?..." }`
 
-### POST `/api/discord-auth?action=callback`
+### POST `/api/oauth?action=callback`
 
 用授權碼完成連結並同步身份組。
 
@@ -168,14 +168,14 @@ https://ctrchk.com/discord-callback
   }
   ```
 
-### GET `/api/discord-auth?action=status`
+### GET `/api/oauth?action=status`
 
 取得帳戶的 Discord 連結狀態。
 
 - **需要**：`Authorization: Bearer <accessToken>` 標頭
 - **回應**：`{ "linked": true, "discord_id": "..." }`
 
-### POST `/api/discord-auth?action=unlink`
+### POST `/api/oauth?action=unlink`
 
 解除 Discord 連結。
 
@@ -225,7 +225,7 @@ https://ctrchk.com/discord-callback
 
 | 檔案 | 說明 |
 |------|------|
-| `api/discord-auth.js` | Discord OAuth2 後端 API |
+| `api/oauth.js` | Google 登入 + Discord OAuth2 後端 API |
 | `discord-callback.html` | OAuth2 回調頁面（處理授權碼並顯示結果） |
 | `dashboard.html` | 儀表板（含 Discord 連結卡片） |
 | `api/_db.js` | 資料庫遷移（含 `discord_id` 欄位） |

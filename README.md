@@ -100,7 +100,7 @@ ctrchk_web/
 │   ├── login.js                # 用戶登入
 │   ├── get-user.js             # 獲取用戶資料
 │   ├── update-profile.js       # 更新個人資料（升級高級會員）
-│   ├── google-auth.js          # Google OAuth 處理
+│   ├── oauth.js                # Google OAuth + Discord OAuth2 整合
 │   ├── getHistory.js           # 獲取騎行歷史
 │   ├── email.js                # 電郵發送工具（Nodemailer）
 │   ├── verify-email.js         # 電郵驗證
@@ -422,7 +422,7 @@ Vercel 環境變數更新後，需**重新部署**（Redeploy）才能生效：
 |------|------|------|
 | `POST /api/register` | POST | 用戶註冊（返回 JWT token，自動登入） |
 | `POST /api/login` | POST | 用戶登入（返回 JWT token） |
-| `POST /api/google-auth` | POST | Google OAuth 登入 |
+| `POST /api/oauth` | POST | Google OAuth 登入 |
 | `GET /api/config` | GET | 獲取前端配置（Google Client ID） |
 | `GET /api/verify-email?token=` | GET | 驗證電郵 token |
 

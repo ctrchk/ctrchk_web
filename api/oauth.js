@@ -1,0 +1,469 @@
+// /api/oauth.js
+// 統一 OAuth 端點，處理 Google 登入及 Discord 帳號連結
+//
+// ── Google 登入 ──────────────────────────────────────────────────────────────
+//   POST /api/oauth              → 驗證 Google ID Token，建立或登入用戶
+//
+// ── Discord 整合 ─────────────────────────────────────────────────────────────
+//   GET  /api/oauth?action=url           → 產生 Discord 授權 URL（需提供 Bearer token）
+//   POST /api/oauth?action=callback      → 用 code 換 token，同步 Discord 身份組至 CTRC 帳戶
+//   POST /api/oauth?action=unlink        → 解除 Discord 連結
+//   GET  /api/oauth?action=status        → 取得目前 Discord 連結狀態
+//
+// 環境變數：
+//   GOOGLE_CLIENT_ID       — Google OAuth2 用戶端 ID（可選，不設則略過受眾驗證）
+//   DISCORD_CLIENT_ID      — Discord 應用程式 Client ID
+//   DISCORD_CLIENT_SECRET  — Discord 應用程式 Client Secret
+//   DISCORD_GUILD_ID       — 要同步身份組的 Discord 伺服器 ID
+//   DISCORD_ADMIN_ROLE_ID  — 對應 CTRC 管理員（admin）的 Discord 身份組 ID（選填）
+//   DISCORD_SENIOR_ROLE_ID — 對應 CTRC 高級會員（senior）的 Discord 身份組 ID（選填）
+//   BASE_URL               — 網站根網址，用於建立 Discord redirect_uri（例如 https://ctrchk.com）
+//   JWT_SECRET             — 用於簽發及驗證 CTRC accessToken
+
+import { query } from './_db.js';
+import jwt from 'jsonwebtoken';
+
+// ════════════════════════════════════════════════════════════════════════════
+// 共用工具
+// ════════════════════════════════════════════════════════════════════════════
+
+/** 驗證 CTRC JWT，回傳 userId；失敗時回傳 null */
+function verifyCtrchkToken(authHeader) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    return payload.userId || null;
+  } catch {
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Google 登入邏輯
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 呼叫 Google 的 tokeninfo 端點驗證 ID Token。
+ * 回傳已驗證的 payload（含 sub, email, name, picture）。
+ *
+ * 注意：此方法需要一次網路請求來驗證 token。
+ * 若需要在高流量環境降低延遲，可改用 google-auth-library 套件在本地驗證。
+ * 參考：https://developers.google.com/identity/gsi/web/guides/verify-google-id-token
+ */
+async function verifyGoogleCredential(credential) {
+  const url = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error('Google ID Token 驗證失敗，請重試。');
+  }
+  const payload = await resp.json();
+
+  // 確認受眾（audience）是我們自己的 Client ID
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  if (GOOGLE_CLIENT_ID && payload.aud !== GOOGLE_CLIENT_ID) {
+    throw new Error('Google Token 的受眾不符合，可能是偽造的 Token。');
+  }
+
+  return payload;
+}
+
+async function handleGoogleAuth(req, res) {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ message: '缺少 Google 憑證（credential）' });
+    }
+
+    // 1. 驗證 Google ID Token
+    const payload = await verifyGoogleCredential(credential);
+    const google_id = payload.sub;       // Google 用戶唯一 ID
+    const email     = payload.email;
+    const full_name = payload.name || '';
+
+    if (!google_id || !email) {
+      return res.status(400).json({ message: 'Google Token 中缺少用戶資訊' });
+    }
+
+    // 2. 查詢資料庫是否已有此用戶
+    const { rows } = await query(
+      'SELECT id, email, username, user_role, full_name, profile_completed, google_id, email_verified, avatar_url FROM users WHERE google_id = $1 OR email = $2',
+      [google_id, email]
+    );
+
+    let user;
+
+    // 已知管理員電郵清單（與 database-schema.sql 種子資料同步）
+    const ADMIN_EMAILS = ['ctrcz9829@gmail.com'];
+
+    if (rows.length > 0) {
+      user = rows[0];
+
+      // 若用戶原本以 email 方式註冊，補上 google_id 並標記電郵已驗證
+      // （Google 帳號代表 Google 已驗證此電郵，無需再次驗證）
+      const needsGoogleId    = !rows[0].google_id;
+      const needsVerification = !rows[0].email_verified;
+      // 若用戶沒有頭像，使用 Google 頭像
+      const needsAvatar = !rows[0].avatar_url && payload.picture;
+      // 若該電郵屬於已知管理員但資料庫角色尚未設為 admin，自動修正
+      const needsAdminRole   = ADMIN_EMAILS.includes(email.toLowerCase()) && rows[0].user_role !== 'admin';
+
+      if (needsGoogleId && needsVerification) {
+        await query(
+          `UPDATE users
+             SET google_id = $1, email_verified = true,
+                 verification_token = NULL, verification_token_expiry = NULL
+           WHERE id = $2`,
+          [google_id, user.id]
+        );
+      } else if (needsGoogleId) {
+        await query('UPDATE users SET google_id = $1 WHERE id = $2', [google_id, user.id]);
+      } else if (needsVerification) {
+        await query(
+          `UPDATE users
+             SET email_verified = true,
+                 verification_token = NULL, verification_token_expiry = NULL
+           WHERE id = $1`,
+          [user.id]
+        );
+      }
+
+      if (needsAvatar) {
+        await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [payload.picture, user.id]);
+        user.avatar_url = payload.picture;
+      }
+
+      if (needsAdminRole) {
+        await query('UPDATE users SET user_role = $1 WHERE id = $2', ['admin', user.id]);
+        user.user_role = 'admin';
+      }
+
+      if (needsVerification) {
+        user.email_verified = true;
+      }
+    } else {
+      // 3. 新用戶：建立帳號，管理員電郵直接設為 admin，其餘為 junior
+      const newRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'junior';
+      const emailBase = String(email || '').split('@')[0].replace(/[^A-Za-z0-9_]/g, '').slice(0, 16);
+      const fallbackBase = `u${Date.now()}`.slice(0, 16);
+      const baseName = emailBase || fallbackBase;
+      const usernameSeed = baseName.length < 4 ? (baseName + '0000').slice(0, 4) : baseName;
+      const { rows: usernameRows } = await query(
+        `SELECT username FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(username) LIKE LOWER($2)`,
+        [usernameSeed, `${usernameSeed}%`]
+      );
+      const taken = new Set(usernameRows.map((r) => String(r.username || '').toLowerCase()));
+      let finalUsername = usernameSeed;
+      if (taken.has(finalUsername.toLowerCase())) {
+        let found = false;
+        for (let i = 1; i <= 9999; i++) {
+          const suffix = String(i);
+          const candidate = (usernameSeed.slice(0, Math.max(0, 16 - suffix.length)) + suffix).slice(0, 16);
+          if (candidate.length >= 4 && !taken.has(candidate.toLowerCase())) {
+            finalUsername = candidate;
+            found = true;
+            break;
+          }
+        }
+        if (!found) finalUsername = `u${Date.now()}`.slice(0, 16);
+      }
+      const googleAvatarUrl = payload.picture || null;
+      const insertResult = await query(
+        `INSERT INTO users (email, google_id, username, full_name, user_role, auth_provider, profile_completed, email_verified, avatar_url)
+         VALUES ($1, $2, $3, $4, $5, 'google', false, true, $6)
+         RETURNING id, email, username, user_role, full_name, profile_completed, avatar_url`,
+        [email, google_id, finalUsername, full_name, newRole, googleAvatarUrl]
+      );
+      user = insertResult.rows[0];
+    }
+
+    // 4. 簽發 JWT（與 email 登入流程保持一致）
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      throw new Error('伺服器未設置 JWT_SECRET 環境變數，請聯絡管理員。');
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.user_role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // 獲取最新的 full_name
+    const fullNameToReturn = user.full_name || full_name || '';
+
+    return res.status(200).json({
+      message: rows.length > 0 ? '登入成功' : '已建立新帳號',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username || '',
+        full_name: fullNameToReturn,
+        user_role: user.user_role,
+        role: user.user_role,
+        profile_completed: user.profile_completed,
+        email_verified: true, // Google 帳號視為已驗證
+        auth_provider: 'google',
+        avatar_url: user.avatar_url || null
+      }
+    });
+
+  } catch (error) {
+    console.error('Google auth error:', error);
+    return res.status(500).json({ message: error.message });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Discord 整合邏輯
+// ════════════════════════════════════════════════════════════════════════════
+
+const DISCORD_API = 'https://discord.com/api/v10';
+
+// Discord OAuth2 所需的授權範圍：
+//   identify            — 取得 Discord 用戶 ID、用戶名、頭像
+//   email               — 取得 Discord 電子郵件（備用，不強制要求）
+//   guilds.members.read — 讀取用戶在指定伺服器的身份組
+const SCOPES = 'identify email guilds.members.read';
+
+// Maximum age of the OAuth2 state parameter (15 minutes)
+const STATE_EXPIRY_MS = 15 * 60 * 1000;
+
+function getDiscordRedirectUri(req) {
+  const base = process.env.BASE_URL || `https://${req.headers.host}`;
+  return `${base}/discord-callback`;
+}
+
+// 交換 Discord 授權碼換取 access token
+async function exchangeDiscordCode(code, redirectUri) {
+  const params = new URLSearchParams({
+    client_id:     process.env.DISCORD_CLIENT_ID,
+    client_secret: process.env.DISCORD_CLIENT_SECRET,
+    grant_type:    'authorization_code',
+    code,
+    redirect_uri:  redirectUri,
+  });
+  const resp = await fetch(`${DISCORD_API}/oauth2/token`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    params.toString(),
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error(`Discord token exchange failed: ${err}`);
+  }
+  return resp.json();
+}
+
+// 取得 Discord 用戶基本資訊
+async function fetchDiscordUser(accessToken) {
+  const resp = await fetch(`${DISCORD_API}/users/@me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!resp.ok) throw new Error('Failed to fetch Discord user info');
+  return resp.json();
+}
+
+// 取得用戶在指定伺服器中的身份組清單（需要 guilds.members.read 範圍）
+// 回傳值：
+//   null  — 用戶不在伺服器（404/403）或伺服器 ID 未設置
+//   []    — 用戶在伺服器但沒有任何身份組
+//   [...] — 用戶在伺服器並持有對應身份組 ID 清單
+async function fetchGuildMemberRoles(accessToken, guildId) {
+  if (!guildId) return null;
+  const resp = await fetch(`${DISCORD_API}/users/@me/guilds/${guildId}/member`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (resp.status === 404 || resp.status === 403) return null; // 不在伺服器
+  if (!resp.ok) return null;
+  const member = await resp.json();
+  return Array.isArray(member.roles) ? member.roles : [];
+}
+
+// 根據 Discord 身份組 ID 清單，決定對應的 CTRC 用戶等級
+// discordRoles 為 null 表示用戶不在伺服器（不升級）
+// 優先級：admin > senior > junior（僅在角色比現有角色更高時才升級；不降級）
+function mapRolesToCtrchkRole(discordRoles, currentRole) {
+  if (!Array.isArray(discordRoles)) return currentRole; // 不在伺服器，維持現有等級
+
+  const adminRoleId  = process.env.DISCORD_ADMIN_ROLE_ID;
+  const seniorRoleId = process.env.DISCORD_SENIOR_ROLE_ID;
+
+  if (adminRoleId && discordRoles.includes(adminRoleId)) return 'admin';
+  if (seniorRoleId && discordRoles.includes(seniorRoleId)) {
+    // 不降級：若用戶已是管理員，維持管理員
+    return currentRole === 'admin' ? 'admin' : 'senior';
+  }
+  // 沒有匹配的身份組：不降級，維持現有等級
+  return currentRole;
+}
+
+async function handleDiscordAction(req, res, action) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // ── GET ?action=url ─────────────────────────────────────────────────────────
+  // 產生 Discord OAuth2 授權 URL（用戶必須已登入 CTRC）
+  if (req.method === 'GET' && action === 'url') {
+    const userId = verifyCtrchkToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ message: '請先登入 CTRC 帳戶' });
+
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    if (!clientId) return res.status(503).json({ message: 'Discord 整合尚未設置（缺少 DISCORD_CLIENT_ID）' });
+
+    // 將 CTRC userId 編碼進 state，供 callback 時使用
+    const state = Buffer.from(JSON.stringify({ userId, ts: Date.now() })).toString('base64url');
+    const redirectUri = getDiscordRedirectUri(req);
+
+    const url = new URL('https://discord.com/oauth2/authorize');
+    url.searchParams.set('client_id',     clientId);
+    url.searchParams.set('redirect_uri',  redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope',         SCOPES);
+    url.searchParams.set('state',         state);
+
+    return res.status(200).json({ url: url.toString() });
+  }
+
+  // ── GET ?action=status ───────────────────────────────────────────────────────
+  // 取得目前帳戶的 Discord 連結狀態
+  if (req.method === 'GET' && action === 'status') {
+    const userId = verifyCtrchkToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ message: '請先登入 CTRC 帳戶' });
+
+    try {
+      const { rows } = await query(
+        'SELECT discord_id FROM users WHERE id = $1',
+        [userId]
+      );
+      if (rows.length === 0) return res.status(404).json({ message: '用戶不存在' });
+      return res.status(200).json({ linked: !!rows[0].discord_id, discord_id: rows[0].discord_id || null });
+    } catch (e) {
+      return res.status(500).json({ message: e.message });
+    }
+  }
+
+  // ── POST ?action=callback ────────────────────────────────────────────────────
+  // 交換授權碼，同步 Discord 身份組至 CTRC 帳戶
+  if (req.method === 'POST' && action === 'callback') {
+    try {
+      const { code, state } = req.body;
+      if (!code || !state) return res.status(400).json({ message: '缺少 code 或 state 參數' });
+
+      // 從 state 解碼 CTRC userId
+      let stateData;
+      try {
+        stateData = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
+      } catch {
+        return res.status(400).json({ message: 'state 參數無效' });
+      }
+      const userId = stateData.userId;
+      if (!userId) return res.status(400).json({ message: 'state 中缺少用戶 ID' });
+
+      // 確認 state 未過期
+      if (Date.now() - (stateData.ts || 0) > STATE_EXPIRY_MS) {
+        return res.status(400).json({ message: '授權連結已過期，請重新嘗試' });
+      }
+
+      const clientId     = process.env.DISCORD_CLIENT_ID;
+      const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+      if (!clientId || !clientSecret) {
+        return res.status(503).json({ message: 'Discord 整合尚未設置（缺少環境變數）' });
+      }
+
+      const redirectUri = getDiscordRedirectUri(req);
+
+      // 1. 交換授權碼換取 Discord access token
+      const tokenData = await exchangeDiscordCode(code, redirectUri);
+      const discordAccessToken = tokenData.access_token;
+
+      // 2. 取得 Discord 用戶資訊
+      const discordUser = await fetchDiscordUser(discordAccessToken);
+      const discordId   = discordUser.id;
+      if (!discordId) return res.status(400).json({ message: '無法取得 Discord 用戶 ID' });
+
+      // 3. 檢查此 Discord 帳號是否已連結至其他 CTRC 帳戶
+      const { rows: existingRows } = await query(
+        'SELECT id FROM users WHERE discord_id = $1 AND id != $2',
+        [discordId, userId]
+      );
+      if (existingRows.length > 0) {
+        return res.status(409).json({ message: '此 Discord 帳號已連結至另一個 CTRC 帳戶' });
+      }
+
+      // 4. 取得 Discord 伺服器身份組
+      const guildId     = process.env.DISCORD_GUILD_ID;
+      const memberRoles = await fetchGuildMemberRoles(discordAccessToken, guildId);
+
+      // 5. 取得現有 CTRC 用戶等級
+      const { rows: userRows } = await query('SELECT user_role FROM users WHERE id = $1', [userId]);
+      if (userRows.length === 0) return res.status(404).json({ message: '用戶不存在' });
+      const currentRole = userRows[0].user_role || 'junior';
+
+      // 6. 計算新等級（只升不降）
+      const newRole = mapRolesToCtrchkRole(memberRoles, currentRole);
+
+      // 7. 更新資料庫
+      await query(
+        'UPDATE users SET discord_id = $1, user_role = $2 WHERE id = $3',
+        [discordId, newRole, userId]
+      );
+
+      const inGuild = guildId ? memberRoles !== null : false;
+      return res.status(200).json({
+        message: 'Discord 帳號連結成功',
+        discord_username: discordUser.username,
+        discord_global_name: discordUser.global_name || discordUser.username,
+        discord_avatar: discordUser.avatar
+          ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png`
+          : null,
+        role_synced: newRole,
+        in_guild: inGuild,
+        roles_matched: memberRoles,
+      });
+    } catch (e) {
+      console.error('Discord callback error:', e);
+      return res.status(500).json({ message: e.message });
+    }
+  }
+
+  // ── POST ?action=unlink ──────────────────────────────────────────────────────
+  // 解除 Discord 連結（不影響用戶等級）
+  if (req.method === 'POST' && action === 'unlink') {
+    const userId = verifyCtrchkToken(req.headers.authorization);
+    if (!userId) return res.status(401).json({ message: '請先登入 CTRC 帳戶' });
+
+    try {
+      await query('UPDATE users SET discord_id = NULL WHERE id = $1', [userId]);
+      return res.status(200).json({ message: 'Discord 帳號已解除連結' });
+    } catch (e) {
+      return res.status(500).json({ message: e.message });
+    }
+  }
+
+  return res.status(400).json({ message: '未知的 action 參數' });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 主處理器
+// ════════════════════════════════════════════════════════════════════════════
+
+export default async function handler(req, res) {
+  const action = req.query.action;
+
+  // 有 action 參數 → Discord 整合
+  if (action) {
+    return handleDiscordAction(req, res, action);
+  }
+
+  // 無 action 參數 → Google 登入（只接受 POST）
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+
+  return handleGoogleAuth(req, res);
+}

@@ -65,7 +65,7 @@ Visit these URLs (replace `your-domain` with your actual domain):
 
 - [ ] `https://your-domain.vercel.app/api/register` → Should return 405 (Method Not Allowed) for GET
 - [ ] `https://your-domain.vercel.app/api/login` → Should return 405 (Method Not Allowed) for GET
-- [ ] `https://your-domain.vercel.app/api/google-auth` → Should return 405 (Method Not Allowed) for GET
+- [ ] `https://your-domain.vercel.app/api/oauth` → Should return 405 (Method Not Allowed) for GET
 
 If you see 500 errors, check Vercel logs.
 

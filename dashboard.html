@@ -794,7 +794,7 @@
         // Section remains hidden until we confirm Discord integration is configured
         async function loadDiscordStatus() {
             try {
-                var resp = await fetch('/api/discord-auth?action=status', {
+                var resp = await fetch('/api/oauth?action=status', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 if (resp.status === 503) {
@@ -837,7 +837,7 @@
 
         async function startDiscordOAuth() {
             try {
-                var resp = await fetch('/api/discord-auth?action=url', {
+                var resp = await fetch('/api/oauth?action=url', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
                 if (resp.status === 503) {
@@ -858,7 +858,7 @@
         async function unlinkDiscord() {
             if (!confirm('確定要解除 Discord 連結嗎？')) return;
             try {
-                var resp = await fetch('/api/discord-auth?action=unlink', {
+                var resp = await fetch('/api/oauth?action=unlink', {
                     method: 'POST',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
