@@ -4,6 +4,20 @@
 
 ---
 
+## v1.8 — 2026-05-06
+
+### 新功能 (New Features)
+- **Discord 帳號連結** — 用戶可在儀表板將 CTRC 帳戶與 Discord 帳號連結：
+  - 透過 Discord OAuth2 授權，安全綁定雙方帳號
+  - 系統自動讀取用戶在 CTRC Discord 伺服器的身份組，並同步升級對應的 CTRC 會員等級
+  - 等級採「只升不降」原則：Discord 身份組被移除後，CTRC 等級不受影響
+  - 可隨時在儀表板「重新同步身份組」或「解除連結」
+  - 身份組對應規則（由管理員設置）：
+    - `DISCORD_ADMIN_ROLE_ID` 身份組 → 管理員（admin）
+    - `DISCORD_SENIOR_ROLE_ID` 身份組 → 高級會員（senior）
+
+---
+
 ## v1.7 — 2026-03-28
 
 ### 新功能 (New Features)

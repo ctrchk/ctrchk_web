@@ -134,7 +134,7 @@ Expected result:
 ## Common Issues and Troubleshooting
 
 ### Issue: "User not found" after Google login
-**Solution**: Check if the user was created in the database. The `google-auth.js` API should create a new user on first login.
+**Solution**: Check if the user was created in the database. The `oauth.js` API should create a new user on first login.
 
 ### Issue: Redirect URL mismatch
 **Solution**: 

@@ -59,7 +59,7 @@ function initGoogleButton() {
 // --- 接收 Google GIS 回調 ---
 async function handleGoogleCredentialResponse(response) {
     try {
-        const res = await fetch('/api/google-auth', {
+        const res = await fetch('/api/oauth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ credential: response.credential })

@@ -382,6 +382,49 @@
         body:not(.app-theme-explicit) #email-verify-notice { background: #fff8e1; color: #7a4000; }
         body:not(.app-theme-explicit) #upgrade-notice { background: rgba(46,125,50,0.06); }
     }
+    /* ── Discord card ── */
+    .db-discord-card {
+        margin: 0 1em 0.8em;
+        background: rgba(88, 101, 242, 0.12);
+        border: 1px solid rgba(88, 101, 242, 0.4);
+        border-radius: 12px;
+        padding: 1em 1.2em;
+    }
+    .db-discord-card h3 { color: #8ea1f5; margin: 0 0 0.4em; font-size: 0.95em; }
+    .db-discord-card p { font-size: 0.84em; color: var(--app-text-secondary, #a8d8a0); margin: 0 0 0.8em; }
+    .db-discord-linked-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4em;
+        background: rgba(88, 101, 242, 0.25);
+        color: #c5ceff;
+        border-radius: 20px;
+        padding: 0.25em 0.8em;
+        font-size: 0.82em;
+        font-weight: 600;
+        margin-bottom: 0.6em;
+    }
+    .db-discord-btn {
+        display: inline-block;
+        background: #5865F2;
+        color: #fff;
+        font-size: 0.85em;
+        font-weight: bold;
+        padding: 0.4em 1.2em;
+        border-radius: 8px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity 0.2s;
+    }
+    .db-discord-btn:hover { opacity: 0.88; }
+    .db-discord-btn.unlink {
+        background: transparent;
+        color: #a0a0a0;
+        border: 1px solid #555;
+        margin-left: 0.6em;
+    }
     </style>
 
     <script>
@@ -481,6 +524,19 @@
             <h3><i class="fas fa-shield-alt"></i> 管理員面板</h3>
             <p>你可以管理網站用戶及查看資料。</p>
             <a href="/admin" class="db-admin-btn"><i class="fas fa-tools"></i> 前往管理員後台</a>
+        </div>
+
+        <!-- Discord link card -->
+        <div id="discord-section" class="db-discord-card" style="display:none;">
+            <h3>
+                <svg style="width:1em;height:1em;vertical-align:-0.1em;margin-right:0.3em;" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.201 13.201 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028z"/>
+                </svg>
+                Discord 連結
+            </h3>
+            <div id="discord-status-area">
+                <p>載入中…</p>
+            </div>
         </div>
 
         <!-- More links (app only) -->
@@ -726,6 +782,98 @@
                 window.location.href = '/login';
             });
         }
+    });
+
+    // ── Discord integration ───────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        var section = document.getElementById('discord-section');
+        var statusArea = document.getElementById('discord-status-area');
+        var token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        // Section remains hidden until we confirm Discord integration is configured
+        async function loadDiscordStatus() {
+            try {
+                var resp = await fetch('/api/oauth?action=status', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resp.status === 503) {
+                    // Discord integration not configured — keep card hidden
+                    return;
+                }
+                // Only show the card once we know the integration is available
+                section.style.display = '';
+                if (!resp.ok) { renderDiscordUnlinked(); return; }
+                var data = await resp.json();
+                if (data.linked) {
+                    renderDiscordLinked(data.discord_id);
+                } else {
+                    renderDiscordUnlinked();
+                }
+            } catch (e) {
+                // Network error — show card with unlinked state
+                section.style.display = '';
+                renderDiscordUnlinked();
+            }
+        }
+
+        function renderDiscordLinked(discordId) {
+            statusArea.innerHTML =
+                '<div class="db-discord-linked-tag">🎮 已連結 Discord 帳號</div>' +
+                '<p>你的 Discord 帳號已連結。每次重新連結時系統會自動同步你在 CTRC Discord 伺服器的身份組與會員等級。</p>' +
+                '<button class="db-discord-btn" id="discord-resync-btn">🔄 重新同步身份組</button>' +
+                '<button class="db-discord-btn unlink" id="discord-unlink-btn">解除連結</button>';
+
+            document.getElementById('discord-resync-btn').addEventListener('click', startDiscordOAuth);
+            document.getElementById('discord-unlink-btn').addEventListener('click', unlinkDiscord);
+        }
+
+        function renderDiscordUnlinked() {
+            statusArea.innerHTML =
+                '<p>連結你的 Discord 帳號，系統會自動同步你在 CTRC Discord 伺服器的身份組，並更新你的會員等級。</p>' +
+                '<button class="db-discord-btn" id="discord-link-btn">🔗 連結 Discord</button>';
+            document.getElementById('discord-link-btn').addEventListener('click', startDiscordOAuth);
+        }
+
+        async function startDiscordOAuth() {
+            try {
+                var resp = await fetch('/api/oauth?action=url', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (resp.status === 503) {
+                    alert('Discord 整合尚未設置，請聯絡管理員。');
+                    return;
+                }
+                var data = await resp.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert('無法取得 Discord 授權連結，請稍後再試。');
+                }
+            } catch (e) {
+                alert('網絡錯誤，請稍後再試。');
+            }
+        }
+
+        async function unlinkDiscord() {
+            if (!confirm('確定要解除 Discord 連結嗎？')) return;
+            try {
+                var resp = await fetch('/api/oauth?action=unlink', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var data = await resp.json();
+                if (resp.ok) {
+                    renderDiscordUnlinked();
+                } else {
+                    alert(data.message || '解除連結失敗');
+                }
+            } catch (e) {
+                alert('網絡錯誤，請稍後再試。');
+            }
+        }
+
+        loadDiscordStatus();
     });
     </script>
     <script src="/js/pwa.js"></script>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord 連結中 - 城市運輸單車</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .cb-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            padding: 2em 1.2em;
+            text-align: center;
+        }
+        .cb-icon {
+            font-size: 3.5em;
+            margin-bottom: 0.4em;
+        }
+        .cb-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+        .cb-msg {
+            color: var(--text-secondary, #666);
+            margin-bottom: 1.5em;
+            max-width: 320px;
+            line-height: 1.5;
+        }
+        .cb-spinner {
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #5865F2;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1em;
+        }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+        .cb-btn {
+            display: inline-block;
+            padding: 0.7em 2em;
+            background: var(--accent, #04D93C);
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1em;
+            border: none;
+            cursor: pointer;
+        }
+        .cb-btn:hover { opacity: 0.88; }
+        .cb-discord-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5em;
+            background: #5865F2;
+            color: #fff;
+            border-radius: 24px;
+            padding: 0.4em 1em;
+            font-weight: 600;
+            font-size: 0.95em;
+            margin-bottom: 1em;
+        }
+        .cb-discord-tag img {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .cb-role-badge {
+            display: inline-block;
+            padding: 0.25em 0.8em;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 1em;
+        }
+        .cb-role-admin  { background: #ff6b6b; color: #fff; }
+        .cb-role-senior { background: #ffd700; color: #333; }
+        .cb-role-junior { background: #a8d8a0; color: #1a3320; }
+    </style>
+</head>
+<body>
+    <div class="cb-container" id="cb-container">
+        <div class="cb-spinner"></div>
+        <div class="cb-title">正在連結 Discord…</div>
+        <div class="cb-msg">請稍候，我們正在同步你的 Discord 帳號與 CTRC 會員等級</div>
+    </div>
+
+    <script>
+    (async function () {
+        var container = document.getElementById('cb-container');
+
+        function escHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showError(msg) {
+            container.innerHTML =
+                '<div class="cb-icon">❌</div>' +
+                '<div class="cb-title">連結失敗</div>' +
+                '<div class="cb-msg">' + escHtml(msg) + '</div>' +
+                '<a href="/dashboard" class="cb-btn">返回儀表板</a>';
+        }
+
+        function showSuccess(data) {
+            var roleLabels = { admin: '管理員', senior: '高級會員', junior: '初級會員' };
+            var roleClass  = { admin: 'cb-role-admin', senior: 'cb-role-senior', junior: 'cb-role-junior' };
+            var roleKey    = escHtml(data.role_synced || 'junior');
+            var displayName = escHtml(data.discord_global_name || '');
+            var avatarHtml = data.discord_avatar
+                ? '<img src="' + escHtml(data.discord_avatar) + '" alt="Discord 頭像">'
+                : '🎮';
+            var guildMsg = data.in_guild
+                ? '已成功讀取你在 CTRC Discord 伺服器的身份組。'
+                : '你目前未加入 CTRC Discord 伺服器，等級維持不變。加入後可重新連結以同步身份組。';
+
+            container.innerHTML =
+                '<div class="cb-icon">✅</div>' +
+                '<div class="cb-title">Discord 連結成功！</div>' +
+                '<div class="cb-discord-tag">' + avatarHtml + displayName + '</div>' +
+                '<div class="cb-role-badge ' + escHtml(roleClass[data.role_synced] || 'cb-role-junior') + '">' +
+                    escHtml(roleLabels[data.role_synced] || data.role_synced) +
+                '</div>' +
+                '<div class="cb-msg">' + escHtml(guildMsg) + '</div>' +
+                '<a href="/dashboard" class="cb-btn">返回儀表板</a>';
+        }
+
+        // 1. 從 URL 取得 code 和 state
+        var params = new URLSearchParams(window.location.search);
+        var code   = params.get('code');
+        var state  = params.get('state');
+        var error  = params.get('error');
+
+        if (error) {
+            showError('Discord 授權已取消：' + (params.get('error_description') || error));
+            return;
+        }
+
+        if (!code || !state) {
+            showError('缺少授權碼，請重新嘗試連結。');
+            return;
+        }
+
+        // 2. 取得 CTRC accessToken（用戶必須已登入）
+        var token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login?redirect=/discord-callback&code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state);
+            return;
+        }
+
+        // 3. 呼叫後端 callback API
+        try {
+            var resp = await fetch('/api/oauth?action=callback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token,
+                },
+                body: JSON.stringify({ code: code, state: state }),
+            });
+            var data = await resp.json();
+            if (!resp.ok) {
+                showError(data.message || '連結失敗，請稍後再試。');
+                return;
+            }
+            showSuccess(data);
+        } catch (e) {
+            showError('網絡錯誤，請稍後再試。');
+        }
+    })();
+    </script>
+</body>
+</html>

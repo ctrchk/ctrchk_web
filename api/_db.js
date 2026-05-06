@@ -61,6 +61,8 @@ const schemaReady = pool.query(`
   ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_expiry TIMESTAMP;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
   ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(16);
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id VARCHAR(255);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_discord_id ON users (discord_id) WHERE discord_id IS NOT NULL;
   -- 為沒有 username 的舊有帳戶自動分配一個預設用戶名（可後續修改）
   UPDATE users SET username = CONCAT('user', CAST(id AS TEXT))
     WHERE username IS NULL OR LENGTH(TRIM(username)) = 0;
