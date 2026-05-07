@@ -8,8 +8,8 @@
 //   POST /api/chat  { action: 'read', user_id, peer_id }  → 標記訊息為已讀
 //   GET  /api/chat?action=users&user_id=X[&q=keyword]  → 搜尋可聊天用戶
 
-import { query } from './_db.js';
-import { sendPushToUser } from './_push_helper.js';
+import { query } from '../lib/db.js';
+import { sendPushToUser } from '../lib/push-helper.js';
 
 // Simple JWT decode (no crypto verification; auth is expected on trusted infra)
 function getUserIdFromToken(req) {

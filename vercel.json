@@ -1,5 +1,15 @@
 {
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/verify-email",
+      "destination": "/api/password-reset?action=verify-email"
+    },
+    {
+      "source": "/api/discord-profile",
+      "destination": "/api/oauth?action=discord-profile"
+    }
+  ],
   "redirects": [
     {
       "source": "/(.*)\\.html$",

@@ -1,5 +1,5 @@
 // /api/forum.js
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 
 const VALID_TAGS = ['路線討論', '車站討論', '地點討論'];

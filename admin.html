@@ -99,7 +99,9 @@
             font-size: 0.8em;
             font-weight: bold;
         }
+        .role-senior-admin { background: #5a189a; color: #fff; }
         .role-admin { background: #2c3e50; color: white; }
+        .role-vip { background: #c9184a; color: #fff; }
         .role-senior { background: #ffc107; color: #333; }
         .role-junior { background: #e0e0e0; color: #555; }
         .verified-badge { color: #04D93C; }
@@ -212,7 +214,7 @@
                 window.location.replace('/login');
                 throw new Error('Invalid token');
             }
-            if (payload.role !== 'admin') {
+            if (payload.role !== 'senior_admin') {
                 document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('admin-content').style.display = 'none';
                     document.getElementById('access-denied').style.display = 'block';
@@ -228,13 +230,13 @@
         <div id="access-denied" style="display:none;">
             <i class="fas fa-ban" style="font-size:4em; color:#e74c3c;"></i>
             <h2>權限不足</h2>
-            <p>你沒有管理員權限，無法訪問此頁面。</p>
+            <p>你沒有高級管理員權限，無法訪問此頁面。</p>
             <a href="/dashboard.html" class="cta-button">返回儀表板</a>
         </div>
 
         <div id="admin-content" class="admin-container">
             <div class="admin-header-bar">
-                <h1><i class="fas fa-shield-alt"></i> 管理員後台</h1>
+                <h1><i class="fas fa-shield-alt"></i> 高級管理員後台</h1>
                 <span id="admin-user-info" style="font-size:0.9em; opacity:0.8;"></span>
             </div>
 
@@ -300,7 +302,8 @@
                                 <th>電郵</th>
                                 <th>用戶名</th>
                                 <th>姓名</th>
-                                <th>角色</th>
+                                <th>會員身份</th>
+                                <th>車手等級</th>
                                 <th>電郵驗證</th>
                                 <th>騎行次數</th>
                                 <th>總里程</th>
@@ -643,11 +646,29 @@
 
         function renderUsersTable(users) {
             const tbody = document.getElementById('users-tbody');
+            const roleLabelMap = {
+                senior_admin: '高級管理員',
+                admin: '管理員',
+                vip: 'VIP 會員',
+                senior: '高級會員',
+                junior: '普通會員',
+            };
+            function cyclistTier(level) {
+                const lv = Number(level || 1);
+                if (lv >= 76) return '頂尖車手';
+                if (lv >= 51) return '精英車手';
+                if (lv >= 31) return '資深車手';
+                if (lv >= 16) return '進階車手';
+                if (lv >= 6) return '初階車手';
+                return '入門車手';
+            }
             tbody.innerHTML = users.map(user => {
-                const roleClass = user.user_role === 'admin' ? 'role-admin' : 
-                                  user.user_role === 'senior' ? 'role-senior' : 'role-junior';
-                const roleLabel = user.user_role === 'admin' ? '管理員' :
-                                  user.user_role === 'senior' ? '高級會員' : '初級會員';
+                const roleClass =
+                    user.user_role === 'senior_admin' ? 'role-senior-admin' :
+                    user.user_role === 'admin' ? 'role-admin' :
+                    user.user_role === 'vip' ? 'role-vip' :
+                    user.user_role === 'senior' ? 'role-senior' : 'role-junior';
+                const roleLabel = roleLabelMap[user.user_role] || user.user_role || '普通會員';
                 const verifiedHtml = user.email_verified 
                     ? '<i class="fas fa-check-circle verified-badge" title="已驗證"></i>'
                     : '<i class="fas fa-times-circle unverified-badge" title="未驗證"></i>';
@@ -660,21 +681,28 @@
                         <td>${escapeHtml(user.username || '-')}</td>
                         <td>${escapeHtml(user.full_name || '-')}</td>
                         <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
+                        <td>Lv.${Number(user.cyclist_level || 1)}（${cyclistTier(user.cyclist_level)}）</td>
                         <td>${verifiedHtml}</td>
                         <td>${user.ride_count || 0}</td>
                         <td>${parseFloat(user.total_distance || 0).toFixed(1)} km</td>
                         <td>${user.auth_provider || 'email'}</td>
                         <td>${date}</td>
                         <td>
-                            ${user.user_role !== 'senior' && user.user_role !== 'admin' 
-                                ? `<button class="action-btn btn-promote" onclick="setRole(${user.id}, 'senior')">升級</button>` 
-                                : ''}
-                            ${user.user_role === 'senior' 
-                                ? `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">降級</button>` 
-                                : ''}
-                            ${user.user_role !== 'admin' 
-                                ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'admin')">設管理員</button>` 
+                            ${user.user_role !== 'senior_admin'
+                                ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'senior_admin')">設高級管理員</button>`
+                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'admin')">降為管理員</button>`}
+                            ${user.user_role !== 'admin'
+                                ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'admin')">設管理員</button>`
                                 : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'senior')">移除管理員</button>`}
+                            ${user.user_role !== 'vip'
+                                ? `<button class="action-btn btn-promote" onclick="setRole(${user.id}, 'vip')">設 VIP</button>`
+                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'senior')">取消 VIP</button>`}
+                            ${user.user_role !== 'senior'
+                                ? `<button class="action-btn btn-promote" onclick="setRole(${user.id}, 'senior')">設高級會員</button>`
+                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">降為普通會員</button>`}
+                            ${user.user_role !== 'junior'
+                                ? `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">設普通會員</button>`
+                                : ''}
                             <button class="action-btn btn-delete" onclick="deleteUser(${user.id}, '${escapeHtml(user.email)}')">刪除</button>
                         </td>
                     </tr>
@@ -697,7 +725,14 @@
         }
 
         async function setRole(userId, newRole) {
-            const roleLabel = newRole === 'admin' ? '管理員' : newRole === 'senior' ? '高級會員' : '初級會員';
+            const roleLabelMap = {
+                senior_admin: '高級管理員',
+                admin: '管理員',
+                vip: 'VIP 會員',
+                senior: '高級會員',
+                junior: '普通會員',
+            };
+            const roleLabel = roleLabelMap[newRole] || newRole;
             if (!confirm(`確定要將此用戶設為「${roleLabel}」嗎？`)) return;
 
             const token = localStorage.getItem('accessToken');
@@ -764,7 +799,7 @@
             if (userData) {
                 const user = JSON.parse(userData);
                 document.getElementById('admin-user-info').textContent = 
-                    `管理員: ${user.full_name || user.email}`;
+                    `高級管理員: ${user.full_name || user.email}`;
             }
 
             // 載入用戶列表

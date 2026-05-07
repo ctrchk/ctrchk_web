@@ -1,5 +1,5 @@
 // /api/blog.js
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 
 function requireAdmin(req, res) {
@@ -16,8 +16,8 @@ function requireAdmin(req, res) {
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== 'admin') {
-      res.status(403).json({ message: 'Forbidden: Admin access required' });
+    if (decoded.role !== 'senior_admin') {
+      res.status(403).json({ message: 'Forbidden: Senior admin access required' });
       return null;
     }
     return decoded;

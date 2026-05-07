@@ -84,7 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_cycling_history_ride_date ON cycling_history(ride
 -- Column descriptions
 -- =========================================================
 
-COMMENT ON COLUMN users.user_role IS 'User membership tier: junior (initial), senior (completed profile), admin (administrator)';
+COMMENT ON COLUMN users.user_role IS 'User membership tier: junior, senior, vip, admin, senior_admin';
 COMMENT ON COLUMN users.preferred_area IS 'Comma-separated list of preferred cycling areas';
 
 -- =========================================================
@@ -143,6 +143,16 @@ CREATE TABLE IF NOT EXISTS user_daily_checkins (
   created_at    TIMESTAMP DEFAULT NOW(),
   UNIQUE(user_id, checkin_date)
 );
+
+CREATE TABLE IF NOT EXISTS user_reward_log (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reward_key VARCHAR(100) NOT NULL,
+  granted_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, reward_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_reward_log_user_id ON user_reward_log(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_user_daily_checkins_user_id ON user_daily_checkins(user_id);
 
@@ -246,14 +256,14 @@ ON CONFLICT (level) DO UPDATE SET
 
 -- =========================================================
 -- 管理員帳戶種子資料（使用 Google 登入）
--- ctrcz9829@gmail.com 預設為管理員，透過 Google OAuth 登入時
+-- ctrcz9829@gmail.com 預設為高級管理員，透過 Google OAuth 登入時
 -- google_id 將自動由 api/google-auth.js 補上。
 -- =========================================================
 
 INSERT INTO users (email, user_role, full_name, profile_completed, auth_provider, email_verified)
-VALUES ('ctrcz9829@gmail.com', 'admin', 'CTRC HK 管理員', true, 'google', true)
+VALUES ('ctrcz9829@gmail.com', 'senior_admin', 'CTRC HK 高級管理員', true, 'google', true)
 ON CONFLICT (email) DO UPDATE
-  SET user_role = 'admin',
+  SET user_role = 'senior_admin',
       email_verified = true,
       profile_completed = true,
       auth_provider = 'google';
