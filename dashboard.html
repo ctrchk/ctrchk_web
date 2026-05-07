@@ -98,8 +98,15 @@
         border-radius: 20px;
     }
     .db-role-admin  { background: #4a1942; color: #f3a0ef; }
+    .db-role-senior-admin { background: #5a189a; color: #fff; border: 1px solid rgba(255,255,255,0.22); }
+    .db-role-vip { background: rgba(201,24,74,0.2); color: #ff8fab; border: 1px solid rgba(255,143,171,0.35); }
     .db-role-senior { background: rgba(255,213,79,0.15); color: #ffd54f; border: 1px solid rgba(255,213,79,0.3); }
     .db-role-junior { background: var(--app-bg-card2, #243824); color: var(--app-text-secondary, #a8d8a0); border: 1px solid var(--app-border, #2d4d2d); }
+    .db-status-summary {
+        margin-top: 0.5em;
+        font-size: 0.82em;
+        color: var(--app-text-secondary, #a8d8a0);
+    }
     .db-profile-edit-btn {
         flex-shrink: 0;
         color: var(--app-text-secondary, #a8d8a0);
@@ -460,8 +467,9 @@
             <div class="db-user-meta">
                 <div class="db-user-name" id="db-user-name">正在載入...</div>
                 <span class="db-role-badge db-role-junior" id="db-role-badge">
-                    <i class="fas fa-user"></i> 初級會員
+                    <i class="fas fa-user"></i> 普通會員
                 </span>
+                <div class="db-status-summary" id="db-status-summary">車手等級：入門車手｜里程卡：銅卡</div>
             </div>
             <a href="/profile" class="db-profile-edit-btn web-only" aria-label="設置">
                 <i class="fas fa-cog"></i>
@@ -662,15 +670,19 @@
                         user.xp = dbUser.xp;
                         user.coins = dbUser.coins;
                     }
+                    user.cyclist_tier = dbUser.cyclist_tier;
+                    user.mileage_card = dbUser.mileage_card;
                     if (Array.isArray(dbUser.unlocked_coin_routes)) {
                         localStorage.setItem('unlockedCoinRoutes', JSON.stringify(dbUser.unlocked_coin_routes));
                     }
                     localStorage.setItem('user', JSON.stringify(user));
                     _applyUserUI(user);
+                    _applyStatusSummary(user);
                 }
             } catch (e) { /* use cached data */ }
 
             _applyRoleUI(userRole);
+            _applyStatusSummary(user);
             await loadHistory();
 
         } catch (e) {
@@ -698,18 +710,36 @@
     function _applyRoleUI(role) {
         var badge = document.getElementById('db-role-badge');
         badge.className = 'db-role-badge';
-        if (role === 'admin') {
+        if (role === 'senior_admin') {
+            badge.classList.add('db-role-senior-admin');
+            badge.innerHTML = '<i class="fas fa-crown"></i> 高級管理員';
+            document.getElementById('admin-section').style.display = '';
+        } else if (role === 'admin') {
             badge.classList.add('db-role-admin');
             badge.innerHTML = '<i class="fas fa-shield-alt"></i> 管理員';
-            document.getElementById('admin-section').style.display = '';
+            document.getElementById('admin-section').style.display = 'none';
+        } else if (role === 'vip') {
+            badge.classList.add('db-role-vip');
+            badge.innerHTML = '<i class="fas fa-gem"></i> VIP 會員';
+            document.getElementById('admin-section').style.display = 'none';
         } else if (role === 'senior') {
             badge.classList.add('db-role-senior');
             badge.innerHTML = '<i class="fas fa-star"></i> 高級會員';
+            document.getElementById('admin-section').style.display = 'none';
         } else {
             badge.classList.add('db-role-junior');
-            badge.innerHTML = '<i class="fas fa-user"></i> 初級會員';
+            badge.innerHTML = '<i class="fas fa-user"></i> 普通會員';
             document.getElementById('upgrade-notice').style.display = '';
+            document.getElementById('admin-section').style.display = 'none';
         }
+    }
+
+    function _applyStatusSummary(user) {
+        var el = document.getElementById('db-status-summary');
+        if (!el) return;
+        var cyclistTier = user.cyclist_tier || '入門車手';
+        var mileageCard = user.mileage_card || '銅卡';
+        el.textContent = '車手等級：' + cyclistTier + '｜里程卡：' + mileageCard;
     }
 
     function _sessionExpired(container) {
@@ -830,8 +860,8 @@
 
         function renderDiscordUnlinked() {
             statusArea.innerHTML =
-                '<p>連結你的 Discord 帳號，系統會自動同步你在 CTRC Discord 伺服器的身份組，並更新你的會員等級。</p>' +
-                '<button class="db-discord-btn" id="discord-link-btn">🔗 連結 Discord</button>';
+                '<p>連結你的 Discord 帳號，系統會自動同步你在 CTRC Discord 伺服器的身份組，並更新你的會員身份、車手等級與里程卡。<br><strong>限時活動：即日起至 5/31，首次成功連結送 100 里程幣！</strong></p>' +
+                '<button class="db-discord-btn" id="discord-link-btn">🔗 立即連結 Discord（限時 +100 里程幣）</button>';
             document.getElementById('discord-link-btn').addEventListener('click', startDiscordOAuth);
         }
 

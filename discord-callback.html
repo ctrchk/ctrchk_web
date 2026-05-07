@@ -112,8 +112,20 @@
         }
 
         function showSuccess(data) {
-            var roleLabels = { admin: '管理員', senior: '高級會員', junior: '初級會員' };
-            var roleClass  = { admin: 'cb-role-admin', senior: 'cb-role-senior', junior: 'cb-role-junior' };
+            var roleLabels = {
+                senior_admin: '高級管理員',
+                admin: '管理員',
+                vip: 'VIP 會員',
+                senior: '高級會員',
+                junior: '普通會員'
+            };
+            var roleClass  = {
+                senior_admin: 'cb-role-admin',
+                admin: 'cb-role-admin',
+                vip: 'cb-role-senior',
+                senior: 'cb-role-senior',
+                junior: 'cb-role-junior'
+            };
             var roleKey    = escHtml(data.role_synced || 'junior');
             var displayName = escHtml(data.discord_global_name || '');
             var avatarHtml = data.discord_avatar
@@ -123,6 +135,10 @@
                 ? '已成功讀取你在 CTRC Discord 伺服器的身份組。'
                 : '你目前未加入 CTRC Discord 伺服器，等級維持不變。加入後可重新連結以同步身份組。';
 
+            var rewardMsg = data.reward_granted
+                ? '<div class="cb-msg" style="color:#2e7d32;font-weight:bold;">🎁 限時活動獎勵已發放：+' + Number(data.reward_coins || 0) + ' 里程幣</div>'
+                : '';
+
             container.innerHTML =
                 '<div class="cb-icon">✅</div>' +
                 '<div class="cb-title">Discord 連結成功！</div>' +
@@ -131,6 +147,7 @@
                     escHtml(roleLabels[data.role_synced] || data.role_synced) +
                 '</div>' +
                 '<div class="cb-msg">' + escHtml(guildMsg) + '</div>' +
+                rewardMsg +
                 '<a href="/dashboard" class="cb-btn">返回儀表板</a>';
         }
 

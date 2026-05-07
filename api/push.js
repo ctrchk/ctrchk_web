@@ -143,8 +143,8 @@ export default async function handler(req, res) {
     if (!user) return res.status(401).json({ message: '未登入' });
     try {
       const { rows } = await query('SELECT user_role FROM users WHERE id = $1', [user.userId]);
-      if (!rows.length || rows[0].user_role !== 'admin') {
-        return res.status(403).json({ message: '無管理員權限' });
+      if (!rows.length || rows[0].user_role !== 'senior_admin') {
+        return res.status(403).json({ message: '無高級管理員權限' });
       }
     } catch (err) {
       console.error('push send role check error:', err);

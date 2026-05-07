@@ -15,8 +15,10 @@
 //   DISCORD_CLIENT_ID      — Discord 應用程式 Client ID
 //   DISCORD_CLIENT_SECRET  — Discord 應用程式 Client Secret
 //   DISCORD_GUILD_ID       — 要同步身份組的 Discord 伺服器 ID
-//   DISCORD_ADMIN_ROLE_ID  — 對應 CTRC 管理員（admin）的 Discord 身份組 ID（選填）
-//   DISCORD_SENIOR_ROLE_ID — 對應 CTRC 高級會員（senior）的 Discord 身份組 ID（選填）
+//   DISCORD_SENIOR_ADMIN_ROLE_ID — 對應 CTRC 高級管理員（senior_admin）的 Discord 身份組 ID（選填）
+//   DISCORD_VIP_ROLE_ID          — 對應 CTRC VIP 會員（vip）的 Discord 身份組 ID（選填）
+//   DISCORD_ADMIN_ROLE_ID        — 對應 CTRC 管理員（admin）的 Discord 身份組 ID（選填）
+//   DISCORD_SENIOR_ROLE_ID       — 對應 CTRC 高級會員（senior）的 Discord 身份組 ID（選填）
 //   BASE_URL               — 網站根網址，用於建立 Discord redirect_uri（例如 https://ctrchk.com）
 //   JWT_SECRET             — 用於簽發及驗證 CTRC accessToken
 
@@ -94,8 +96,8 @@ async function handleGoogleAuth(req, res) {
 
     let user;
 
-    // 已知管理員電郵清單（與 database-schema.sql 種子資料同步）
-    const ADMIN_EMAILS = ['ctrcz9829@gmail.com'];
+    // 已知高級管理員電郵清單（與 database-schema.sql 種子資料同步）
+    const SENIOR_ADMIN_EMAILS = ['ctrcz9829@gmail.com'];
 
     if (rows.length > 0) {
       user = rows[0];
@@ -106,8 +108,8 @@ async function handleGoogleAuth(req, res) {
       const needsVerification = !rows[0].email_verified;
       // 若用戶沒有頭像，使用 Google 頭像
       const needsAvatar = !rows[0].avatar_url && payload.picture;
-      // 若該電郵屬於已知管理員但資料庫角色尚未設為 admin，自動修正
-      const needsAdminRole   = ADMIN_EMAILS.includes(email.toLowerCase()) && rows[0].user_role !== 'admin';
+      // 若該電郵屬於已知高級管理員但資料庫角色尚未設為 senior_admin，自動修正
+      const needsSeniorAdminRole = SENIOR_ADMIN_EMAILS.includes(email.toLowerCase()) && rows[0].user_role !== 'senior_admin';
 
       if (needsGoogleId && needsVerification) {
         await query(
@@ -134,17 +136,17 @@ async function handleGoogleAuth(req, res) {
         user.avatar_url = payload.picture;
       }
 
-      if (needsAdminRole) {
-        await query('UPDATE users SET user_role = $1 WHERE id = $2', ['admin', user.id]);
-        user.user_role = 'admin';
+      if (needsSeniorAdminRole) {
+        await query('UPDATE users SET user_role = $1 WHERE id = $2', ['senior_admin', user.id]);
+        user.user_role = 'senior_admin';
       }
 
       if (needsVerification) {
         user.email_verified = true;
       }
     } else {
-      // 3. 新用戶：建立帳號，管理員電郵直接設為 admin，其餘為 junior
-      const newRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'junior';
+      // 3. 新用戶：建立帳號，高級管理員電郵直接設為 senior_admin，其餘為 junior
+      const newRole = SENIOR_ADMIN_EMAILS.includes(email.toLowerCase()) ? 'senior_admin' : 'junior';
       const emailBase = String(email || '').split('@')[0].replace(/[^A-Za-z0-9_]/g, '').slice(0, 16);
       const fallbackBase = `u${Date.now()}`.slice(0, 16);
       const baseName = emailBase || fallbackBase;
@@ -288,16 +290,85 @@ async function fetchGuildMemberRoles(accessToken, guildId) {
 function mapRolesToCtrchkRole(discordRoles, currentRole) {
   if (!Array.isArray(discordRoles)) return currentRole; // 不在伺服器，維持現有等級
 
+  const roleRank = { junior: 1, senior: 2, admin: 3, senior_admin: 4, vip: 5 };
+  const keepHigher = (candidate) => {
+    const current = roleRank[currentRole] || 1;
+    const next = roleRank[candidate] || 1;
+    return next > current ? candidate : currentRole;
+  };
+
+  const seniorAdminRoleId = process.env.DISCORD_SENIOR_ADMIN_ROLE_ID;
+  const vipRoleId = process.env.DISCORD_VIP_ROLE_ID;
   const adminRoleId  = process.env.DISCORD_ADMIN_ROLE_ID;
   const seniorRoleId = process.env.DISCORD_SENIOR_ROLE_ID;
 
-  if (adminRoleId && discordRoles.includes(adminRoleId)) return 'admin';
+  if (seniorAdminRoleId && discordRoles.includes(seniorAdminRoleId)) return keepHigher('senior_admin');
+  if (vipRoleId && discordRoles.includes(vipRoleId)) return keepHigher('vip');
+  if (adminRoleId && discordRoles.includes(adminRoleId)) return keepHigher('admin');
   if (seniorRoleId && discordRoles.includes(seniorRoleId)) {
-    // 不降級：若用戶已是管理員，維持管理員
-    return currentRole === 'admin' ? 'admin' : 'senior';
+    return keepHigher('senior');
   }
   // 沒有匹配的身份組：不降級，維持現有等級
   return currentRole;
+}
+
+const DISCORD_CONNECT_REWARD_KEY = 'discord_connect_2026_05';
+const DISCORD_CONNECT_REWARD_COINS = 100;
+const DISCORD_CONNECT_REWARD_END_UTC = '2026-05-31T23:59:59.999Z';
+
+async function grantDiscordConnectRewardIfEligible(userId) {
+  if (Date.now() > Date.parse(DISCORD_CONNECT_REWARD_END_UTC)) {
+    return { rewarded: false, coins: 0 };
+  }
+
+  await query(
+    `CREATE TABLE IF NOT EXISTS user_reward_log (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      reward_key VARCHAR(100) NOT NULL,
+      granted_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (user_id, reward_key)
+    )`
+  );
+
+  const { rowCount } = await query(
+    `INSERT INTO user_reward_log (user_id, reward_key)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id, reward_key) DO NOTHING`,
+    [userId, DISCORD_CONNECT_REWARD_KEY]
+  );
+
+  if (!rowCount) {
+    return { rewarded: false, coins: 0 };
+  }
+
+  await query(
+    `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
+     VALUES ($1, 1, 0, $2, NOW())
+     ON CONFLICT (user_id) DO UPDATE
+       SET coins = user_game_profile.coins + $2, updated_at = NOW()`,
+    [userId, DISCORD_CONNECT_REWARD_COINS]
+  );
+
+  return { rewarded: true, coins: DISCORD_CONNECT_REWARD_COINS };
+}
+
+async function triggerDiscordBotSync(userId, discordId) {
+  const endpoint = process.env.DISCORD_BOT_SYNC_ENDPOINT;
+  const token = process.env.DISCORD_BOT_SYNC_TOKEN;
+  if (!endpoint || !token) return;
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, discordId }),
+    });
+  } catch (e) {
+    console.warn('Failed to trigger Discord bot sync:', e.message);
+  }
 }
 
 async function handleDiscordAction(req, res, action) {
@@ -413,6 +484,11 @@ async function handleDiscordAction(req, res, action) {
         [discordId, newRole, userId]
       );
 
+      // 8. Discord 連結限時獎勵（到 2026-05-31）
+      const rewardResult = await grantDiscordConnectRewardIfEligible(userId);
+      // 9. 通知 Discord Bot 同步身份組（若已配置）
+      await triggerDiscordBotSync(userId, discordId);
+
       const inGuild = guildId ? memberRoles !== null : false;
       return res.status(200).json({
         message: 'Discord 帳號連結成功',
@@ -424,6 +500,8 @@ async function handleDiscordAction(req, res, action) {
         role_synced: newRole,
         in_guild: inGuild,
         roles_matched: memberRoles,
+        reward_granted: rewardResult.rewarded,
+        reward_coins: rewardResult.coins,
       });
     } catch (e) {
       console.error('Discord callback error:', e);

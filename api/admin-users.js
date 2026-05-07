@@ -48,8 +48,8 @@ function verifyAdmin(req) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== 'admin') {
-      return { error: 'Forbidden: Admin access required', status: 403 };
+    if (decoded.role !== 'senior_admin') {
+      return { error: 'Forbidden: Senior admin access required', status: 403 };
     }
     return { decoded };
   } catch (err) {
@@ -119,6 +119,7 @@ export default async function handler(req, res) {
           u.username,
           u.full_name,
           u.user_role,
+          COALESCE(gp.level, 1) AS cyclist_level,
           u.phone,
           u.experience,
           u.preferred_area,
@@ -129,9 +130,10 @@ export default async function handler(req, res) {
           COUNT(DISTINCT ch.id) AS ride_count,
           COALESCE(SUM(ch.distance_km), 0) AS total_distance
          FROM users u
-         LEFT JOIN cycling_history ch ON u.id = ch.user_id
-         ${whereClause}
-         GROUP BY u.id
+         LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+          LEFT JOIN cycling_history ch ON u.id = ch.user_id
+          ${whereClause}
+         GROUP BY u.id, gp.level
          ORDER BY u.created_at DESC
          LIMIT $1 OFFSET $2`,
         params
@@ -216,7 +218,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'set_role') {
-        const validRoles = ['junior', 'senior', 'admin'];
+        const validRoles = ['junior', 'senior', 'vip', 'admin', 'senior_admin'];
         if (!validRoles.includes(new_role)) {
           return res.status(400).json({ message: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
         }
@@ -341,7 +343,7 @@ export default async function handler(req, res) {
         if (password.length < 12) {
           return res.status(400).json({ message: 'Admin password must be at least 12 characters' });
         }
-        const validRoles = ['admin', 'senior'];
+        const validRoles = ['admin', 'senior_admin', 'senior', 'vip'];
         if (!validRoles.includes(role)) {
           return res.status(400).json({ message: 'Invalid role' });
         }
@@ -379,7 +381,7 @@ export default async function handler(req, res) {
         );
 
         return res.status(201).json({
-          message: `${role === 'admin' ? '管理員' : '高級會員'}帳戶建立成功`,
+          message: `${role === 'senior_admin' ? '高級管理員' : role === 'admin' ? '管理員' : role === 'vip' ? 'VIP 會員' : '高級會員'}帳戶建立成功`,
           email,
           role
         });

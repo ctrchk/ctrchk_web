@@ -22,6 +22,34 @@ async function ensureUsersUsernameColumn() {
   await _ensureUsersUsernameColumnPromise;
 }
 
+function getCyclistTierByLevel(level) {
+  const lv = Number(level || 1);
+  if (lv >= 76) return '頂尖車手';
+  if (lv >= 51) return '精英車手';
+  if (lv >= 31) return '資深車手';
+  if (lv >= 16) return '進階車手';
+  if (lv >= 6) return '初階車手';
+  return '入門車手';
+}
+
+function getMileageCardByDistance(totalDistanceKm) {
+  const km = Number(totalDistanceKm || 0);
+  if (km >= 1000) return '金卡';
+  if (km >= 300) return '銀卡';
+  return '銅卡';
+}
+
+function getMembershipLabel(role) {
+  const map = {
+    junior: '普通會員',
+    senior: '高級會員',
+    vip: 'VIP 會員',
+    admin: '管理員',
+    senior_admin: '高級管理員',
+  };
+  return map[role] || role || '普通會員';
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -46,7 +74,8 @@ export default async function handler(req, res) {
       let result;
       const SELECT = `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.phone, u.profile_completed,
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
-                             gp.level, gp.xp, gp.coins
+                             gp.level, gp.xp, gp.coins,
+                             COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km
                         FROM users u
                         LEFT JOIN user_game_profile gp ON gp.user_id = u.id`;
 
@@ -68,6 +97,10 @@ export default async function handler(req, res) {
         user.xp = 0;
         user.coins = 0;
       }
+      user.total_distance_km = Number(user.total_distance_km || 0);
+      user.cyclist_tier = getCyclistTierByLevel(user.level);
+      user.mileage_card = getMileageCardByDistance(user.total_distance_km);
+      user.membership_status = getMembershipLabel(user.user_role);
 
       // Fetch coin-purchased route IDs for the front-end unlock cache
       try {
