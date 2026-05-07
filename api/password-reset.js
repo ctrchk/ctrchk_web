@@ -45,8 +45,8 @@ export default async function handler(req, res) {
 
       await query(
         `UPDATE users
-            SET email_verified = true, verification_token = NULL, verification_token_expiry = NULL
-          WHERE id = $1`,
+           SET email_verified = true, verification_token = NULL, verification_token_expiry = NULL
+         WHERE id = $1`,
         [user.id]
       );
       sendWelcomeEmail(user.email, user.full_name).catch(err => {
