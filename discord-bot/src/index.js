@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   Client,
   GatewayIntentBits,
@@ -21,17 +22,17 @@ const cfg = {
   port: Number(process.env.PORT || 8787),
   roleIds: {
     cyclist: {
-      入門車手: process.env.ROLE_CYCLIST_BEGINNER_ID,
-      初階車手: process.env.ROLE_CYCLIST_NOVICE_ID,
-      進階車手: process.env.ROLE_CYCLIST_ADVANCED_ID,
-      資深車手: process.env.ROLE_CYCLIST_VETERAN_ID,
-      精英車手: process.env.ROLE_CYCLIST_ELITE_ID,
-      頂尖車手: process.env.ROLE_CYCLIST_TOP_ID,
+      beginner: process.env.ROLE_CYCLIST_BEGINNER_ID,
+      novice: process.env.ROLE_CYCLIST_NOVICE_ID,
+      advanced: process.env.ROLE_CYCLIST_ADVANCED_ID,
+      veteran: process.env.ROLE_CYCLIST_VETERAN_ID,
+      elite: process.env.ROLE_CYCLIST_ELITE_ID,
+      top: process.env.ROLE_CYCLIST_TOP_ID,
     },
     mileage: {
-      銅卡: process.env.ROLE_MILEAGE_BRONZE_ID,
-      銀卡: process.env.ROLE_MILEAGE_SILVER_ID,
-      金卡: process.env.ROLE_MILEAGE_GOLD_ID,
+      bronze: process.env.ROLE_MILEAGE_BRONZE_ID,
+      silver: process.env.ROLE_MILEAGE_SILVER_ID,
+      gold: process.env.ROLE_MILEAGE_GOLD_ID,
     },
     membership: {
       junior: process.env.ROLE_MEMBERSHIP_JUNIOR_ID,
@@ -80,11 +81,24 @@ function pickManagedRoleIds() {
   return new Set(ids);
 }
 
+function cyclistTierKey(tierLabel) {
+  const map = {
+    入門車手: 'beginner',
+    初階車手: 'novice',
+    進階車手: 'advanced',
+    資深車手: 'veteran',
+    精英車手: 'elite',
+    頂尖車手: 'top',
+  };
+  return map[tierLabel] || 'beginner';
+}
+
 function pickTargetRoleIds(profile) {
   const ids = [];
-  const cyclist = cfg.roleIds.cyclist[profile.cyclist_tier];
+  const cyclist = cfg.roleIds.cyclist[cyclistTierKey(profile.cyclist_tier)];
   if (cyclist) ids.push(cyclist);
-  const mileage = cfg.roleIds.mileage[profile.mileage_card];
+  const mileageKey = profile.mileage_card === '金卡' ? 'gold' : profile.mileage_card === '銀卡' ? 'silver' : 'bronze';
+  const mileage = cfg.roleIds.mileage[mileageKey];
   if (mileage) ids.push(mileage);
   const membership = cfg.roleIds.membership[profile.user_role];
   if (membership) ids.push(membership);
@@ -96,8 +110,8 @@ async function syncMemberRoles(member, profile) {
   const target = new Set(pickTargetRoleIds(profile));
   const toRemove = [...member.roles.cache.keys()].filter((id) => managed.has(id) && !target.has(id));
   const toAdd = [...target].filter((id) => !member.roles.cache.has(id));
-  if (toRemove.length) await member.roles.remove(toRemove, 'CTRCHK 自動同步身份組');
-  if (toAdd.length) await member.roles.add(toAdd, 'CTRCHK 自動同步身份組');
+  if (toRemove.length) await member.roles.remove(toRemove, 'CTRCHK automatic role sync');
+  if (toAdd.length) await member.roles.add(toAdd, 'CTRCHK automatic role sync');
 }
 
 async function syncByDiscordId({ userId, discordId }) {
@@ -161,13 +175,19 @@ client.on('interactionCreate', async (interaction) => {
 
 const app = express();
 app.use(express.json());
+const limiter = rateLimit({
+  windowMs: Number(process.env.RELAY_RATE_WINDOW_MS || 60_000),
+  max: Number(process.env.RELAY_RATE_LIMIT_MAX || 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.get('/healthz', (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
 // Admin Relay: 後台可調用此 API，讓 Bot 以官方身份發話
-app.post('/api/admin-relay', async (req, res) => {
+app.post('/api/admin-relay', limiter, async (req, res) => {
   if (!cfg.adminRelayToken || authToken(req) !== cfg.adminRelayToken) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
@@ -196,7 +216,7 @@ app.post('/api/admin-relay', async (req, res) => {
 });
 
 // 網站連結 Discord 後可呼叫此 API 同步角色
-app.post('/api/sync-user', async (req, res) => {
+app.post('/api/sync-user', limiter, async (req, res) => {
   if (!cfg.botSyncToken || authToken(req) !== cfg.botSyncToken) {
     return res.status(401).json({ message: 'Unauthorized' });
   }

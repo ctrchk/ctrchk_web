@@ -29,7 +29,7 @@ function getMembershipLabel(role) {
 }
 
 function requireBotToken(req, res) {
-  const expected = process.env.CTRCHK_API_BOT_TOKEN || process.env.DISCORD_BOT_SYNC_TOKEN;
+  const expected = process.env.CTRCHK_API_BOT_TOKEN;
   if (!expected) {
     res.status(503).json({ message: 'CTRCHK_API_BOT_TOKEN is not configured' });
     return false;

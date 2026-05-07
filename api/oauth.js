@@ -290,7 +290,7 @@ async function fetchGuildMemberRoles(accessToken, guildId) {
 function mapRolesToCtrchkRole(discordRoles, currentRole) {
   if (!Array.isArray(discordRoles)) return currentRole; // 不在伺服器，維持現有等級
 
-  const roleRank = { junior: 1, senior: 2, admin: 3, senior_admin: 4, vip: 5 };
+  const roleRank = { junior: 1, senior: 2, vip: 3, admin: 4, senior_admin: 5 };
   const keepHigher = (candidate) => {
     const current = roleRank[currentRole] || 1;
     const next = roleRank[candidate] || 1;
@@ -320,16 +320,6 @@ async function grantDiscordConnectRewardIfEligible(userId) {
   if (Date.now() > Date.parse(DISCORD_CONNECT_REWARD_END_UTC)) {
     return { rewarded: false, coins: 0 };
   }
-
-  await query(
-    `CREATE TABLE IF NOT EXISTS user_reward_log (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      reward_key VARCHAR(100) NOT NULL,
-      granted_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE (user_id, reward_key)
-    )`
-  );
 
   const { rowCount } = await query(
     `INSERT INTO user_reward_log (user_id, reward_key)
