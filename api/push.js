@@ -8,7 +8,7 @@
 //   POST /api/push  { action:'send', ...}  → admin: send custom notification
 //   GET  /api/push?action=cron-remind      → cron: daily check-in reminder
 //
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import webpush from 'web-push';
 

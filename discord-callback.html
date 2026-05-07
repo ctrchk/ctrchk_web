@@ -136,7 +136,7 @@
                 : '你目前未加入 CTRC Discord 伺服器，等級維持不變。加入後可重新連結以同步身份組。';
 
             var rewardMsg = data.reward_granted
-                ? '<div class="cb-msg" style="color:#2e7d32;font-weight:bold;">🎁 限時活動獎勵已發放：+' + Number(data.reward_coins || 0) + ' 里程幣</div>'
+                ? '<div class="cb-msg" style="color:#2e7d32;font-weight:bold;">🎁 限時活動獎勵已發放：+' + escHtml(String(Number(data.reward_coins || 0))) + ' 里程幣</div>'
                 : '';
 
             container.innerHTML =

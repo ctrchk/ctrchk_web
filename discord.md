@@ -149,7 +149,7 @@ npm run start
 
 ### 5.1 CTRCHK 提供給 Bot：讀取用戶資料
 
-- `GET /api/discord-profile?discord_id=<id>`（或 `user_id`）
+- `GET /api/oauth?action=discord-profile&discord_id=<id>`（或 `user_id`）
 - Header：`Authorization: Bearer <CTRCHK_API_BOT_TOKEN>`
 - 回傳：會員身份、車手等級、里程卡、里程幣、Discord ID 等
 
@@ -189,4 +189,3 @@ npm run start
 - 網站連結 Discord 後會自動同步三軌身份組
 - 後台可指定頻道發純文字/Embed
 - 5/31 前首次連結成功可收到 100 里程幣
-

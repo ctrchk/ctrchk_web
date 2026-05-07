@@ -5,12 +5,64 @@
 //   { email }                 → 忘記密碼：生成 token 並寄送重設郵件
 //   { token, password }       → 重設密碼：驗證 token 並更新新密碼
 //
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { sendPasswordResetEmail } from './_email.js';
+import { sendPasswordResetEmail, sendWelcomeEmail } from '../lib/email.js';
 
 export default async function handler(req, res) {
+  const action = req.query.action;
+
+  // ── 電郵驗證（由 /api/verify-email rewrite 到本端點）─────────────────────
+  if (action === 'verify-email') {
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      return res.status(405).json({ message: 'Method Not Allowed' });
+    }
+    try {
+      const token = req.query.token || req.body?.token;
+      if (!token) return res.status(400).json({ message: '缺少驗證 token' });
+
+      const { rows } = await query(
+        `SELECT id, email, full_name, email_verified, verification_token_expiry
+         FROM users
+         WHERE verification_token = $1`,
+        [token]
+      );
+      if (rows.length === 0) {
+        return res.status(400).json({ message: '無效的驗證連結，token 不存在或已使用。' });
+      }
+
+      const user = rows[0];
+      if (user.email_verified) {
+        return res.status(200).json({ message: '您的電郵已成功驗證，無需重複驗證。' });
+      }
+      if (user.verification_token_expiry && new Date() > new Date(user.verification_token_expiry)) {
+        return res.status(400).json({
+          message: '驗證連結已過期（超過 24 小時）。請重新申請驗證郵件。',
+          expired: true
+        });
+      }
+
+      await query(
+        `UPDATE users
+            SET email_verified = true, verification_token = NULL, verification_token_expiry = NULL
+          WHERE id = $1`,
+        [user.id]
+      );
+      sendWelcomeEmail(user.email, user.full_name).catch(err => {
+        console.error('發送歡迎郵件失敗:', err);
+      });
+
+      return res.status(200).json({
+        message: '電郵驗證成功！歡迎加入城市運輸單車。',
+        email: user.email
+      });
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }

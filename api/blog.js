@@ -1,5 +1,5 @@
 // /api/blog.js
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 
 function requireAdmin(req, res) {

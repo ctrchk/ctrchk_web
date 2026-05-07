@@ -6,7 +6,7 @@
 //   GET  /api/user?email=X     → get user by email
 //   POST /api/user             → update profile (replaces update-profile.js)
 //
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 
 let _ensureUsersUsernameColumnPromise = null;
 async function ensureUsersUsernameColumn() {

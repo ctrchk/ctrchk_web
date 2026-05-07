@@ -61,7 +61,8 @@ function authToken(req) {
 }
 
 async function fetchCtrchkProfile({ userId, discordId }) {
-  const url = new URL('/api/discord-profile', cfg.apiBaseUrl);
+  const url = new URL('/api/oauth', cfg.apiBaseUrl);
+  url.searchParams.set('action', 'discord-profile');
   if (userId) url.searchParams.set('user_id', String(userId));
   if (discordId) url.searchParams.set('discord_id', String(discordId));
 

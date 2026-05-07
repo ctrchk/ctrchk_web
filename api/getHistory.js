@@ -1,5 +1,5 @@
 // /api/getHistory.js
-import { query } from './_db.js';
+import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
