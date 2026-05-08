@@ -70,6 +70,40 @@ if (!cfg.token || !cfg.clientId || !cfg.guildId) {
   throw new Error('Missing required env: DISCORD_BOT_TOKEN / DISCORD_CLIENT_ID / DISCORD_GUILD_ID');
 }
 
+const runtime = {
+  startedAt: new Date().toISOString(),
+  discordReady: false,
+  readyAt: null,
+  lastDiscordError: null,
+};
+
+function setDiscordError(error) {
+  runtime.lastDiscordError = {
+    at: new Date().toISOString(),
+    message: error?.message || String(error),
+  };
+}
+
+function logStartupChecklist() {
+  console.log('[CTRCHK Bot] Startup checklist');
+  console.log(`[CTRCHK Bot] DISCORD_CLIENT_ID set: ${Boolean(cfg.clientId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_GUILD_ID set: ${Boolean(cfg.guildId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_WELCOME_CHANNEL_ID set: ${Boolean(cfg.welcomeChannelId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_ADMIN_RELAY_TOKEN set: ${Boolean(cfg.adminRelayToken)}`);
+  console.log(`[CTRCHK Bot] DISCORD_BOT_SYNC_TOKEN set: ${Boolean(cfg.botSyncToken)}`);
+  console.log(`[CTRCHK Bot] CTRCHK_API_BASE_URL set: ${Boolean(cfg.apiBaseUrl)}`);
+  console.log(`[CTRCHK Bot] CTRCHK_API_BOT_TOKEN set: ${Boolean(cfg.apiBotToken)}`);
+  if (!cfg.botSyncToken) {
+    console.warn('[CTRCHK Bot] WARNING: DISCORD_BOT_SYNC_TOKEN is empty; /api/sync-user will always reject');
+  }
+  if (!cfg.adminRelayToken) {
+    console.warn('[CTRCHK Bot] WARNING: DISCORD_ADMIN_RELAY_TOKEN is empty; /api/admin-relay will always reject');
+  }
+  if (!cfg.apiBaseUrl || !cfg.apiBotToken) {
+    console.warn('[CTRCHK Bot] WARNING: CTRCHK_API_BASE_URL / CTRCHK_API_BOT_TOKEN missing; /status and role sync may fail');
+  }
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -241,8 +275,30 @@ async function registerStatusCommands() {
 }
 
 client.once('ready', async () => {
+  runtime.discordReady = true;
+  runtime.readyAt = new Date().toISOString();
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
   await registerStatusCommands();
+});
+
+client.on('error', (error) => {
+  setDiscordError(error);
+  console.error('[CTRCHK Bot] Client error:', error.message);
+});
+
+client.on('shardError', (error) => {
+  setDiscordError(error);
+  console.error('[CTRCHK Bot] Shard error:', error.message);
+});
+
+client.on('shardDisconnect', (event, id) => {
+  runtime.discordReady = false;
+  console.warn(`[CTRCHK Bot] Shard ${id} disconnected with code ${event.code}`);
+});
+
+client.on('shardResume', (id, replayedEvents) => {
+  runtime.discordReady = true;
+  console.log(`[CTRCHK Bot] Shard ${id} resumed (${replayedEvents} replayed events)`);
 });
 
 client.on('guildMemberAdd', async (member) => {
@@ -284,7 +340,30 @@ const limiter = rateLimit({
 });
 
 app.get('/healthz', (_req, res) => {
-  res.status(200).json({ ok: true });
+  res.status(200).json({
+    ok: true,
+    uptimeSec: Math.floor(process.uptime()),
+    runtime,
+    discord: {
+      loggedInUser: client.user?.tag || null,
+      guildId: cfg.guildId,
+      welcomeChannelConfigured: Boolean(cfg.welcomeChannelId),
+    },
+  });
+});
+
+app.get('/readyz', (_req, res) => {
+  if (!runtime.discordReady) {
+    return res.status(503).json({
+      ok: false,
+      message: 'Discord client is not ready',
+      runtime,
+    });
+  }
+  return res.status(200).json({
+    ok: true,
+    runtime,
+  });
 });
 
 // Admin Relay: 後台可調用此 API，讓 Bot 以官方身份發話
@@ -336,4 +415,12 @@ app.listen(cfg.port, () => {
   console.log(`[CTRCHK Bot API] listening on :${cfg.port}`);
 });
 
-await client.login(cfg.token);
+logStartupChecklist();
+
+try {
+  await client.login(cfg.token);
+} catch (error) {
+  setDiscordError(error);
+  console.error('[CTRCHK Bot] Login failed. Check DISCORD_BOT_TOKEN / DISCORD_CLIENT_ID / DISCORD_GUILD_ID and Discord permissions.');
+  throw error;
+}
