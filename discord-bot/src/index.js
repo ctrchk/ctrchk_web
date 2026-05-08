@@ -8,6 +8,11 @@ import {
   Routes,
   EmbedBuilder,
   SlashCommandBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  PermissionFlagsBits,
 } from 'discord.js';
 
 const cfg = {
@@ -15,11 +20,19 @@ const cfg = {
   clientId: process.env.DISCORD_CLIENT_ID,
   guildId: process.env.DISCORD_GUILD_ID,
   welcomeChannelId: process.env.DISCORD_WELCOME_CHANNEL_ID,
+  defaultMemberRoleId: process.env.DISCORD_DEFAULT_MEMBER_ROLE_ID,
+  defaultMemberRoleName: process.env.DISCORD_DEFAULT_MEMBER_ROLE_NAME || '訪客',
   adminRelayToken: process.env.DISCORD_ADMIN_RELAY_TOKEN,
   botSyncToken: process.env.DISCORD_BOT_SYNC_TOKEN,
   apiBaseUrl: process.env.CTRCHK_API_BASE_URL,
   apiBotToken: process.env.CTRCHK_API_BOT_TOKEN,
   port: Number(process.env.PORT || 8787),
+  ticket: {
+    channelId: process.env.DISCORD_TICKET_CHANNEL_ID,
+    categoryId: process.env.DISCORD_TICKET_CATEGORY_ID,
+    adminRoleId: process.env.DISCORD_TICKET_ADMIN_ROLE_ID,
+    adminRoleName: process.env.DISCORD_TICKET_ADMIN_ROLE_NAME || 'CTRC 會員｜高級管理員',
+  },
   roleIds: {
     cyclist: {
       beginner: process.env.ROLE_CYCLIST_BEGINNER_ID,
@@ -120,6 +133,12 @@ function logStartupChecklist() {
   console.log(`[CTRCHK Bot] DISCORD_CLIENT_ID set: ${Boolean(cfg.clientId)}`);
   console.log(`[CTRCHK Bot] DISCORD_GUILD_ID set: ${Boolean(cfg.guildId)}`);
   console.log(`[CTRCHK Bot] DISCORD_WELCOME_CHANNEL_ID set: ${Boolean(cfg.welcomeChannelId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_DEFAULT_MEMBER_ROLE_ID set: ${Boolean(cfg.defaultMemberRoleId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_DEFAULT_MEMBER_ROLE_NAME set: ${Boolean(cfg.defaultMemberRoleName)}`);
+  console.log(`[CTRCHK Bot] DISCORD_TICKET_CHANNEL_ID set: ${Boolean(cfg.ticket.channelId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_TICKET_CATEGORY_ID set: ${Boolean(cfg.ticket.categoryId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_TICKET_ADMIN_ROLE_ID set: ${Boolean(cfg.ticket.adminRoleId)}`);
+  console.log(`[CTRCHK Bot] DISCORD_TICKET_ADMIN_ROLE_NAME set: ${Boolean(cfg.ticket.adminRoleName)}`);
   console.log(`[CTRCHK Bot] DISCORD_ADMIN_RELAY_TOKEN set: ${Boolean(cfg.adminRelayToken)}`);
   console.log(`[CTRCHK Bot] DISCORD_BOT_SYNC_TOKEN set: ${Boolean(cfg.botSyncToken)}`);
   console.log(`[CTRCHK Bot] CTRCHK_API_BASE_URL (cfg.apiBaseUrl) set: ${Boolean(cfg.apiBaseUrl)}`);
@@ -236,6 +255,14 @@ function resolveRoleId(guild, group, key, roleNameIndex) {
   return null;
 }
 
+function resolveRoleIdByIdOrName(guild, roleId, roleName, roleNameIndex) {
+  if (roleId) return roleId;
+  const target = normalizeRoleName(roleName);
+  if (!target) return null;
+  if (roleNameIndex?.has(target)) return roleNameIndex.get(target);
+  return guild.roles.cache.find((role) => normalizeRoleName(role.name) === target)?.id || null;
+}
+
 function pickManagedRoleIds(guild, roleNameIndex) {
   const ids = [];
   for (const group of ['cyclist', 'mileage', 'membership']) {
@@ -256,6 +283,14 @@ function pickTargetRoleIds(profile, guild, roleNameIndex) {
   const membership = resolveRoleId(guild, 'membership', profile.user_role, roleNameIndex);
   if (membership) ids.push(membership);
   return ids;
+}
+
+function resolveDefaultMemberRoleId(guild, roleNameIndex) {
+  return resolveRoleIdByIdOrName(guild, cfg.defaultMemberRoleId, cfg.defaultMemberRoleName, roleNameIndex);
+}
+
+function resolveTicketAdminRoleId(guild, roleNameIndex) {
+  return resolveRoleIdByIdOrName(guild, cfg.ticket.adminRoleId, cfg.ticket.adminRoleName, roleNameIndex);
 }
 
 async function syncMemberRoles(member, guild, profile) {
@@ -288,6 +323,86 @@ const statusCommand = new SlashCommandBuilder()
   .setName('status')
   .setDescription('查看你的 CTRCHK 里程卡、里程幣、車手等級與會員身份');
 
+const TICKET_OPEN_BUTTON_ID = 'ctrchk_ticket_open';
+const TICKET_CLOSE_BUTTON_ID = 'ctrchk_ticket_close';
+const TICKET_OWNER_TOPIC_PREFIX = 'ctrchk-ticket-owner:';
+
+function ticketOwnerTopic(ownerId) {
+  return `${TICKET_OWNER_TOPIC_PREFIX}${ownerId}`;
+}
+
+function parseTicketOwnerId(topic) {
+  const text = String(topic || '');
+  if (!text.startsWith(TICKET_OWNER_TOPIC_PREFIX)) return null;
+  return text.slice(TICKET_OWNER_TOPIC_PREFIX.length) || null;
+}
+
+function buildTicketOpenRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(TICKET_OPEN_BUTTON_ID)
+      .setLabel('開啟客服單')
+      .setStyle(ButtonStyle.Primary),
+  );
+}
+
+function buildTicketCloseRow() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(TICKET_CLOSE_BUTTON_ID)
+      .setLabel('關閉此客服單')
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
+async function findOpenTicketChannel(guild, ownerId) {
+  await guild.channels.fetch();
+  return guild.channels.cache.find((channel) => (
+    channel.type === ChannelType.GuildText
+    && parseTicketOwnerId(channel.topic) === String(ownerId)
+  )) || null;
+}
+
+function ticketChannelNameForUser(user) {
+  const safeName = String(user.username || 'member')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 16) || 'member';
+  return `ticket-${safeName}-${String(user.id).slice(-4)}`;
+}
+
+async function ensureTicketPanelMessage() {
+  if (!cfg.ticket.channelId) return;
+  const channel = await client.channels.fetch(cfg.ticket.channelId);
+  if (!channel || !channel.isTextBased()) {
+    throw new Error('DISCORD_TICKET_CHANNEL_ID is not a valid text channel');
+  }
+  const messages = await channel.messages.fetch({ limit: 50 });
+  const panelExists = [...messages.values()].some((message) => (
+    message.author.id === client.user.id
+    && message.components.some((row) => row.components.some((component) => component.customId === TICKET_OPEN_BUTTON_ID))
+  ));
+  if (panelExists) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(0x3498db)
+    .setTitle('🛟 客服中心')
+    .setDescription('如你有需要協助的問題，請按下方按鈕建立客服單。每位用戶同一時間只能開啟 1 張客服單。');
+
+  await channel.send({
+    embeds: [embed],
+    components: [buildTicketOpenRow()],
+  });
+}
+
+async function memberHasTicketAdminPermission(guild, userId) {
+  const member = await guild.members.fetch(userId);
+  const roleNameIndex = buildGuildRoleNameIndex(guild);
+  const adminRoleId = resolveTicketAdminRoleId(guild, roleNameIndex);
+  return Boolean(adminRoleId && member.roles.cache.has(adminRoleId));
+}
+
 async function registerStatusCommands() {
   const rest = new REST({ version: '10' }).setToken(cfg.token);
   const body = [statusCommand.toJSON()];
@@ -309,6 +424,11 @@ client.once('ready', async () => {
   setReadyState(true);
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
   await registerStatusCommands();
+  try {
+    await ensureTicketPanelMessage();
+  } catch (error) {
+    console.error('[CTRCHK Bot] Failed to ensure ticket panel message:', error.message);
+  }
 });
 
 client.on('error', (error) => {
@@ -337,15 +457,136 @@ client.on('shardReady', (id) => {
 });
 
 client.on('guildMemberAdd', async (member) => {
+  try {
+    const roleNameIndex = buildGuildRoleNameIndex(member.guild);
+    const visitorRoleId = resolveDefaultMemberRoleId(member.guild, roleNameIndex);
+    if (visitorRoleId && !member.roles.cache.has(visitorRoleId)) {
+      await member.roles.add(visitorRoleId, 'Assign default visitor role for new members');
+    } else if (!visitorRoleId) {
+      console.warn('[CTRCHK Bot] Default member role not found; skip assigning visitor role');
+    }
+  } catch (error) {
+    console.error('[CTRCHK Bot] Failed to assign default member role:', error.message);
+  }
+
   if (!cfg.welcomeChannelId) return;
-  const channel = await member.guild.channels.fetch(cfg.welcomeChannelId);
-  if (!channel || !channel.isTextBased()) return;
-  await channel.send({
-    content: `🎉 歡迎 <@${member.id}> 加入 CTRCHK 社群！請先在 CTRCHK 網站連結 Discord，系統會自動同步你的會員身份、車手等級與里程卡。`,
-  });
+  try {
+    const channel = await member.guild.channels.fetch(cfg.welcomeChannelId);
+    if (!channel || !channel.isTextBased()) return;
+    await channel.send({
+      content: `🎉 歡迎 <@${member.id}> 加入 CTRCHK 社群！請先在 CTRCHK 網站連結 Discord，系統會自動同步你的會員身份、車手等級與里程卡。`,
+    });
+  } catch (error) {
+    console.error('[CTRCHK Bot] Failed to send welcome message:', error.message);
+  }
 });
 
 client.on('interactionCreate', async (interaction) => {
+  if (interaction.isButton() && interaction.customId === TICKET_OPEN_BUTTON_ID) {
+    if (!interaction.guild) {
+      await interaction.reply({ content: '此功能只能在伺服器內使用。', ephemeral: true });
+      return;
+    }
+    await interaction.deferReply({ ephemeral: true });
+    try {
+      const roleNameIndex = buildGuildRoleNameIndex(interaction.guild);
+      const adminRoleId = resolveTicketAdminRoleId(interaction.guild, roleNameIndex);
+      if (!adminRoleId) {
+        await interaction.editReply('未找到「高級管理員」身份組，請先完成 Ticket 角色設定。');
+        return;
+      }
+
+      const existing = await findOpenTicketChannel(interaction.guild, interaction.user.id);
+      if (existing) {
+        await interaction.editReply(`你已有未關閉的客服單：<#${existing.id}>`);
+        return;
+      }
+
+      const ticketChannel = await interaction.guild.channels.create({
+        name: ticketChannelNameForUser(interaction.user),
+        type: ChannelType.GuildText,
+        topic: ticketOwnerTopic(interaction.user.id),
+        parent: cfg.ticket.categoryId || undefined,
+        permissionOverwrites: [
+          {
+            id: interaction.guild.roles.everyone.id,
+            deny: [PermissionFlagsBits.ViewChannel],
+          },
+          {
+            id: interaction.user.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.AttachFiles,
+              PermissionFlagsBits.EmbedLinks,
+            ],
+          },
+          {
+            id: adminRoleId,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.ManageMessages,
+            ],
+          },
+          {
+            id: client.user.id,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.ReadMessageHistory,
+              PermissionFlagsBits.ManageChannels,
+              PermissionFlagsBits.ManageMessages,
+            ],
+          },
+        ],
+      });
+
+      await ticketChannel.send({
+        content: `🎫 <@${interaction.user.id}> 你好，這是你的專屬客服單頻道。請描述你的問題，高級管理員會盡快跟進。`,
+        components: [buildTicketCloseRow()],
+      });
+
+      await interaction.editReply(`已為你建立客服單：<#${ticketChannel.id}>`);
+    } catch (error) {
+      await interaction.editReply(`建立客服單失敗：${error.message}`);
+    }
+    return;
+  }
+
+  if (interaction.isButton() && interaction.customId === TICKET_CLOSE_BUTTON_ID) {
+    if (!interaction.guild || interaction.channel?.type !== ChannelType.GuildText) {
+      await interaction.reply({ content: '此功能只能在 Ticket 頻道使用。', ephemeral: true });
+      return;
+    }
+    const ownerId = parseTicketOwnerId(interaction.channel.topic);
+    if (!ownerId) {
+      await interaction.reply({ content: '這不是可關閉的客服單頻道。', ephemeral: true });
+      return;
+    }
+    try {
+      const isOwner = interaction.user.id === ownerId;
+      const isTicketAdmin = await memberHasTicketAdminPermission(interaction.guild, interaction.user.id);
+      if (!isOwner && !isTicketAdmin) {
+        await interaction.reply({ content: '只有該客服單用戶或高級管理員可關閉。', ephemeral: true });
+        return;
+      }
+      await interaction.reply({ content: '客服單將於 3 秒後關閉。', ephemeral: true });
+      setTimeout(async () => {
+        try {
+          await interaction.channel.delete('Ticket closed by owner/admin');
+        } catch (error) {
+          console.error('[CTRCHK Bot] Failed to delete ticket channel:', error.message);
+        }
+      }, 3000);
+    } catch (error) {
+      await interaction.reply({ content: `關閉客服單失敗：${error.message}`, ephemeral: true });
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand() || interaction.commandName !== 'status') return;
   try {
     const profile = await fetchCtrchkProfile({ discordId: interaction.user.id });
@@ -382,6 +623,9 @@ app.get('/healthz', (_req, res) => {
     discord: {
       loggedInUser: client.user?.tag || null,
       welcomeChannelConfigured: Boolean(cfg.welcomeChannelId),
+      defaultMemberRoleConfigured: Boolean(cfg.defaultMemberRoleId || cfg.defaultMemberRoleName),
+      ticketChannelConfigured: Boolean(cfg.ticket.channelId),
+      ticketAdminRoleConfigured: Boolean(cfg.ticket.adminRoleId || cfg.ticket.adminRoleName),
     },
   });
 });
