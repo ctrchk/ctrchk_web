@@ -85,16 +85,33 @@ function setDiscordError(error) {
   };
 }
 
+function setReadyState(isReady) {
+  if (isReady) {
+    runtime.discordReady = true;
+    runtime.readyAt = new Date().toISOString();
+    runtime.lastDiscordError = null;
+    return;
+  }
+  runtime.discordReady = false;
+  runtime.readyAt = null;
+}
+
+function runtimeSnapshot() {
+  return {
+    startedAt: runtime.startedAt,
+    discordReady: runtime.discordReady,
+    readyAt: runtime.readyAt,
+    lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
+  };
+}
+
 function updateShardConnectivity(shardId, isConnected) {
   const key = Number.isInteger(shardId) ? shardId : 0;
   const wasReady = runtime.discordReady;
   shardConnectivity.set(key, isConnected);
-  runtime.discordReady = [...shardConnectivity.values()].every(Boolean);
-  if (runtime.discordReady && !wasReady) {
-    runtime.readyAt = new Date().toISOString();
-    runtime.lastDiscordError = null;
-  } else if (!runtime.discordReady && wasReady) {
-    runtime.readyAt = null;
+  const nowReady = [...shardConnectivity.values()].every(Boolean);
+  if (nowReady !== wasReady) {
+    setReadyState(nowReady);
   }
 }
 
@@ -105,8 +122,8 @@ function logStartupChecklist() {
   console.log(`[CTRCHK Bot] DISCORD_WELCOME_CHANNEL_ID set: ${Boolean(cfg.welcomeChannelId)}`);
   console.log(`[CTRCHK Bot] DISCORD_ADMIN_RELAY_TOKEN set: ${Boolean(cfg.adminRelayToken)}`);
   console.log(`[CTRCHK Bot] DISCORD_BOT_SYNC_TOKEN set: ${Boolean(cfg.botSyncToken)}`);
-  console.log(`[CTRCHK Bot] CTRCHK_API_BASE_URL set: ${Boolean(cfg.apiBaseUrl)}`);
-  console.log(`[CTRCHK Bot] CTRCHK_API_BOT_TOKEN set: ${Boolean(cfg.apiBotToken)}`);
+  console.log(`[CTRCHK Bot] CTRCHK_API_BASE_URL (cfg.apiBaseUrl) set: ${Boolean(cfg.apiBaseUrl)}`);
+  console.log(`[CTRCHK Bot] CTRCHK_API_BOT_TOKEN (cfg.apiBotToken) set: ${Boolean(cfg.apiBotToken)}`);
   if (!cfg.botSyncToken) {
     console.warn('[CTRCHK Bot] WARNING: DISCORD_BOT_SYNC_TOKEN is empty; /api/sync-user will always reject');
   }
@@ -289,9 +306,7 @@ async function registerStatusCommands() {
 }
 
 client.once('ready', async () => {
-  runtime.discordReady = true;
-  runtime.readyAt = new Date().toISOString();
-  runtime.lastDiscordError = null;
+  setReadyState(true);
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
   await registerStatusCommands();
 });
@@ -360,19 +375,12 @@ const limiter = rateLimit({
 });
 
 app.get('/healthz', (_req, res) => {
-  const runtimeSnapshot = {
-    startedAt: runtime.startedAt,
-    discordReady: runtime.discordReady,
-    readyAt: runtime.readyAt,
-    lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
-  };
   res.status(200).json({
     ok: true,
     uptimeSec: Math.floor(process.uptime()),
-    runtime: runtimeSnapshot,
+    runtime: runtimeSnapshot(),
     discord: {
       loggedInUser: client.user?.tag || null,
-      guildId: cfg.guildId,
       welcomeChannelConfigured: Boolean(cfg.welcomeChannelId),
     },
   });
@@ -383,22 +391,12 @@ app.get('/readyz', (_req, res) => {
     return res.status(503).json({
       ok: false,
       message: 'Discord client is not ready',
-      runtime: {
-        startedAt: runtime.startedAt,
-        discordReady: runtime.discordReady,
-        readyAt: runtime.readyAt,
-        lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
-      },
+      runtime: runtimeSnapshot(),
     });
   }
   return res.status(200).json({
     ok: true,
-    runtime: {
-      startedAt: runtime.startedAt,
-      discordReady: runtime.discordReady,
-      readyAt: runtime.readyAt,
-      lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
-    },
+    runtime: runtimeSnapshot(),
   });
 });
 
