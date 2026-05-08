@@ -87,10 +87,14 @@ function setDiscordError(error) {
 
 function updateShardConnectivity(shardId, isConnected) {
   if (!Number.isInteger(shardId)) return;
+  const wasReady = runtime.discordReady;
   shardConnectivity.set(shardId, isConnected);
   runtime.discordReady = [...shardConnectivity.values()].every(Boolean);
-  if (runtime.discordReady && !runtime.readyAt) {
+  if (runtime.discordReady && !wasReady) {
     runtime.readyAt = new Date().toISOString();
+    runtime.lastDiscordError = null;
+  } else if (!runtime.discordReady && wasReady) {
+    runtime.readyAt = null;
   }
 }
 
@@ -285,9 +289,11 @@ async function registerStatusCommands() {
 }
 
 client.once('ready', async () => {
+  // Non-sharded fallback: if no shard events are tracked, use `ready` as readiness source.
   if (shardConnectivity.size === 0) {
     runtime.discordReady = true;
     runtime.readyAt = new Date().toISOString();
+    runtime.lastDiscordError = null;
   }
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
   await registerStatusCommands();
