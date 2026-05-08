@@ -76,12 +76,21 @@ const runtime = {
   readyAt: null,
   lastDiscordError: null,
 };
+const shardConnectivity = new Map();
 
 function setDiscordError(error) {
   runtime.lastDiscordError = {
     at: new Date().toISOString(),
     message: error?.message || String(error),
   };
+}
+
+function updateShardConnectivity(shardId, isConnected) {
+  if (Number.isInteger(shardId)) {
+    shardConnectivity.set(shardId, isConnected);
+  }
+  if (shardConnectivity.size === 0) return;
+  runtime.discordReady = [...shardConnectivity.values()].every(Boolean);
 }
 
 function logStartupChecklist() {
@@ -292,13 +301,18 @@ client.on('shardError', (error) => {
 });
 
 client.on('shardDisconnect', (event, id) => {
-  runtime.discordReady = false;
+  updateShardConnectivity(id, false);
   console.warn(`[CTRCHK Bot] Shard ${id} disconnected with code ${event.code}`);
 });
 
 client.on('shardResume', (id, replayedEvents) => {
-  runtime.discordReady = true;
+  updateShardConnectivity(id, true);
   console.log(`[CTRCHK Bot] Shard ${id} resumed (${replayedEvents} replayed events)`);
+});
+
+client.on('shardReady', (id) => {
+  updateShardConnectivity(id, true);
+  console.log(`[CTRCHK Bot] Shard ${id} ready`);
 });
 
 client.on('guildMemberAdd', async (member) => {
