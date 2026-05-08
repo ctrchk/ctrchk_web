@@ -209,40 +209,62 @@ cp .env.example .env
 以下變數請設在網站部署環境（Production / Preview 視需要）：
 
 - `DISCORD_CLIENT_ID`  
-  - 與 Bot 端同一個 Discord App 的 Application ID。  
-  - 必須與 Bot 端 `DISCORD_CLIENT_ID` 一致。
+  - 填甚麼：Discord Developer Portal → **General Information** → **Application ID**。  
+  - 格式：純數字字串。  
+  - 檢查：必須與 Bot 端 `DISCORD_CLIENT_ID` 一致。
 
 - `DISCORD_CLIENT_SECRET`  
-  - Discord App 的 Client Secret（Developer Portal → OAuth2）。  
-  - 只放在伺服器環境，不可前端暴露。
+  - 填甚麼：Discord Developer Portal → **OAuth2** → **Client Secret**。  
+  - 格式：原始字串（不要加引號）。  
+  - 檢查：只放在伺服器環境，不可前端暴露。
 
 - `DISCORD_GUILD_ID`  
-  - 目標 Discord 伺服器 ID。  
-  - 必須與 Bot 端 `DISCORD_GUILD_ID` 一致。
+  - 填甚麼：目標 Discord 伺服器 ID（右鍵伺服器圖示複製 ID）。  
+  - 格式：純數字字串。  
+  - 檢查：必須與 Bot 端 `DISCORD_GUILD_ID` 一致。
 
 - `DISCORD_SENIOR_ADMIN_ROLE_ID`  
-  - 對應網站 `senior_admin` 的 Discord Role ID（選填）。
+  - 填甚麼：`senior_admin` 對應的 Discord Role ID。  
+  - 格式：純數字字串。  
+  - 是否必填：選填（未填則不做該角色同步）。
 
 - `DISCORD_VIP_ROLE_ID`  
-  - 對應網站 `vip` 的 Discord Role ID（選填）。
+  - 填甚麼：`vip` 對應的 Discord Role ID。  
+  - 格式：純數字字串。  
+  - 是否必填：選填（未填則不做該角色同步）。
 
 - `DISCORD_ADMIN_ROLE_ID`  
-  - 對應網站 `admin` 的 Discord Role ID（選填）。
+  - 填甚麼：`admin` 對應的 Discord Role ID。  
+  - 格式：純數字字串。  
+  - 是否必填：選填（未填則不做該角色同步）。
 
 - `DISCORD_SENIOR_ROLE_ID`  
-  - 對應網站 `senior` 的 Discord Role ID（選填）。
+  - 填甚麼：`senior` 對應的 Discord Role ID。  
+  - 格式：純數字字串。  
+  - 是否必填：選填（未填則不做該角色同步）。
 
 - `DISCORD_BOT_SYNC_ENDPOINT`  
-  - 網站呼叫 Bot 同步 API 的完整 URL。  
-  - 格式：`https://<你的-bot-網域>/api/sync-user`
+  - 填甚麼：網站呼叫 Bot 同步 API 的**完整 URL**。  
+  - 格式：`https://<你的-bot-網域>/api/sync-user`  
+  - 例子：`https://bot.ctrchk.com/api/sync-user`  
+  - 常見錯誤：  
+    - 只填網域（少了 `/api/sync-user`）  
+    - 打成網站網域而不是 Bot 網域  
+    - 用了 `http://` 導致部署環境被擋
 
 - `DISCORD_BOT_SYNC_TOKEN`  
-  - 網站呼叫 Bot 同步 API 的 Bearer Token。  
-  - 必須與 Bot 端 `DISCORD_BOT_SYNC_TOKEN` 完全一致。
+  - 填甚麼：網站呼叫 Bot 同步 API 的 Bearer Token。  
+  - 格式：高強度隨機字串。  
+  - 檢查：必須與 Bot 端 `DISCORD_BOT_SYNC_TOKEN` 完全一致。
 
 - `CTRCHK_API_BOT_TOKEN`  
-  - Bot 回查網站資料時使用的授權 Token。  
-  - 必須與 Bot 端 `CTRCHK_API_BOT_TOKEN` 完全一致。
+  - 填甚麼：Bot 回查網站資料時使用的授權 Token。  
+  - 格式：高強度隨機字串。  
+  - 檢查：必須與 Bot 端 `CTRCHK_API_BOT_TOKEN` 完全一致。
+
+> 4.4 是否要填金／銀／銅卡、各級車手 Role？  
+> 不需要在 **網站 4.4** 填。網站端這裡只處理會員身份角色（junior/senior/vip/admin/senior_admin）。  
+> 金銀銅卡與各級車手 Role ID 請在 **4.3 B（Bot 環境變數）** 填寫。
 
 ## 4.5 啟動 Bot
 
@@ -253,6 +275,18 @@ npm run start
 ```
 
 建議使用 PM2 / Cloud Run 等長駐方式，避免中斷。
+
+> 只用 iPad 可否完成 4.5？  
+> 可以「有條件」完成：你需要可在 iPad 使用的遠端終端環境（例如 SSH 到 Linux 主機、Codespaces、雲端 Shell）。  
+> 若只在 iPad 本機、沒有可執行 Node.js 的終端環境，通常無法直接完成 4.5。
+
+## 4.6 Bot 操作方式（啟動後怎樣用）
+
+1. **先確認 Bot 在線**：Discord 成員列表看到 Bot 為在線狀態。  
+2. **測試 Slash 指令**：在伺服器任一可用頻道輸入 `/status`。  
+3. **驗證網站→Bot 同步**：用測試帳號在網站連結 Discord，確認身份組有更新。  
+4. **驗證後台代發（Admin Relay）**：在後台發一則測試公告到指定頻道。  
+5. **看 log 排錯**：若失敗，先檢查 Bot 啟動 log（Token、Guild ID、Role 權限、API token 是否一致）。
 
 ---
 
