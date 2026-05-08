@@ -97,7 +97,8 @@ async function fetchCtrchkProfile({ userId, discordId }) {
 
 /**
  * Normalize role names for matching.
- * Removes all whitespace and lowercases all characters.
+ * Removes all whitespace and lowercases all characters so role matching
+ * is stable against spacing/case variations in Discord role names.
  */
 function normalizeRoleName(text) {
   return String(text || '').replace(/\s+/g, '').toLowerCase();
@@ -134,9 +135,12 @@ function cyclistTierKey(tierLabel, level) {
  * Prefer explicit card label from API; fallback to total distance thresholds.
  */
 function mileageCardKey(cardLabel, totalDistanceKm) {
-  if (cardLabel === '金卡') return 'gold';
-  if (cardLabel === '銀卡') return 'silver';
-  if (cardLabel === '銅卡') return 'bronze';
+  const MILEAGE_GOLD = '金卡';
+  const MILEAGE_SILVER = '銀卡';
+  const MILEAGE_BRONZE = '銅卡';
+  if (cardLabel === MILEAGE_GOLD) return 'gold';
+  if (cardLabel === MILEAGE_SILVER) return 'silver';
+  if (cardLabel === MILEAGE_BRONZE) return 'bronze';
   const km = Number(totalDistanceKm || 0);
   if (Number.isFinite(km)) {
     if (km >= 1000) return 'gold';
@@ -164,8 +168,7 @@ function resolveRoleId(guild, group, key, roleNameIndex) {
   if (!roleName) return null;
   const target = normalizeRoleName(roleName);
   if (roleNameIndex?.has(target)) return roleNameIndex.get(target);
-  const role = guild.roles.cache.find((r) => normalizeRoleName(r.name) === target);
-  return role?.id || null;
+  return null;
 }
 
 function pickManagedRoleIds(guild, roleNameIndex) {

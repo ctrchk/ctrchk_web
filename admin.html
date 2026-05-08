@@ -1118,7 +1118,7 @@
                 const data = await resp.json();
                 if (resp.ok && data.ok === true) {
                     resultEl.style.color = 'green';
-                    resultEl.textContent = `✅ 已發送到 Discord（messageId: ${data.messageId || 'N/A'}）`;
+                    resultEl.textContent = `✅ 已發送到 Discord（messageId: ${data.messageId || '未返回'}）`;
                 } else {
                     resultEl.style.color = 'red';
                     resultEl.textContent = '❌ ' + (data.message || '發送失敗');

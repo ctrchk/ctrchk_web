@@ -74,12 +74,17 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ channelId, content, embed }),
     });
+    let parseFailed = false;
     const data = await resp.json().catch((e) => {
+      parseFailed = true;
       console.warn('[admin-relay] Failed to parse relay response JSON:', e.message);
       return {};
     });
+    if (parseFailed && resp.ok) {
+      return res.status(502).json({ message: 'Relay returned invalid JSON response' });
+    }
     if (!resp.ok) {
-      return res.status(resp.status).json({ message: data.message || 'Relay failed' });
+      return res.status(resp.status).json({ message: data.message || resp.statusText || 'Relay failed' });
     }
     return res.status(200).json({ ok: true, ...data });
   } catch (error) {

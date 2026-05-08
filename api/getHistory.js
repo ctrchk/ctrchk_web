@@ -129,7 +129,7 @@ async function triggerDiscordBotSyncForUser(userId) {
   const endpoint = process.env.DISCORD_BOT_SYNC_ENDPOINT;
   const token = process.env.DISCORD_BOT_SYNC_TOKEN;
   if (!endpoint || !token) {
-    console.debug('[getHistory] Discord sync skipped: missing endpoint or token');
+    console.info('[getHistory] Discord sync skipped: missing endpoint or token');
     return;
   }
   try {
