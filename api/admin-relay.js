@@ -80,8 +80,12 @@ export default async function handler(req, res) {
       console.warn('[admin-relay] Failed to parse relay response JSON:', e.message);
       return {};
     });
-    if (parseFailed && resp.ok) {
-      return res.status(502).json({ message: 'Relay returned invalid JSON response' });
+    if (parseFailed) {
+      return res.status(resp.ok ? 502 : resp.status).json({
+        message: resp.ok
+          ? 'Relay returned invalid JSON response'
+          : `Relay failed with non-JSON response (${resp.status})`,
+      });
     }
     if (!resp.ok) {
       return res.status(resp.status).json({ message: data.message || resp.statusText || 'Relay failed' });

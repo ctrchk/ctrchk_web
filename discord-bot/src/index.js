@@ -119,7 +119,7 @@ function cyclistTierKey(tierLabel, level) {
   };
   const direct = map[tierLabel];
   if (direct) return direct;
-  const lv = Number(level || 1);
+  const lv = Number(level ?? 1);
   if (Number.isFinite(lv)) {
     if (lv >= 76) return 'top';
     if (lv >= 51) return 'elite';

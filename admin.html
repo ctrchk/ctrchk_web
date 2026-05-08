@@ -1116,7 +1116,7 @@
                 });
                 if (handleTokenError(resp)) return;
                 const data = await resp.json();
-                if (resp.ok && data.ok === true) {
+                if (resp.ok) {
                     resultEl.style.color = 'green';
                     resultEl.textContent = `✅ 已發送到 Discord（messageId: ${data.messageId || '未返回'}）`;
                 } else {
