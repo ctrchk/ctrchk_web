@@ -1170,7 +1170,8 @@
 
         async function confirmEditDiscordMessage(i) {
             const m = discordMessagesList[i];
-            const newContent = document.getElementById(`discord-msg-edit-input-${i}`).value.trim();
+            const rawContent = document.getElementById(`discord-msg-edit-input-${i}`).value;
+            const newContent = rawContent.trim();
             const resultEl = document.getElementById(`discord-msg-edit-result-${i}`);
             if (!newContent) { resultEl.style.color = 'red'; resultEl.textContent = '❌ 內容不能為空'; return; }
             const token = localStorage.getItem('accessToken') || '';

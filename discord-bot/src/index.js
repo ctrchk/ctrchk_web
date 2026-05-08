@@ -400,6 +400,11 @@ app.get('/readyz', (_req, res) => {
   });
 });
 
+const FETCH_LIMIT_DEFAULT = 20;
+const FETCH_LIMIT_MIN = 1;
+const FETCH_LIMIT_MAX = 50;
+
+/** Map common Discord API error codes to actionable Chinese messages. */
 function discordErrorMessage(error) {
   if (error?.code === 50013) {
     return 'Bot 缺少頻道權限，請確認 Bot 角色在該頻道擁有「View Channel」及「Send Messages」權限（如為公告頻道還需「Send Messages in Threads」）';
@@ -440,7 +445,7 @@ app.post('/api/admin-relay', limiter, async (req, res) => {
       if (!channel || !channel.isTextBased()) {
         return res.status(400).json({ message: 'Invalid text channel' });
       }
-      const fetchLimit = Math.min(Math.max(Number(limit) || 20, 1), 50);
+      const fetchLimit = Math.min(Math.max(Number(limit) || FETCH_LIMIT_DEFAULT, FETCH_LIMIT_MIN), FETCH_LIMIT_MAX);
       const fetched = await channel.messages.fetch({ limit: fetchLimit });
       const messages = [...fetched.values()].map((m) => ({
         messageId: m.id,
