@@ -119,47 +119,130 @@ CTRCHK 的 Discord 整合包含兩個系統：
 
 ## 4.3 設定 Bot 環境變數（`discord-bot/.env`）
 
-### 必填（核心連線）
+先複製範本：
 
-- `DISCORD_BOT_TOKEN`
-- `DISCORD_CLIENT_ID`
-- `DISCORD_GUILD_ID`
-- `DISCORD_WELCOME_CHANNEL_ID`
-- `DISCORD_ADMIN_RELAY_TOKEN`
-- `DISCORD_BOT_SYNC_TOKEN`
-- `CTRCHK_API_BASE_URL`
-- `CTRCHK_API_BOT_TOKEN`
+```bash
+cd discord-bot
+cp .env.example .env
+```
 
-### 建議全部填寫（身份組映射）
+然後逐項填寫：
 
-- `ROLE_CYCLIST_BEGINNER_ID`
-- `ROLE_CYCLIST_NOVICE_ID`
-- `ROLE_CYCLIST_ADVANCED_ID`
-- `ROLE_CYCLIST_VETERAN_ID`
-- `ROLE_CYCLIST_ELITE_ID`
-- `ROLE_CYCLIST_TOP_ID`
-- `ROLE_MILEAGE_BRONZE_ID`
-- `ROLE_MILEAGE_SILVER_ID`
-- `ROLE_MILEAGE_GOLD_ID`
-- `ROLE_MEMBERSHIP_JUNIOR_ID`
-- `ROLE_MEMBERSHIP_SENIOR_ID`
-- `ROLE_MEMBERSHIP_VIP_ID`
-- `ROLE_MEMBERSHIP_ADMIN_ID`
-- `ROLE_MEMBERSHIP_SENIOR_ADMIN_ID`
+### A. Bot 核心連線變數（必填）
 
-> 重要：`DISCORD_BOT_SYNC_TOKEN` 必須與網站端完全一致，否則同步 API 會被拒絕。
+- `DISCORD_BOT_TOKEN`  
+  - 用途：Bot 登入 Discord。  
+  - 去哪裡拿：Discord Developer Portal → 你的 App → Bot → Reset Token / Copy。  
+  - 填寫格式：一整串 Token 字串（不要加引號）。
+
+- `DISCORD_CLIENT_ID`  
+  - 用途：註冊 `/status` 指令與識別應用。  
+  - 去哪裡拿：Discord Developer Portal → General Information → Application ID。  
+  - 填寫格式：純數字字串。
+
+- `DISCORD_GUILD_ID`  
+  - 用途：指定 Bot 操作的伺服器（同步身份組、註冊 guild 指令）。  
+  - 去哪裡拿：Discord 伺服器右鍵 → 複製伺服器 ID。  
+  - 填寫格式：純數字字串。
+
+- `DISCORD_WELCOME_CHANNEL_ID`  
+  - 用途：新成員歡迎訊息發送頻道。  
+  - 去哪裡拿：目標頻道右鍵 → 複製頻道 ID。  
+  - 填寫格式：純數字字串。
+
+- `DISCORD_ADMIN_RELAY_TOKEN`  
+  - 用途：保護 `/api/admin-relay`，後台呼叫時要帶同一個 Bearer Token。  
+  - 設置方式：自行產生高強度隨機字串（建議至少 32 字元）。  
+  - 填寫格式：隨機字串。
+
+- `DISCORD_BOT_SYNC_TOKEN`  
+  - 用途：保護 `/api/sync-user`，網站觸發身份組同步時使用。  
+  - 設置方式：自行產生高強度隨機字串。  
+  - 填寫格式：隨機字串。  
+  - 注意：必須與網站端 `DISCORD_BOT_SYNC_TOKEN` 完全一致。
+
+- `CTRCHK_API_BASE_URL`  
+  - 用途：Bot 回查網站會員資料 API 的根網址。  
+  - 設置方式：填網站正式網域，例如 `https://ctrchk.com`。  
+  - 注意：不要加結尾 `/`。
+
+- `CTRCHK_API_BOT_TOKEN`  
+  - 用途：Bot 呼叫網站 `/api/oauth?action=discord-profile` 時的授權 Token。  
+  - 設置方式：與網站端 `CTRCHK_API_BOT_TOKEN` 保持一致。  
+  - 填寫格式：隨機字串。
+
+### B. Role 映射變數（強烈建議全部填寫）
+
+以下全部都是 Discord 身份組的 **Role ID**（純數字）。  
+取得方式：在 Discord 開發者模式下，右鍵對應身份組 → 複製 ID。
+
+- 車手等級：
+  - `ROLE_CYCLIST_BEGINNER_ID` → 入門車手
+  - `ROLE_CYCLIST_NOVICE_ID` → 初階車手
+  - `ROLE_CYCLIST_ADVANCED_ID` → 進階車手
+  - `ROLE_CYCLIST_VETERAN_ID` → 資深車手
+  - `ROLE_CYCLIST_ELITE_ID` → 精英車手
+  - `ROLE_CYCLIST_TOP_ID` → 頂尖車手
+
+- 里程計劃：
+  - `ROLE_MILEAGE_BRONZE_ID` → 銅卡
+  - `ROLE_MILEAGE_SILVER_ID` → 銀卡
+  - `ROLE_MILEAGE_GOLD_ID` → 金卡
+
+- 會員身份：
+  - `ROLE_MEMBERSHIP_JUNIOR_ID` → 普通會員（junior）
+  - `ROLE_MEMBERSHIP_SENIOR_ID` → 高級會員（senior）
+  - `ROLE_MEMBERSHIP_VIP_ID` → VIP 會員（vip）
+  - `ROLE_MEMBERSHIP_ADMIN_ID` → 管理員（admin）
+  - `ROLE_MEMBERSHIP_SENIOR_ADMIN_ID` → 高級管理員（senior_admin）
+
+> 如有缺漏，Bot 只會同步已配置到的身份組，未配置項目會被跳過。
+
+### C. Bot 運行參數（可選，未填會用預設值）
+
+- `PORT`：Bot API 監聽埠，預設 `8787`。  
+- `RELAY_RATE_WINDOW_MS`：限流時間窗（毫秒），預設 `60000`。  
+- `RELAY_RATE_LIMIT_MAX`：時間窗內最大請求數，預設 `30`。
 
 ## 4.4 設定網站環境變數（Vercel / GCP）
 
-- `DISCORD_CLIENT_ID`
-- `DISCORD_CLIENT_SECRET`
-- `DISCORD_GUILD_ID`
-- `DISCORD_SENIOR_ADMIN_ROLE_ID`
-- `DISCORD_VIP_ROLE_ID`
-- `DISCORD_ADMIN_ROLE_ID`
-- `DISCORD_SENIOR_ROLE_ID`
-- `DISCORD_BOT_SYNC_ENDPOINT`（例：`https://bot.example.com/api/sync-user`）
-- `DISCORD_BOT_SYNC_TOKEN`（必須與 Bot 端一致）
+以下變數請設在網站部署環境（Production / Preview 視需要）：
+
+- `DISCORD_CLIENT_ID`  
+  - 與 Bot 端同一個 Discord App 的 Application ID。  
+  - 必須與 Bot 端 `DISCORD_CLIENT_ID` 一致。
+
+- `DISCORD_CLIENT_SECRET`  
+  - Discord App 的 Client Secret（Developer Portal → OAuth2）。  
+  - 只放在伺服器環境，不可前端暴露。
+
+- `DISCORD_GUILD_ID`  
+  - 目標 Discord 伺服器 ID。  
+  - 必須與 Bot 端 `DISCORD_GUILD_ID` 一致。
+
+- `DISCORD_SENIOR_ADMIN_ROLE_ID`  
+  - 對應網站 `senior_admin` 的 Discord Role ID（選填）。
+
+- `DISCORD_VIP_ROLE_ID`  
+  - 對應網站 `vip` 的 Discord Role ID（選填）。
+
+- `DISCORD_ADMIN_ROLE_ID`  
+  - 對應網站 `admin` 的 Discord Role ID（選填）。
+
+- `DISCORD_SENIOR_ROLE_ID`  
+  - 對應網站 `senior` 的 Discord Role ID（選填）。
+
+- `DISCORD_BOT_SYNC_ENDPOINT`  
+  - 網站呼叫 Bot 同步 API 的完整 URL。  
+  - 格式：`https://<你的-bot-網域>/api/sync-user`
+
+- `DISCORD_BOT_SYNC_TOKEN`  
+  - 網站呼叫 Bot 同步 API 的 Bearer Token。  
+  - 必須與 Bot 端 `DISCORD_BOT_SYNC_TOKEN` 完全一致。
+
+- `CTRCHK_API_BOT_TOKEN`  
+  - Bot 回查網站資料時使用的授權 Token。  
+  - 必須與 Bot 端 `CTRCHK_API_BOT_TOKEN` 完全一致。
 
 ## 4.5 啟動 Bot
 
