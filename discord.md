@@ -395,6 +395,11 @@ npm run start
 4. 如果出現 `Login failed`：
    - 先重設 `DISCORD_BOT_TOKEN` 再貼回 Render。
    - 確認 `DISCORD_CLIENT_ID`、`DISCORD_GUILD_ID` 沒貼錯。
+5. 如果出現 `Shard error: Used disallowed intents` 或 `code 4014`：
+   - 到 Discord Developer Portal → 你的 App → **Bot** → **Privileged Gateway Intents**。
+   - 開啟 **SERVER MEMBERS INTENT**（對應程式使用的 `GuildMembers` intent）。
+   - 按 **Save Changes** 後回 Render 重新部署（Deploy latest commit 或手動重啟）。
+   - 若仍失敗，重新貼上 `DISCORD_BOT_TOKEN` 再部署，並確認你開的是「目前 token 對應的同一個 App」。
 
 ### 第 5 步：部署後先驗 Bot 健康狀態
 
@@ -553,6 +558,20 @@ npm run start
 1. `DISCORD_ADMIN_RELAY_TOKEN` 是否正確  
 2. `channelId` 是否有效且 Bot 對該頻道有發言權限  
 3. 發送內容是否超出 Discord 限制（過長或格式錯誤）
+
+### 問題 E：Render logs 出現 `Used disallowed intents`（`code 4014`）
+
+這代表 Bot 申請了未被允許的 Gateway Intent。  
+本專案會使用 `GuildMembers`，因此必須開啟對應權限。
+
+優先檢查：
+
+1. Discord Developer Portal → App → **Bot** → **Privileged Gateway Intents**：
+   - 開啟 **SERVER MEMBERS INTENT**
+2. 儲存後回 Render 重新部署
+3. 若仍報 4014：
+   - 重新貼上 `DISCORD_BOT_TOKEN` 後再部署
+   - 確認你調整的是與目前 `DISCORD_BOT_TOKEN` 同一個 Discord App
 
 ---
 
