@@ -86,9 +86,9 @@ function setDiscordError(error) {
 }
 
 function updateShardConnectivity(shardId, isConnected) {
-  if (!Number.isInteger(shardId)) return;
+  const key = Number.isInteger(shardId) ? shardId : 0;
   const wasReady = runtime.discordReady;
-  shardConnectivity.set(shardId, isConnected);
+  shardConnectivity.set(key, isConnected);
   runtime.discordReady = [...shardConnectivity.values()].every(Boolean);
   if (runtime.discordReady && !wasReady) {
     runtime.readyAt = new Date().toISOString();
@@ -289,12 +289,9 @@ async function registerStatusCommands() {
 }
 
 client.once('ready', async () => {
-  // Non-sharded fallback: if no shard events are tracked, use `ready` as readiness source.
-  if (shardConnectivity.size === 0) {
-    runtime.discordReady = true;
-    runtime.readyAt = new Date().toISOString();
-    runtime.lastDiscordError = null;
-  }
+  runtime.discordReady = true;
+  runtime.readyAt = new Date().toISOString();
+  runtime.lastDiscordError = null;
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
   await registerStatusCommands();
 });
@@ -363,10 +360,16 @@ const limiter = rateLimit({
 });
 
 app.get('/healthz', (_req, res) => {
+  const runtimeSnapshot = {
+    startedAt: runtime.startedAt,
+    discordReady: runtime.discordReady,
+    readyAt: runtime.readyAt,
+    lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
+  };
   res.status(200).json({
     ok: true,
     uptimeSec: Math.floor(process.uptime()),
-    runtime,
+    runtime: runtimeSnapshot,
     discord: {
       loggedInUser: client.user?.tag || null,
       guildId: cfg.guildId,
@@ -380,12 +383,22 @@ app.get('/readyz', (_req, res) => {
     return res.status(503).json({
       ok: false,
       message: 'Discord client is not ready',
-      runtime,
+      runtime: {
+        startedAt: runtime.startedAt,
+        discordReady: runtime.discordReady,
+        readyAt: runtime.readyAt,
+        lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
+      },
     });
   }
   return res.status(200).json({
     ok: true,
-    runtime,
+    runtime: {
+      startedAt: runtime.startedAt,
+      discordReady: runtime.discordReady,
+      readyAt: runtime.readyAt,
+      lastDiscordErrorAt: runtime.lastDiscordError?.at || null,
+    },
   });
 });
 
