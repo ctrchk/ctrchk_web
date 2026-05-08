@@ -21,6 +21,11 @@ function verifyAdmin(req) {
   }
 }
 
+/**
+ * Resolve bot relay endpoint.
+ * Prefer explicit DISCORD_BOT_ADMIN_RELAY_ENDPOINT; otherwise derive from
+ * DISCORD_BOT_SYNC_ENDPOINT by replacing pathname with /api/admin-relay.
+ */
 function buildBotRelayEndpoint() {
   if (process.env.DISCORD_BOT_ADMIN_RELAY_ENDPOINT) {
     return process.env.DISCORD_BOT_ADMIN_RELAY_ENDPOINT;
@@ -51,7 +56,7 @@ export default async function handler(req, res) {
   const relayToken = process.env.DISCORD_ADMIN_RELAY_TOKEN;
   if (!endpoint || !relayToken) {
     return res.status(503).json({
-      message: 'Discord relay is not configured (DISCORD_BOT_SYNC_ENDPOINT/DISCORD_BOT_ADMIN_RELAY_ENDPOINT or DISCORD_ADMIN_RELAY_TOKEN)',
+      message: 'Discord relay is not configured. Required: DISCORD_ADMIN_RELAY_TOKEN and either DISCORD_BOT_ADMIN_RELAY_ENDPOINT or DISCORD_BOT_SYNC_ENDPOINT',
     });
   }
 

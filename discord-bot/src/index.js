@@ -95,10 +95,14 @@ async function fetchCtrchkProfile({ userId, discordId }) {
   return resp.json();
 }
 
-function normalizeLabel(text) {
+function normalizeRoleName(text) {
   return String(text || '').replace(/\s+/g, '').toLowerCase();
 }
 
+/**
+ * Resolve cyclist tier key from profile fields.
+ * Prefer explicit tier labels from API; fallback to numeric level mapping.
+ */
 function cyclistTierKey(tierLabel, level) {
   const map = {
     入門車手: 'beginner',
@@ -121,6 +125,10 @@ function cyclistTierKey(tierLabel, level) {
   return 'beginner';
 }
 
+/**
+ * Resolve mileage card key from profile fields.
+ * Prefer explicit card label from API; fallback to total distance thresholds.
+ */
 function mileageCardKey(cardLabel, totalDistanceKm) {
   if (cardLabel === '金卡') return 'gold';
   if (cardLabel === '銀卡') return 'silver';
@@ -133,13 +141,17 @@ function mileageCardKey(cardLabel, totalDistanceKm) {
   return 'bronze';
 }
 
+/**
+ * Resolve target Discord role ID.
+ * Priority: configured role ID -> configured role name lookup in guild cache.
+ */
 function resolveRoleId(guild, group, key) {
   const byId = cfg.roleIds[group]?.[key];
   if (byId) return byId;
   const roleName = cfg.roleNames[group]?.[key];
   if (!roleName) return null;
-  const target = normalizeLabel(roleName);
-  const role = guild.roles.cache.find((r) => normalizeLabel(r.name) === target);
+  const target = normalizeRoleName(roleName);
+  const role = guild.roles.cache.find((r) => normalizeRoleName(r.name) === target);
   return role?.id || null;
 }
 
