@@ -1,16 +1,34 @@
-# CTRCHK Discord 開發與部署指南
+# CTRCHK Discord 完整教學（網站＋Bot 一次打通）
 
-本文件為 CTRCHK Discord Bot 與網站 Discord 整合的唯一開發指引。  
-所有文字統一使用香港術語：**車手、路線**（嚴禁使用「騎手、線路」）。
+本文件是 CTRCHK Discord 整合的完整操作手冊，目標是讓你由零開始完成：
+
+1. 建立 Discord 應用與 Bot  
+2. 建立並對應 CTRCHK 三軌身份組  
+3. 設定網站與 Bot 雙方環境變數  
+4. 啟動 Bot 並與網站 API 互通  
+5. 驗收所有功能（歡迎訊息、`/status`、身份組同步、Admin Relay）
+
+> 用詞規範：統一使用香港術語 **車手、路線**（不要使用「騎手、線路」）。
 
 ---
 
-## 1) 功能總覽
+## 0) 先理解你要做的是甚麼
 
-- Discord 新成員自動歡迎與引導
-- 網站連結 Discord 後自動同步身份組
-- 管理員儀表盤透過 API 由 Bot 官方發話（Admin Relay）
-- `/status` 指令顯示：
+CTRCHK 的 Discord 整合包含兩個系統：
+
+- **網站（ctrchk_web）**：處理用戶登入、Discord 連結、後台操作
+- **Discord Bot（discord-bot）**：在伺服器執行實際 Discord 操作（派發身份組、發訊息、回應指令）
+
+兩者透過 Token 驗證互相呼叫 API。
+
+---
+
+## 1) 功能總覽（完成後你會得到甚麼）
+
+- 新成員入群自動歡迎
+- 用戶在網站連結 Discord 後，自動同步身份組
+- 管理員可由後台透過 Bot 在指定頻道發官方公告（Admin Relay）
+- `/status` 指令可顯示：
   - 里程卡類別
   - 里程幣餘額
   - 車手等級
@@ -19,7 +37,7 @@
 
 ---
 
-## 2) 三軌體系定義
+## 2) 三軌系統定義（先確認規則再建身份組）
 
 ### 2.1 車手等級（Cyclist Level）
 
@@ -46,11 +64,12 @@
 
 ---
 
-## 3) Discord 身份組對應表（必建）
+## 3) Discord 身份組對應（必做，缺一不可）
 
-> 下表為建議名稱，實際以 Role ID 對應為準。
+> 名稱可自訂，但實際綁定以 Role ID 為準。  
+> 建議先照以下名稱建立，減少混亂。
 
-### 3.1 車手等級 → Discord 身份組
+### 3.1 車手等級 → 身份組
 
 - 入門車手 → `CTRC 車手｜入門`
 - 初階車手 → `CTRC 車手｜初階`
@@ -59,13 +78,13 @@
 - 精英車手 → `CTRC 車手｜精英`
 - 頂尖車手 → `CTRC 車手｜頂尖`
 
-### 3.2 里程計劃 → Discord 身份組
+### 3.2 里程計劃 → 身份組
 
 - 銅卡 → `CTRC 里程卡｜銅卡`
 - 銀卡 → `CTRC 里程卡｜銀卡`
 - 金卡 → `CTRC 里程卡｜金卡`
 
-### 3.3 會員身份 → Discord 身份組
+### 3.3 會員身份 → 身份組
 
 - 普通會員 → `CTRC 會員｜普通`
 - 高級會員 → `CTRC 會員｜高級`
@@ -75,25 +94,32 @@
 
 ---
 
-## 4) 你需要操作的步驟（完整教學）
+## 4) 完整部署流程（由零開始）
 
 ## 4.1 建立 Discord App 與 Bot
 
-1. 到 Discord Developer Portal 建立應用程式。
-2. 在 Bot 頁面建立 Bot，開啟必要權限（Manage Roles、Send Messages、Use Slash Commands）。
-3. 把 Bot 邀請進伺服器，並把 Bot 角色放在所有 CTRCHK 管理身份組之上（否則無法派發身份組）。
+1. 到 Discord Developer Portal 建立 Application。  
+2. 進入 **Bot** 分頁建立 Bot。  
+3. 開啟所需權限（最少）：
+   - Manage Roles
+   - Send Messages
+   - Use Slash Commands
+4. 把 Bot 邀請進你的 Discord 伺服器。  
+5. 在伺服器身份組設定中，將 **Bot 角色放在所有 CTRCHK 目標身份組之上**。  
+   - 否則 Bot 無法派發或更新身份組（最常見錯誤）。
 
-### 4.2 建立身份組並複製 ID
+## 4.2 開啟開發者模式並收集所有 ID
 
-1. 在伺服器設定 > 身份組，建立第 3 章列出的身份組。
-2. 開啟 Discord 開發者模式。
-3. 右鍵每個身份組，複製 Role ID。
-4. 右鍵伺服器圖示，複製 Guild ID。
-5. 準備歡迎頻道 ID（新成員歡迎用）。
+1. 在 Discord 用戶設定啟用「開發者模式」。  
+2. 右鍵每個身份組，複製 Role ID。  
+3. 右鍵伺服器圖示，複製 Guild ID。  
+4. 選一個歡迎頻道，複製 Channel ID（新成員歡迎用途）。
 
-### 4.3 設定 Bot 環境變數（`discord-bot/.env`）
+請先把 ID 整理好，下一步會一次填入環境變數。
 
-必要項目：
+## 4.3 設定 Bot 環境變數（`discord-bot/.env`）
+
+### 必填（核心連線）
 
 - `DISCORD_BOT_TOKEN`
 - `DISCORD_CLIENT_ID`
@@ -104,7 +130,7 @@
 - `CTRCHK_API_BASE_URL`
 - `CTRCHK_API_BOT_TOKEN`
 
-身份組 ID（全部建議填）：
+### 建議全部填寫（身份組映射）
 
 - `ROLE_CYCLIST_BEGINNER_ID`
 - `ROLE_CYCLIST_NOVICE_ID`
@@ -121,7 +147,9 @@
 - `ROLE_MEMBERSHIP_ADMIN_ID`
 - `ROLE_MEMBERSHIP_SENIOR_ADMIN_ID`
 
-### 4.4 設定網站環境變數（Vercel / GCP）
+> 重要：`DISCORD_BOT_SYNC_TOKEN` 必須與網站端完全一致，否則同步 API 會被拒絕。
+
+## 4.4 設定網站環境變數（Vercel / GCP）
 
 - `DISCORD_CLIENT_ID`
 - `DISCORD_CLIENT_SECRET`
@@ -131,9 +159,9 @@
 - `DISCORD_ADMIN_ROLE_ID`
 - `DISCORD_SENIOR_ROLE_ID`
 - `DISCORD_BOT_SYNC_ENDPOINT`（例：`https://bot.example.com/api/sync-user`）
-- `DISCORD_BOT_SYNC_TOKEN`（需與 Bot 端一致）
+- `DISCORD_BOT_SYNC_TOKEN`（必須與 Bot 端一致）
 
-### 4.5 啟動 Bot（iPad + Google Cloud Shell）
+## 4.5 啟動 Bot
 
 ```bash
 cd discord-bot
@@ -141,33 +169,40 @@ npm install
 npm run start
 ```
 
-建議用 PM2 / Cloud Run 長駐執行，避免中斷。
+建議使用 PM2 / Cloud Run 等長駐方式，避免中斷。
 
 ---
 
-## 5) API 說明（Bot 對接）
+## 5) API 對接說明（網站與 Bot 如何互通）
 
-### 5.1 CTRCHK 提供給 Bot：讀取用戶資料
+### 5.1 CTRCHK → Bot：觸發同步身份組
+
+- `POST /api/sync-user`
+- Header：`Authorization: Bearer <DISCORD_BOT_SYNC_TOKEN>`
+- Body：
+  ```json
+  { "userId": 123, "discordId": "1234567890" }
+  ```
+
+用途：網站在用戶連結 Discord 後，呼叫 Bot 更新該用戶身份組。
+
+### 5.2 Bot → CTRCHK：讀取用戶資料
 
 - `GET /api/oauth?action=discord-profile&discord_id=<id>`（或 `user_id`）
 - Header：`Authorization: Bearer <CTRCHK_API_BOT_TOKEN>`
 - 回傳：會員身份、車手等級、里程卡、里程幣、Discord ID 等
 
-### 5.2 Bot 提供給 CTRCHK：同步身份組
+用途：Bot 執行 `/status` 或同步身份組時，拉取最新資料。
 
-- `POST /api/sync-user`
-- Header：`Authorization: Bearer <DISCORD_BOT_SYNC_TOKEN>`
-- Body：`{ "userId": 123, "discordId": "1234567890" }`
-
-### 5.3 Admin Relay（後台發話）
+### 5.3 Admin Relay（後台代發官方訊息）
 
 - `POST /api/admin-relay`
 - Header：`Authorization: Bearer <DISCORD_ADMIN_RELAY_TOKEN>`
-- Body（純文字）：
+- 純文字 Body：
   ```json
   { "channelId": "123", "content": "官方公告內容" }
   ```
-- Body（Embed）：
+- Embed Body：
   ```json
   {
     "channelId": "123",
@@ -182,10 +217,69 @@ npm run start
 
 ---
 
-## 6) 驗收清單
+## 6) 驗收清單（逐項打勾）
 
 - 新成員入群會收到正式歡迎訊息
-- `/status` 可讀到完整狀態
+- `/status` 可讀到完整狀態（里程卡、里程幣、車手等級、會員身份）
 - 網站連結 Discord 後會自動同步三軌身份組
-- 後台可指定頻道發純文字/Embed
+- 後台可指定頻道發純文字或 Embed
 - 5/31 前首次連結成功可收到 100 里程幣
+
+---
+
+## 7) 常見錯誤與排查
+
+### 問題 A：Bot 無法派發身份組
+
+優先檢查：
+
+1. Bot 角色是否高於目標身份組  
+2. `Manage Roles` 是否已授權  
+3. Role ID 是否貼錯（常見：把頻道 ID 當 Role ID）
+
+### 問題 B：網站顯示已連結，但 Discord 沒更新
+
+優先檢查：
+
+1. `DISCORD_BOT_SYNC_ENDPOINT` 是否正確可達  
+2. `DISCORD_BOT_SYNC_TOKEN` 網站與 Bot 是否完全一致  
+3. Bot 服務是否在線（有沒有異常重啟或停止）
+
+### 問題 C：`/status` 回傳空資料或失敗
+
+優先檢查：
+
+1. `CTRCHK_API_BASE_URL` 是否正確  
+2. `CTRCHK_API_BOT_TOKEN` 是否有效  
+3. `GET /api/oauth?action=discord-profile...` 是否可由 Bot 端成功存取
+
+### 問題 D：Admin Relay 發不出訊息
+
+優先檢查：
+
+1. `DISCORD_ADMIN_RELAY_TOKEN` 是否正確  
+2. `channelId` 是否有效且 Bot 對該頻道有發言權限  
+3. 發送內容是否超出 Discord 限制（過長或格式錯誤）
+
+---
+
+## 8) 安全與維運建議（建議遵守）
+
+- 所有 Token 一律放在環境變數，不要寫入程式碼或提交到 Git  
+- 若 Token 洩漏，立即重置並更新網站與 Bot 兩邊設定  
+- 任何「同步失敗」問題先看 Bot log，再看網站 API log  
+- 每次調整身份組規則後，建議用測試帳號做完整驗收
+
+---
+
+## 9) 最短上線路徑（快速版）
+
+若你只想先上線最核心功能，請最少完成以下項目：
+
+1. 建立 Bot 並正確設定角色順位  
+2. 設定 `discord-bot/.env` 的核心變數  
+3. 設定網站端 Discord 相關環境變數  
+4. 啟動 Bot 並確保 `/api/sync-user` 可被網站呼叫  
+5. 用測試帳號完成「連結 Discord → 同步身份組 → `/status` 驗證」
+
+完成以上 5 步後，再補完歡迎訊息與 Admin Relay。
