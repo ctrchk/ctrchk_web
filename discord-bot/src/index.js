@@ -95,6 +95,10 @@ async function fetchCtrchkProfile({ userId, discordId }) {
   return resp.json();
 }
 
+/**
+ * Normalize role names for matching.
+ * Removes all whitespace and lowercases all characters.
+ */
 function normalizeRoleName(text) {
   return String(text || '').replace(/\s+/g, '').toLowerCase();
 }
@@ -145,41 +149,51 @@ function mileageCardKey(cardLabel, totalDistanceKm) {
  * Resolve target Discord role ID.
  * Priority: configured role ID -> configured role name lookup in guild cache.
  */
-function resolveRoleId(guild, group, key) {
+function buildGuildRoleNameIndex(guild) {
+  const index = new Map();
+  for (const role of guild.roles.cache.values()) {
+    index.set(normalizeRoleName(role.name), role.id);
+  }
+  return index;
+}
+
+function resolveRoleId(guild, group, key, roleNameIndex) {
   const byId = cfg.roleIds[group]?.[key];
   if (byId) return byId;
   const roleName = cfg.roleNames[group]?.[key];
   if (!roleName) return null;
   const target = normalizeRoleName(roleName);
+  if (roleNameIndex?.has(target)) return roleNameIndex.get(target);
   const role = guild.roles.cache.find((r) => normalizeRoleName(r.name) === target);
   return role?.id || null;
 }
 
-function pickManagedRoleIds(guild) {
+function pickManagedRoleIds(guild, roleNameIndex) {
   const ids = [];
   for (const group of ['cyclist', 'mileage', 'membership']) {
     for (const key of Object.keys(cfg.roleNames[group])) {
-      const id = resolveRoleId(guild, group, key);
+      const id = resolveRoleId(guild, group, key, roleNameIndex);
       if (id) ids.push(id);
     }
   }
   return new Set(ids);
 }
 
-function pickTargetRoleIds(profile, guild) {
+function pickTargetRoleIds(profile, guild, roleNameIndex) {
   const ids = [];
-  const cyclist = resolveRoleId(guild, 'cyclist', cyclistTierKey(profile.cyclist_tier, profile.level));
+  const cyclist = resolveRoleId(guild, 'cyclist', cyclistTierKey(profile.cyclist_tier, profile.level), roleNameIndex);
   if (cyclist) ids.push(cyclist);
-  const mileage = resolveRoleId(guild, 'mileage', mileageCardKey(profile.mileage_card, profile.total_distance_km));
+  const mileage = resolveRoleId(guild, 'mileage', mileageCardKey(profile.mileage_card, profile.total_distance_km), roleNameIndex);
   if (mileage) ids.push(mileage);
-  const membership = resolveRoleId(guild, 'membership', profile.user_role);
+  const membership = resolveRoleId(guild, 'membership', profile.user_role, roleNameIndex);
   if (membership) ids.push(membership);
   return ids;
 }
 
 async function syncMemberRoles(member, guild, profile) {
-  const managed = pickManagedRoleIds(guild);
-  const target = new Set(pickTargetRoleIds(profile, guild));
+  const roleNameIndex = buildGuildRoleNameIndex(guild);
+  const managed = pickManagedRoleIds(guild, roleNameIndex);
+  const target = new Set(pickTargetRoleIds(profile, guild, roleNameIndex));
   const toRemove = [...member.roles.cache.keys()].filter((id) => managed.has(id) && !target.has(id));
   const toAdd = [...target].filter((id) => !member.roles.cache.has(id));
   if (toRemove.length) await member.roles.remove(toRemove, 'CTRCHK automatic role sync');

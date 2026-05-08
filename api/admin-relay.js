@@ -37,7 +37,8 @@ function buildBotRelayEndpoint() {
     url.pathname = '/api/admin-relay';
     url.search = '';
     return url.toString();
-  } catch {
+  } catch (e) {
+    console.error('[admin-relay] Failed to parse DISCORD_BOT_SYNC_ENDPOINT:', e.message);
     return null;
   }
 }
@@ -73,7 +74,10 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ channelId, content, embed }),
     });
-    const data = await resp.json().catch(() => ({}));
+    const data = await resp.json().catch((e) => {
+      console.warn('[admin-relay] Failed to parse relay response JSON:', e.message);
+      return {};
+    });
     if (!resp.ok) {
       return res.status(resp.status).json({ message: data.message || 'Relay failed' });
     }
