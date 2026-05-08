@@ -136,7 +136,7 @@ async function triggerDiscordBotSyncForUser(userId) {
     const { rows } = await query('SELECT discord_id FROM users WHERE id = $1', [userId]);
     const discordId = rows[0]?.discord_id;
     if (!discordId) return;
-    await fetch(endpoint, {
+    const resp = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -144,6 +144,10 @@ async function triggerDiscordBotSyncForUser(userId) {
       },
       body: JSON.stringify({ userId, discordId }),
     });
+    if (!resp.ok) {
+      const body = await resp.text();
+      console.warn(`[getHistory] Discord bot sync failed: ${resp.status} ${body.slice(0, 300)}`);
+    }
   } catch (e) {
     console.warn('[getHistory] Failed to trigger Discord bot sync:', e.message);
   }
