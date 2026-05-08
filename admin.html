@@ -277,8 +277,8 @@
                 <button class="tab-btn" onclick="showTab('push');">
                     <i class="fas fa-bell"></i> 推送通知
                 </button>
-                <button class="tab-btn" onclick="showTab('discord-relay');">
-                    <i class="fab fa-discord"></i> Discord 發送消息
+                <button class="tab-btn" onclick="showTab('discord-relay'); onDiscordRelayTabOpen();">
+                    <i class="fab fa-discord"></i> Discord 消息管理
                 </button>
                 <button class="tab-btn" onclick="showTab('route-mgmt'); loadRouteMgmt();">
                     <i class="fas fa-route"></i> 路線管理
@@ -514,7 +514,7 @@
             <!-- Discord 發送消息標籤 -->
             <div id="tab-discord-relay" style="display:none;">
                 <h3 style="margin-top:0;"><i class="fab fa-discord"></i> Discord 官方消息代發</h3>
-                <p style="color:#555; font-size:0.9em;">透過 CTRCHK Bot 在指定 Discord 頻道發送消息。</p>
+                <p style="color:#555; font-size:0.9em;">透過 CTRCHK Bot 在指定 Discord 頻道發送、編輯或刪除消息。</p>
                 <form id="discord-relay-form" onsubmit="sendDiscordRelay(event)" style="max-width:620px;">
                     <div style="margin-bottom:1em;">
                         <label style="display:block; font-weight:bold; margin-bottom:0.3em;">頻道 ID <span style="color:red">*</span></label>
@@ -531,6 +531,28 @@
                     </button>
                 </form>
                 <div id="discord-relay-result" style="margin-top:1em;"></div>
+
+                <!-- 載入頻道消息 -->
+                <div style="margin-top:2em; border-top:1px solid #e0e0e0; padding-top:1.5em; max-width:620px;">
+                    <h4 style="margin:0 0 0.5em 0;"><i class="fas fa-history"></i> 載入頻道最近消息（編輯 / 刪除）</h4>
+                    <p style="color:#666; font-size:0.85em; margin:0 0 0.8em 0;">輸入頻道 ID 及筆數，載入該頻道最近的消息。只有 Bot 自己發送的消息可以編輯或刪除。</p>
+                    <div style="display:flex; gap:0.8em; align-items:center; flex-wrap:wrap;">
+                        <input type="text" id="discord-fetch-channel-id" maxlength="40" placeholder="頻道 ID"
+                               style="flex:1; min-width:160px; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                        <input type="number" id="discord-fetch-limit" min="1" max="50" value="20" placeholder="筆數（最多50）"
+                               style="width:120px; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                        <button onclick="fetchDiscordMessages()" class="cta-button" id="discord-fetch-btn" style="white-space:nowrap;">
+                            <i class="fas fa-download"></i> 載入消息
+                        </button>
+                    </div>
+                    <div id="discord-fetch-result" style="margin-top:0.7em; font-size:0.9em;"></div>
+                </div>
+
+                <!-- 消息列表 -->
+                <div id="discord-messages-section" style="margin-top:1.5em; max-width:740px; display:none;">
+                    <h4 style="margin:0 0 0.8em 0;"><i class="fas fa-list"></i> 消息列表</h4>
+                    <div id="discord-messages-list"></div>
+                </div>
             </div>
             <!-- 路線管理標籤 -->
             <div id="tab-route-mgmt" style="display:none;">
@@ -1087,6 +1109,153 @@
             }
         }
 
+        // ── Discord Relay ─────────────────────────────────────────────────────
+
+        function onDiscordRelayTabOpen() {
+            // Pre-fill the fetch channel ID if the send channel ID is already set
+            const sendCh = document.getElementById('discord-channel-id').value.trim();
+            const fetchCh = document.getElementById('discord-fetch-channel-id');
+            if (sendCh && !fetchCh.value.trim()) fetchCh.value = sendCh;
+        }
+
+        // Stores messages currently displayed in the messages list: [{ channelId, messageId, content, isBot }]
+        let discordMessagesList = [];
+
+        function renderDiscordMessages() {
+            const section = document.getElementById('discord-messages-section');
+            const list = document.getElementById('discord-messages-list');
+            if (!discordMessagesList.length) { section.style.display = 'none'; return; }
+            section.style.display = '';
+            list.innerHTML = discordMessagesList.map((m, i) => {
+                const canEdit = m.isBot;
+                const ts = m.createdAt ? new Date(m.createdAt).toLocaleString('zh-Hant') : '';
+                return `<div id="discord-msg-row-${i}" style="background:white; border:1px solid #e0e0e0; border-radius:8px; padding:1em 1.2em; margin-bottom:0.8em; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5em; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.78em; color:#888; margin-bottom:0.3em;">
+                                ${canEdit ? '<span style="color:#04D93C; font-weight:bold;">● Bot</span>' : `<span>${escapeHtml(m.authorTag || '')}</span>`}
+                                ${ts ? `<span style="margin-left:0.5em;">${ts}</span>` : ''}
+                                <span style="margin-left:0.5em; font-family:monospace; color:#aaa;">ID: ${escapeHtml(m.messageId)}</span>
+                            </div>
+                            <div id="discord-msg-content-${i}" style="white-space:pre-wrap; word-break:break-word; font-size:0.95em;">${escapeHtml(m.content || (m.hasEmbeds ? '[Embed 消息]' : ''))}</div>
+                        </div>
+                        <div style="display:flex; gap:0.5em; flex-shrink:0; align-items:center;">
+                            ${canEdit ? `<button class="action-btn btn-promote" onclick="startEditDiscordMessage(${i})" id="discord-msg-edit-btn-${i}"><i class="fas fa-edit"></i> 編輯</button>` : ''}
+                            ${canEdit ? `<button class="action-btn btn-delete" onclick="deleteDiscordMessage(${i})" id="discord-msg-del-btn-${i}"><i class="fas fa-trash"></i> 刪除</button>` : ''}
+                            ${!canEdit ? '<span style="font-size:0.8em; color:#aaa;">（非 Bot 消息）</span>' : ''}
+                        </div>
+                    </div>
+                    <div id="discord-msg-edit-area-${i}" style="display:none; margin-top:0.8em;">
+                        <textarea id="discord-msg-edit-input-${i}" maxlength="2000" rows="3"
+                            style="width:100%; padding:0.5em 0.8em; border:1px solid #aaa; border-radius:6px; font-size:0.95em; resize:vertical; box-sizing:border-box;">${escapeHtml(m.content || '')}</textarea>
+                        <div style="display:flex; gap:0.5em; margin-top:0.5em;">
+                            <button class="action-btn btn-promote" onclick="confirmEditDiscordMessage(${i})"><i class="fas fa-check"></i> 確認編輯</button>
+                            <button class="action-btn" onclick="cancelEditDiscordMessage(${i})" style="background:#888; color:white;"><i class="fas fa-times"></i> 取消</button>
+                        </div>
+                        <div id="discord-msg-edit-result-${i}" style="margin-top:0.4em; font-size:0.9em;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function startEditDiscordMessage(i) {
+            document.getElementById(`discord-msg-edit-area-${i}`).style.display = '';
+            document.getElementById(`discord-msg-edit-btn-${i}`).style.display = 'none';
+        }
+
+        function cancelEditDiscordMessage(i) {
+            document.getElementById(`discord-msg-edit-area-${i}`).style.display = 'none';
+            document.getElementById(`discord-msg-edit-btn-${i}`).style.display = '';
+        }
+
+        async function confirmEditDiscordMessage(i) {
+            const m = discordMessagesList[i];
+            const rawContent = document.getElementById(`discord-msg-edit-input-${i}`).value;
+            const newContent = rawContent.trim();
+            const resultEl = document.getElementById(`discord-msg-edit-result-${i}`);
+            if (!newContent) { resultEl.style.color = 'red'; resultEl.textContent = '❌ 內容不能為空'; return; }
+            const token = localStorage.getItem('accessToken') || '';
+            resultEl.style.color = '#555'; resultEl.textContent = '儲存中…';
+            try {
+                const resp = await fetch('/api/admin-relay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ action: 'edit', channelId: m.channelId, messageId: m.messageId, content: newContent }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (resp.ok) {
+                    discordMessagesList[i].content = newContent;
+                    resultEl.style.color = 'green'; resultEl.textContent = '✅ 已更新';
+                    document.getElementById(`discord-msg-content-${i}`).textContent = newContent;
+                    setTimeout(() => cancelEditDiscordMessage(i), 800);
+                } else {
+                    resultEl.style.color = 'red'; resultEl.textContent = '❌ ' + (data.message || '編輯失敗');
+                }
+            } catch (err) {
+                resultEl.style.color = 'red'; resultEl.textContent = '❌ 錯誤：' + err.message;
+            }
+        }
+
+        async function deleteDiscordMessage(i) {
+            const m = discordMessagesList[i];
+            if (!confirm(`確認刪除此 Bot 消息？\n\n${m.content || '[Embed]'}`)) return;
+            const token = localStorage.getItem('accessToken') || '';
+            const btn = document.getElementById(`discord-msg-del-btn-${i}`);
+            btn.disabled = true; btn.textContent = '刪除中…';
+            try {
+                const resp = await fetch('/api/admin-relay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ action: 'delete', channelId: m.channelId, messageId: m.messageId }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (resp.ok) {
+                    discordMessagesList.splice(i, 1);
+                    renderDiscordMessages();
+                } else {
+                    alert('❌ ' + (data.message || '刪除失敗'));
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
+                }
+            } catch (err) {
+                alert('❌ 錯誤：' + err.message);
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash"></i> 刪除';
+            }
+        }
+
+        async function fetchDiscordMessages() {
+            const channelId = document.getElementById('discord-fetch-channel-id').value.trim();
+            const limit = document.getElementById('discord-fetch-limit').value || 20;
+            const resultEl = document.getElementById('discord-fetch-result');
+            const btn = document.getElementById('discord-fetch-btn');
+            if (!channelId) { resultEl.style.color = 'red'; resultEl.textContent = '❌ 請輸入頻道 ID'; return; }
+            const token = localStorage.getItem('accessToken') || '';
+            btn.disabled = true; btn.innerHTML = '載入中…';
+            resultEl.style.color = '#555'; resultEl.textContent = '載入中…';
+            try {
+                const resp = await fetch('/api/admin-relay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify({ action: 'fetch_messages', channelId, limit: Number(limit) }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (resp.ok && data.messages) {
+                    discordMessagesList = data.messages.map((m) => ({ ...m, channelId }));
+                    renderDiscordMessages();
+                    resultEl.style.color = 'green';
+                    resultEl.textContent = `✅ 已載入 ${data.messages.length} 條消息`;
+                } else {
+                    resultEl.style.color = 'red'; resultEl.textContent = '❌ ' + (data.message || '載入失敗');
+                }
+            } catch (err) {
+                resultEl.style.color = 'red'; resultEl.textContent = '❌ 錯誤：' + err.message;
+            } finally {
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> 載入消息';
+            }
+        }
+
         async function sendDiscordRelay(e) {
             e.preventDefault();
             const btn = document.getElementById('discord-relay-submit-btn');
@@ -1112,13 +1281,26 @@
                         'Content-Type': 'application/json',
                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     },
-                    body: JSON.stringify({ channelId, content }),
+                    body: JSON.stringify({ action: 'send', channelId, content }),
                 });
                 if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     resultEl.style.color = 'green';
                     resultEl.textContent = `✅ 已發送到 Discord（messageId: ${data.messageId || '未返回'}）`;
+                    if (data.messageId) {
+                        discordMessagesList.unshift({
+                            channelId,
+                            messageId: data.messageId,
+                            content,
+                            isBot: true,
+                            createdAt: new Date().toISOString(),
+                            authorTag: 'Bot',
+                            hasEmbeds: false,
+                        });
+                        renderDiscordMessages();
+                        document.getElementById('discord-messages-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                 } else {
                     resultEl.style.color = 'red';
                     resultEl.textContent = '❌ ' + (data.message || '發送失敗');

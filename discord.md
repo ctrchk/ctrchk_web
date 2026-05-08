@@ -102,11 +102,23 @@ CTRCHK 的 Discord 整合包含兩個系統：
 2. 進入 **Bot** 分頁建立 Bot。  
 3. 開啟所需權限（最少）：
    - Manage Roles
+   - View Channels
    - Send Messages
+   - Manage Messages（用於編輯及刪除 Bot 自己的消息）
+   - Read Message History（用於後台載入頻道消息列表）
+   - Embed Links（如需發送 Embed 消息）
    - Use Slash Commands
 4. 把 Bot 邀請進你的 Discord 伺服器。  
 5. 在伺服器身份組設定中，將 **Bot 角色放在所有 CTRCHK 目標身份組之上**。  
    - 否則 Bot 無法派發或更新身份組（最常見錯誤）。
+
+> **遇到「Missing Permissions」錯誤？**  
+> 這是 Discord API 的頻道級別權限錯誤，通常原因如下：  
+> - Bot 角色沒有目標頻道的 **Send Messages** 或 **View Channel** 權限  
+> - 目標頻道設置了僅限特定身份組發言的覆蓋規則，Bot 角色未被包含  
+> - 如為公告頻道（Announcement Channel），Bot 還需 **Send Messages in Threads** 權限  
+> 
+> 解決方法：前往 Discord → 頻道設定 → 權限，確認 Bot 的角色（或 @everyone）有足夠權限，或為 Bot 新增特定的頻道覆蓋規則。
 
 ## 4.2 開啟開發者模式並收集所有 ID
 

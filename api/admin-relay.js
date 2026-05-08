@@ -61,9 +61,17 @@ export default async function handler(req, res) {
     });
   }
 
-  const { channelId, content, embed } = req.body || {};
+  const { action = 'send', channelId, messageId, content, embed, limit } = req.body || {};
   if (!channelId) return res.status(400).json({ message: 'channelId is required' });
-  if (!content && !embed) return res.status(400).json({ message: 'content or embed is required' });
+  if (action === 'send' && !content && !embed) {
+    return res.status(400).json({ message: 'content or embed is required' });
+  }
+  if ((action === 'edit' || action === 'delete') && !messageId) {
+    return res.status(400).json({ message: 'messageId is required' });
+  }
+  if (action === 'edit' && !content && !embed) {
+    return res.status(400).json({ message: 'content or embed is required' });
+  }
 
   try {
     const resp = await fetch(endpoint, {
@@ -72,7 +80,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${relayToken}`,
       },
-      body: JSON.stringify({ channelId, content, embed }),
+      body: JSON.stringify({ action, channelId, messageId, content, embed, limit }),
     });
     let parseFailed = false;
     const data = await resp.json().catch((e) => {

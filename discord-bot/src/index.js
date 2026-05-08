@@ -400,32 +400,112 @@ app.get('/readyz', (_req, res) => {
   });
 });
 
+const FETCH_LIMIT_DEFAULT = 20;
+const FETCH_LIMIT_MIN = 1;
+const FETCH_LIMIT_MAX = 50;
+
+/** Map common Discord API error codes to actionable Chinese messages. */
+function discordErrorMessage(error) {
+  if (error?.code === 50013) {
+    return 'Bot 缺少頻道權限，請確認 Bot 角色在該頻道擁有「View Channel」及「Send Messages」權限（如為公告頻道還需「Send Messages in Threads」）';
+  }
+  if (error?.code === 50001) {
+    return 'Bot 無法存取該頻道，請確認 Bot 已被邀請至伺服器且頻道 ID 正確';
+  }
+  if (error?.code === 10003) {
+    return '找不到指定頻道，請確認頻道 ID 正確';
+  }
+  if (error?.code === 10008) {
+    return '找不到指定消息，請確認消息 ID 正確';
+  }
+  return error?.message || String(error);
+}
+
+function buildEmbedPayload(embed) {
+  const eb = new EmbedBuilder().setColor(embed.color || 0x2ecc71);
+  if (embed.title) eb.setTitle(String(embed.title));
+  if (embed.description) eb.setDescription(String(embed.description));
+  if (embed.footer) eb.setFooter({ text: String(embed.footer) });
+  return eb;
+}
+
 // Admin Relay: 後台可調用此 API，讓 Bot 以官方身份發話
 app.post('/api/admin-relay', limiter, async (req, res) => {
   if (!cfg.adminRelayToken || authToken(req) !== cfg.adminRelayToken) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
-  const { channelId, content, embed } = req.body || {};
+  const { action = 'send', channelId, messageId, content, embed, limit } = req.body || {};
+
   if (!channelId) return res.status(400).json({ message: 'channelId is required' });
-  if (!content && !embed) return res.status(400).json({ message: 'content or embed is required' });
+
   try {
+    // ── fetch_messages ──────────────────────────────────────────────────────
+    if (action === 'fetch_messages') {
+      const channel = await client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) {
+        return res.status(400).json({ message: 'Invalid text channel' });
+      }
+      const fetchLimit = Math.min(Math.max(Number(limit) || FETCH_LIMIT_DEFAULT, FETCH_LIMIT_MIN), FETCH_LIMIT_MAX);
+      const fetched = await channel.messages.fetch({ limit: fetchLimit });
+      const messages = [...fetched.values()].map((m) => ({
+        messageId: m.id,
+        content: m.content,
+        authorId: m.author.id,
+        authorTag: m.author.tag,
+        isBot: m.author.bot,
+        createdAt: m.createdAt.toISOString(),
+        hasEmbeds: m.embeds.length > 0,
+      }));
+      return res.status(200).json({ ok: true, messages });
+    }
+
+    // ── delete ───────────────────────────────────────────────────────────────
+    if (action === 'delete') {
+      if (!messageId) return res.status(400).json({ message: 'messageId is required for delete' });
+      const channel = await client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) {
+        return res.status(400).json({ message: 'Invalid text channel' });
+      }
+      const msg = await channel.messages.fetch(messageId);
+      if (!msg.author.bot || msg.author.id !== client.user.id) {
+        return res.status(403).json({ message: 'Bot 只能刪除自己發送的消息' });
+      }
+      await msg.delete();
+      return res.status(200).json({ ok: true, deleted: true });
+    }
+
+    // ── edit ─────────────────────────────────────────────────────────────────
+    if (action === 'edit') {
+      if (!messageId) return res.status(400).json({ message: 'messageId is required for edit' });
+      if (!content && !embed) return res.status(400).json({ message: 'content or embed is required' });
+      const channel = await client.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) {
+        return res.status(400).json({ message: 'Invalid text channel' });
+      }
+      const msg = await channel.messages.fetch(messageId);
+      if (!msg.author.bot || msg.author.id !== client.user.id) {
+        return res.status(403).json({ message: 'Bot 只能編輯自己發送的消息' });
+      }
+      const payload = {};
+      if (content !== undefined) payload.content = String(content);
+      if (embed) payload.embeds = [buildEmbedPayload(embed)];
+      const edited = await msg.edit(payload);
+      return res.status(200).json({ ok: true, messageId: edited.id });
+    }
+
+    // ── send (default) ───────────────────────────────────────────────────────
+    if (!content && !embed) return res.status(400).json({ message: 'content or embed is required' });
     const channel = await client.channels.fetch(channelId);
     if (!channel || !channel.isTextBased()) {
       return res.status(400).json({ message: 'Invalid text channel' });
     }
     const payload = {};
     if (content) payload.content = String(content);
-    if (embed) {
-      const eb = new EmbedBuilder().setColor(embed.color || 0x2ecc71);
-      if (embed.title) eb.setTitle(String(embed.title));
-      if (embed.description) eb.setDescription(String(embed.description));
-      if (embed.footer) eb.setFooter({ text: String(embed.footer) });
-      payload.embeds = [eb];
-    }
+    if (embed) payload.embeds = [buildEmbedPayload(embed)];
     const message = await channel.send(payload);
     return res.status(200).json({ ok: true, messageId: message.id });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: discordErrorMessage(error) });
   }
 });
 
