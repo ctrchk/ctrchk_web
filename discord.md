@@ -294,6 +294,9 @@ npm run start
 3. **驗證網站→Bot 同步**：用測試帳號在網站連結 Discord，確認身份組有更新。  
 4. **驗證後台代發（Admin Relay）**：在後台發一則測試公告到指定頻道。  
 5. **看 log 排錯**：若失敗，先檢查 Bot 啟動 log（Token、Guild ID、Role 權限、API token 是否一致）。
+6. **打健康檢查端點**（Bot API）：
+   - `GET /healthz`：看進程在線、uptime、最近 Discord 錯誤
+   - `GET /readyz`：看 Discord Client 是否 ready（未 ready 會回 503）
 
 ---
 
@@ -368,6 +371,7 @@ npm run start
 1. `DISCORD_BOT_SYNC_ENDPOINT` 是否正確可達  
 2. `DISCORD_BOT_SYNC_TOKEN` 網站與 Bot 是否完全一致  
 3. Bot 服務是否在線（有沒有異常重啟或停止）
+4. 先打 Bot `GET /readyz`，如果是 503 代表 Discord 端未成功連線
 
 ### 問題 C：`/status` 回傳空資料或失敗
 
@@ -376,6 +380,7 @@ npm run start
 1. `CTRCHK_API_BASE_URL` 是否正確  
 2. `CTRCHK_API_BOT_TOKEN` 是否有效  
 3. `GET /api/oauth?action=discord-profile...` 是否可由 Bot 端成功存取
+4. 打 Bot `GET /healthz` 檢查 `CTRCHK_API_BASE_URL` / `CTRCHK_API_BOT_TOKEN` 是否有配置
 
 ### 問題 D：Admin Relay 發不出訊息
 
