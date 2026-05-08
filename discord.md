@@ -298,6 +298,175 @@ npm run start
    - `GET /healthz`：看進程在線、uptime、最近 Discord 錯誤
    - `GET /readyz`：看 Discord Client 是否 ready（未 ready 會回 503）
 
+## 4.7 超詳細部署教學（一步一步，照做即可）
+
+> 目標：把 Bot 部署到可長駐的平台（示範用 Render），再把網站（Vercel）接上 Bot 的同步 API。  
+> 你如果不是用 Render，也可照同一邏輯搬到 Railway/Fly.io/VM。
+
+### 第 0 步：先準備 3 組資料表（先整理，部署時不會手忙腳亂）
+
+先開一個純文字檔（不要上傳 Git），把以下內容先填好：
+
+1. **Discord 基本資料**
+   - `DISCORD_BOT_TOKEN`
+   - `DISCORD_CLIENT_ID`
+   - `DISCORD_GUILD_ID`
+   - `DISCORD_WELCOME_CHANNEL_ID`
+2. **Bot 安全 Token（自行產生）**
+   - `DISCORD_ADMIN_RELAY_TOKEN`
+   - `DISCORD_BOT_SYNC_TOKEN`
+   - `CTRCHK_API_BOT_TOKEN`
+3. **Role ID 對照表**
+   - 車手 6 組、里程卡 3 組、會員 5 組（共 14 組）
+
+> 建議你先全部收齊再進下一步，成功率最高。
+
+### 第 1 步：確認 Discord Bot 權限與角色順位
+
+1. 到 Discord 伺服器設定 → 身份組（Roles）。
+2. 找到 Bot 身份組（通常是 Bot 名稱）。
+3. 把 Bot 身份組拖到所有 `CTRC ...` 目標身份組上方。
+4. 確認 Bot 有 `Manage Roles`、`Send Messages` 權限。
+5. 若你要用 `/status`，確認 `Use Slash Commands` 可用。
+
+> 這一步錯，後面全部都會「看似成功、其實不同步」。
+
+### 第 2 步：在 Render 建立 Bot 服務
+
+1. 登入 Render。
+2. 按 **New +** → **Web Service**。
+3. 連接 GitHub，選 repository：`ctrchk/ctrchk_web`。
+4. 進入服務設定頁，填：
+   - **Name**：例如 `ctrchk-discord-bot`
+   - **Root Directory**：`discord-bot`
+   - **Environment**：`Node`
+   - **Build Command**：`npm install`
+   - **Start Command**：`npm run start`
+5. Region 可先用離你主要用戶近的位置（例如 Singapore）。
+6. 方案先用可長駐的最低方案即可（重點是常駐，不是 serverless）。
+7. 先不要按 Deploy，先進環境變數（下一步）。
+
+### 第 3 步：把 Bot 環境變數填進 Render（最關鍵）
+
+在 Render 服務的 **Environment**，逐個新增以下 key/value：
+
+#### 3A. 必填（沒有就不能正常運作）
+
+- `DISCORD_BOT_TOKEN`
+- `DISCORD_CLIENT_ID`
+- `DISCORD_GUILD_ID`
+- `DISCORD_WELCOME_CHANNEL_ID`
+- `DISCORD_ADMIN_RELAY_TOKEN`
+- `DISCORD_BOT_SYNC_TOKEN`
+- `CTRCHK_API_BASE_URL`（例：`https://ctrchk.com`）
+- `CTRCHK_API_BOT_TOKEN`
+
+#### 3B. 強烈建議全填（角色同步核心）
+
+- `ROLE_CYCLIST_BEGINNER_ID`
+- `ROLE_CYCLIST_NOVICE_ID`
+- `ROLE_CYCLIST_ADVANCED_ID`
+- `ROLE_CYCLIST_VETERAN_ID`
+- `ROLE_CYCLIST_ELITE_ID`
+- `ROLE_CYCLIST_TOP_ID`
+- `ROLE_MILEAGE_BRONZE_ID`
+- `ROLE_MILEAGE_SILVER_ID`
+- `ROLE_MILEAGE_GOLD_ID`
+- `ROLE_MEMBERSHIP_JUNIOR_ID`
+- `ROLE_MEMBERSHIP_SENIOR_ID`
+- `ROLE_MEMBERSHIP_VIP_ID`
+- `ROLE_MEMBERSHIP_ADMIN_ID`
+- `ROLE_MEMBERSHIP_SENIOR_ADMIN_ID`
+
+#### 3C. 可選（先用預設也可）
+
+- `PORT`（可不填，平台會注入；本專案預設 `8787`）
+- `RELAY_RATE_WINDOW_MS`（預設 `60000`）
+- `RELAY_RATE_LIMIT_MAX`（預設 `30`）
+
+### 第 4 步：首次部署 Render
+
+1. 按 **Create Web Service / Deploy**。
+2. 等待 Build 完成。
+3. 進入 Logs 檢查以下關鍵字：
+   - `listening on`
+   - `Logged in as`
+   - `/status guild command registered`（或 global registered）
+4. 如果出現 `Login failed`：
+   - 先重設 `DISCORD_BOT_TOKEN` 再貼回 Render。
+   - 確認 `DISCORD_CLIENT_ID`、`DISCORD_GUILD_ID` 沒貼錯。
+5. 如果出現 `Shard error: Used disallowed intents` 或 `code 4014`：
+   - 到 Discord Developer Portal → 你的 App → **Bot** → **Privileged Gateway Intents**。
+   - 開啟 **SERVER MEMBERS INTENT**（對應程式使用的 `GuildMembers` intent）。
+   - 按 **Save Changes** 後回 Render 重新部署（Deploy latest commit 或手動重啟）。
+   - 若仍失敗，重新貼上 `DISCORD_BOT_TOKEN` 再部署，並確認你開的是「目前 token 對應的同一個 App」。
+
+### 第 5 步：部署後先驗 Bot 健康狀態
+
+假設你的 Render 網域是 `https://ctrchk-discord-bot.onrender.com`：
+
+1. 瀏覽器開：`https://ctrchk-discord-bot.onrender.com/healthz`
+   - 預期 `ok: true`
+2. 再開：`https://ctrchk-discord-bot.onrender.com/readyz`
+   - 預期 `ok: true`
+   - 若 `503`，代表 Discord 還未 ready（看 logs）
+
+### 第 6 步：把網站（Vercel）接到 Bot API
+
+到 Vercel 專案 → Settings → Environment Variables，填／更新：
+
+1. `DISCORD_BOT_SYNC_ENDPOINT`
+   - 值：`https://<你的-render-domain>/api/sync-user`
+   - 例：`https://ctrchk-discord-bot.onrender.com/api/sync-user`
+2. `DISCORD_BOT_SYNC_TOKEN`
+   - 值必須與 Render 裡的 `DISCORD_BOT_SYNC_TOKEN` 完全一致
+3. `CTRCHK_API_BOT_TOKEN`
+   - 值必須與 Render 裡的 `CTRCHK_API_BOT_TOKEN` 完全一致
+4. `DISCORD_CLIENT_ID`、`DISCORD_CLIENT_SECRET`、`DISCORD_GUILD_ID`
+   - 確保與 Discord App / Bot 設定一致
+
+> 填完後要 **Redeploy Vercel**，否則新變數不會生效。
+
+### 第 7 步：做「實戰驗收」而不是只看部署成功
+
+1. 用測試 Discord 帳號加入伺服器，確認歡迎訊息正常。
+2. 在 Discord 輸入 `/status`：
+   - 預期看到里程卡、里程幣、車手等級、會員身份。
+3. 到網站用測試帳號做「連結 Discord」。
+4. 連結完成後，回 Discord 看身份組是否更新。
+5. 後台發一則 Admin Relay 公告，確認 Bot 可代發。
+
+### 第 8 步：失敗時按這個順序排查（不要亂改）
+
+1. 先打 Bot `GET /readyz`（先確定 Discord 連線狀態）。
+2. 再看 Render logs（登入失敗？權限？token？）。
+3. 再檢查 Vercel 的 `DISCORD_BOT_SYNC_ENDPOINT` 是否完整含 `/api/sync-user`。
+4. 比對兩邊 token 是否「完全一致」：
+   - `DISCORD_BOT_SYNC_TOKEN`
+   - `CTRCHK_API_BOT_TOKEN`
+5. 最後檢查 Discord 角色順位是否又被改動。
+
+### 第 9 步：之後每次更新 Bot 的標準流程
+
+1. push 到 GitHub（`discord-bot` 有改動）。
+2. Render 自動 redeploy（或手動 Deploy latest commit）。
+3. 部署完成後，先驗 `healthz` / `readyz`。
+4. 再用 `/status` + 網站連結流程做一次快驗。
+5. 若改了 token 或 endpoint，記得同步更新 Vercel 並 redeploy。
+
+### 第 10 步：你可以直接照抄的最短部署清單
+
+1. 建 Discord App + Bot  
+2. 設定 Bot 權限與角色順位  
+3. 收集所有 ID + 產生 3 個安全 token  
+4. Render 建 Web Service（Root Directory=`discord-bot`）  
+5. Render 填完整環境變數  
+6. Deploy 並檢查 logs  
+7. 檢查 `/healthz`、`/readyz`  
+8. Vercel 設 `DISCORD_BOT_SYNC_ENDPOINT` 與同步 token  
+9. Redeploy Vercel  
+10. 驗收：歡迎訊息、`/status`、身份組同步、Admin Relay
+
 ---
 
 ## 5) API 對接說明（網站與 Bot 如何互通）
@@ -389,6 +558,20 @@ npm run start
 1. `DISCORD_ADMIN_RELAY_TOKEN` 是否正確  
 2. `channelId` 是否有效且 Bot 對該頻道有發言權限  
 3. 發送內容是否超出 Discord 限制（過長或格式錯誤）
+
+### 問題 E：Render logs 出現 `Used disallowed intents`（`code 4014`）
+
+這代表 Bot 申請了未被允許的 Gateway Intent。  
+本專案會使用 `GuildMembers`，因此必須開啟對應權限。
+
+優先檢查：
+
+1. Discord Developer Portal → App → **Bot** → **Privileged Gateway Intents**：
+   - 開啟 **SERVER MEMBERS INTENT**
+2. 儲存後回 Render 重新部署
+3. 若仍報 4014：
+   - 重新貼上 `DISCORD_BOT_TOKEN` 後再部署
+   - 確認你調整的是與目前 `DISCORD_BOT_TOKEN` 同一個 Discord App
 
 ---
 
