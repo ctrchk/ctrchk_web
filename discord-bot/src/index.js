@@ -86,11 +86,12 @@ function setDiscordError(error) {
 }
 
 function updateShardConnectivity(shardId, isConnected) {
-  if (Number.isInteger(shardId)) {
-    shardConnectivity.set(shardId, isConnected);
-  }
-  if (shardConnectivity.size === 0) return;
+  if (!Number.isInteger(shardId)) return;
+  shardConnectivity.set(shardId, isConnected);
   runtime.discordReady = [...shardConnectivity.values()].every(Boolean);
+  if (runtime.discordReady && !runtime.readyAt) {
+    runtime.readyAt = new Date().toISOString();
+  }
 }
 
 function logStartupChecklist() {
@@ -284,8 +285,10 @@ async function registerStatusCommands() {
 }
 
 client.once('ready', async () => {
-  runtime.discordReady = true;
-  runtime.readyAt = new Date().toISOString();
+  if (shardConnectivity.size === 0) {
+    runtime.discordReady = true;
+    runtime.readyAt = new Date().toISOString();
+  }
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
   await registerStatusCommands();
 });
