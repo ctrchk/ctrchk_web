@@ -42,6 +42,28 @@ const cfg = {
       senior_admin: process.env.ROLE_MEMBERSHIP_SENIOR_ADMIN_ID,
     },
   },
+  roleNames: {
+    cyclist: {
+      beginner: process.env.ROLE_CYCLIST_BEGINNER_NAME || 'CTRC 車手｜入門',
+      novice: process.env.ROLE_CYCLIST_NOVICE_NAME || 'CTRC 車手｜初階',
+      advanced: process.env.ROLE_CYCLIST_ADVANCED_NAME || 'CTRC 車手｜進階',
+      veteran: process.env.ROLE_CYCLIST_VETERAN_NAME || 'CTRC 車手｜資深',
+      elite: process.env.ROLE_CYCLIST_ELITE_NAME || 'CTRC 車手｜精英',
+      top: process.env.ROLE_CYCLIST_TOP_NAME || 'CTRC 車手｜頂尖',
+    },
+    mileage: {
+      bronze: process.env.ROLE_MILEAGE_BRONZE_NAME || 'CTRC 里程卡｜銅卡',
+      silver: process.env.ROLE_MILEAGE_SILVER_NAME || 'CTRC 里程卡｜銀卡',
+      gold: process.env.ROLE_MILEAGE_GOLD_NAME || 'CTRC 里程卡｜金卡',
+    },
+    membership: {
+      junior: process.env.ROLE_MEMBERSHIP_JUNIOR_NAME || 'CTRC 會員｜普通',
+      senior: process.env.ROLE_MEMBERSHIP_SENIOR_NAME || 'CTRC 會員｜高級',
+      vip: process.env.ROLE_MEMBERSHIP_VIP_NAME || 'CTRC 會員｜VIP',
+      admin: process.env.ROLE_MEMBERSHIP_ADMIN_NAME || 'CTRC 會員｜管理員',
+      senior_admin: process.env.ROLE_MEMBERSHIP_SENIOR_ADMIN_NAME || 'CTRC 會員｜高級管理員',
+    },
+  },
 };
 
 if (!cfg.token || !cfg.clientId || !cfg.guildId) {
@@ -73,16 +95,20 @@ async function fetchCtrchkProfile({ userId, discordId }) {
   return resp.json();
 }
 
-function pickManagedRoleIds() {
-  const ids = [
-    ...Object.values(cfg.roleIds.cyclist),
-    ...Object.values(cfg.roleIds.mileage),
-    ...Object.values(cfg.roleIds.membership),
-  ].filter(Boolean);
-  return new Set(ids);
+/**
+ * Normalize role names for matching.
+ * Removes all whitespace and lowercases all characters so role matching
+ * is stable against spacing/case variations in Discord role names.
+ */
+function normalizeRoleName(text) {
+  return String(text || '').replace(/\s+/g, '').toLowerCase();
 }
 
-function cyclistTierKey(tierLabel) {
+/**
+ * Resolve cyclist tier key from profile fields.
+ * Prefer explicit tier labels from API; fallback to numeric level mapping.
+ */
+function cyclistTierKey(tierLabel, level) {
   const map = {
     入門車手: 'beginner',
     初階車手: 'novice',
@@ -91,24 +117,86 @@ function cyclistTierKey(tierLabel) {
     精英車手: 'elite',
     頂尖車手: 'top',
   };
-  return map[tierLabel] || 'beginner';
+  const direct = map[tierLabel];
+  if (direct) return direct;
+  const lv = Number(level ?? 1);
+  if (Number.isFinite(lv)) {
+    if (lv >= 76) return 'top';
+    if (lv >= 51) return 'elite';
+    if (lv >= 31) return 'veteran';
+    if (lv >= 16) return 'advanced';
+    if (lv >= 6) return 'novice';
+  }
+  return 'beginner';
 }
 
-function pickTargetRoleIds(profile) {
+/**
+ * Resolve mileage card key from profile fields.
+ * Prefer explicit card label from API; fallback to total distance thresholds.
+ */
+function mileageCardKey(cardLabel, totalDistanceKm) {
+  const MILEAGE_GOLD = '金卡';
+  const MILEAGE_SILVER = '銀卡';
+  const MILEAGE_BRONZE = '銅卡';
+  if (cardLabel === MILEAGE_GOLD) return 'gold';
+  if (cardLabel === MILEAGE_SILVER) return 'silver';
+  if (cardLabel === MILEAGE_BRONZE) return 'bronze';
+  const km = Number(totalDistanceKm || 0);
+  if (Number.isFinite(km)) {
+    if (km >= 1000) return 'gold';
+    if (km >= 300) return 'silver';
+  }
+  return 'bronze';
+}
+
+/**
+ * Resolve target Discord role ID.
+ * Priority: configured role ID -> configured role name lookup in guild cache.
+ */
+function buildGuildRoleNameIndex(guild) {
+  const index = new Map();
+  for (const role of guild.roles.cache.values()) {
+    index.set(normalizeRoleName(role.name), role.id);
+  }
+  return index;
+}
+
+function resolveRoleId(guild, group, key, roleNameIndex) {
+  const byId = cfg.roleIds[group]?.[key];
+  if (byId) return byId;
+  const roleName = cfg.roleNames[group]?.[key];
+  if (!roleName) return null;
+  const target = normalizeRoleName(roleName);
+  if (roleNameIndex?.has(target)) return roleNameIndex.get(target);
+  return null;
+}
+
+function pickManagedRoleIds(guild, roleNameIndex) {
   const ids = [];
-  const cyclist = cfg.roleIds.cyclist[cyclistTierKey(profile.cyclist_tier)];
+  for (const group of ['cyclist', 'mileage', 'membership']) {
+    for (const key of Object.keys(cfg.roleNames[group])) {
+      const id = resolveRoleId(guild, group, key, roleNameIndex);
+      if (id) ids.push(id);
+    }
+  }
+  return new Set(ids);
+}
+
+function pickTargetRoleIds(profile, guild, roleNameIndex) {
+  const ids = [];
+  const cyclist = resolveRoleId(guild, 'cyclist', cyclistTierKey(profile.cyclist_tier, profile.level), roleNameIndex);
   if (cyclist) ids.push(cyclist);
-  const mileageKey = profile.mileage_card === '金卡' ? 'gold' : profile.mileage_card === '銀卡' ? 'silver' : 'bronze';
-  const mileage = cfg.roleIds.mileage[mileageKey];
+  const mileage = resolveRoleId(guild, 'mileage', mileageCardKey(profile.mileage_card, profile.total_distance_km), roleNameIndex);
   if (mileage) ids.push(mileage);
-  const membership = cfg.roleIds.membership[profile.user_role];
+  const membership = resolveRoleId(guild, 'membership', profile.user_role, roleNameIndex);
   if (membership) ids.push(membership);
   return ids;
 }
 
-async function syncMemberRoles(member, profile) {
-  const managed = pickManagedRoleIds();
-  const target = new Set(pickTargetRoleIds(profile));
+async function syncMemberRoles(member, guild, profile) {
+  const roleNameIndex = buildGuildRoleNameIndex(guild);
+  const managed = pickManagedRoleIds(guild, roleNameIndex);
+  const target = new Set(pickTargetRoleIds(profile, guild, roleNameIndex));
   const toRemove = [...member.roles.cache.keys()].filter((id) => managed.has(id) && !target.has(id));
   const toAdd = [...target].filter((id) => !member.roles.cache.has(id));
   if (toRemove.length) await member.roles.remove(toRemove, 'CTRCHK automatic role sync');
@@ -120,7 +208,7 @@ async function syncByDiscordId({ userId, discordId }) {
   if (!profile.discord_id) return { synced: false, reason: 'discord_not_linked' };
   const guild = await client.guilds.fetch(cfg.guildId);
   const member = await guild.members.fetch(profile.discord_id);
-  await syncMemberRoles(member, profile);
+  await syncMemberRoles(member, guild, profile);
   return {
     synced: true,
     profile: {
@@ -135,14 +223,26 @@ const statusCommand = new SlashCommandBuilder()
   .setName('status')
   .setDescription('查看你的 CTRCHK 里程卡、里程幣、車手等級與會員身份');
 
+async function registerStatusCommands() {
+  const rest = new REST({ version: '10' }).setToken(cfg.token);
+  const body = [statusCommand.toJSON()];
+  try {
+    await rest.put(Routes.applicationGuildCommands(cfg.clientId, cfg.guildId), { body });
+    console.log('[CTRCHK Bot] /status guild command registered');
+  } catch (error) {
+    console.error('[CTRCHK Bot] Failed to register guild /status command:', error.message);
+  }
+  try {
+    await rest.put(Routes.applicationCommands(cfg.clientId), { body });
+    console.log('[CTRCHK Bot] /status global command registered');
+  } catch (error) {
+    console.error('[CTRCHK Bot] Failed to register global /status command:', error.message);
+  }
+}
+
 client.once('ready', async () => {
   console.log(`[CTRCHK Bot] Logged in as ${client.user.tag}`);
-  const rest = new REST({ version: '10' }).setToken(cfg.token);
-  await rest.put(
-    Routes.applicationGuildCommands(cfg.clientId, cfg.guildId),
-    { body: [statusCommand.toJSON()] }
-  );
-  console.log('[CTRCHK Bot] /status command registered');
+  await registerStatusCommands();
 });
 
 client.on('guildMemberAdd', async (member) => {

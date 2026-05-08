@@ -125,6 +125,30 @@ async function ensureGameProfile(userId) {
   return { level: 1, xp: 0, coins: 0 };
 }
 
+async function triggerDiscordBotSyncForUser(userId) {
+  const endpoint = process.env.DISCORD_BOT_SYNC_ENDPOINT;
+  const token = process.env.DISCORD_BOT_SYNC_TOKEN;
+  if (!endpoint || !token) {
+    console.info('[getHistory] Discord sync skipped: missing endpoint or token');
+    return;
+  }
+  try {
+    const { rows } = await query('SELECT discord_id FROM users WHERE id = $1', [userId]);
+    const discordId = rows[0]?.discord_id;
+    if (!discordId) return;
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, discordId }),
+    });
+  } catch (e) {
+    console.warn('[getHistory] Failed to trigger Discord bot sync:', e.message);
+  }
+}
+
 async function tableExists(tableName) {
   try {
     const { rows } = await query('SELECT to_regclass($1) AS reg', [`public.${tableName}`]);
@@ -497,6 +521,7 @@ export default async function handler(req, res) {
              SET level = $2, xp = $3, coins = $4, updated_at = NOW()`,
           [userData.userId, newLevel, newXp, newCoins]
         );
+        await triggerDiscordBotSyncForUser(userData.userId);
 
         const gameProfile = { level: newLevel, xp: newXp, coins: newCoins };
         return res.status(200).json({
@@ -650,6 +675,7 @@ export default async function handler(req, res) {
              SET level = $2, xp = $3, coins = $4, updated_at = NOW()`,
           [userData.userId, newLevel, newXp, newCoins]
         );
+        await triggerDiscordBotSyncForUser(userData.userId);
 
         gameResult = {
           level: newLevel,
