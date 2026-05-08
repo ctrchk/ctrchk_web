@@ -117,7 +117,10 @@ CTRCHK 的 Discord 整合包含兩個系統：
 
 請先把 ID 整理好，下一步會一次填入環境變數。
 
-## 4.3 設定 Bot 環境變數（`discord-bot/.env`）
+## 4.3 設定 Bot 環境變數（`discord-bot/.env` 或雲端平台環境變數）
+
+> `discord-bot/.env` 只是本地開發的寫法。  
+> 正式上線時，請把同名變數填到你實際部署 Bot 的雲端平台（Render/Railway/Fly.io/VM 等），不一定要存本地檔案。
 
 先複製範本：
 
@@ -206,6 +209,14 @@ cp .env.example .env
 
 ## 4.4 設定網站環境變數（Vercel / GCP）
 
+先講結論（對應常見疑問）：
+
+1. 你做的是 Discord Bot，**不需要有一個 bot 前台網站**。  
+   `DISCORD_BOT_SYNC_ENDPOINT` 要的是「Bot API 位址」，不是網頁前台。
+2. 4.4 不填車手/里程卡 role 是正常的；  
+   **同步後自動派發三軌 role** 主要由 Bot 端 4.3(B) 的 `ROLE_*` 映射負責。
+3. 4.4 這裡的網站設定重點是：Discord OAuth + 觸發 Bot 同步。
+
 以下變數請設在網站部署環境（Production / Preview 視需要）：
 
 - `DISCORD_CLIENT_ID`  
@@ -223,33 +234,26 @@ cp .env.example .env
   - 格式：純數字字串。  
   - 檢查：必須與 Bot 端 `DISCORD_GUILD_ID` 一致。
 
-- `DISCORD_SENIOR_ADMIN_ROLE_ID`  
-  - 填甚麼：`senior_admin` 對應的 Discord Role ID。  
-  - 格式：純數字字串。  
-  - 是否必填：選填（未填則不做該角色同步）。
+- `DISCORD_SENIOR_ADMIN_ROLE_ID`（選填）  
+  - 用途：網站在 OAuth 流程中，讀取 Discord 既有身份組時，用來判定是否升級網站帳號到 `senior_admin`。  
+  - 注意：這組變數是「Discord → 網站帳號等級」判定，不是 Bot 三軌派發的主配置。
 
-- `DISCORD_VIP_ROLE_ID`  
-  - 填甚麼：`vip` 對應的 Discord Role ID。  
-  - 格式：純數字字串。  
-  - 是否必填：選填（未填則不做該角色同步）。
+- `DISCORD_VIP_ROLE_ID`（選填）  
+  - 用途：同上，用於判定網站帳號 `vip`。
 
-- `DISCORD_ADMIN_ROLE_ID`  
-  - 填甚麼：`admin` 對應的 Discord Role ID。  
-  - 格式：純數字字串。  
-  - 是否必填：選填（未填則不做該角色同步）。
+- `DISCORD_ADMIN_ROLE_ID`（選填）  
+  - 用途：同上，用於判定網站帳號 `admin`。
 
-- `DISCORD_SENIOR_ROLE_ID`  
-  - 填甚麼：`senior` 對應的 Discord Role ID。  
-  - 格式：純數字字串。  
-  - 是否必填：選填（未填則不做該角色同步）。
+- `DISCORD_SENIOR_ROLE_ID`（選填）  
+  - 用途：同上，用於判定網站帳號 `senior`。
 
 - `DISCORD_BOT_SYNC_ENDPOINT`  
-  - 填甚麼：網站呼叫 Bot 同步 API 的**完整 URL**。  
-  - 格式：`https://<你的-bot-網域>/api/sync-user`  
-  - 例子：`https://bot.ctrchk.com/api/sync-user`  
+  - 填甚麼：網站呼叫 Bot 同步 API 的**完整 URL**（Bot 後端服務位址）。  
+  - 格式：`https://<你的-bot-api-domain>/api/sync-user`  
+  - 例子：`https://ctrchk-discord-bot.onrender.com/api/sync-user`  
   - 常見錯誤：  
     - 只填網域（少了 `/api/sync-user`）  
-    - 打成網站網域而不是 Bot 網域  
+    - 打成網站前台網域而不是 Bot API 網域  
     - 用了 `http://` 導致部署環境被擋
 
 - `DISCORD_BOT_SYNC_TOKEN`  
@@ -263,8 +267,8 @@ cp .env.example .env
   - 檢查：必須與 Bot 端 `CTRCHK_API_BOT_TOKEN` 完全一致。
 
 > 4.4 是否要填金／銀／銅卡、各級車手 Role？  
-> 不需要在 **網站 4.4** 填。網站端這裡只處理會員身份角色（junior/senior/vip/admin/senior_admin）。  
-> 金銀銅卡與各級車手 Role ID 請在 **4.3 B（Bot 環境變數）** 填寫。
+> 不需要在 **網站 4.4** 填。三軌（車手等級 / 里程卡 / 會員身份）的 Discord 派發主邏輯在 Bot。  
+> 只要 **4.3(B) 的 `ROLE_*` 映射完整**，網站觸發同步後就會由 Bot 自動派發對應 role。
 
 ## 4.5 啟動 Bot
 
@@ -274,11 +278,14 @@ npm install
 npm run start
 ```
 
-建議使用 PM2 / Cloud Run 等長駐方式，避免中斷。
+重點不是「一定要你自己有實體機器」，而是 **Bot 必須有長駐執行環境**。  
+這個環境可以是雲端平台，不一定是你本地電腦。
 
-> 只用 iPad 可否完成 4.5？  
-> 可以「有條件」完成：你需要可在 iPad 使用的遠端終端環境（例如 SSH 到 Linux 主機、Codespaces、雲端 Shell）。  
-> 若只在 iPad 本機、沒有可執行 Node.js 的終端環境，通常無法直接完成 4.5。
+如果你現在已經是「GitHub 提交 → 雲端平台 redeploy → Bot 自動生效」，代表你其實已具備 4.5 需要的條件，只要：
+
+1. Bot 服務在雲端保持運行（不中斷）。  
+2. 4.3 的 Bot 環境變數設在該雲端平台。  
+3. 4.4 的網站環境變數設在 Vercel（或你用的網站平台）。
 
 ## 4.6 Bot 操作方式（啟動後怎樣用）
 
