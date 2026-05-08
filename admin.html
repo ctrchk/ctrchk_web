@@ -277,6 +277,9 @@
                 <button class="tab-btn" onclick="showTab('push');">
                     <i class="fas fa-bell"></i> 推送通知
                 </button>
+                <button class="tab-btn" onclick="showTab('discord-relay');">
+                    <i class="fab fa-discord"></i> Discord 發送消息
+                </button>
                 <button class="tab-btn" onclick="showTab('route-mgmt'); loadRouteMgmt();">
                     <i class="fas fa-route"></i> 路線管理
                 </button>
@@ -506,6 +509,28 @@
                     </button>
                 </form>
                 <div id="push-result" style="margin-top:1em;"></div>
+            </div>
+
+            <!-- Discord 發送消息標籤 -->
+            <div id="tab-discord-relay" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fab fa-discord"></i> Discord 官方消息代發</h3>
+                <p style="color:#555; font-size:0.9em;">透過 CTRCHK Bot 在指定 Discord 頻道發送消息。</p>
+                <form id="discord-relay-form" onsubmit="sendDiscordRelay(event)" style="max-width:620px;">
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">頻道 ID <span style="color:red">*</span></label>
+                        <input type="text" id="discord-channel-id" required maxlength="40" placeholder="Discord Channel ID"
+                               style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.3em;">內容 <span style="color:red">*</span></label>
+                        <textarea id="discord-message-content" required maxlength="2000" rows="4" placeholder="輸入要發送到 Discord 的公告內容"
+                                  style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+                    <button type="submit" class="cta-button" id="discord-relay-submit-btn">
+                        <i class="fas fa-paper-plane"></i> 發送到 Discord
+                    </button>
+                </form>
+                <div id="discord-relay-result" style="margin-top:1em;"></div>
             </div>
             <!-- 路線管理標籤 -->
             <div id="tab-route-mgmt" style="display:none;">
@@ -1059,6 +1084,51 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送通知';
+            }
+        }
+
+        async function sendDiscordRelay(e) {
+            e.preventDefault();
+            const btn = document.getElementById('discord-relay-submit-btn');
+            const resultEl = document.getElementById('discord-relay-result');
+            const token = localStorage.getItem('accessToken') || '';
+            const channelId = document.getElementById('discord-channel-id').value.trim();
+            const content = document.getElementById('discord-message-content').value.trim();
+
+            if (!channelId || !content) {
+                resultEl.style.color = 'red';
+                resultEl.textContent = '❌ 請填寫頻道 ID 及內容';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '發送中…';
+            resultEl.textContent = '';
+
+            try {
+                const resp = await fetch('/api/admin-relay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({ channelId, content }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (resp.ok) {
+                    resultEl.style.color = 'green';
+                    resultEl.textContent = `✅ 已發送到 Discord（messageId: ${data.messageId || 'N/A'}）`;
+                } else {
+                    resultEl.style.color = 'red';
+                    resultEl.textContent = '❌ ' + (data.message || '發送失敗');
+                }
+            } catch (error) {
+                resultEl.style.color = 'red';
+                resultEl.textContent = '❌ 錯誤：' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送到 Discord';
             }
         }
 

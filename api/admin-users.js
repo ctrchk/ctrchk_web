@@ -57,6 +57,27 @@ function verifyAdmin(req) {
   }
 }
 
+async function triggerDiscordBotSyncForUser(userId) {
+  const endpoint = process.env.DISCORD_BOT_SYNC_ENDPOINT;
+  const token = process.env.DISCORD_BOT_SYNC_TOKEN;
+  if (!endpoint || !token) return;
+  try {
+    const { rows } = await query('SELECT discord_id FROM users WHERE id = $1', [userId]);
+    const discordId = rows[0]?.discord_id;
+    if (!discordId) return;
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, discordId }),
+    });
+  } catch (e) {
+    console.warn('[admin-users] Failed to trigger Discord bot sync:', e.message);
+  }
+}
+
 export default async function handler(req, res) {
   // CORS headers for admin panel
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -227,6 +248,7 @@ export default async function handler(req, res) {
           `UPDATE users SET user_role = $1 WHERE id = $2`,
           [new_role, user_id]
         );
+        await triggerDiscordBotSyncForUser(user_id);
 
         return res.status(200).json({ message: `User ${user_id} role updated to ${new_role}` });
       }
@@ -300,6 +322,7 @@ export default async function handler(req, res) {
            xp    !== undefined ? xp    : null,
            coins !== undefined ? coins : null]
         );
+        await triggerDiscordBotSyncForUser(user_id);
 
         return res.status(200).json({ message: `User ${user_id} game stats updated`, level: newLevel });
       }
