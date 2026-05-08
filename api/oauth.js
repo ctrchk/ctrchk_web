@@ -348,7 +348,7 @@ async function triggerDiscordBotSync(userId, discordId) {
   const token = process.env.DISCORD_BOT_SYNC_TOKEN;
   if (!endpoint || !token) return;
   try {
-    await fetch(endpoint, {
+    const resp = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -356,6 +356,10 @@ async function triggerDiscordBotSync(userId, discordId) {
       },
       body: JSON.stringify({ userId, discordId }),
     });
+    if (!resp.ok) {
+      const body = await resp.text();
+      console.warn(`[oauth] Discord bot sync failed: ${resp.status} ${body.slice(0, 300)}`);
+    }
   } catch (e) {
     console.warn('Failed to trigger Discord bot sync:', e.message);
   }

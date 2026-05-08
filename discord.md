@@ -6,7 +6,7 @@
 2. 建立並對應 CTRCHK 三軌身份組  
 3. 設定網站與 Bot 雙方環境變數  
 4. 啟動 Bot 並與網站 API 互通  
-5. 驗收所有功能（歡迎訊息、`/status`、身份組同步、Admin Relay）
+5. 驗收所有功能（歡迎訊息、訪客自動派發、`/status`、身份組同步、Ticket、Admin Relay）
 
 > 用詞規範：統一使用香港術語 **車手、路線**（不要使用「騎手、線路」）。
 
@@ -26,7 +26,9 @@ CTRCHK 的 Discord 整合包含兩個系統：
 ## 1) 功能總覽（完成後你會得到甚麼）
 
 - 新成員入群自動歡迎
+- 新成員入群自動獲得「訪客」身份組
 - 用戶在網站連結 Discord 後，自動同步身份組
+- 在 `#客服` 放置客服面板按鈕，點擊可開 Ticket（每人同時僅 1 張）
 - 管理員可由後台透過 Bot 在指定頻道發官方公告（Admin Relay）
 - `/status` 指令可顯示：
   - 里程卡類別
@@ -126,6 +128,11 @@ CTRCHK 的 Discord 整合包含兩個系統：
 2. 右鍵每個身份組，複製 Role ID。  
 3. 右鍵伺服器圖示，複製 Guild ID。  
 4. 選一個歡迎頻道，複製 Channel ID（新成員歡迎用途）。
+5. 複製「訪客」身份組 Role ID（或確保名稱就是 `訪客`）。
+6. 複製 Ticket 需要的 ID：
+   - `#客服` 頻道 ID（放開單按鈕）
+   - Ticket 分類（Category）ID（選填）
+   - 高級管理員身份組 Role ID
 
 請先把 ID 整理好，下一步會一次填入環境變數。
 
@@ -164,6 +171,32 @@ cp .env.example .env
   - 用途：新成員歡迎訊息發送頻道。  
   - 去哪裡拿：目標頻道右鍵 → 複製頻道 ID。  
   - 填寫格式：純數字字串。
+
+- `DISCORD_DEFAULT_MEMBER_ROLE_ID`（建議填）  
+  - 用途：新成員入群時自動派發預設身份組（例如「訪客」）。  
+  - 去哪裡拿：訪客身份組右鍵 → 複製 Role ID。  
+  - 注意：若不填 ID，Bot 會用 `DISCORD_DEFAULT_MEMBER_ROLE_NAME`（預設 `訪客`）找身份組。
+
+- `DISCORD_DEFAULT_MEMBER_ROLE_NAME`（選填）  
+  - 用途：預設身份組名稱後備值。  
+  - 建議：維持 `訪客`，除非你在伺服器使用其他名稱。
+
+- `DISCORD_TICKET_CHANNEL_ID`  
+  - 用途：客服面板消息投放頻道（建議設定為 `#客服`）。  
+  - 去哪裡拿：`#客服` 頻道右鍵 → 複製頻道 ID。
+
+- `DISCORD_TICKET_ADMIN_ROLE_ID`（建議填）  
+  - 用途：可檢視及處理 Ticket 的管理身份組。  
+  - 去哪裡拿：高級管理員身份組右鍵 → 複製 Role ID。  
+  - 注意：若不填 ID，Bot 會用 `DISCORD_TICKET_ADMIN_ROLE_NAME`（預設 `CTRC 會員｜高級管理員`）找身份組。
+
+- `DISCORD_TICKET_ADMIN_ROLE_NAME`（選填）  
+  - 用途：Ticket 管理身份組名稱後備值。  
+  - 建議：維持 `CTRC 會員｜高級管理員` 或改成你的實際名稱。
+
+- `DISCORD_TICKET_CATEGORY_ID`（選填）  
+  - 用途：新 Ticket 建立時放入指定分類。  
+  - 不填：Ticket 會建立在伺服器根層級頻道列表。
 
 - `DISCORD_ADMIN_RELAY_TOKEN`  
   - 用途：保護 `/api/admin-relay`，後台呼叫時要帶同一個 Bearer Token。  
@@ -304,9 +337,10 @@ npm run start
 1. **先確認 Bot 在線**：Discord 成員列表看到 Bot 為在線狀態。  
 2. **測試 Slash 指令**：在伺服器任一可用頻道輸入 `/status`。  
 3. **驗證網站→Bot 同步**：用測試帳號在網站連結 Discord，確認身份組有更新。  
-4. **驗證後台代發（Admin Relay）**：在後台發一則測試公告到指定頻道。  
-5. **看 log 排錯**：若失敗，先檢查 Bot 啟動 log（Token、Guild ID、Role 權限、API token 是否一致）。
-6. **打健康檢查端點**（Bot API）：
+4. **驗證 Ticket**：在 `#客服` 按按鈕開單，確認同一用戶不能同時開第 2 張，並可由用戶或高級管理員關單。  
+5. **驗證後台代發（Admin Relay）**：在後台發一則測試公告到指定頻道。  
+6. **看 log 排錯**：若失敗，先檢查 Bot 啟動 log（Token、Guild ID、Role 權限、API token 是否一致）。
+7. **打健康檢查端點**（Bot API）：
    - `GET /healthz`：看進程在線、uptime、最近 Discord 錯誤
    - `GET /readyz`：看 Discord Client 是否 ready（未 ready 會回 503）
 
@@ -324,6 +358,10 @@ npm run start
    - `DISCORD_CLIENT_ID`
    - `DISCORD_GUILD_ID`
    - `DISCORD_WELCOME_CHANNEL_ID`
+   - `DISCORD_DEFAULT_MEMBER_ROLE_ID`（或保留名稱後備）
+   - `DISCORD_TICKET_CHANNEL_ID`
+   - `DISCORD_TICKET_CATEGORY_ID`（選填）
+   - `DISCORD_TICKET_ADMIN_ROLE_ID`
 2. **Bot 安全 Token（自行產生）**
    - `DISCORD_ADMIN_RELAY_TOKEN`
    - `DISCORD_BOT_SYNC_TOKEN`
@@ -368,6 +406,9 @@ npm run start
 - `DISCORD_CLIENT_ID`
 - `DISCORD_GUILD_ID`
 - `DISCORD_WELCOME_CHANNEL_ID`
+- `DISCORD_DEFAULT_MEMBER_ROLE_ID`（或 `DISCORD_DEFAULT_MEMBER_ROLE_NAME`）
+- `DISCORD_TICKET_CHANNEL_ID`
+- `DISCORD_TICKET_ADMIN_ROLE_ID`（或 `DISCORD_TICKET_ADMIN_ROLE_NAME`）
 - `DISCORD_ADMIN_RELAY_TOKEN`
 - `DISCORD_BOT_SYNC_TOKEN`
 - `CTRCHK_API_BASE_URL`（例：`https://ctrchk.com`）
@@ -395,6 +436,7 @@ npm run start
 - `PORT`（可不填，平台會注入；本專案預設 `8787`）
 - `RELAY_RATE_WINDOW_MS`（預設 `60000`）
 - `RELAY_RATE_LIMIT_MAX`（預設 `30`）
+- `DISCORD_TICKET_CATEGORY_ID`（選填；不填則 Ticket 不會自動歸類）
 
 ### 第 4 步：首次部署 Render
 
@@ -442,11 +484,13 @@ npm run start
 ### 第 7 步：做「實戰驗收」而不是只看部署成功
 
 1. 用測試 Discord 帳號加入伺服器，確認歡迎訊息正常。
+2. 確認新成員同時自動拿到「訪客」身份組。
 2. 在 Discord 輸入 `/status`：
    - 預期看到里程卡、里程幣、車手等級、會員身份。
-3. 到網站用測試帳號做「連結 Discord」。
-4. 連結完成後，回 Discord 看身份組是否更新。
-5. 後台發一則 Admin Relay 公告，確認 Bot 可代發。
+3. 到 `#客服` 按按鈕建立 Ticket，確認每人同時只能有 1 張，並可關閉。
+4. 到網站用測試帳號做「連結 Discord」。
+5. 連結完成後，回 Discord 看身份組是否更新。
+6. 後台發一則 Admin Relay 公告，確認 Bot 可代發。
 
 ### 第 8 步：失敗時按這個順序排查（不要亂改）
 
@@ -528,8 +572,10 @@ npm run start
 ## 6) 驗收清單（逐項打勾）
 
 - 新成員入群會收到正式歡迎訊息
+- 新成員入群會自動獲得「訪客」身份組
 - `/status` 可讀到完整狀態（里程卡、里程幣、車手等級、會員身份）
 - 網站連結 Discord 後會自動同步三軌身份組
+- `#客服` 已有 Ticket 面板按鈕，且每人同時僅可開 1 張 Ticket
 - 後台可指定頻道發純文字或 Embed
 - 5/31 前首次連結成功可收到 100 里程幣
 
@@ -553,6 +599,11 @@ npm run start
 2. `DISCORD_BOT_SYNC_TOKEN` 網站與 Bot 是否完全一致  
 3. Bot 服務是否在線（有沒有異常重啟或停止）
 4. 先打 Bot `GET /readyz`，如果是 503 代表 Discord 端未成功連線
+5. 看網站 logs 是否有：
+   - `[oauth] Discord bot sync failed: ...`
+   - `[getHistory] Discord bot sync failed: ...`
+   - `[admin-users] Discord bot sync failed: ...`
+   若出現，先按狀態碼排查：401（token 不一致）、404（endpoint 錯）、500（Bot 端錯誤）
 
 ### 問題 C：`/status` 回傳空資料或失敗
 
@@ -582,8 +633,25 @@ npm run start
    - 開啟 **SERVER MEMBERS INTENT**
 2. 儲存後回 Render 重新部署
 3. 若仍報 4014：
-   - 重新貼上 `DISCORD_BOT_TOKEN` 後再部署
-   - 確認你調整的是與目前 `DISCORD_BOT_TOKEN` 同一個 Discord App
+    - 重新貼上 `DISCORD_BOT_TOKEN` 後再部署
+    - 確認你調整的是與目前 `DISCORD_BOT_TOKEN` 同一個 Discord App
+
+### 問題 F：Ticket 沒出現在 `#客服` 或按鈕開單失敗
+
+優先檢查：
+
+1. `DISCORD_TICKET_CHANNEL_ID` 是否正確且 Bot 對該頻道有讀寫權限  
+2. `DISCORD_TICKET_ADMIN_ROLE_ID`（或 `DISCORD_TICKET_ADMIN_ROLE_NAME`）是否能正確對到身份組  
+3. Bot 是否有 `Manage Channels` 權限（建立/刪除 Ticket 頻道需要）  
+4. 如有設定 `DISCORD_TICKET_CATEGORY_ID`，確認該分類允許 Bot 建立子頻道
+
+### 問題 G：Bot 沒法 24 小時上線
+
+優先檢查：
+
+1. 你使用的方案是否為「可長駐」方案（免費休眠方案會離線）  
+2. 平台健康檢查是否設為 `GET /healthz`（存活）與 `GET /readyz`（Discord 連線狀態）  
+3. 平台是否因記憶體/重啟策略導致循環重啟（先看部署平台 logs）
 
 ---
 
