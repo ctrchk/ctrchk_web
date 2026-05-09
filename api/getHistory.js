@@ -1,6 +1,7 @@
 // /api/getHistory.js
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
+import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
@@ -526,6 +527,9 @@ export default async function handler(req, res) {
           [userData.userId, newLevel, newXp, newCoins]
         );
         await triggerDiscordBotSyncForUser(userData.userId);
+        syncDiscordRolesForUser(userData.userId).catch(e =>
+          console.warn('[getHistory] Discord role sync failed:', e.message)
+        );
 
         const gameProfile = { level: newLevel, xp: newXp, coins: newCoins };
         return res.status(200).json({
@@ -680,6 +684,9 @@ export default async function handler(req, res) {
           [userData.userId, newLevel, newXp, newCoins]
         );
         await triggerDiscordBotSyncForUser(userData.userId);
+        syncDiscordRolesForUser(userData.userId).catch(e =>
+          console.warn('[getHistory] Discord role sync failed:', e.message)
+        );
 
         gameResult = {
           level: newLevel,

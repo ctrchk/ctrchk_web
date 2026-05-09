@@ -3,6 +3,7 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 
 // 根據累計 XP 計算等級（與 getHistory.js 保持一致）
 function calcLevel(xp) {
@@ -253,6 +254,9 @@ export default async function handler(req, res) {
           [new_role, user_id]
         );
         await triggerDiscordBotSyncForUser(user_id);
+        syncDiscordRolesForUser(user_id).catch(e =>
+          console.warn('[admin-users] Discord role sync failed:', e.message)
+        );
 
         return res.status(200).json({ message: `User ${user_id} role updated to ${new_role}` });
       }
@@ -327,6 +331,9 @@ export default async function handler(req, res) {
            coins !== undefined ? coins : null]
         );
         await triggerDiscordBotSyncForUser(user_id);
+        syncDiscordRolesForUser(user_id).catch(e =>
+          console.warn('[admin-users] Discord role sync failed:', e.message)
+        );
 
         return res.status(200).json({ message: `User ${user_id} game stats updated`, level: newLevel });
       }

@@ -279,18 +279,37 @@ cp .env.example .env
   - 格式：純數字字串。  
   - 檢查：必須與 Bot 端 `DISCORD_GUILD_ID` 一致。
 
-- `DISCORD_SENIOR_ADMIN_ROLE_ID`（選填）  
-  - 用途：網站在 OAuth 流程中，讀取 Discord 既有身份組時，用來判定是否升級網站帳號到 `senior_admin`。  
-  - 注意：這組變數是「Discord → 網站帳號等級」判定，不是 Bot 三軌派發的主配置。
+- `DISCORD_BOT_TOKEN`（**新增，建議填寫**）  
+  - 用途：網站端直接呼叫 Discord REST API，將 CTRC 等級（車手等級、里程卡、會員身份）同步至 Discord 身份組。不需要 Bot 在線，由 Vercel 直接操作。  
+  - 填甚麼：Discord Developer Portal → 你的 App → **Bot** → **Reset Token / Copy**。  
+  - 格式：一整串 Token 字串（不要加引號）。  
+  - 注意：必須與 Bot 端 `DISCORD_BOT_TOKEN` 完全一致（同一個 Bot）。
 
-- `DISCORD_VIP_ROLE_ID`（選填）  
-  - 用途：同上，用於判定網站帳號 `vip`。
+- `ROLE_MEMBERSHIP_SENIOR_ADMIN_ID`（建議填，取代舊名 `DISCORD_SENIOR_ADMIN_ROLE_ID`）  
+  - 用途：網站在 OAuth 流程中判定是否升級帳號至 `senior_admin`，並用於 CTRC → Discord 身份組同步。
 
-- `DISCORD_ADMIN_ROLE_ID`（選填）  
-  - 用途：同上，用於判定網站帳號 `admin`。
+- `ROLE_MEMBERSHIP_VIP_ID`（建議填，取代舊名 `DISCORD_VIP_ROLE_ID`）  
+  - 用途：同上，用於判定及同步 `vip` 等級。
 
-- `DISCORD_SENIOR_ROLE_ID`（選填）  
-  - 用途：同上，用於判定網站帳號 `senior`。
+- `ROLE_MEMBERSHIP_ADMIN_ID`（建議填，取代舊名 `DISCORD_ADMIN_ROLE_ID`）  
+  - 用途：同上，用於判定及同步 `admin` 等級。
+
+- `ROLE_MEMBERSHIP_SENIOR_ID`（建議填，取代舊名 `DISCORD_SENIOR_ROLE_ID`）  
+  - 用途：同上，用於判定及同步 `senior` 等級。
+
+- `ROLE_MEMBERSHIP_JUNIOR_ID`（建議填）  
+  - 用途：CTRC → Discord 同步時，指派普通會員身份組。
+
+- `ROLE_CYCLIST_BEGINNER_ID` / `ROLE_CYCLIST_NOVICE_ID` / `ROLE_CYCLIST_ADVANCED_ID` / `ROLE_CYCLIST_VETERAN_ID` / `ROLE_CYCLIST_ELITE_ID` / `ROLE_CYCLIST_TOP_ID`（建議填）  
+  - 用途：網站端直接同步 CTRC 車手等級至 Discord（入門／初階／進階／資深／精英／頂尖）。
+
+- `ROLE_MILEAGE_BRONZE_ID` / `ROLE_MILEAGE_SILVER_ID` / `ROLE_MILEAGE_GOLD_ID`（建議填）  
+  - 用途：網站端直接同步 CTRC 里程卡至 Discord（銅卡／銀卡／金卡）。
+
+> **雙向同步說明（以高的為準）：**  
+> - Discord → CTRC：用戶連結 Discord 時，若 Discord 身份組比 CTRC 帳號等級更高，網站會自動升級 CTRC 帳號（包括會員身份、車手等級、里程卡）。  
+> - CTRC → Discord：用戶連結 Discord、記錄騎行、或管理員修改用戶後，網站會直接呼叫 Discord API，將 CTRC 等級（車手／里程卡／會員）派發至 Discord。  
+> - 以高的為準：兩個方向均取較高等級，不會降級。
 
 - `DISCORD_BOT_SYNC_ENDPOINT`  
   - 填甚麼：網站呼叫 Bot 同步 API 的**完整 URL**（Bot 後端服務位址）。  
@@ -311,9 +330,9 @@ cp .env.example .env
   - 格式：高強度隨機字串。  
   - 檢查：必須與 Bot 端 `CTRCHK_API_BOT_TOKEN` 完全一致。
 
-> 4.4 是否要填金／銀／銅卡、各級車手 Role？  
-> 不需要在 **網站 4.4** 填。三軌（車手等級 / 里程卡 / 會員身份）的 Discord 派發主邏輯在 Bot。  
-> 只要 **4.3(B) 的 `ROLE_*` 映射完整**，網站觸發同步後就會由 Bot 自動派發對應 role。
+> 4.4 三軌 Role ID 現在也要填在 **Vercel（網站）**。  
+> 網站端已可直接同步 CTRC 車手等級、里程卡、會員身份至 Discord，不再需要 Bot 在線才能完成派發。  
+> Bot 端的 `ROLE_*` 設定仍保留（Bot 在線時同步、`/status` 指令等功能不受影響）。
 
 ## 4.5 啟動 Bot
 
