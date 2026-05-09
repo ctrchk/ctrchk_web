@@ -577,8 +577,9 @@ async function handleDiscordAction(req, res, action) {
         );
       }
 
-      if (mergedDistance - currentDistance >= DISTANCE_EPSILON_KM) {
-        const deltaKm = Number((mergedDistance - currentDistance).toFixed(2));
+      const rawDistanceDelta = mergedDistance - currentDistance;
+      if (rawDistanceDelta >= DISTANCE_EPSILON_KM) {
+        const deltaKm = Number(rawDistanceDelta.toFixed(2));
         await query(
           `INSERT INTO cycling_history (user_id, ride_date, distance_km, route_name, source, created_at)
            VALUES ($1, CURRENT_DATE, $2, $3, $4, NOW())`,
