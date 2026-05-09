@@ -653,6 +653,24 @@ npm run start
 2. 平台健康檢查是否設為 `GET /healthz`（存活）與 `GET /readyz`（Discord 連線狀態）  
 3. 平台是否因記憶體/重啟策略導致循環重啟（先看部署平台 logs）
 
+> 補充：若 Bot 因平台休眠而離線，網站端觸發 `/api/sync-user` 會失敗，表現就是「網站顯示已連結 Discord，但 Discord 身份組不更新」。
+
+### 問題 H：環境變數都齊，但身份組仍不同步
+
+請用以下 5 步快速定位（按順序）：
+
+1. 打開 `https://<你的-bot-domain>/healthz`  
+   - 若無法連線：先處理平台離線／休眠問題。
+2. 打開 `https://<你的-bot-domain>/readyz`  
+   - 若回 `503`：代表 Discord Client 未 ready（看 Bot logs）。
+3. 檢查網站 `DISCORD_BOT_SYNC_ENDPOINT`  
+   - 必須是完整 `https://<bot-domain>/api/sync-user`，不能只有網域。
+4. 核對兩邊 token  
+   - `DISCORD_BOT_SYNC_TOKEN`（網站與 Bot 必須完全一致）  
+   - `CTRCHK_API_BOT_TOKEN`（網站與 Bot 必須完全一致）
+5. 檢查 Discord 權限與角色順位  
+   - Bot 角色需高於所有目標身份組，且有 `Manage Roles`。
+
 ---
 
 ## 8) 安全與維運建議（建議遵守）
@@ -675,3 +693,99 @@ npm run start
 5. 用測試帳號完成「連結 Discord → 同步身份組 → `/status` 驗證」
 
 完成以上 5 步後，再補完歡迎訊息與 Admin Relay。
+
+---
+
+## 10) 換平台完整教學（Render 免費休眠 → Railway 常駐）
+
+> 適用場景：你目前平台會休眠，導致 Bot 不是 24 小時在線，進而令身份組同步間歇失效。  
+> 目標：把 Bot 遷移到 Railway（或任何可長駐方案），網站仍放 Vercel。
+
+### 第 0 步：先確認是否真的需要搬
+
+先做兩個檢查：
+
+1. 在 Bot 離線時打 `https://<目前-bot-domain>/healthz`  
+   - 若逾時/連不上：高機率是平台休眠或服務停機。
+2. 看網站 logs 是否出現：  
+   - `[oauth] Discord bot sync failed: ...`  
+   - `[getHistory] Discord bot sync failed: ...`  
+   - `[admin-users] Discord bot sync failed: ...`
+
+若兩者都符合，建議直接搬平台，不要只反覆重部署。
+
+### 第 1 步：在 Railway 建立新服務
+
+1. 登入 Railway。  
+2. 建立新 Project。  
+3. 選「Deploy from GitHub Repo」。  
+4. 選 `ctrchk/ctrchk_web`。  
+5. 在服務設定指定：
+   - **Root Directory**：`discord-bot`
+   - **Start Command**：`npm run start`
+6. 確認服務型態為長駐 Web Service（非一次性 Job）。
+
+### 第 2 步：把 Bot 環境變數完整搬過去
+
+在 Railway 逐一新增以下變數（與現有 Bot 一致）：
+
+1. 核心：  
+   - `DISCORD_BOT_TOKEN`  
+   - `DISCORD_CLIENT_ID`  
+   - `DISCORD_GUILD_ID`  
+   - `DISCORD_WELCOME_CHANNEL_ID`  
+   - `DISCORD_DEFAULT_MEMBER_ROLE_ID`（或名稱後備）  
+   - `DISCORD_TICKET_CHANNEL_ID`  
+   - `DISCORD_TICKET_ADMIN_ROLE_ID`（或名稱後備）  
+   - `DISCORD_ADMIN_RELAY_TOKEN`  
+   - `DISCORD_BOT_SYNC_TOKEN`  
+   - `CTRCHK_API_BASE_URL`  
+   - `CTRCHK_API_BOT_TOKEN`
+2. 三軌 Role 映射（建議全填）：  
+   - `ROLE_CYCLIST_*`  
+   - `ROLE_MILEAGE_*`  
+   - `ROLE_MEMBERSHIP_*`
+3. 可選：  
+   - `PORT`  
+   - `RELAY_RATE_WINDOW_MS`  
+   - `RELAY_RATE_LIMIT_MAX`  
+   - `DISCORD_TICKET_CATEGORY_ID`
+
+### 第 3 步：部署並先驗 Bot 狀態
+
+1. 在 Railway 觸發 Deploy。  
+2. 等待 logs 出現：
+   - `listening on`  
+   - `Logged in as`  
+3. 打開：
+   - `https://<railway-domain>/healthz`（應回 `ok: true`）  
+   - `https://<railway-domain>/readyz`（應回 `ok: true`）
+
+若 `readyz` 仍是 `503`，先看 Discord Token / Intent / 權限，不要先改網站端。
+
+### 第 4 步：切換網站（Vercel）到新 Bot 網域
+
+在 Vercel 更新以下變數：
+
+1. `DISCORD_BOT_SYNC_ENDPOINT`  
+   - 改成：`https://<railway-domain>/api/sync-user`
+2. `DISCORD_BOT_SYNC_TOKEN`  
+   - 必須與 Railway 的值完全一致
+3. `CTRCHK_API_BOT_TOKEN`  
+   - 必須與 Railway 的值完全一致
+
+更新後 **Redeploy Vercel**。
+
+### 第 5 步：做遷移驗收（必做）
+
+1. Discord 測 `/status` 是否正常。  
+2. 網站用測試帳號重新「連結 Discord」。  
+3. 確認 Discord 三軌身份組有更新。  
+4. 測試 Admin Relay 能否正常發文。  
+5. 測試 Ticket 建立與關閉流程。
+
+### 第 6 步：灰度期與回滾策略（建議）
+
+1. 新平台穩定前，舊平台先保留 24 小時。  
+2. 若新平台異常，只需把 Vercel `DISCORD_BOT_SYNC_ENDPOINT` 改回舊網域並 redeploy。  
+3. 確認新平台連續穩定後，再下線舊服務。
