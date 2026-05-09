@@ -347,10 +347,10 @@ function resolveTicketAdminRoleId(guild, roleNameIndex) {
   return resolveRoleIdByIdOrName(guild, cfg.ticket.adminRoleId, cfg.ticket.adminRoleName, roleNameIndex);
 }
 
-async function syncMemberRoles(member, guild, profile) {
-  const roleNameIndex = buildGuildRoleNameIndex(guild);
-  const managed = pickManagedRoleIds(guild, roleNameIndex);
-  const target = new Set(pickTargetRoleIds(profile, guild, roleNameIndex));
+async function syncMemberRoles(member, guild, profile, roleNameIndex = null) {
+  const index = roleNameIndex || buildGuildRoleNameIndex(guild);
+  const managed = pickManagedRoleIds(guild, index);
+  const target = new Set(pickTargetRoleIds(profile, guild, index));
   const toRemove = [...member.roles.cache.keys()].filter((id) => managed.has(id) && !target.has(id));
   const toAdd = [...target].filter((id) => !member.roles.cache.has(id));
   if (toRemove.length) await member.roles.remove(toRemove, 'CTRCHK automatic role sync');
@@ -396,7 +396,7 @@ async function syncByDiscordId({ userId, discordId }) {
     if (mergedProfile) profile = mergedProfile;
   }
 
-  await syncMemberRoles(member, guild, profile);
+  await syncMemberRoles(member, guild, profile, roleNameIndex);
   return {
     synced: true,
     profile: {
