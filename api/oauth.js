@@ -316,6 +316,39 @@ function mapRolesToCtrchkRole(discordRoles, currentRole) {
   return currentRole;
 }
 
+// 根據 Discord 身份組 ID 清單，決定最高的 CTRC 車手等級 key
+// 從最高等級往下找，回傳第一個匹配的 key；若無匹配則回傳 null
+function mapRolesToCyclistKey(discordRoles) {
+  if (!Array.isArray(discordRoles)) return null;
+  const tiers = [
+    { key: 'top',      id: process.env.ROLE_CYCLIST_TOP_ID },
+    { key: 'elite',    id: process.env.ROLE_CYCLIST_ELITE_ID },
+    { key: 'veteran',  id: process.env.ROLE_CYCLIST_VETERAN_ID },
+    { key: 'advanced', id: process.env.ROLE_CYCLIST_ADVANCED_ID },
+    { key: 'novice',   id: process.env.ROLE_CYCLIST_NOVICE_ID },
+    { key: 'beginner', id: process.env.ROLE_CYCLIST_BEGINNER_ID },
+  ];
+  for (const { key, id } of tiers) {
+    if (id && discordRoles.includes(id)) return key;
+  }
+  return null;
+}
+
+// 根據 Discord 身份組 ID 清單，決定最高的 CTRC 里程卡 key
+// 從最高等級往下找，回傳第一個匹配的 key；若無匹配則回傳 null
+function mapRolesToMileageKey(discordRoles) {
+  if (!Array.isArray(discordRoles)) return null;
+  const cards = [
+    { key: 'gold',   id: process.env.ROLE_MILEAGE_GOLD_ID },
+    { key: 'silver', id: process.env.ROLE_MILEAGE_SILVER_ID },
+    { key: 'bronze', id: process.env.ROLE_MILEAGE_BRONZE_ID },
+  ];
+  for (const { key, id } of cards) {
+    if (id && discordRoles.includes(id)) return key;
+  }
+  return null;
+}
+
 const DISCORD_CONNECT_REWARD_KEY = 'discord_connect_2026_05';
 const DISCORD_CONNECT_REWARD_COINS = 100;
 const DISCORD_CONNECT_REWARD_END_UTC = '2026-05-31T23:59:59.999Z';
