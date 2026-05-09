@@ -396,6 +396,9 @@ function getMembershipLabel(role) {
 const MEMBERSHIP_RANK = { junior: 1, senior: 2, vip: 3, admin: 4, senior_admin: 5 };
 const CYCLIST_TIER_RANK = { beginner: 1, novice: 2, advanced: 3, veteran: 4, elite: 5, top: 6 };
 const MILEAGE_CARD_RANK = { bronze: 1, silver: 2, gold: 3 };
+const DISCORD_SYNC_ROUTE_NAME = 'Discord 里程卡同步';
+const DISCORD_SYNC_SOURCE = 'discord_sync';
+const DISTANCE_EPSILON_KM = 0.01;
 
 function extractBotToken(req) {
   const auth = req.headers.authorization || '';
@@ -574,13 +577,13 @@ async function handleDiscordAction(req, res, action) {
         );
       }
 
-      if (mergedDistance > currentDistance) {
+      if (mergedDistance - currentDistance >= DISTANCE_EPSILON_KM) {
         const deltaKm = Number((mergedDistance - currentDistance).toFixed(2));
-        if (deltaKm > 0) {
+        if (deltaKm >= DISTANCE_EPSILON_KM) {
           await query(
             `INSERT INTO cycling_history (user_id, ride_date, distance_km, route_name, source, created_at)
              VALUES ($1, CURRENT_DATE, $2, $3, $4, NOW())`,
-            [currentUser.id, deltaKm, 'Discord 里程卡同步', 'discord_sync']
+            [currentUser.id, deltaKm, DISCORD_SYNC_ROUTE_NAME, DISCORD_SYNC_SOURCE]
           );
         }
       }
