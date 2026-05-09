@@ -653,9 +653,9 @@ npm run start
 2. 平台健康檢查是否設為 `GET /healthz`（存活）與 `GET /readyz`（Discord 連線狀態）  
 3. 平台是否因記憶體/重啟策略導致循環重啟（先看部署平台 logs）
 
-> 補充：若 Bot 因平台休眠而離線，網站端觸發 `/api/sync-user` 會失敗，表現就是「網站顯示已連結 Discord，但 Discord 身份組不更新」。
+> 補充：若 Bot 因平台休眠而離線，網站端觸發 `/api/sync-user` 會失敗，表現就是「網站顯示已連結 Discord，但 Discord 身分組不更新」。
 
-### 問題 H：環境變數都齊，但身份組仍不同步
+### 問題 H：環境變數都齊，但身分組仍不同步
 
 請用以下 5 步快速定位（按順序）：
 
@@ -669,7 +669,7 @@ npm run start
    - `DISCORD_BOT_SYNC_TOKEN`（網站與 Bot 必須完全一致）  
    - `CTRCHK_API_BOT_TOKEN`（網站與 Bot 必須完全一致）
 5. 檢查 Discord 權限與角色順位  
-   - Bot 角色需高於所有目標身份組，且有 `Manage Roles`。
+   - Bot 角色需高於所有目標身分組，且有 `Manage Roles`。
 
 ---
 
@@ -699,7 +699,7 @@ npm run start
 ## 10) 換平台完整教學（Render 免費休眠 → Railway 常駐）
 
 > 適用場景：你目前平台會休眠，導致 Bot 不是 24 小時在線，進而令身份組同步間歇失效。  
-> 目標：把 Bot 遷移到 Railway（或任何可長駐方案），網站仍放 Vercel。
+> 目標：把 Bot 遷移到 Railway（或任何可常駐方案），網站仍放 Vercel。
 
 ### 第 0 步：先確認是否真的需要搬
 
@@ -780,7 +780,7 @@ npm run start
 
 1. Discord 測 `/status` 是否正常。  
 2. 網站用測試帳號重新「連結 Discord」。  
-3. 確認 Discord 三軌身份組有更新。  
+3. 確認 Discord 三軌身分組有更新。  
 4. 測試 Admin Relay 能否正常發文。  
 5. 測試 Ticket 建立與關閉流程。
 
