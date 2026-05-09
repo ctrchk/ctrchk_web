@@ -546,6 +546,23 @@ npm run start
 
 用途：Bot 執行 `/status` 或同步身份組時，拉取最新資料。
 
+### 5.2B Bot → CTRCHK：回寫較高等級（雙向同步）
+
+- `POST /api/oauth?action=discord-merge-higher`
+- Header：`Authorization: Bearer <CTRCHK_API_BOT_TOKEN>`
+- Body（至少帶 `user_id` 或 `discord_id`）：
+  ```json
+  {
+    "user_id": 123,
+    "discord_id": "1234567890",
+    "user_role": "vip",
+    "level": 31,
+    "total_distance_km": 300
+  }
+  ```
+
+用途：Bot 在同步時比較 Discord 身分組與 CTRCHK 資料，按「較高者為準」回寫會員身份、車手等級與里程卡（里程）。
+
 ### 5.3 Admin Relay（後台代發官方訊息）
 
 - `POST /api/admin-relay`

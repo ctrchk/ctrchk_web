@@ -179,6 +179,28 @@ async function fetchCtrchkProfile({ userId, discordId }) {
   return resp.json();
 }
 
+async function mergeCtrchkProfileWithHigher({ userId, discordId, userRole, level, totalDistanceKm }) {
+  const url = new URL('/api/oauth', cfg.apiBaseUrl);
+  url.searchParams.set('action', 'discord-merge-higher');
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cfg.apiBotToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      discord_id: discordId,
+      user_role: userRole,
+      level,
+      total_distance_km: totalDistanceKm,
+    }),
+  });
+  if (!resp.ok) throw new Error(`CTRCHK profile merge failed: ${resp.status}`);
+  const data = await resp.json();
+  return data.profile || null;
+}
+
 /**
  * Normalize role names for matching.
  * Removes all whitespace and lowercases all characters so role matching
@@ -263,6 +285,38 @@ function resolveRoleIdByIdOrName(guild, roleId, roleName, roleNameIndex) {
   return guild.roles.cache.find((role) => normalizeRoleName(role.name) === target)?.id || null;
 }
 
+const MEMBERSHIP_RANK = { junior: 1, senior: 2, vip: 3, admin: 4, senior_admin: 5 };
+const CYCLIST_RANK = { beginner: 1, novice: 2, advanced: 3, veteran: 4, elite: 5, top: 6 };
+const MILEAGE_RANK = { bronze: 1, silver: 2, gold: 3 };
+
+function rankValue(rankMap, key) {
+  return rankMap[key] || 0;
+}
+
+function pickHigherKey(currentKey, incomingKey, rankMap) {
+  return rankValue(rankMap, incomingKey) > rankValue(rankMap, currentKey) ? incomingKey : currentKey;
+}
+
+function cyclistMinLevel(key) {
+  const map = { beginner: 1, novice: 6, advanced: 16, veteran: 31, elite: 51, top: 76 };
+  return map[key] || 1;
+}
+
+function mileageMinDistance(key) {
+  const map = { bronze: 0, silver: 300, gold: 1000 };
+  return map[key] || 0;
+}
+
+function highestRoleKeyFromMember(member, guild, group, rankMap, roleNameIndex) {
+  let highest = null;
+  for (const key of Object.keys(cfg.roleNames[group])) {
+    const id = resolveRoleId(guild, group, key, roleNameIndex);
+    if (!id || !member.roles.cache.has(id)) continue;
+    if (rankValue(rankMap, key) > rankValue(rankMap, highest)) highest = key;
+  }
+  return highest;
+}
+
 function pickManagedRoleIds(guild, roleNameIndex) {
   const ids = [];
   for (const group of ['cyclist', 'mileage', 'membership']) {
@@ -293,10 +347,10 @@ function resolveTicketAdminRoleId(guild, roleNameIndex) {
   return resolveRoleIdByIdOrName(guild, cfg.ticket.adminRoleId, cfg.ticket.adminRoleName, roleNameIndex);
 }
 
-async function syncMemberRoles(member, guild, profile) {
-  const roleNameIndex = buildGuildRoleNameIndex(guild);
-  const managed = pickManagedRoleIds(guild, roleNameIndex);
-  const target = new Set(pickTargetRoleIds(profile, guild, roleNameIndex));
+async function syncMemberRoles(member, guild, profile, roleNameIndex = null) {
+  const index = roleNameIndex || buildGuildRoleNameIndex(guild);
+  const managed = pickManagedRoleIds(guild, index);
+  const target = new Set(pickTargetRoleIds(profile, guild, index));
   const toRemove = [...member.roles.cache.keys()].filter((id) => managed.has(id) && !target.has(id));
   const toAdd = [...target].filter((id) => !member.roles.cache.has(id));
   if (toRemove.length) await member.roles.remove(toRemove, 'CTRCHK automatic role sync');
@@ -304,11 +358,45 @@ async function syncMemberRoles(member, guild, profile) {
 }
 
 async function syncByDiscordId({ userId, discordId }) {
-  const profile = await fetchCtrchkProfile({ userId, discordId });
+  let profile = await fetchCtrchkProfile({ userId, discordId });
   if (!profile.discord_id) return { synced: false, reason: 'discord_not_linked' };
   const guild = await client.guilds.fetch(cfg.guildId);
   const member = await guild.members.fetch(profile.discord_id);
-  await syncMemberRoles(member, guild, profile);
+  const roleNameIndex = buildGuildRoleNameIndex(guild);
+
+  const ctrcMembership = profile.user_role || 'junior';
+  const ctrcCyclist = cyclistTierKey(profile.cyclist_tier, profile.level);
+  const ctrcMileage = mileageCardKey(profile.mileage_card, profile.total_distance_km);
+  const ctrcLevel = Number(profile.level || 1);
+  const ctrcDistanceKm = Number(profile.total_distance_km || 0);
+
+  const discordMembership = highestRoleKeyFromMember(member, guild, 'membership', MEMBERSHIP_RANK, roleNameIndex);
+  const discordCyclist = highestRoleKeyFromMember(member, guild, 'cyclist', CYCLIST_RANK, roleNameIndex);
+  const discordMileage = highestRoleKeyFromMember(member, guild, 'mileage', MILEAGE_RANK, roleNameIndex);
+
+  const mergedMembership = pickHigherKey(ctrcMembership, discordMembership, MEMBERSHIP_RANK);
+  const mergedCyclist = pickHigherKey(ctrcCyclist, discordCyclist, CYCLIST_RANK);
+  const mergedMileage = pickHigherKey(ctrcMileage, discordMileage, MILEAGE_RANK);
+  const mergedLevel = Math.max(ctrcLevel, cyclistMinLevel(mergedCyclist));
+  const mergedDistanceKm = Math.max(ctrcDistanceKm, mileageMinDistance(mergedMileage));
+
+  const needsCtrcWriteBack =
+    rankValue(MEMBERSHIP_RANK, mergedMembership) > rankValue(MEMBERSHIP_RANK, ctrcMembership) ||
+    mergedLevel > ctrcLevel ||
+    mergedDistanceKm > ctrcDistanceKm;
+
+  if (needsCtrcWriteBack) {
+    const mergedProfile = await mergeCtrchkProfileWithHigher({
+      userId: profile.id,
+      discordId: profile.discord_id,
+      userRole: mergedMembership,
+      level: mergedLevel,
+      totalDistanceKm: mergedDistanceKm,
+    });
+    if (mergedProfile) profile = mergedProfile;
+  }
+
+  await syncMemberRoles(member, guild, profile, roleNameIndex);
   return {
     synced: true,
     profile: {
