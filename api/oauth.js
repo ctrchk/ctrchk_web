@@ -393,6 +393,93 @@ function getMembershipLabel(role) {
   return map[role] || role || '普通會員';
 }
 
+const MEMBERSHIP_RANK = { junior: 1, senior: 2, vip: 3, admin: 4, senior_admin: 5 };
+const CYCLIST_TIER_RANK = { beginner: 1, novice: 2, advanced: 3, veteran: 4, elite: 5, top: 6 };
+const MILEAGE_CARD_RANK = { bronze: 1, silver: 2, gold: 3 };
+
+function extractBotToken(req) {
+  const auth = req.headers.authorization || '';
+  return auth.startsWith('Bearer ') ? auth.slice(7) : '';
+}
+
+function pickHigherByRank(current, incoming, rankMap) {
+  const c = rankMap[current] || 0;
+  const n = rankMap[incoming] || 0;
+  return n > c ? incoming : current;
+}
+
+function cyclistTierKeyByLevel(level) {
+  const lv = Number(level || 1);
+  if (lv >= 76) return 'top';
+  if (lv >= 51) return 'elite';
+  if (lv >= 31) return 'veteran';
+  if (lv >= 16) return 'advanced';
+  if (lv >= 6) return 'novice';
+  return 'beginner';
+}
+
+function cyclistTierMinLevel(key) {
+  const map = { beginner: 1, novice: 6, advanced: 16, veteran: 31, elite: 51, top: 76 };
+  return map[key] || 1;
+}
+
+function mileageCardKeyByDistance(totalDistanceKm) {
+  const km = Number(totalDistanceKm || 0);
+  if (km >= 1000) return 'gold';
+  if (km >= 300) return 'silver';
+  return 'bronze';
+}
+
+function mileageCardMinDistance(key) {
+  const map = { bronze: 0, silver: 300, gold: 1000 };
+  return map[key] || 0;
+}
+
+function parseNonNegativeNumber(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
+function parsePositiveInteger(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.floor(n);
+}
+
+async function fetchDiscordProfileRow(userId, discordId) {
+  const { rows } = await query(
+    `SELECT
+       u.id,
+       u.email,
+       u.username,
+       u.full_name,
+       u.user_role,
+       u.discord_id,
+       COALESCE(gp.level, 1) AS level,
+       COALESCE(gp.xp, 0) AS xp,
+       COALESCE(gp.coins, 0) AS coins,
+       COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km
+     FROM users u
+     LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+     WHERE ($1::int IS NOT NULL AND u.id = $1) OR ($2::text IS NOT NULL AND u.discord_id = $2)
+     LIMIT 1`,
+    [userId ? Number(userId) : null, discordId || null]
+  );
+  return rows[0] || null;
+}
+
+function buildDiscordProfileResponse(user) {
+  const totalDistanceKm = Number(user.total_distance_km || 0);
+  return {
+    ...user,
+    total_distance_km: totalDistanceKm,
+    cyclist_tier: getCyclistTierByLevel(user.level),
+    mileage_card: getMileageCardByDistance(totalDistanceKm),
+    membership_status: getMembershipLabel(user.user_role),
+  };
+}
+
 async function handleDiscordAction(req, res, action) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -404,8 +491,7 @@ async function handleDiscordAction(req, res, action) {
   if (req.method === 'GET' && action === 'discord-profile') {
     const expected = process.env.CTRCHK_API_BOT_TOKEN;
     if (!expected) return res.status(503).json({ message: 'CTRCHK_API_BOT_TOKEN is not configured' });
-    const auth = req.headers.authorization || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    const token = extractBotToken(req);
     if (token !== expected) return res.status(401).json({ message: 'Unauthorized' });
 
     const { user_id, discord_id } = req.query;
@@ -414,37 +500,98 @@ async function handleDiscordAction(req, res, action) {
     }
 
     try {
-      const { rows } = await query(
-        `SELECT
-           u.id,
-           u.email,
-           u.username,
-           u.full_name,
-           u.user_role,
-           u.discord_id,
-           COALESCE(gp.level, 1) AS level,
-           COALESCE(gp.xp, 0) AS xp,
-           COALESCE(gp.coins, 0) AS coins,
-           COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km
-         FROM users u
-         LEFT JOIN user_game_profile gp ON gp.user_id = u.id
-         WHERE ($1::int IS NOT NULL AND u.id = $1) OR ($2::text IS NOT NULL AND u.discord_id = $2)
-         LIMIT 1`,
-        [user_id ? Number(user_id) : null, discord_id || null]
-      );
-      if (!rows.length) return res.status(404).json({ message: 'User not found' });
-
-      const user = rows[0];
-      const totalDistanceKm = Number(user.total_distance_km || 0);
-      return res.status(200).json({
-        ...user,
-        total_distance_km: totalDistanceKm,
-        cyclist_tier: getCyclistTierByLevel(user.level),
-        mileage_card: getMileageCardByDistance(totalDistanceKm),
-        membership_status: getMembershipLabel(user.user_role),
-      });
+      const user = await fetchDiscordProfileRow(user_id, discord_id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      return res.status(200).json(buildDiscordProfileResponse(user));
     } catch (error) {
       console.error('discord-profile error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+
+  // ── POST ?action=discord-merge-higher ───────────────────────────────────────
+  // Bot 專用：以「較高者為準」回寫網站三軌資料
+  if (req.method === 'POST' && action === 'discord-merge-higher') {
+    const expected = process.env.CTRCHK_API_BOT_TOKEN;
+    if (!expected) return res.status(503).json({ message: 'CTRCHK_API_BOT_TOKEN is not configured' });
+    const token = extractBotToken(req);
+    if (token !== expected) return res.status(401).json({ message: 'Unauthorized' });
+
+    const body = req.body || {};
+    const bodyUserId = body.user_id ?? body.userId ?? null;
+    const bodyDiscordId = body.discord_id ?? body.discordId ?? null;
+    if (!bodyUserId && !bodyDiscordId) {
+      return res.status(400).json({ message: 'user_id or discord_id is required' });
+    }
+
+    try {
+      const currentUser = await fetchDiscordProfileRow(bodyUserId, bodyDiscordId);
+      if (!currentUser) return res.status(404).json({ message: 'User not found' });
+
+      const currentRole = currentUser.user_role || 'junior';
+      const currentLevel = parsePositiveInteger(currentUser.level) || 1;
+      const currentDistance = parseNonNegativeNumber(currentUser.total_distance_km) || 0;
+
+      const incomingRole = MEMBERSHIP_RANK[body.user_role] ? body.user_role : null;
+      const incomingLevel = parsePositiveInteger(body.level);
+      const incomingDistance = parseNonNegativeNumber(body.total_distance_km);
+
+      const mergedRole = pickHigherByRank(currentRole, incomingRole, MEMBERSHIP_RANK);
+      const mergedCyclistKey = pickHigherByRank(
+        cyclistTierKeyByLevel(currentLevel),
+        incomingLevel ? cyclistTierKeyByLevel(incomingLevel) : null,
+        CYCLIST_TIER_RANK
+      );
+      const mergedMileageKey = pickHigherByRank(
+        mileageCardKeyByDistance(currentDistance),
+        incomingDistance !== null ? mileageCardKeyByDistance(incomingDistance) : null,
+        MILEAGE_CARD_RANK
+      );
+
+      const mergedLevel = Math.max(
+        currentLevel,
+        incomingLevel || 0,
+        cyclistTierMinLevel(mergedCyclistKey)
+      );
+      const mergedDistance = Math.max(
+        currentDistance,
+        incomingDistance !== null ? incomingDistance : 0,
+        mileageCardMinDistance(mergedMileageKey)
+      );
+
+      if (mergedRole !== currentRole) {
+        await query('UPDATE users SET user_role = $1 WHERE id = $2', [mergedRole, currentUser.id]);
+      }
+
+      if (mergedLevel > currentLevel) {
+        await query(
+          `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
+           VALUES ($1, $2, 0, 0, NOW())
+           ON CONFLICT (user_id) DO UPDATE
+             SET level = GREATEST(user_game_profile.level, EXCLUDED.level),
+                 updated_at = NOW()`,
+          [currentUser.id, mergedLevel]
+        );
+      }
+
+      if (mergedDistance > currentDistance) {
+        const deltaKm = Number((mergedDistance - currentDistance).toFixed(2));
+        if (deltaKm > 0) {
+          await query(
+            `INSERT INTO cycling_history (user_id, ride_date, distance_km, route_name, source, created_at)
+             VALUES ($1, CURRENT_DATE, $2, $3, $4, NOW())`,
+            [currentUser.id, deltaKm, 'Discord 里程卡同步', 'discord_sync']
+          );
+        }
+      }
+
+      const updatedUser = await fetchDiscordProfileRow(currentUser.id, null);
+      return res.status(200).json({
+        merged: true,
+        profile: buildDiscordProfileResponse(updatedUser || currentUser),
+      });
+    } catch (error) {
+      console.error('discord-merge-higher error:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   }
