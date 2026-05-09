@@ -316,47 +316,6 @@ function mapRolesToCtrchkRole(discordRoles, currentRole) {
   return currentRole;
 }
 
-// 從 Discord 身份組 ID 清單中找出最高的車手等級 key（beginner/novice/…/top）
-// 找不到則回傳 null
-function mapRolesToCyclistKey(discordRoles) {
-  if (!Array.isArray(discordRoles)) return null;
-  const cfgMap = {
-    top:      process.env.ROLE_CYCLIST_TOP_ID,
-    elite:    process.env.ROLE_CYCLIST_ELITE_ID,
-    veteran:  process.env.ROLE_CYCLIST_VETERAN_ID,
-    advanced: process.env.ROLE_CYCLIST_ADVANCED_ID,
-    novice:   process.env.ROLE_CYCLIST_NOVICE_ID,
-    beginner: process.env.ROLE_CYCLIST_BEGINNER_ID,
-  };
-  let best = null;
-  for (const [key, id] of Object.entries(cfgMap)) {
-    if (id && discordRoles.includes(id) &&
-        (CYCLIST_TIER_RANK[key] || 0) > (CYCLIST_TIER_RANK[best] || 0)) {
-      best = key;
-    }
-  }
-  return best;
-}
-
-// 從 Discord 身份組 ID 清單中找出最高的里程卡 key（bronze/silver/gold）
-// 找不到則回傳 null
-function mapRolesToMileageKey(discordRoles) {
-  if (!Array.isArray(discordRoles)) return null;
-  const cfgMap = {
-    gold:   process.env.ROLE_MILEAGE_GOLD_ID,
-    silver: process.env.ROLE_MILEAGE_SILVER_ID,
-    bronze: process.env.ROLE_MILEAGE_BRONZE_ID,
-  };
-  let best = null;
-  for (const [key, id] of Object.entries(cfgMap)) {
-    if (id && discordRoles.includes(id) &&
-        (MILEAGE_CARD_RANK[key] || 0) > (MILEAGE_CARD_RANK[best] || 0)) {
-      best = key;
-    }
-  }
-  return best;
-}
-
 const DISCORD_CONNECT_REWARD_KEY = 'discord_connect_2026_05';
 const DISCORD_CONNECT_REWARD_COINS = 100;
 const DISCORD_CONNECT_REWARD_END_UTC = '2026-05-31T23:59:59.999Z';
