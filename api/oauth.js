@@ -6,7 +6,7 @@
 //
 // ── Discord 整合 ─────────────────────────────────────────────────────────────
 //   GET  /api/oauth?action=url           → 產生 Discord 授權 URL（需提供 Bearer token）
-//   POST /api/oauth?action=callback      → 用 code 換 token，同步 Discord 身份組至 CTRC 帳戶
+//   POST /api/oauth?action=callback      → 用 code 換 token，雙向同步身份組（Discord↔CTRC，以高的為準）
 //   POST /api/oauth?action=unlink        → 解除 Discord 連結
 //   GET  /api/oauth?action=status        → 取得目前 Discord 連結狀態
 //
@@ -15,15 +15,19 @@
 //   DISCORD_CLIENT_ID      — Discord 應用程式 Client ID
 //   DISCORD_CLIENT_SECRET  — Discord 應用程式 Client Secret
 //   DISCORD_GUILD_ID       — 要同步身份組的 Discord 伺服器 ID
-//   DISCORD_SENIOR_ADMIN_ROLE_ID — 對應 CTRC 高級管理員（senior_admin）的 Discord 身份組 ID（選填）
-//   DISCORD_VIP_ROLE_ID          — 對應 CTRC VIP 會員（vip）的 Discord 身份組 ID（選填）
-//   DISCORD_ADMIN_ROLE_ID        — 對應 CTRC 管理員（admin）的 Discord 身份組 ID（選填）
-//   DISCORD_SENIOR_ROLE_ID       — 對應 CTRC 高級會員（senior）的 Discord 身份組 ID（選填）
+//   DISCORD_BOT_TOKEN      — Discord Bot Token（用於直接同步身份組至 Discord，需在 Vercel 設置）
+//   ROLE_MEMBERSHIP_SENIOR_ADMIN_ID — 高級管理員身份組 ID（選填，舊名 DISCORD_SENIOR_ADMIN_ROLE_ID）
+//   ROLE_MEMBERSHIP_VIP_ID          — VIP 身份組 ID（選填，舊名 DISCORD_VIP_ROLE_ID）
+//   ROLE_MEMBERSHIP_ADMIN_ID        — 管理員身份組 ID（選填，舊名 DISCORD_ADMIN_ROLE_ID）
+//   ROLE_MEMBERSHIP_SENIOR_ID       — 高級會員身份組 ID（選填，舊名 DISCORD_SENIOR_ROLE_ID）
+//   ROLE_CYCLIST_*_ID      — 各車手等級身份組 ID（選填）
+//   ROLE_MILEAGE_*_ID      — 各里程卡身份組 ID（選填）
 //   BASE_URL               — 網站根網址，用於建立 Discord redirect_uri（例如 https://ctrchk.com）
 //   JWT_SECRET             — 用於簽發及驗證 CTRC accessToken
 
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
+import { syncCtrchkRolesToDiscord } from '../lib/discord-role-sync.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // 共用工具
@@ -284,9 +288,10 @@ async function fetchGuildMemberRoles(accessToken, guildId) {
   return Array.isArray(member.roles) ? member.roles : [];
 }
 
-// 根據 Discord 身份組 ID 清單，決定對應的 CTRC 用戶等級
+// 根據 Discord 身份組 ID 清單，決定對應的 CTRC 用戶等級（會員身份）
 // discordRoles 為 null 表示用戶不在伺服器（不升級）
-// 優先級：admin > senior > junior（僅在角色比現有角色更高時才升級；不降級）
+// 優先級：senior_admin > vip > admin > senior > junior（僅在角色比現有角色更高時才升級；不降級）
+// 同時支援 ROLE_MEMBERSHIP_*_ID（主要）與舊有 DISCORD_*_ROLE_ID（後備）兩種環境變數命名
 function mapRolesToCtrchkRole(discordRoles, currentRole) {
   if (!Array.isArray(discordRoles)) return currentRole; // 不在伺服器，維持現有等級
 
@@ -297,17 +302,16 @@ function mapRolesToCtrchkRole(discordRoles, currentRole) {
     return next > current ? candidate : currentRole;
   };
 
-  const seniorAdminRoleId = process.env.DISCORD_SENIOR_ADMIN_ROLE_ID;
-  const vipRoleId = process.env.DISCORD_VIP_ROLE_ID;
-  const adminRoleId  = process.env.DISCORD_ADMIN_ROLE_ID;
-  const seniorRoleId = process.env.DISCORD_SENIOR_ROLE_ID;
+  // 優先使用 ROLE_MEMBERSHIP_*_ID，後備使用舊名 DISCORD_*_ROLE_ID
+  const seniorAdminRoleId = process.env.ROLE_MEMBERSHIP_SENIOR_ADMIN_ID || process.env.DISCORD_SENIOR_ADMIN_ROLE_ID;
+  const vipRoleId         = process.env.ROLE_MEMBERSHIP_VIP_ID          || process.env.DISCORD_VIP_ROLE_ID;
+  const adminRoleId       = process.env.ROLE_MEMBERSHIP_ADMIN_ID         || process.env.DISCORD_ADMIN_ROLE_ID;
+  const seniorRoleId      = process.env.ROLE_MEMBERSHIP_SENIOR_ID        || process.env.DISCORD_SENIOR_ROLE_ID;
 
   if (seniorAdminRoleId && discordRoles.includes(seniorAdminRoleId)) return keepHigher('senior_admin');
   if (vipRoleId && discordRoles.includes(vipRoleId)) return keepHigher('vip');
   if (adminRoleId && discordRoles.includes(adminRoleId)) return keepHigher('admin');
-  if (seniorRoleId && discordRoles.includes(seniorRoleId)) {
-    return keepHigher('senior');
-  }
+  if (seniorRoleId && discordRoles.includes(seniorRoleId)) return keepHigher('senior');
   // 沒有匹配的身份組：不降級，維持現有等級
   return currentRole;
 }
@@ -696,19 +700,75 @@ async function handleDiscordAction(req, res, action) {
       if (userRows.length === 0) return res.status(404).json({ message: '用戶不存在' });
       const currentRole = userRows[0].user_role || 'junior';
 
-      // 6. 計算新等級（只升不降）
+      // 6. 計算新會員等級（以高的為準：Discord 身份組 → CTRC）
       const newRole = mapRolesToCtrchkRole(memberRoles, currentRole);
 
-      // 7. 更新資料庫
+      // 7. 更新資料庫（discord_id 與會員等級）
       await query(
         'UPDATE users SET discord_id = $1, user_role = $2 WHERE id = $3',
         [discordId, newRole, userId]
       );
 
+      // 7b. 同步車手等級與里程卡（Discord 身份組 → CTRC，以高的為準）
+      if (Array.isArray(memberRoles)) {
+        const discordCyclistKey = mapRolesToCyclistKey(memberRoles);
+        const discordMileageKey = mapRolesToMileageKey(memberRoles);
+
+        if (discordCyclistKey || discordMileageKey) {
+          const currentProfile = await fetchDiscordProfileRow(userId, null);
+          if (currentProfile) {
+            const currentLevel    = parsePositiveInteger(currentProfile.level) || 1;
+            const currentDistance = parseNonNegativeNumber(currentProfile.total_distance_km) || 0;
+
+            const mergedCyclistKey = pickHigherByRank(
+              cyclistTierKeyByLevel(currentLevel),
+              discordCyclistKey,
+              CYCLIST_TIER_RANK
+            );
+            const mergedMileageKey = pickHigherByRank(
+              mileageCardKeyByDistance(currentDistance),
+              discordMileageKey,
+              MILEAGE_CARD_RANK
+            );
+
+            const mergedLevel    = Math.max(currentLevel, cyclistTierMinLevel(mergedCyclistKey));
+            const mergedDistance = Math.max(currentDistance, mileageCardMinDistance(mergedMileageKey));
+
+            if (mergedLevel > currentLevel) {
+              await query(
+                `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
+                 VALUES ($1, $2, 0, 0, NOW())
+                 ON CONFLICT (user_id) DO UPDATE
+                   SET level = GREATEST(user_game_profile.level, EXCLUDED.level),
+                       updated_at = NOW()`,
+                [userId, mergedLevel]
+              );
+            }
+            const rawDelta = mergedDistance - currentDistance;
+            if (rawDelta >= DISTANCE_EPSILON_KM) {
+              const deltaKm = Number(rawDelta.toFixed(2));
+              await query(
+                `INSERT INTO cycling_history (user_id, ride_date, distance_km, route_name, source, created_at)
+                 VALUES ($1, CURRENT_DATE, $2, $3, $4, NOW())`,
+                [userId, deltaKm, DISCORD_SYNC_ROUTE_NAME, DISCORD_SYNC_SOURCE]
+              );
+            }
+          }
+        }
+      }
+
       // 8. Discord 連結限時獎勵（到 2026-05-31）
       const rewardResult = await grantDiscordConnectRewardIfEligible(userId);
       // 9. 通知 Discord Bot 同步身份組（若已配置）
       await triggerDiscordBotSync(userId, discordId);
+
+      // 10. 直接同步 CTRC 等級至 Discord 身份組（CTRC → Discord，以高的為準）
+      const finalProfile = await fetchDiscordProfileRow(userId, null);
+      if (finalProfile) {
+        syncCtrchkRolesToDiscord(discordId, finalProfile).catch(e =>
+          console.warn('[oauth] Discord role sync failed:', e.message)
+        );
+      }
 
       const inGuild = guildId ? memberRoles !== null : false;
       return res.status(200).json({
