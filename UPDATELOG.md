@@ -1,4 +1,4 @@
-# 更新日誌 (Update Log)
+# 更新日誌 (Engineering Logbook)
 
 所有重要的版本更新記錄於此檔案。
 
