@@ -33,10 +33,10 @@
     /* ── Top bar ── */
     #nav-topbar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-      padding: calc(env(safe-area-inset-top) + 0.5em) 0.8em 0.5em;
-      background: linear-gradient(to bottom, rgba(18,31,20,0.95) 75%, transparent);
+      padding: calc(env(safe-area-inset-top) + 0.55em) 0.8em 0.65em;
+      background: linear-gradient(to bottom, rgba(18,31,20,0.96) 78%, transparent);
       color: #e8f5e9;
-      display: flex; align-items: center; gap: 0.6em;
+      display: flex; align-items: center; gap: 0.7em;
     }
     body.app-light-theme #nav-topbar {
       background: linear-gradient(to bottom, rgba(240,248,240,0.97) 75%, transparent);
@@ -49,9 +49,53 @@
       font-size: 1.1em; flex-shrink: 0; text-decoration: none;
     }
     body.app-light-theme #btn-nav-back { background: rgba(0,0,0,0.08); }
-    #nav-title {
-      flex: 1; font-weight: bold; font-size: 1em;
+    #nav-title-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.24em;
     }
+    #nav-title {
+      font-weight: bold;
+      font-size: 1em;
+      line-height: 1.15;
+    }
+    #nav-topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.45em;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+    .nav-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0.22em 0.55em;
+      border-radius: 999px;
+      font-size: 0.72em;
+      line-height: 1.2;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+      max-width: 100%;
+    }
+    body.app-light-theme .nav-chip { background: rgba(0,0,0,0.08); }
+    #nav-road-name {
+      min-width: 0;
+      max-width: 18em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #nav-junction-distance strong { color: #7df9ff; font-weight: 700; }
+    #nav-pushbike-warning {
+      display: none;
+      color: #121f14;
+      background: #BFE340;
+      font-weight: 700;
+    }
+    #nav-pushbike-warning.show { display: inline-flex; }
     #btn-heading-up {
       background: rgba(255,255,255,0.12); border: none; color: #e8f5e9;
       width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
@@ -319,7 +363,14 @@
     <a href="javascript:navBack()" id="btn-nav-back" aria-label="返回">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <span id="nav-title" data-i18n="nav_title">🗺️ 單車徑導航</span>
+    <div id="nav-title-wrap">
+      <span id="nav-title" data-i18n="nav_title">🗺️ 單車徑導航</span>
+      <div id="nav-topbar-meta">
+        <span id="nav-road-name" class="nav-chip" data-i18n="road_searching">定位中…</span>
+        <span id="nav-junction-distance" class="nav-chip">下一路口 <strong>--</strong></span>
+        <span id="nav-pushbike-warning" class="nav-chip"><i class="fas fa-person-walking"></i><span id="nav-pushbike-text">請推車</span></span>
+      </div>
+    </div>
     <button id="btn-heading-up" title="切換地圖方向" aria-label="切換地圖方向">
       <i class="fas fa-compass"></i>
     </button>
@@ -418,6 +469,7 @@
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+  <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js" crossorigin=""></script>
   <script src="/js/main.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
@@ -448,6 +500,14 @@
 
     // Maximum time (ms) to wait for map initial load before hiding the overlay
     const MAP_LOADING_TIMEOUT_MS = 12000;
+    const TKO_DEFAULT_CENTER = [114.2597, 22.3083];
+    const DEFAULT_NAV_ZOOM = 18;
+    const DEFAULT_NAV_PITCH = 60;
+    const VIRTUAL_LINK_MAX_M = 30;
+    const SNAP_MAX_METERS = 45;
+    const JUNCTION_DETECT_METERS = 15;
+    const JUNCTION_HIGHLIGHT_METERS = 80;
+    const GRID_CELL_DEG = 0.00045;
 
     // ── State ─────────────────────────────────────────────────────────────
     let map = null;
@@ -471,6 +531,17 @@
     let plannedFrom = null;        // start point for re-draw after style change
     let plannedTo = null;          // end point for re-draw after style change
     let tkoGeoJsonData = null;     // cached TKO GeoJSON data
+    let processedTrackNetwork = null;
+    let networkLines = [];
+    let networkIndex = new Map();
+    let networkJunctions = turf.featureCollection([]);
+    let routeLineFeature = null;
+    let routeJunctions = [];
+    let routeFxTimer = null;
+    let lastSnappedLngLat = null;
+    let lastCameraBearing = 0;
+    let activeMatch = null;
+    let activeRouteCoords = null;
 
     // ── Helpers ──────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -501,27 +572,277 @@
       return `${h} 小時 ${m} 分鐘`;
     }
 
-    /** Snap [userLat, userLon] to nearest point on routeCoords [[lon,lat],...] */
-    function snapToRoute(userLat, userLon, routeCoords) {
-      let minDist = Infinity;
-      let snapped = null;
-      for (let i = 0; i < routeCoords.length - 1; i++) {
-        const p = closestPointOnSegment(
-          [userLon, userLat], routeCoords[i], routeCoords[i + 1]
-        );
-        const d = haversineM(userLat, userLon, p[1], p[0]);
-        if (d < minDist) { minDist = d; snapped = p; }
-      }
-      // Only snap if within 30 m to avoid forcing position when off-track
-      return (snapped && minDist < 30) ? snapped : [userLon, userLat];
+    function formatJunctionDist(meters) {
+      return meters == null || !Number.isFinite(meters) ? '--' : formatDist(meters);
     }
 
-    /** Closest point on line segment [p1, p2] to point p0 (all [lon, lat]) */
-    function closestPointOnSegment(p0, p1, p2) {
-      const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
-      if (dx === 0 && dy === 0) return p1;
-      const t = Math.max(0, Math.min(1, ((p0[0]-p1[0])*dx + (p0[1]-p1[1])*dy) / (dx*dx + dy*dy)));
-      return [p1[0] + t*dx, p1[1] + t*dy];
+    function getGridKey(lon, lat) {
+      return `${Math.floor(lon / GRID_CELL_DEG)}:${Math.floor(lat / GRID_CELL_DEG)}`;
+    }
+
+    function getGridKeysForBBox(bbox) {
+      const [minX, minY, maxX, maxY] = bbox;
+      const keys = [];
+      for (let x = Math.floor(minX / GRID_CELL_DEG); x <= Math.floor(maxX / GRID_CELL_DEG); x++) {
+        for (let y = Math.floor(minY / GRID_CELL_DEG); y <= Math.floor(maxY / GRID_CELL_DEG); y++) {
+          keys.push(`${x}:${y}`);
+        }
+      }
+      return keys;
+    }
+
+    function normalizeTrackData(data) {
+      const features = [];
+      (data && Array.isArray(data.features) ? data.features : []).forEach((feature) => {
+        if (!feature || !feature.geometry) return;
+        const props = { ...(feature.properties || {}) };
+        if (feature.geometry.type === 'LineString') {
+          const coords = (feature.geometry.coordinates || [])
+            .map(c => [Number(c[0]), Number(c[1])])
+            .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+          if (coords.length >= 2) {
+            features.push(turf.lineString(coords, { ...props, linkType: 'cycle-track', isVirtual: false }));
+          }
+          return;
+        }
+        if (feature.geometry.type === 'MultiLineString') {
+          (feature.geometry.coordinates || []).forEach((part, partIdx) => {
+            const coords = (part || [])
+              .map(c => [Number(c[0]), Number(c[1])])
+              .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+            if (coords.length >= 2) {
+              features.push(turf.lineString(coords, {
+                ...props,
+                _multiPart: partIdx,
+                linkType: 'cycle-track',
+                isVirtual: false,
+              }));
+            }
+          });
+        }
+      });
+      return features;
+    }
+
+    function buildVirtualLinks(lineFeatures, thresholdMeters) {
+      const endpoints = [];
+      const buckets = new Map();
+
+      lineFeatures.forEach((feature, lineIdx) => {
+        const coords = feature.geometry.coordinates || [];
+        if (coords.length < 2) return;
+        [
+          { lineIdx, endpointType: 'start', coord: coords[0] },
+          { lineIdx, endpointType: 'end', coord: coords[coords.length - 1] },
+        ].forEach((endpoint) => {
+          endpoints.push(endpoint);
+          const key = getGridKey(endpoint.coord[0], endpoint.coord[1]);
+          if (!buckets.has(key)) buckets.set(key, []);
+          buckets.get(key).push(endpoint);
+        });
+      });
+
+      const links = [];
+      const seen = new Set();
+      endpoints.forEach((a) => {
+        const [lon, lat] = a.coord;
+        const x = Math.floor(lon / GRID_CELL_DEG);
+        const y = Math.floor(lat / GRID_CELL_DEG);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const nearby = buckets.get(`${x + dx}:${y + dy}`) || [];
+            nearby.forEach((b) => {
+              if (a.lineIdx === b.lineIdx) return;
+              const linePairKey = [a.lineIdx, b.lineIdx].sort((m, n) => m - n).join(':');
+              const endpointPairKey = `${linePairKey}:${a.endpointType}:${b.endpointType}`;
+              const reverseKey = `${linePairKey}:${b.endpointType}:${a.endpointType}`;
+              if (seen.has(endpointPairKey) || seen.has(reverseKey)) return;
+              const distance = turf.distance(turf.point(a.coord), turf.point(b.coord), { units: 'meters' });
+              if (distance >= thresholdMeters || distance === 0) return;
+              links.push(turf.lineString([a.coord, b.coord], {
+                linkType: 'push-bike',
+                isVirtual: true,
+                roadName: 'Push Bike Link',
+                distance_m: Number(distance.toFixed(2)),
+              }));
+              seen.add(endpointPairKey);
+            });
+          }
+        }
+      });
+      return links;
+    }
+
+    function buildLineSpatialIndex(lineFeatures) {
+      const index = new Map();
+      lineFeatures.forEach((feature, idx) => {
+        getGridKeysForBBox(turf.bbox(feature)).forEach((key) => {
+          if (!index.has(key)) index.set(key, []);
+          index.get(key).push(idx);
+        });
+      });
+      return index;
+    }
+
+    function getCandidateLineIndexes(coord) {
+      const [lon, lat] = coord;
+      const x = Math.floor(lon / GRID_CELL_DEG);
+      const y = Math.floor(lat / GRID_CELL_DEG);
+      const idxs = new Set();
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const key = `${x + dx}:${y + dy}`;
+          (networkIndex.get(key) || []).forEach(v => idxs.add(v));
+        }
+      }
+      return idxs.size ? Array.from(idxs) : networkLines.map((_, idx) => idx);
+    }
+
+    function buildJunctionCollection(lineFeatures) {
+      const counts = new Map();
+      lineFeatures.forEach((feature) => {
+        (feature.geometry.coordinates || []).forEach((coord) => {
+          const key = `${coord[0].toFixed(6)}:${coord[1].toFixed(6)}`;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        });
+      });
+      return turf.featureCollection(
+        Array.from(counts.entries())
+          .filter(([, count]) => count >= 3)
+          .map(([key, count]) => {
+            const [lon, lat] = key.split(':').map(Number);
+            return turf.point([lon, lat], { degree: count });
+          })
+      );
+    }
+
+    function preprocessTrackNetwork(data) {
+      const normalized = normalizeTrackData(data);
+      const virtualLinks = buildVirtualLinks(normalized, VIRTUAL_LINK_MAX_M);
+      const features = [...normalized, ...virtualLinks];
+      return {
+        type: 'FeatureCollection',
+        features,
+      };
+    }
+
+    function getNearestNetworkMatch(coord) {
+      if (!networkLines.length || typeof turf === 'undefined') return null;
+      const point = turf.point(coord);
+      let best = null;
+      getCandidateLineIndexes(coord).forEach((idx) => {
+        const feature = networkLines[idx];
+        const snapped = turf.nearestPointOnLine(feature, point, { units: 'meters' });
+        const dist = snapped && snapped.properties ? Number(snapped.properties.dist || Infinity) : Infinity;
+        if (!best || dist < best.distance) {
+          best = {
+            feature,
+            snapped,
+            distance: dist,
+          };
+        }
+      });
+      return best;
+    }
+
+    function snapCoordinateToNetwork(coord) {
+      const match = getNearestNetworkMatch(coord);
+      if (!match || !match.snapped || match.distance > SNAP_MAX_METERS) {
+        return {
+          coordinate: coord,
+          match: null,
+          isSnapped: false,
+        };
+      }
+      return {
+        coordinate: match.snapped.geometry.coordinates.slice(0, 2),
+        match,
+        isSnapped: true,
+      };
+    }
+
+    function smoothBearing(nextBearing) {
+      if (!Number.isFinite(nextBearing)) return lastCameraBearing;
+      const current = Number.isFinite(lastCameraBearing) ? lastCameraBearing : 0;
+      const delta = ((nextBearing - current + 540) % 360) - 180;
+      lastCameraBearing = (current + delta * 0.28 + 360) % 360;
+      return lastCameraBearing;
+    }
+
+    function computeHeadingFromMovement(coord) {
+      if (!lastSnappedLngLat) return lastCameraBearing || 0;
+      const movement = turf.distance(turf.point(lastSnappedLngLat), turf.point(coord), { units: 'meters' });
+      if (movement < 1.5) return lastCameraBearing || 0;
+      return turf.bearing(turf.point(lastSnappedLngLat), turf.point(coord));
+    }
+
+    function extractRoadName(props) {
+      if (!props) return '單車徑';
+      return props.roadName ||
+        props.ROAD_NAME ||
+        props.ROADNAME ||
+        props.route_name ||
+        props.routeName ||
+        props.NAME_CHI ||
+        props.NAME ||
+        props.STREET ||
+        props.STREETNAME ||
+        props.name ||
+        (props.linkType === 'push-bike' ? 'Push Bike Link' : '單車徑');
+    }
+
+    function updateTopBarMeta(match, distanceToJunctionMeters) {
+      const lang = localStorage.getItem('appLang') === 'en' ? 'en' : 'zh';
+      const junctionLabel = lang === 'en' ? 'Next junction' : '下一路口';
+      const locatingLabel = lang === 'en' ? 'Locating…' : '定位中…';
+      const roadEl = document.getElementById('nav-road-name');
+      const junctionEl = document.getElementById('nav-junction-distance');
+      const pushBikeEl = document.getElementById('nav-pushbike-warning');
+      if (roadEl) roadEl.textContent = match ? extractRoadName(match.feature.properties) : locatingLabel;
+      if (junctionEl) junctionEl.innerHTML = `${junctionLabel} <strong>${formatJunctionDist(distanceToJunctionMeters)}</strong>`;
+      if (pushBikeEl) pushBikeEl.classList.toggle('show', !!(match && match.feature && match.feature.properties && match.feature.properties.linkType === 'push-bike'));
+    }
+
+    function projectRouteToNetwork(coords) {
+      if (!Array.isArray(coords) || !coords.length || !networkLines.length) return coords;
+      const projected = [];
+      coords.forEach((coord) => {
+        const snapped = snapCoordinateToNetwork(coord);
+        const nextCoord = snapped.isSnapped ? snapped.coordinate : coord;
+        const prev = projected[projected.length - 1];
+        if (!prev || haversineM(prev[1], prev[0], nextCoord[1], nextCoord[0]) > 1.5) {
+          projected.push(nextCoord);
+        }
+      });
+      return projected.length >= 2 ? projected : coords;
+    }
+
+    function buildRouteJunctions(coords) {
+      if (!coords || coords.length < 2 || !networkJunctions.features.length) return [];
+      const routeLine = turf.lineString(coords);
+      return networkJunctions.features
+        .map((feature) => {
+          const snapped = turf.nearestPointOnLine(routeLine, feature, { units: 'meters' });
+          const dist = Number(snapped.properties && snapped.properties.dist || Infinity);
+          if (!Number.isFinite(dist) || dist > JUNCTION_DETECT_METERS) return null;
+          let coordIndex = 0;
+          let coordDist = Infinity;
+          coords.forEach((coord, idx) => {
+            const d = turf.distance(turf.point(coord), feature, { units: 'meters' });
+            if (d < coordDist) {
+              coordDist = d;
+              coordIndex = idx;
+            }
+          });
+          return {
+            point: feature,
+            routeLocation: Number(snapped.properties && snapped.properties.location || 0),
+            coordIndex,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.routeLocation - b.routeLocation)
+        .filter((entry, idx, arr) => idx === 0 || Math.abs(entry.routeLocation - arr[idx - 1].routeLocation) > 20);
     }
 
     /** Decode OSRM polyline (precision 5 or 6) */
@@ -669,8 +990,11 @@
         container: 'nav-map',
         // OpenFreeMap free vector tiles (no API key, no usage limits)
         style: mapStyle,
-        center: [114.2597, 22.3083],  // TKO area default
-        zoom: 14,
+        center: TKO_DEFAULT_CENTER,
+        zoom: DEFAULT_NAV_ZOOM,
+        pitch: DEFAULT_NAV_PITCH,
+        bearing: 0,
+        antialias: true,
         attributionControl: false,
       });
 
@@ -681,6 +1005,7 @@
         clearTimeout(loadingTimer);
         addCyclewayLayers();
         loadTkoGeoJson();
+        map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 0 });
         document.getElementById('nav-loading').classList.add('hidden');
         startGPS();
       });
@@ -807,15 +1132,31 @@
     }
 
     /** Load TKO GeoJSON cycling track overlay */
-    function loadTkoGeoJson() {
-      fetch('/gpx/tko/cycling_tracks_tko.geojson')
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (!data) return;
-          tkoGeoJsonData = data; // cache for re-use after style change
-          addTkoLocalLayer(data);
-        })
-        .catch(e => console.warn('[Nav] TKO GeoJSON load failed', e));
+    async function loadTkoGeoJson() {
+      const candidates = [
+        '/data/tko_tracks.json',
+        '/CYCFACI.gdb_CYCTRACK_converted.geojson',
+        '/gpx/tko/cycling_tracks_tko.geojson',
+      ];
+      for (const url of candidates) {
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) continue;
+          const data = await resp.json();
+          if (!data || !Array.isArray(data.features)) continue;
+          tkoGeoJsonData = data;
+          processedTrackNetwork = preprocessTrackNetwork(data);
+          networkLines = processedTrackNetwork.features.slice();
+          networkIndex = buildLineSpatialIndex(networkLines);
+          networkJunctions = buildJunctionCollection(networkLines);
+          addTkoLocalLayer(processedTrackNetwork);
+          updateTopBarMeta(null, null);
+          return;
+        } catch (e) {
+          console.warn('[Nav] TKO GeoJSON load candidate failed', url, e);
+        }
+      }
+      console.warn('[Nav] TKO GeoJSON load failed: no usable dataset found');
     }
 
     function addTkoLocalLayer(data) {
@@ -837,10 +1178,13 @@
         type: 'line',
         source: 'tko-cycleways',
         paint: {
-          'line-color': '#00E676',
+          'line-color': ['case',
+            ['==', ['get', 'linkType'], 'push-bike'], '#FFD166',
+            '#00E5FF'
+          ],
           'line-width': ['interpolate', ['linear'], ['zoom'],
             12, 3, 15, 6, 17, 12, 19, 20],
-          'line-opacity': 0.85,
+          'line-opacity': 0.82,
           'line-cap': 'round',
           'line-join': 'round',
         },
@@ -855,7 +1199,10 @@
         paint: {
           'line-color': '#FFFFFF',
           'line-width': 1.5,
-          'line-dasharray': [4, 5],
+          'line-dasharray': ['case',
+            ['==', ['get', 'linkType'], 'push-bike'], ['literal', [1.2, 1.8]],
+            ['literal', [4, 5]]
+          ],
           'line-opacity': 0.6,
         },
       });
@@ -867,17 +1214,36 @@
         source: 'tko-cycleways',
         minzoom: 16,
         paint: {
-          'line-color': '#007A2D',
+          'line-color': ['case',
+            ['==', ['get', 'linkType'], 'push-bike'], '#8C6A00',
+            '#0086B3'
+          ],
           'line-width': ['interpolate', ['linear'], ['zoom'],
             16, 14, 17, 22, 19, 32],
           'line-opacity': 0.25,
           'line-gap-width': 0,
         },
       }, 'tko-cycleway-bg');
+
+      if (!map.getSource('tko-junctions')) {
+        map.addSource('tko-junctions', {
+          type: 'geojson',
+          data: networkJunctions,
+        });
+      } else {
+        map.getSource('tko-junctions').setData(networkJunctions);
+      }
     }
 
     // ── GPS ───────────────────────────────────────────────────────────────
     const GPS_OPTS = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+
+    function clearGpsWatch() {
+      if (watchId !== null && 'geolocation' in navigator) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      watchId = null;
+    }
 
     function startGPS() {
       if (!('geolocation' in navigator)) {
@@ -897,32 +1263,53 @@
       watchId = navigator.geolocation.watchPosition(handlePosition, onGpsError, GPS_OPTS);
     }
 
+    function updateCamera(lngLat, bearing) {
+      if (!map) return;
+      const nextBearing = headingUp ? smoothBearing(bearing) : 0;
+      map.easeTo({
+       center: lngLat,
+       bearing: nextBearing,
+       zoom: DEFAULT_NAV_ZOOM,
+       pitch: DEFAULT_NAV_PITCH,
+       duration: 550,
+       easing: t => 1 - Math.pow(1 - t, 2),
+      });
+    }
+
     function handlePosition(pos) {
-      const { latitude: lat, longitude: lon, accuracy, speed } = pos.coords;
+      const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
       const acc = Math.round(accuracy);
       setGpsDot(acc < 20 ? 'good' : acc < 50 ? 'fair' : 'searching', `±${acc} m`);
 
-      // Compute bearing from movement
-      if (lastLat !== null) {
-        const d = haversineM(lastLat, lastLon, lat, lon);
-        if (d > 2) {
-          lastBearing = bearingDeg(lastLat, lastLon, lat, lon);
-          if (isNavigating) navDistTravelledM += d;
-        }
+      const rawCoord = [lon, lat];
+      const snapped = snapCoordinateToNetwork(rawCoord);
+      const activeCoord = snapped.coordinate;
+      activeMatch = snapped.match;
+
+      if (lastSnappedLngLat) {
+       const d = haversineM(lastSnappedLngLat[1], lastSnappedLngLat[0], activeCoord[1], activeCoord[0]);
+       if (d > 1.2 && isNavigating) navDistTravelledM += d;
+      }
+      if (lastLat !== null && lastLon !== null && !snapped.isSnapped) {
+       const dRaw = haversineM(lastLat, lastLon, lat, lon);
+       if (dRaw > 2 && isNavigating && !lastSnappedLngLat) navDistTravelledM += dRaw;
       }
       lastLat = lat; lastLon = lon;
       lastSpeedKmh = speed != null ? speed * 3.6 : 0;
 
-      updateUserMarker(lat, lon, lastBearing);
+      const liveHeading = Number.isFinite(heading) && heading >= 0 ? heading : computeHeadingFromMovement(activeCoord);
+      lastBearing = smoothBearing(liveHeading);
 
-      // Pan/rotate map
-      if (headingUp) {
-        map.easeTo({ center: [lon, lat], bearing: lastBearing, duration: 300, zoom: Math.max(map.getZoom(), 16) });
+      updateUserMarker(activeCoord[1], activeCoord[0], lastBearing);
+      updateCamera(activeCoord, lastBearing);
+
+      if (isNavigating) {
+       updateNavProgress(activeCoord[1], activeCoord[0], activeMatch);
       } else {
-        if (!map.getBounds().contains([lon, lat])) map.panTo([lon, lat]);
+       updateTopBarMeta(activeMatch, getDistanceToNextJunction(activeCoord));
       }
 
-      if (isNavigating) updateNavProgress(lat, lon);
+      lastSnappedLngLat = activeCoord;
     }
 
     function onGpsError(err) {
@@ -1106,14 +1493,18 @@
 
         const feature = data.features[0];
         const coords = feature.geometry.coordinates.map(c => [c[0], c[1]]);
+        const laneCoords = projectRouteToNetwork(coords);
         const distM  = parseFloat(feature.properties['track-length'] || 0);
         const timeS  = parseFloat(feature.properties['total-time'] || 0);
 
-        plannedRoute  = coords;
-        plannedSteps  = computeNavSteps(coords);
+        plannedRoute  = laneCoords;
+        activeRouteCoords = laneCoords;
+        routeLineFeature = turf.lineString(laneCoords);
+        routeJunctions = buildRouteJunctions(laneCoords);
+        plannedSteps  = computeNavSteps(laneCoords);
         navTotalDistM = distM;
 
-        drawPlannedRoute(coords, from, to);
+        drawPlannedRoute(laneCoords, from, to);
 
         const distKm = (distM / 1000).toFixed(1);
         const mins   = Math.round(timeS / 60);
@@ -1124,7 +1515,7 @@
         document.getElementById('route-summary').classList.add('show');
         document.getElementById('btn-start-nav').classList.add('show');
 
-        const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+        const lngs = laneCoords.map(c => c[0]), lats = laneCoords.map(c => c[1]);
         map.fitBounds([
           [Math.min(...lngs), Math.min(...lats)],
           [Math.max(...lngs), Math.max(...lats)],
@@ -1148,12 +1539,16 @@
           if (data.code !== 'Ok' || !data.routes || !data.routes.length) throw new Error('No route found');
           const route  = data.routes[0];
           const coords = decodePolyline(route.geometry, 6);
+          const laneCoords = projectRouteToNetwork(coords);
 
-          plannedRoute  = coords;
-          plannedSteps  = computeNavSteps(coords);
+          plannedRoute  = laneCoords;
+          activeRouteCoords = laneCoords;
+          routeLineFeature = turf.lineString(laneCoords);
+          routeJunctions = buildRouteJunctions(laneCoords);
+          plannedSteps  = computeNavSteps(laneCoords);
           navTotalDistM = route.distance;
 
-          drawPlannedRoute(coords, from, to);
+          drawPlannedRoute(laneCoords, from, to);
 
           const distKm = (route.distance / 1000).toFixed(1);
           const mins   = Math.round(route.duration / 60);
@@ -1164,7 +1559,7 @@
           document.getElementById('route-summary').classList.add('show');
           document.getElementById('btn-start-nav').classList.add('show');
 
-          const lngs = coords.map(c => c[0]), lats = coords.map(c => c[1]);
+          const lngs = laneCoords.map(c => c[0]), lats = laneCoords.map(c => c[1]);
           map.fitBounds([
             [Math.min(...lngs), Math.min(...lats)],
             [Math.max(...lngs), Math.max(...lats)],
@@ -1181,11 +1576,77 @@
       btn.textContent = '🔍 規劃路線';
     }
 
+    function startRouteFx() {
+      stopRouteFx();
+      let phase = 0;
+      routeFxTimer = setInterval(() => {
+        if (!map) return;
+        if (map.getLayer('planned-route-flow')) {
+          phase = (phase + 1) % 10;
+          map.setPaintProperty('planned-route-flow', 'line-dasharray', [0.8 + phase * 0.12, 2.4]);
+        }
+        if (map.getLayer('planned-route-junction-guide')) {
+          const opacity = 0.35 + ((Math.sin(phase / 1.5) + 1) * 0.22);
+          map.setPaintProperty('planned-route-junction-guide', 'line-opacity', opacity);
+        }
+      }, 180);
+    }
+
+    function stopRouteFx() {
+      if (routeFxTimer) clearInterval(routeFxTimer);
+      routeFxTimer = null;
+    }
+
+    function getDistanceToNextJunction(coord) {
+      if (!coord) return null;
+      const currentPoint = turf.point(coord);
+      if (routeLineFeature && routeJunctions.length) {
+        const onRoute = turf.nearestPointOnLine(routeLineFeature, currentPoint, { units: 'meters' });
+        const routeLocation = Number(onRoute.properties && onRoute.properties.location || 0);
+        const nextRouteJunction = routeJunctions.find(j => j.routeLocation > routeLocation + 5);
+        if (nextRouteJunction) {
+          return turf.distance(currentPoint, nextRouteJunction.point, { units: 'meters' });
+        }
+      }
+      let nearest = Infinity;
+      networkJunctions.features.forEach((feature) => {
+        const dist = turf.distance(currentPoint, feature, { units: 'meters' });
+        if (dist < nearest) nearest = dist;
+      });
+      return Number.isFinite(nearest) && nearest < 250 ? nearest : null;
+    }
+
+    function updateJunctionGuide(coord) {
+      if (!map || !map.getSource('planned-route-junction-guide')) return null;
+      let guideFeature = turf.featureCollection([]);
+      let distanceToNext = null;
+      if (coord && routeLineFeature && routeJunctions.length && activeRouteCoords && activeRouteCoords.length > 1) {
+        const currentPoint = turf.point(coord);
+        const onRoute = turf.nearestPointOnLine(routeLineFeature, currentPoint, { units: 'meters' });
+        const routeLocation = Number(onRoute.properties && onRoute.properties.location || 0);
+        const nextJunction = routeJunctions.find(j => j.routeLocation > routeLocation + 5);
+        if (nextJunction) {
+          distanceToNext = turf.distance(currentPoint, nextJunction.point, { units: 'meters' });
+          if (distanceToNext <= JUNCTION_HIGHLIGHT_METERS) {
+            const start = Math.max(0, nextJunction.coordIndex - 1);
+            const end = Math.min(activeRouteCoords.length, nextJunction.coordIndex + 4);
+            const coords = activeRouteCoords.slice(start, end);
+            if (coords.length >= 2) {
+              guideFeature = turf.featureCollection([turf.lineString(coords)]);
+            }
+          }
+        }
+      }
+      map.getSource('planned-route-junction-guide').setData(guideFeature);
+      return distanceToNext;
+    }
+
     function drawPlannedRoute(coords, from, to) {
       if (!map) return;
       // Save for re-draw after potential style change (e.g. fallback to raster)
       plannedFrom = from;
       plannedTo = to;
+      activeRouteCoords = coords;
 
       // Route polyline source
       if (!map.getSource('planned-route')) {
@@ -1205,20 +1666,36 @@
           id: 'planned-route-shadow',
           type: 'line',
           source: 'planned-route',
-          paint: { 'line-color': '#000', 'line-width': 9, 'line-opacity': 0.25, 'line-blur': 3 },
+          paint: { 'line-color': '#02172d', 'line-width': 14, 'line-opacity': 0.2, 'line-blur': 4 },
         });
       }
 
-      // Main route highlight
+      // Main neon route highlight
       if (!map.getLayer('planned-route-line')) {
         map.addLayer({
           id: 'planned-route-line',
           type: 'line',
           source: 'planned-route',
           paint: {
-            'line-color': '#1E90FF',
-            'line-width': 5,
-            'line-opacity': 0.92,
+            'line-color': '#00AEEF',
+            'line-width': 8,
+            'line-opacity': 0.55,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        });
+      }
+
+      if (!map.getLayer('planned-route-flow')) {
+        map.addLayer({
+          id: 'planned-route-flow',
+          type: 'line',
+          source: 'planned-route',
+          paint: {
+            'line-color': '#7DF9FF',
+            'line-width': 4.6,
+            'line-opacity': 0.95,
+            'line-dasharray': [0.8, 2.4],
             'line-cap': 'round',
             'line-join': 'round',
           },
@@ -1234,20 +1711,49 @@
           minzoom: 13,
           layout: {
             'symbol-placement': 'line',
-            'symbol-spacing': 100,
+            'symbol-spacing': 42,
             'icon-image': 'triangle-11',   // built-in MapLibre icon
-            'icon-size': 0.9,
+            'icon-size': 0.8,
             'icon-rotate': 90,
             'icon-rotation-alignment': 'map',
             'icon-allow-overlap': true,
           },
-          paint: { 'icon-color': '#fff', 'icon-opacity': 0.7 },
+          paint: {
+            'icon-color': '#ffffff',
+            'icon-opacity': 0.9,
+            'icon-halo-color': '#00E5FF',
+            'icon-halo-width': 1.2,
+          },
+        });
+      }
+
+      if (!map.getSource('planned-route-junction-guide')) {
+        map.addSource('planned-route-junction-guide', {
+          type: 'geojson',
+          data: turf.featureCollection([]),
+        });
+      }
+
+      if (!map.getLayer('planned-route-junction-guide')) {
+        map.addLayer({
+          id: 'planned-route-junction-guide',
+          type: 'line',
+          source: 'planned-route-junction-guide',
+          paint: {
+            'line-color': '#00FFFF',
+            'line-width': 9,
+            'line-opacity': 0.4,
+            'line-blur': 1.5,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
         });
       }
 
       // Start / end markers
       addRouteMarker('start-marker', from.lon, from.lat, '#04D93C', '🚴');
       addRouteMarker('end-marker',   to.lon,   to.lat,   '#e74c3c', '🏁');
+      startRouteFx();
     }
 
     function addRouteMarker(id, lon, lat, color, emoji) {
@@ -1263,14 +1769,19 @@
     }
 
     function clearRouteLayers() {
-      ['planned-route-arrows','planned-route-line','planned-route-shadow'].forEach(id => {
+      stopRouteFx();
+      ['planned-route-junction-guide','planned-route-arrows','planned-route-flow','planned-route-line','planned-route-shadow'].forEach(id => {
         if (map.getLayer(id)) map.removeLayer(id);
       });
+      if (map.getSource('planned-route-junction-guide')) map.removeSource('planned-route-junction-guide');
       if (map.getSource('planned-route')) map.removeSource('planned-route');
       ['start-marker','end-marker'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
       });
+      routeLineFeature = null;
+      routeJunctions = [];
+      activeRouteCoords = null;
     }
 
     // ── Active navigation ─────────────────────────────────────────────────
@@ -1295,10 +1806,14 @@
       collapsePanel();
       updateTurnBanner();
       updateNavStats();
+      if (lastSnappedLngLat) {
+        updateTopBarMeta(activeMatch, updateJunctionGuide(lastSnappedLngLat));
+      }
     }
 
-    function updateNavProgress(lat, lon) {
+    function updateNavProgress(lat, lon, match) {
       if (!isNavigating || !plannedSteps.length) return;
+      const currentCoord = [lon, lat];
 
       // Find next waypoint in current step
       const step = plannedSteps[currentStepIdx];
@@ -1315,6 +1830,8 @@
 
       // Update distance to next turn
       document.getElementById('turn-dist').textContent = formatDist(distToEnd);
+      const nextJunctionDistance = updateJunctionGuide(currentCoord);
+      updateTopBarMeta(match || activeMatch, nextJunctionDistance);
 
       // Check if arrived (within 30 m of destination)
       const dest = plannedRoute[plannedRoute.length - 1];
@@ -1328,14 +1845,10 @@
 
       // Auto-zoom near intersections
       if (distToEnd < 80) {
-        map.easeTo({ zoom: 18, duration: 500 });
-      } else if (distToEnd > 200 && map.getZoom() > 17) {
-        map.easeTo({ zoom: 16, duration: 500 });
+        map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 500 });
+      } else if (distToEnd > 200 && map.getZoom() > DEFAULT_NAV_ZOOM) {
+        map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 500 });
       }
-
-      // Snap user to route
-      const snappedCoords = snapToRoute(lat, lon, plannedRoute);
-      if (userMarker) userMarker.setLngLat(snappedCoords);
     }
 
     function updateTurnBanner() {
@@ -1365,7 +1878,6 @@
 
     function showArrived() {
       isNavigating = false;
-      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
 
       const elapsed = navStartTime ? Math.round((Date.now() - navStartTime) / 60000) : 0;
       document.getElementById('arrived-stats').textContent =
@@ -1389,8 +1901,11 @@
       plannedFrom = null;
       plannedTo = null;
       plannedSteps = [];
+      navTotalDistM = 0;
+      currentStepIdx = 0;
       document.getElementById('sel-from').value = '';
       document.getElementById('sel-to').value = '';
+      updateTopBarMeta(activeMatch, getDistanceToNextJunction(lastSnappedLngLat));
       checkPlanBtn();
     }
 
@@ -1406,8 +1921,13 @@
     document.getElementById('btn-heading-up').addEventListener('click', () => {
       headingUp = !headingUp;
       document.getElementById('btn-heading-up').classList.toggle('active', headingUp);
-      if (!headingUp) map.easeTo({ bearing: 0, duration: 500 });
+      if (!headingUp) map.easeTo({ bearing: 0, pitch: DEFAULT_NAV_PITCH, zoom: DEFAULT_NAV_ZOOM, duration: 500 });
     });
+
+    function cleanupNavRuntime() {
+      clearGpsWatch();
+      stopRouteFx();
+    }
 
     // ── Back navigation ───────────────────────────────────────────────────
     window.navBack = function () {
@@ -1415,7 +1935,7 @@
         if (!confirm('確定結束導航嗎？')) return;
         endNavigation();
       }
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      cleanupNavRuntime();
       history.back();
     };
 
@@ -1471,6 +1991,8 @@
       document.getElementById('arrived-overlay').classList.remove('show');
       endNavigation();
     });
+    window.addEventListener('pagehide', cleanupNavRuntime);
+    window.addEventListener('beforeunload', cleanupNavRuntime);
 
     // Panel handle toggle
     document.getElementById('panel-handle').addEventListener('click', () => {
@@ -1521,6 +2043,8 @@
       rs_time: '預計時間',
       rs_turns: '轉向次數',
       btn_start: '🚴 開始導航',
+      road_searching: '定位中…',
+      pushbike_warning: '請推車',
       stat_dist: '已行距離',
       stat_remain: '剩餘距離',
       stat_eta: '預計到達',
@@ -1545,6 +2069,8 @@
       rs_time: 'Est. Time',
       rs_turns: 'Turns',
       btn_start: '🚴 Start Navigation',
+      road_searching: 'Locating…',
+      pushbike_warning: 'Please Push Bike',
       stat_dist: 'Travelled',
       stat_remain: 'Remaining',
       stat_eta: 'ETA',
@@ -1570,6 +2096,8 @@
       const key = el.dataset.i18n;
       if (t[key] !== undefined) el.textContent = t[key];
     });
+    const pushBikeText = document.getElementById('nav-pushbike-text');
+    if (pushBikeText && t.pushbike_warning) pushBikeText.textContent = t.pushbike_warning;
   })();
   </script>
 </body>
