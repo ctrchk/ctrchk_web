@@ -4,6 +4,19 @@
 
 ---
 
+## v1.10 — 2026-05-23
+
+### 新功能 (New Features)
+- **Optimized Custom Dijkstra Cycling Routing Engine (No-Roads Policy)** — `/nav` 路線規劃改為只使用本地 `/data/tko_tracks.json` + 程式化 Virtual Links 建圖，完全移除外部路由引擎依賴；`push-bike` 連接段成本提高至一般單車徑 100 倍，僅在必要連通時使用。
+- **Implemented Proximity Auto-Finish** — 導航中當使用者與終點距離 ≤ 8 米會自動結束騎行流程，無需手動按鈕。
+- **Integrated Neon DB Save for Rides & XP** — 自動結束後即時呼叫伺服器函式寫入騎行資料（距離、時間、XP、時間戳）到 Neon PostgreSQL，並同步更新本機玩家等級/XP。
+- **Added Post-Ride Map Summary UI** — 新增 SummaryView 卡片，顯示距離、時間、XP 與本次歷史軌跡的非互動地圖回顧。
+
+### 改進 (Improvements)
+- **資源清理強化** — 進入 SummaryView 時會清理 GPS watcher 與路線特效計時器，避免結束後仍持續追蹤。
+
+---
+
 ## v1.9 — 2026-05-08
 
 ### 文件更新 (Documentation)

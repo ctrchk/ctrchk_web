@@ -246,21 +246,56 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Arrived overlay ── */
+    /* ── Post-ride summary view ── */
     #arrived-overlay {
       display: none; position: fixed; inset: 0; z-index: 600;
       background: rgba(18,31,20,0.96); align-items: center; justify-content: center;
-      flex-direction: column; text-align: center; padding: 2em;
+      flex-direction: column; text-align: center; padding: 1.2em;
     }
     body.app-light-theme #arrived-overlay { background: rgba(240,248,240,0.97); color: #1b3a1f; }
     #arrived-overlay.show { display: flex; animation: fadeIn 0.4s ease; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    #arrived-emoji { font-size: 4em; margin-bottom: 0.3em; }
-    #arrived-title { font-size: 1.8em; font-weight: bold; color: #BFE340; margin-bottom: 0.5em; }
-    #arrived-stats { font-size: 0.9em; opacity: 0.8; margin-bottom: 1.5em; line-height: 1.7; }
+    #summary-card {
+      width: min(520px, 95vw);
+      border-radius: 16px;
+      border: 1px solid rgba(4, 217, 60, 0.25);
+      background: rgba(18, 31, 20, 0.88);
+      padding: 1em;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    body.app-light-theme #summary-card {
+      background: rgba(255, 255, 255, 0.92);
+      border-color: rgba(46, 125, 50, 0.3);
+    }
+    #arrived-emoji { font-size: 2.8em; margin-bottom: 0.2em; }
+    #arrived-title { font-size: 1.35em; font-weight: bold; color: #BFE340; margin-bottom: 0.8em; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6em;
+      margin-bottom: 0.9em;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 0.55em 0.4em;
+    }
+    body.app-light-theme .summary-item { background: rgba(0,0,0,0.05); }
+    .summary-item .val { font-size: 1.04em; font-weight: 700; color: #BFE340; }
+    body.app-light-theme .summary-item .val { color: #2e7d32; }
+    .summary-item .lbl { font-size: 0.7em; opacity: 0.72; margin-top: 0.2em; }
+    #summary-map {
+      width: 100%;
+      height: 220px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      margin-bottom: 0.9em;
+    }
     #btn-arrived-done {
       background: #04D93C; color: #121f14; border: none;
-      padding: 0.85em 2.5em; border-radius: 10px; font-size: 1em; font-weight: bold;
+      width: 100%;
+      padding: 0.8em 1.2em; border-radius: 10px; font-size: 0.96em; font-weight: bold;
       cursor: pointer;
     }
 
@@ -462,10 +497,17 @@
 
   <!-- Arrived overlay -->
   <div id="arrived-overlay">
-    <div id="arrived-emoji">🎉</div>
-    <div id="arrived-title" data-i18n="arrived_title">已到達目的地！</div>
-    <div id="arrived-stats"></div>
-    <button id="btn-arrived-done" data-i18n="btn_done">完成</button>
+    <div id="summary-card">
+      <div id="arrived-emoji">🎉</div>
+      <div id="arrived-title" data-i18n="arrived_title">已到達目的地！</div>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="val" id="summary-distance">--</div><div class="lbl">距離</div></div>
+        <div class="summary-item"><div class="val" id="summary-time">--</div><div class="lbl">時間</div></div>
+        <div class="summary-item"><div class="val" id="summary-xp">--</div><div class="lbl">XP</div></div>
+      </div>
+      <div id="summary-map"></div>
+      <button id="btn-arrived-done" data-i18n="btn_done">完成並返回儀表板</button>
+    </div>
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
@@ -488,12 +530,11 @@
       { id: 'tkoi',  name: '將軍澳創新園',       lat: 22.28570, lon: 114.27240 },
     ];
 
-    // ── Routing engines ────────────────────────────────────────────────────
-    // Plan C: Brouter — cycling-optimised, free, no API key required
-    // Returns GeoJSON; profiles: safety | trekking | fastbike | shortest
-    const BROUTER_BASE = 'https://brouter.de/brouter';
-    // Fallback: OSRM public demo (online, free, generic bike profile)
-    const OSRM_FALLBACK = 'https://router.project-osrm.org/route/v1/bike';
+    // ── Local routing policy (strict cycling-only) ────────────────────────
+    const VIRTUAL_LINK_COST_MULTIPLIER = 100;
+    const ARRIVAL_AUTO_FINISH_METERS = 8;
+    const NAV_SPEED_KMH = 15;
+    const PUSHBIKE_SPEED_KMH = 4;
     const ADDRESS_SUGGEST_MIN_CHARS = 2;
     const ADDRESS_SUGGEST_DEBOUNCE_MS = 250;
     const NOMINATIM_LIMIT = 5;
@@ -542,6 +583,10 @@
     let lastCameraBearing = 0;
     let activeMatch = null;
     let activeRouteCoords = null;
+    let networkGraph = null;
+    let navTrailCoords = [];
+    let navSummaryMap = null;
+    let finishInProgress = false;
 
     // ── Helpers ──────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -726,6 +771,155 @@
       };
     }
 
+    function buildRoutingGraph(lineFeatures) {
+      const nodes = new Map();
+      const adjacency = new Map();
+      const edgeLookup = new Map();
+
+      function ensureNode(coord) {
+        const id = `${coord[0].toFixed(6)}:${coord[1].toFixed(6)}`;
+        if (!nodes.has(id)) nodes.set(id, { id, coord: [coord[0], coord[1]] });
+        if (!adjacency.has(id)) adjacency.set(id, []);
+        return id;
+      }
+
+      function addEdge(aId, bId, distanceM, linkType) {
+        if (!Number.isFinite(distanceM) || distanceM <= 0) return;
+        const isPushBike = linkType === 'push-bike';
+        const cost = isPushBike ? distanceM * VIRTUAL_LINK_COST_MULTIPLIER : distanceM;
+        const edge = { to: bId, distanceM, cost, linkType: isPushBike ? 'push-bike' : 'cycle-track' };
+        adjacency.get(aId).push(edge);
+        edgeLookup.set(`${aId}|${bId}`, edge);
+      }
+
+      lineFeatures.forEach((feature) => {
+        const coords = feature && feature.geometry ? feature.geometry.coordinates : null;
+        if (!Array.isArray(coords) || coords.length < 2) return;
+        const linkType = feature.properties && feature.properties.linkType === 'push-bike'
+          ? 'push-bike'
+          : 'cycle-track';
+        for (let i = 0; i < coords.length - 1; i++) {
+          const from = coords[i];
+          const to = coords[i + 1];
+          const aId = ensureNode(from);
+          const bId = ensureNode(to);
+          const d = haversineM(from[1], from[0], to[1], to[0]);
+          addEdge(aId, bId, d, linkType);
+          addEdge(bId, aId, d, linkType);
+        }
+      });
+
+      return { nodes, adjacency, edgeLookup, nodeIds: Array.from(nodes.keys()) };
+    }
+
+    function nearestGraphNode(coord) {
+      if (!networkGraph || !networkGraph.nodeIds || !networkGraph.nodeIds.length) return null;
+      let best = null;
+      networkGraph.nodeIds.forEach((id) => {
+        const node = networkGraph.nodes.get(id);
+        const d = haversineM(coord[1], coord[0], node.coord[1], node.coord[0]);
+        if (!best || d < best.distance) best = { id, distance: d, coord: node.coord };
+      });
+      return best;
+    }
+
+    function findRouteWithAStar(startId, endId) {
+      if (!networkGraph || startId == null || endId == null) return null;
+      const gScore = new Map();
+      const fScore = new Map();
+      const cameFrom = new Map();
+      const open = new Set([startId]);
+
+      gScore.set(startId, 0);
+      const startNode = networkGraph.nodes.get(startId);
+      const endNode = networkGraph.nodes.get(endId);
+      fScore.set(startId, haversineM(startNode.coord[1], startNode.coord[0], endNode.coord[1], endNode.coord[0]));
+
+      while (open.size) {
+        let current = null;
+        let currentF = Infinity;
+        open.forEach((nodeId) => {
+          const score = fScore.get(nodeId) ?? Infinity;
+          if (score < currentF) {
+            currentF = score;
+            current = nodeId;
+          }
+        });
+        if (current == null) break;
+        if (current === endId) {
+          const pathNodeIds = [current];
+          while (cameFrom.has(pathNodeIds[0])) {
+            pathNodeIds.unshift(cameFrom.get(pathNodeIds[0]));
+          }
+          return { pathNodeIds, totalCost: gScore.get(endId) ?? Infinity };
+        }
+        open.delete(current);
+
+        const neighbors = networkGraph.adjacency.get(current) || [];
+        neighbors.forEach((edge) => {
+          const tentativeG = (gScore.get(current) ?? Infinity) + edge.cost;
+          if (tentativeG >= (gScore.get(edge.to) ?? Infinity)) return;
+          cameFrom.set(edge.to, current);
+          gScore.set(edge.to, tentativeG);
+          const nb = networkGraph.nodes.get(edge.to);
+          const heuristic = haversineM(nb.coord[1], nb.coord[0], endNode.coord[1], endNode.coord[0]);
+          fScore.set(edge.to, tentativeG + heuristic);
+          open.add(edge.to);
+        });
+      }
+      return null;
+    }
+
+    function buildPathMetrics(pathNodeIds) {
+      let distanceM = 0;
+      let pushBikeM = 0;
+      if (!networkGraph || !Array.isArray(pathNodeIds)) return { distanceM, pushBikeM, etaMinutes: 0 };
+      for (let i = 0; i < pathNodeIds.length - 1; i++) {
+        const edge = networkGraph.edgeLookup.get(`${pathNodeIds[i]}|${pathNodeIds[i + 1]}`);
+        if (!edge) continue;
+        distanceM += edge.distanceM;
+        if (edge.linkType === 'push-bike') pushBikeM += edge.distanceM;
+      }
+      const cycleM = Math.max(0, distanceM - pushBikeM);
+      const etaHours = (cycleM / 1000) / NAV_SPEED_KMH + (pushBikeM / 1000) / PUSHBIKE_SPEED_KMH;
+      return {
+        distanceM,
+        pushBikeM,
+        etaMinutes: Math.max(1, Math.round(etaHours * 60)),
+      };
+    }
+
+    function planLocalCyclingRoute(fromCoord, toCoord) {
+      if (!networkGraph || !networkGraph.nodeIds.length) return null;
+      const fromSnap = snapCoordinateToNetwork(fromCoord);
+      const toSnap = snapCoordinateToNetwork(toCoord);
+      const startNode = nearestGraphNode(fromSnap.coordinate);
+      const endNode = nearestGraphNode(toSnap.coordinate);
+      if (!startNode || !endNode) return null;
+      const result = findRouteWithAStar(startNode.id, endNode.id);
+      if (!result || !result.pathNodeIds || result.pathNodeIds.length < 2) return null;
+
+      const coords = result.pathNodeIds.map(nodeId => networkGraph.nodes.get(nodeId).coord.slice());
+      const first = coords[0];
+      const last = coords[coords.length - 1];
+      if (haversineM(fromSnap.coordinate[1], fromSnap.coordinate[0], first[1], first[0]) > 1.2) {
+        coords.unshift(fromSnap.coordinate.slice(0, 2));
+      }
+      if (haversineM(toSnap.coordinate[1], toSnap.coordinate[0], last[1], last[0]) > 1.2) {
+        coords.push(toSnap.coordinate.slice(0, 2));
+      }
+      const metrics = buildPathMetrics(result.pathNodeIds);
+      metrics.distanceM += haversineM(fromCoord[1], fromCoord[0], fromSnap.coordinate[1], fromSnap.coordinate[0]);
+      metrics.distanceM += haversineM(toCoord[1], toCoord[0], toSnap.coordinate[1], toSnap.coordinate[0]);
+
+      return {
+        coords,
+        distanceM: metrics.distanceM,
+        etaMinutes: metrics.etaMinutes,
+        pushBikeM: metrics.pushBikeM,
+      };
+    }
+
     function getNearestNetworkMatch(coord) {
       if (!networkLines.length || typeof turf === 'undefined') return null;
       const point = turf.point(coord);
@@ -845,23 +1039,6 @@
         .filter((entry, idx, arr) => idx === 0 || Math.abs(entry.routeLocation - arr[idx - 1].routeLocation) > 20);
     }
 
-    /** Decode OSRM polyline (precision 5 or 6) */
-    function decodePolyline(encoded, precision) {
-      const factor = Math.pow(10, precision || 5);
-      const coords = [];
-      let index = 0, lat = 0, lng = 0;
-      while (index < encoded.length) {
-        let b, shift = 0, result = 0;
-        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-        lat += (result & 1) ? ~(result >> 1) : result >> 1;
-        shift = 0; result = 0;
-        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-        lng += (result & 1) ? ~(result >> 1) : result >> 1;
-        coords.push([lng / factor, lat / factor]);
-      }
-      return coords;
-    }
-
     /** Turn type → emoji arrow */
     function turnEmoji(modifier) {
       const m = (modifier || '').toLowerCase();
@@ -874,7 +1051,7 @@
       return '↑';
     }
 
-    /** Translate OSRM maneuver to Chinese instruction */
+    /** Translate local maneuver to Chinese instruction */
     function stepInstruction(step) {
       if (!step) return '繼續前行';
       const type = step.maneuver && step.maneuver.type;
@@ -1133,30 +1310,23 @@
 
     /** Load TKO GeoJSON cycling track overlay */
     async function loadTkoGeoJson() {
-      const candidates = [
-        '/data/tko_tracks.json',
-        '/CYCFACI.gdb_CYCTRACK_converted.geojson',
-        '/gpx/tko/cycling_tracks_tko.geojson',
-      ];
-      for (const url of candidates) {
-        try {
-          const resp = await fetch(url);
-          if (!resp.ok) continue;
-          const data = await resp.json();
-          if (!data || !Array.isArray(data.features)) continue;
-          tkoGeoJsonData = data;
-          processedTrackNetwork = preprocessTrackNetwork(data);
-          networkLines = processedTrackNetwork.features.slice();
-          networkIndex = buildLineSpatialIndex(networkLines);
-          networkJunctions = buildJunctionCollection(networkLines);
-          addTkoLocalLayer(processedTrackNetwork);
-          updateTopBarMeta(null, null);
-          return;
-        } catch (e) {
-          console.warn('[Nav] TKO GeoJSON load candidate failed', url, e);
-        }
+      const url = '/data/tko_tracks.json';
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data || !Array.isArray(data.features)) throw new Error('Invalid data format');
+        tkoGeoJsonData = data;
+        processedTrackNetwork = preprocessTrackNetwork(data);
+        networkLines = processedTrackNetwork.features.slice();
+        networkIndex = buildLineSpatialIndex(networkLines);
+        networkJunctions = buildJunctionCollection(networkLines);
+        networkGraph = buildRoutingGraph(networkLines);
+        addTkoLocalLayer(processedTrackNetwork);
+        updateTopBarMeta(null, null);
+      } catch (e) {
+        console.warn('[Nav] TKO local dataset load failed', e);
       }
-      console.warn('[Nav] TKO GeoJSON load failed: no usable dataset found');
     }
 
     function addTkoLocalLayer(data) {
@@ -1304,6 +1474,10 @@
       updateCamera(activeCoord, lastBearing);
 
       if (isNavigating) {
+       const tail = navTrailCoords[navTrailCoords.length - 1];
+       if (!tail || haversineM(tail[1], tail[0], activeCoord[1], activeCoord[0]) > 1.5) {
+         navTrailCoords.push(activeCoord.slice(0, 2));
+       }
        updateNavProgress(activeCoord[1], activeCoord[0], activeMatch);
       } else {
        updateTopBarMeta(activeMatch, getDistanceToNextJunction(activeCoord));
@@ -1472,104 +1646,37 @@
       // Remove any existing planned route layer
       clearRouteLayers();
 
-      const profile = document.getElementById('sel-profile').value || 'safety';
-      let routeSuccess = false;
-
-      // ── Try Brouter first (Plan C: cycling-optimised routing) ─────────────
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const brouterUrl = `${BROUTER_BASE}?lonlat=${from.lon},${from.lat}|${to.lon},${to.lat}` +
-          `&profile=${encodeURIComponent(profile)}&alternativeidx=0&format=geojson`;
-        let resp;
-        try {
-          resp = await fetch(brouterUrl, { signal: controller.signal });
-        } finally {
-          clearTimeout(timeoutId);
+        const localRoute = planLocalCyclingRoute([from.lon, from.lat], [to.lon, to.lat]);
+        if (!localRoute || !localRoute.coords || localRoute.coords.length < 2) {
+          throw new Error('No local route found');
         }
-        if (!resp.ok) throw new Error('Brouter HTTP ' + resp.status);
-        const data = await resp.json();
-        if (!data.features || !data.features.length) throw new Error('Brouter: no route found');
 
-        const feature = data.features[0];
-        const coords = feature.geometry.coordinates.map(c => [c[0], c[1]]);
-        const laneCoords = projectRouteToNetwork(coords);
-        const distM  = parseFloat(feature.properties['track-length'] || 0);
-        const timeS  = parseFloat(feature.properties['total-time'] || 0);
+        plannedRoute = localRoute.coords;
+        activeRouteCoords = localRoute.coords;
+        routeLineFeature = turf.lineString(localRoute.coords);
+        routeJunctions = buildRouteJunctions(localRoute.coords);
+        plannedSteps = computeNavSteps(localRoute.coords);
+        navTotalDistM = localRoute.distanceM;
 
-        plannedRoute  = laneCoords;
-        activeRouteCoords = laneCoords;
-        routeLineFeature = turf.lineString(laneCoords);
-        routeJunctions = buildRouteJunctions(laneCoords);
-        plannedSteps  = computeNavSteps(laneCoords);
-        navTotalDistM = distM;
+        drawPlannedRoute(localRoute.coords, from, to);
 
-        drawPlannedRoute(laneCoords, from, to);
-
-        const distKm = (distM / 1000).toFixed(1);
-        const mins   = Math.round(timeS / 60);
-        document.getElementById('rs-dist').textContent = `${distKm} km`;
-        document.getElementById('rs-time').textContent = formatMinutes(mins);
+        document.getElementById('rs-dist').textContent = `${(localRoute.distanceM / 1000).toFixed(1)} km`;
+        document.getElementById('rs-time').textContent = formatMinutes(localRoute.etaMinutes);
         document.getElementById('rs-turns').textContent =
           `${plannedSteps.filter(s => s.maneuver.type === 'turn').length} 個`;
         document.getElementById('route-summary').classList.add('show');
         document.getElementById('btn-start-nav').classList.add('show');
 
-        const lngs = laneCoords.map(c => c[0]), lats = laneCoords.map(c => c[1]);
+        const lngs = localRoute.coords.map(c => c[0]), lats = localRoute.coords.map(c => c[1]);
         map.fitBounds([
           [Math.min(...lngs), Math.min(...lats)],
           [Math.max(...lngs), Math.max(...lats)],
         ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
-
         expandPanel();
-        routeSuccess = true;
-      } catch (brouterErr) {
-        console.warn('[Nav] Brouter failed, falling back to OSRM:', brouterErr.message);
-      }
-
-      // ── OSRM fallback (generic bike routing) ─────────────────────────────
-      if (!routeSuccess) {
-        try {
-          const url = `${OSRM_FALLBACK}/${from.lon},${from.lat};${to.lon},${to.lat}` +
-            // steps=false: turn instructions are derived by computeNavSteps() from geometry
-            `?overview=full&geometries=polyline6&steps=false&annotations=false`;
-          const resp = await fetch(url);
-          if (!resp.ok) throw new Error('OSRM returned ' + resp.status);
-          const data = await resp.json();
-          if (data.code !== 'Ok' || !data.routes || !data.routes.length) throw new Error('No route found');
-          const route  = data.routes[0];
-          const coords = decodePolyline(route.geometry, 6);
-          const laneCoords = projectRouteToNetwork(coords);
-
-          plannedRoute  = laneCoords;
-          activeRouteCoords = laneCoords;
-          routeLineFeature = turf.lineString(laneCoords);
-          routeJunctions = buildRouteJunctions(laneCoords);
-          plannedSteps  = computeNavSteps(laneCoords);
-          navTotalDistM = route.distance;
-
-          drawPlannedRoute(laneCoords, from, to);
-
-          const distKm = (route.distance / 1000).toFixed(1);
-          const mins   = Math.round(route.duration / 60);
-          document.getElementById('rs-dist').textContent = `${distKm} km`;
-          document.getElementById('rs-time').textContent = formatMinutes(mins);
-          document.getElementById('rs-turns').textContent =
-            `${plannedSteps.filter(s => s.maneuver.type === 'turn').length} 個`;
-          document.getElementById('route-summary').classList.add('show');
-          document.getElementById('btn-start-nav').classList.add('show');
-
-          const lngs = laneCoords.map(c => c[0]), lats = laneCoords.map(c => c[1]);
-          map.fitBounds([
-            [Math.min(...lngs), Math.min(...lats)],
-            [Math.max(...lngs), Math.max(...lats)],
-          ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
-
-          expandPanel();
-        } catch (osrmErr) {
-          console.error('[Nav] Both Brouter and OSRM failed:', osrmErr);
-          alert('路線規劃失敗，請檢查網絡連接後再試。\n（如問題持續，可嘗試更換起點/終點。）');
-        }
+      } catch (routeErr) {
+        console.error('[Nav] Local routing failed:', routeErr);
+        alert('無法使用本地單車徑網絡規劃路線，請確認起點與終點在將軍澳單車徑覆蓋範圍內。');
       }
 
       btn.disabled = false;
@@ -1788,9 +1895,12 @@
     function startNavigation() {
       if (!plannedRoute || !plannedSteps.length) return;
       isNavigating = true;
+      finishInProgress = false;
       navStartTime = Date.now();
       navDistTravelledM = 0;
       currentStepIdx = 0;
+      navTrailCoords = [];
+      if (lastSnappedLngLat) navTrailCoords.push(lastSnappedLngLat.slice(0, 2));
 
       // Switch UI to nav mode
       document.getElementById('btn-start-nav').classList.remove('show');
@@ -1833,11 +1943,11 @@
       const nextJunctionDistance = updateJunctionGuide(currentCoord);
       updateTopBarMeta(match || activeMatch, nextJunctionDistance);
 
-      // Check if arrived (within 30 m of destination)
+      // Check if arrived (within 8 m of destination)
       const dest = plannedRoute[plannedRoute.length - 1];
       const distToDest = haversineM(lat, lon, dest[1], dest[0]);
-      if (distToDest < 30) {
-        showArrived();
+      if (distToDest <= ARRIVAL_AUTO_FINISH_METERS) {
+        finishNavigationSequence();
         return;
       }
 
@@ -1876,22 +1986,152 @@
       document.getElementById('nav-stat-speed').textContent   = lastSpeedKmh.toFixed(1);
     }
 
-    function showArrived() {
-      isNavigating = false;
+    async function saveNavigationRide(summary) {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return { xpEarned: summary.xpEarned, saved: false };
+      try {
+        const payload = {
+          route_id: 'TKO_NAV',
+          route_name: 'TKO Custom Navigation',
+          ride_date: new Date(summary.startTime).toISOString().slice(0, 10),
+          start_time: new Date(summary.startTime).toISOString(),
+          end_time: new Date(summary.endTime).toISOString(),
+          distance_km: summary.distanceKm,
+          duration_minutes: summary.durationMinutes,
+          avg_speed_kmh: summary.avgSpeedKmh,
+          stops_reached: [1, 2],
+          stops_count: 2,
+          all_stops: true,
+          districts_count: 1,
+          source: 'nav',
+          xp_earned_override: summary.xpEarned,
+          gpx_track: JSON.stringify(summary.pathCoords || []),
+        };
+        const res = await fetch('/api/getHistory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        try {
+          const raw = localStorage.getItem('user');
+          if (raw) {
+            const user = JSON.parse(raw);
+            if (typeof data.level === 'number') user.level = data.level;
+            if (typeof data.xp === 'number') user.xp = data.xp;
+            if (typeof data.coins === 'number') user.coins = data.coins;
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+        } catch (e) {}
+        return { xpEarned: data.xp_earned || summary.xpEarned, saved: true };
+      } catch (error) {
+        console.warn('[Nav] save ride failed:', error);
+        return { xpEarned: summary.xpEarned, saved: false };
+      }
+    }
 
-      const elapsed = navStartTime ? Math.round((Date.now() - navStartTime) / 60000) : 0;
-      document.getElementById('arrived-stats').textContent =
-        `騎行距離：${formatDist(navDistTravelledM)}\n用時：${formatMinutes(elapsed)}\n平均速度：${navDistTravelledM > 0 && elapsed > 0 ? ((navDistTravelledM/1000)/(elapsed/60)).toFixed(1) : '--'} km/h`;
+    function renderSummaryMap(pathCoords) {
+      const mapWrap = document.getElementById('summary-map');
+      if (!mapWrap || typeof maplibregl === 'undefined') return;
+      if (navSummaryMap) {
+        navSummaryMap.remove();
+        navSummaryMap = null;
+      }
+      if (!Array.isArray(pathCoords) || pathCoords.length < 2) {
+        mapWrap.innerHTML = '<div style="padding:1.2em;color:#9cb39f;text-align:center;">無可用路徑資料</div>';
+        return;
+      }
+      mapWrap.innerHTML = '';
+      const isLightTheme = document.body.classList.contains('app-light-theme') ||
+        (!document.body.classList.contains('app-theme-explicit') &&
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+      navSummaryMap = new maplibregl.Map({
+        container: 'summary-map',
+        style: isLightTheme ? 'https://tiles.openfreemap.org/styles/liberty' : 'https://tiles.openfreemap.org/styles/dark',
+        center: pathCoords[0],
+        zoom: 15,
+        interactive: false,
+        attributionControl: false,
+      });
+      navSummaryMap.on('load', () => {
+        navSummaryMap.addSource('summary-path', {
+          type: 'geojson',
+          data: turf.lineString(pathCoords),
+        });
+        navSummaryMap.addLayer({
+          id: 'summary-path-line',
+          type: 'line',
+          source: 'summary-path',
+          paint: {
+            'line-color': '#00E5FF',
+            'line-width': 5,
+            'line-opacity': 0.95,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        });
+        const lngs = pathCoords.map(c => c[0]);
+        const lats = pathCoords.map(c => c[1]);
+        navSummaryMap.fitBounds([
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ], { padding: 30, duration: 0 });
+      });
+    }
+
+    function showSummaryView(summary) {
+      document.getElementById('summary-distance').textContent = `${summary.distanceKm.toFixed(2)} km`;
+      document.getElementById('summary-time').textContent = formatMinutes(summary.durationMinutes);
+      document.getElementById('summary-xp').textContent = `+${summary.xpEarned} XP`;
+      renderSummaryMap(summary.pathCoords);
       document.getElementById('arrived-overlay').classList.add('show');
+    }
+
+    async function finishNavigationSequence() {
+      if (finishInProgress) return;
+      finishInProgress = true;
+      isNavigating = false;
+      clearGpsWatch();
+      stopRouteFx();
+      document.getElementById('turn-banner').classList.remove('show');
+      document.getElementById('nav-stats-bar').classList.remove('show');
+      document.getElementById('btn-end-nav').style.display = 'none';
+      headingUp = false;
+      document.getElementById('btn-heading-up').classList.remove('active');
+      map.easeTo({ bearing: 0, duration: 500 });
+
+      const endTime = Date.now();
+      const elapsedMinutes = navStartTime ? Math.max(1, Math.round((endTime - navStartTime) / 60000)) : 1;
+      const distanceKm = Number((Math.max(navDistTravelledM, 0) / 1000).toFixed(2));
+      const avgSpeedKmh = elapsedMinutes > 0 ? Number(((distanceKm / elapsedMinutes) * 60).toFixed(1)) : 0;
+      const localXp = Math.max(1, Math.round(distanceKm * 20));
+      const pathCoords = navTrailCoords.length >= 2
+        ? navTrailCoords.slice()
+        : (plannedRoute ? plannedRoute.slice() : []);
+      const summary = {
+        startTime: navStartTime || endTime,
+        endTime,
+        distanceKm,
+        durationMinutes: elapsedMinutes,
+        avgSpeedKmh,
+        xpEarned: localXp,
+        pathCoords,
+      };
+      const saveResult = await saveNavigationRide(summary);
+      summary.xpEarned = saveResult.xpEarned;
+      showSummaryView(summary);
     }
 
     function endNavigation() {
       isNavigating = false;
+      finishInProgress = false;
       document.getElementById('turn-banner').classList.remove('show');
       document.getElementById('nav-stats-bar').classList.remove('show');
       document.getElementById('btn-end-nav').style.display = 'none';
       document.getElementById('btn-start-nav').classList.remove('show');
       document.getElementById('route-summary').classList.remove('show');
+      document.getElementById('arrived-overlay').classList.remove('show');
       headingUp = false;
       document.getElementById('btn-heading-up').classList.remove('active');
       map.easeTo({ bearing: 0, duration: 500 });
@@ -1902,9 +2142,14 @@
       plannedTo = null;
       plannedSteps = [];
       navTotalDistM = 0;
+      navTrailCoords = [];
       currentStepIdx = 0;
       document.getElementById('sel-from').value = '';
       document.getElementById('sel-to').value = '';
+      if (navSummaryMap) {
+        navSummaryMap.remove();
+        navSummaryMap = null;
+      }
       updateTopBarMeta(activeMatch, getDistanceToNextJunction(lastSnappedLngLat));
       checkPlanBtn();
     }
@@ -1988,8 +2233,8 @@
       if (confirm('確定結束導航？')) endNavigation();
     });
     document.getElementById('btn-arrived-done').addEventListener('click', () => {
-      document.getElementById('arrived-overlay').classList.remove('show');
       endNavigation();
+      location.href = '/dashboard';
     });
     window.addEventListener('pagehide', cleanupNavRuntime);
     window.addEventListener('beforeunload', cleanupNavRuntime);
@@ -2051,7 +2296,7 @@
       stat_speed: '速度 km/h',
       btn_end: '⏹ 結束導航',
       arrived_title: '已到達目的地！',
-      btn_done: '完成',
+      btn_done: '確認並返回儀表板',
     },
     en: {
       nav_loading: 'Loading map...',
@@ -2077,7 +2322,7 @@
       stat_speed: 'Speed km/h',
       btn_end: '⏹ End Navigation',
       arrived_title: 'Arrived at Destination!',
-      btn_done: 'Done',
+      btn_done: 'Done & Back to Dashboard',
     }
   };
   (function applyNavLang() {
