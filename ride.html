@@ -609,6 +609,19 @@
       return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
     }
 
+    function getRideModeFromRoute(route) {
+      const nature = String(route?.nature || '').toLowerCase();
+      if (nature.includes('旅遊') || nature.includes('tour')) return 'tourism';
+      if (
+        nature.includes('通勤') ||
+        nature.includes('commut') ||
+        nature.includes('drt') ||
+        nature.includes('混合') ||
+        nature.includes('mixed')
+      ) return 'commuter';
+      return 'tourism';
+    }
+
     function getUserLevel() {
       try {
         const raw = localStorage.getItem('user');
@@ -1073,6 +1086,7 @@
             all_stops: allStopsReached,
             districts_count: districts.size,
             source: 'pwa',
+            ride_mode: getRideModeFromRoute(routeData),
             xp_earned_override: sessionXp,
             bonus_coins: bonusCoins,
           };

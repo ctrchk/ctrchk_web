@@ -4,6 +4,13 @@
 
 ---
 
+## v1.11 — 2026-05-24
+
+### 新功能 (New Features)
+- **Implemented Admin Station/Route Management System and New Mileage Multiplier Logic (x1.5 / x1.0 / x0.8)** — 新增後台站點/路線動態管理（含站點 CRUD、路線建立與編輯、站點經過路線總覽），並套用新騎行倍率規則：旅遊模式 x1.5、通勤/DRT 模式 x1.0、自由導航模式 x0.8。
+
+---
+
 ## v1.10 — 2026-05-23
 
 ### 新功能 (New Features)

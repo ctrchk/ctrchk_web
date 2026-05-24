@@ -2004,6 +2004,7 @@
           all_stops: true,
           districts_count: 1,
           source: 'nav',
+          ride_mode: 'free',
           xp_earned_override: summary.xpEarned,
           gpx_track: JSON.stringify(summary.pathCoords || []),
         };
@@ -2105,7 +2106,7 @@
       const elapsedMinutes = navStartTime ? Math.max(1, Math.round((endTime - navStartTime) / 60000)) : 1;
       const distanceKm = Number((Math.max(navDistTravelledM, 0) / 1000).toFixed(2));
       const avgSpeedKmh = elapsedMinutes > 0 ? Number(((distanceKm / elapsedMinutes) * 60).toFixed(1)) : 0;
-      const localXp = Math.max(1, Math.round(distanceKm * 20));
+      const localXp = Math.max(1, Math.round(distanceKm * 20 * 0.8));
       const pathCoords = navTrailCoords.length >= 2
         ? navTrailCoords.slice()
         : (plannedRoute ? plannedRoute.slice() : []);

@@ -40,6 +40,16 @@ function verifyAdmin(req) {
     return { error: 'Unauthorized: Missing token', status: 401 };
   }
 
+  function buildStationId(area, stationNumber) {
+    return `${String(area || '').trim().toUpperCase()}${String(parseInt(stationNumber, 10)).padStart(2, '0')}`;
+  }
+
+  function parseJsonSafe(value, fallback) {
+    if (value == null) return fallback;
+    if (typeof value === 'object') return value;
+    try { return JSON.parse(value); } catch (_) { return fallback; }
+  }
+
   const token = authHeader.split(' ')[1];
   const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -101,6 +111,68 @@ export default async function handler(req, res) {
 
   // GET: 獲取用戶列表 / 部門與路線配置
   if (req.method === 'GET') {
+    if (req.query.action === 'get-stations') {
+      try {
+        const { rows: stations } = await query(
+          `SELECT id, area, station_number, name_zh, name_en, lat, lon, road_name
+           FROM stations
+           ORDER BY area, station_number`
+        );
+        const { rows: routes } = await query(
+          `SELECT dept, route_number, start_station_id, end_station_id, stops
+           FROM routes`
+        );
+        const stationRoutes = new Map();
+        for (const st of stations) stationRoutes.set(st.id, new Set());
+        for (const r of routes) {
+          const routeLabel = `${r.dept}-${r.route_number}`;
+          [r.start_station_id, r.end_station_id].forEach((sid) => {
+            if (sid && stationRoutes.has(sid)) stationRoutes.get(sid).add(routeLabel);
+          });
+          const stops = parseJsonSafe(r.stops, []);
+          if (Array.isArray(stops)) {
+            stops.forEach((s) => {
+              const sid = s?.station_id;
+              if (sid && stationRoutes.has(sid)) stationRoutes.get(sid).add(routeLabel);
+            });
+          }
+        }
+        return res.status(200).json({
+          stations: stations.map((s) => ({
+            ...s,
+            route_refs: Array.from(stationRoutes.get(s.id) || []).sort(),
+          })),
+        });
+      } catch (e) {
+        console.error('[admin-users] get-stations error:', e.message);
+        return res.status(500).json({ message: '載入站點失敗', stations: [] });
+      }
+    }
+
+    if (req.query.action === 'get-managed-routes') {
+      try {
+        const { rows } = await query(
+          `SELECT r.dept, r.route_number, r.start_station_id, r.end_station_id, r.type, r.stops, r.rewards,
+                  s1.name_zh AS start_station_name_zh, s2.name_zh AS end_station_name_zh
+           FROM routes r
+           LEFT JOIN stations s1 ON s1.id = r.start_station_id
+           LEFT JOIN stations s2 ON s2.id = r.end_station_id
+           ORDER BY r.dept, r.route_number`
+        );
+        return res.status(200).json({
+          routes: rows.map((r) => ({
+            ...r,
+            route_id: `${r.dept}-${r.route_number}`,
+            stops: parseJsonSafe(r.stops, []),
+            rewards: parseJsonSafe(r.rewards, {}),
+          })),
+        });
+      } catch (e) {
+        console.error('[admin-users] get-managed-routes error:', e.message);
+        return res.status(500).json({ message: '載入路線失敗', routes: [] });
+      }
+    }
+
     // GET department configs
     if (req.query.action === 'get-dept-config') {
       try {
@@ -222,6 +294,94 @@ export default async function handler(req, res) {
           `UPDATE routes_config SET promo_cost = $1 WHERE route_id = $2`,
           [promo_cost != null ? parseInt(promo_cost, 10) : null, route_id]
         );
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'upsert_station') {
+        const { area, station_number, name_zh, name_en, lat, lon, road_name } = body;
+        const stationNumber = parseInt(station_number, 10);
+        if (!area || !Number.isFinite(stationNumber) || stationNumber <= 0 || !name_zh) {
+          return res.status(400).json({ message: 'area, station_number, name_zh 為必填欄位' });
+        }
+        const latNum = Number(lat);
+        const lonNum = Number(lon);
+        if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) {
+          return res.status(400).json({ message: 'lat/lon 格式無效' });
+        }
+        const id = buildStationId(area, stationNumber);
+        await query(
+          `INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+           ON CONFLICT (id) DO UPDATE SET
+             area = EXCLUDED.area,
+             station_number = EXCLUDED.station_number,
+             name_zh = EXCLUDED.name_zh,
+             name_en = EXCLUDED.name_en,
+             lat = EXCLUDED.lat,
+             lon = EXCLUDED.lon,
+             road_name = EXCLUDED.road_name,
+             updated_at = NOW()`,
+          [id, String(area).trim().toUpperCase(), stationNumber, name_zh, name_en || null, latNum, lonNum, road_name || null]
+        );
+        return res.status(200).json({ success: true, id });
+      }
+
+      if (action === 'delete_station') {
+        const { station_id } = body;
+        if (!station_id) return res.status(400).json({ message: 'station_id is required' });
+        const { rowCount } = await query(`DELETE FROM stations WHERE id = $1`, [station_id]);
+        if (!rowCount) return res.status(404).json({ message: 'Station not found' });
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'upsert_managed_route') {
+        const {
+          dept,
+          route_number,
+          start_station_id,
+          end_station_id,
+          type,
+          stops,
+          rewards,
+        } = body;
+        if (!dept || !route_number || !start_station_id || !end_station_id || !type) {
+          return res.status(400).json({ message: 'dept, route_number, start_station_id, end_station_id, type 為必填' });
+        }
+        const validTypes = ['One-way', 'Two-way', 'Circular'];
+        if (!validTypes.includes(type)) {
+          return res.status(400).json({ message: 'type 必須為 One-way / Two-way / Circular' });
+        }
+        const safeStops = Array.isArray(stops) ? stops : [];
+        const safeRewards = rewards && typeof rewards === 'object' ? rewards : {};
+        await query(
+          `INSERT INTO routes
+            (dept, route_number, start_station_id, end_station_id, type, stops, rewards, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,NOW())
+           ON CONFLICT (dept, route_number) DO UPDATE SET
+             start_station_id = EXCLUDED.start_station_id,
+             end_station_id = EXCLUDED.end_station_id,
+             type = EXCLUDED.type,
+             stops = EXCLUDED.stops,
+             rewards = EXCLUDED.rewards,
+             updated_at = NOW()`,
+          [
+            String(dept).trim(),
+            String(route_number).trim(),
+            String(start_station_id).trim(),
+            String(end_station_id).trim(),
+            type,
+            JSON.stringify(safeStops),
+            JSON.stringify(safeRewards),
+          ]
+        );
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'delete_managed_route') {
+        const { dept, route_number } = body;
+        if (!dept || !route_number) return res.status(400).json({ message: 'dept and route_number are required' });
+        const { rowCount } = await query(`DELETE FROM routes WHERE dept = $1 AND route_number = $2`, [dept, route_number]);
+        if (!rowCount) return res.status(404).json({ message: 'Route not found' });
         return res.status(200).json({ success: true });
       }
 

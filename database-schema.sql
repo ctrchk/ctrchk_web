@@ -168,6 +168,44 @@ CREATE TABLE IF NOT EXISTS routes_config (
   is_special   BOOLEAN DEFAULT FALSE       -- TRUE = 只能購買，不能騎行解鎖
 );
 
+-- =========================================================
+-- 站點與路線管理（Admin Dashboard 動態維護）
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS stations (
+  id             VARCHAR(20) PRIMARY KEY, -- e.g. TKO01
+  area           VARCHAR(20) NOT NULL,
+  station_number INTEGER NOT NULL CHECK (station_number > 0),
+  name_zh        VARCHAR(255) NOT NULL,
+  name_en        VARCHAR(255),
+  lat            DOUBLE PRECISION NOT NULL,
+  lon            DOUBLE PRECISION NOT NULL,
+  coordinates    POINT GENERATED ALWAYS AS (POINT(lon, lat)) STORED,
+  road_name      VARCHAR(255),
+  created_at     TIMESTAMP DEFAULT NOW(),
+  updated_at     TIMESTAMP DEFAULT NOW(),
+  UNIQUE(area, station_number),
+  CHECK (id = UPPER(area) || LPAD(station_number::TEXT, 2, '0'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_stations_area ON stations(area);
+
+CREATE TABLE IF NOT EXISTS routes (
+  dept              VARCHAR(50) NOT NULL,
+  route_number      VARCHAR(50) NOT NULL,
+  start_station_id  VARCHAR(20) REFERENCES stations(id) ON DELETE RESTRICT,
+  end_station_id    VARCHAR(20) REFERENCES stations(id) ON DELETE RESTRICT,
+  type              VARCHAR(20) NOT NULL CHECK (type IN ('One-way', 'Two-way', 'Circular')),
+  stops             JSONB NOT NULL DEFAULT '[]'::jsonb,
+  rewards           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at        TIMESTAMP DEFAULT NOW(),
+  updated_at        TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (dept, route_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_routes_start_station ON routes(start_station_id);
+CREATE INDEX IF NOT EXISTS idx_routes_end_station ON routes(end_station_id);
+
 -- 初始路線配置（每3-4級解鎖一條新路線）
 -- Level 1 起始路線：900, 900A, 966T（966T 取代 966 成為初始路線）
 -- 里程幣解鎖路線：900S(300幣), 914B(200幣), 920, 961P, 962P, 962X（920/961P/962P/962X 幣數為暫定值，待確認）

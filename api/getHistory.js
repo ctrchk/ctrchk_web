@@ -5,6 +5,20 @@ import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
+const XP_MODE_MULTIPLIER = {
+  tourism: 1.5,
+  commuter: 1.0,
+  drt: 1.0,
+  free: 0.8,
+};
+
+function normalizeRideMode(mode) {
+  const m = String(mode || '').trim().toLowerCase();
+  if (['tourism', 'tour', '旅遊'].includes(m)) return 'tourism';
+  if (['commuter', 'commute', '通勤', 'mixed', '混合', 'drt'].includes(m)) return 'commuter';
+  if (['free', 'free_mode', 'free-mode', 'navigation', 'nav', '自由'].includes(m)) return 'free';
+  return 'commuter';
+}
 
 // 28-day daily check-in reward table — must match tasks.html CHECKIN_REWARDS
 // Each entry: [xp, coins]. Index 0 is unused (days are 1-indexed).
@@ -563,6 +577,7 @@ export default async function handler(req, res) {
         districts_count,
         gpx_track,
         source = 'pwa',
+        ride_mode,
         xp_earned_override,   // per-stop + district-change XP calculated client-side
         bonus_coins,          // e.g. +5 for finishing within 45 min
       } = req.body || {};
@@ -616,6 +631,12 @@ export default async function handler(req, res) {
       if (typeof xp_earned_override === 'number' && xp_earned_override >= 0) {
         xpReward = Math.min(Math.round(xp_earned_override), maxXpForRoute);
       }
+
+      // Apply ride mode multiplier:
+      // tourism x1.5, commuter/DRT x1.0, free x0.8 (rounded to nearest integer)
+      const normalizedRideMode = normalizeRideMode(ride_mode);
+      const multiplier = XP_MODE_MULTIPLIER[normalizedRideMode] ?? 1.0;
+      xpReward = Math.max(0, Math.round(xpReward * multiplier));
 
       // 2. 插入騎行記錄
       const { rows: newRide } = await query(
@@ -692,6 +713,8 @@ export default async function handler(req, res) {
           level: newLevel,
           xp: newXp,
           xp_earned: xpReward,
+          ride_mode: normalizedRideMode,
+          xp_multiplier: multiplier,
           coins: newCoins,
           level_up: levelUp,
           coins_earned: coinsEarned,
