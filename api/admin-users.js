@@ -4,6 +4,9 @@ import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // 根據累計 XP 計算等級（與 getHistory.js 保持一致）
 function calcLevel(xp) {
@@ -127,6 +130,51 @@ function normalizeRouteType(input) {
   return raw;
 }
 
+async function loadLegacyRoutesFromRepo() {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const candidates = [
+    path.resolve(__dirname, '../routes.json'),
+    path.resolve(process.cwd(), 'routes.json'),
+  ];
+  for (const filePath of candidates) {
+    try {
+      const raw = await readFile(filePath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    } catch (_) {}
+  }
+  return [];
+}
+
+function normalizeLegacyRouteToManagedRow(route) {
+  const routeId = String(route?.id || '').trim();
+  if (!routeId) return null;
+  const dept = String(route?.dept || 'LEGACY').trim() || 'LEGACY';
+  const routeNumber = routeId;
+  const rawType = String(route?.type || '').toLowerCase();
+  const type = rawType.includes('circular') || route?.end == null ? 'Circular' : 'Two-way';
+  const rewards = {
+    xp_reward: Number(route?.xp_reward || 0),
+    mileage_coin_reward: Number(route?.mileage_coin_reward || 0),
+    unlock_cost: Number(route?.unlock_cost || 0),
+    per_stop_xp: Number(route?.per_stop_xp || 0),
+    cross_district_bonus: Number(route?.cross_district_bonus || 0),
+    completion_bonus: Number(route?.completion_bonus || 0),
+    time_limit_bonus: Number(route?.time_limit_bonus || 0),
+  };
+  return {
+    dept,
+    route_number: routeNumber,
+    type,
+    start_station_id: null,
+    end_station_id: null,
+    stops: Array.isArray(route?.stops) ? route.stops : [],
+    rewards,
+    route_id: routeId,
+  };
+}
+
 /**
  * 驗證管理員身份的中間件
  */
@@ -134,6 +182,19 @@ function verifyAdmin(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { error: 'Unauthorized: Missing token', status: 401 };
+  }
+
+  let _ensureAdminEconomyColumnsPromise = null;
+  async function ensureAdminEconomyColumns() {
+    if (!_ensureAdminEconomyColumnsPromise) {
+      _ensureAdminEconomyColumnsPromise = (async () => {
+        await query(`ALTER TABLE routes_config ADD COLUMN IF NOT EXISTS mileage_coin_reward INTEGER NOT NULL DEFAULT 0;`);
+      })().catch((err) => {
+        _ensureAdminEconomyColumnsPromise = null;
+        throw err;
+      });
+    }
+    await _ensureAdminEconomyColumnsPromise;
   }
 
   const token = authHeader.split(' ')[1];
@@ -194,6 +255,7 @@ export default async function handler(req, res) {
   if (authResult.error) {
     return res.status(authResult.status).json({ message: authResult.error });
   }
+  await ensureAdminEconomyColumns();
 
   // GET: 獲取用戶列表 / 部門與路線配置
   if (req.method === 'GET') {
@@ -513,6 +575,21 @@ export default async function handler(req, res) {
             JSON.stringify(safeStops),
             JSON.stringify(safeRewards),
           ]
+        );
+        const routeIdForConfig = String(route_number).trim();
+        const xpReward = Number(safeRewards.xp_reward || 0);
+        const mileageCoinReward = Number(safeRewards.mileage_coin_reward || 0);
+        const unlockCostRaw = Number(safeRewards.unlock_cost || 0);
+        const unlockCost = unlockCostRaw > 0 ? unlockCostRaw : null;
+        await query(
+          `INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, mileage_coin_reward, is_special)
+           VALUES ($1, 1, $2, $3, $4, $5)
+           ON CONFLICT (route_id) DO UPDATE SET
+             unlock_cost = EXCLUDED.unlock_cost,
+             xp_reward = EXCLUDED.xp_reward,
+             mileage_coin_reward = EXCLUDED.mileage_coin_reward,
+             is_special = EXCLUDED.is_special`,
+          [routeIdForConfig, unlockCost, xpReward, mileageCoinReward, unlockCost != null]
         );
         return res.status(200).json({ success: true });
       }

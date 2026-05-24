@@ -503,6 +503,10 @@
                 <span class="db-pill-val" id="db-coins-pill">0</span>
                 <span class="db-pill-lbl">里程幣</span>
             </div>
+            <div class="db-pill">
+                <span class="db-pill-val" id="db-streak-pill">0</span>
+                <span class="db-pill-lbl">🔥 通勤連勝</span>
+            </div>
         </div>
 
         <!-- Email verify notice -->
@@ -553,6 +557,9 @@
             <a href="/leaderboard" class="db-more-item">
                 <i class="fas fa-trophy"></i><span>排行榜</span>
             </a>
+            <button type="button" class="db-more-item" onclick="alert('區域霸主排行榜即將推出！')">
+                <i class="fas fa-crown"></i><span>區域霸主</span>
+            </button>
             <a href="/tasks" class="db-more-item">
                 <i class="fas fa-tasks"></i><span>任務</span>
             </a>
@@ -600,7 +607,7 @@
         return String(n);
     }
 
-    function renderGameProfile(level, xp, coins, ridesCount) {
+    function renderGameProfile(level, xp, coins, ridesCount, commuteStreak) {
         var lvl = Math.max(1, Math.min(level || 1, 20));
         var currentXp = xp || 0;
         var currentCoins = coins || 0;
@@ -623,6 +630,7 @@
         }
         document.getElementById('db-total-xp').textContent = formatNum(currentXp);
         document.getElementById('db-coins-pill').textContent = formatNum(currentCoins);
+        document.getElementById('db-streak-pill').textContent = String(Math.max(0, Number(commuteStreak || 0)));
         document.getElementById('db-pills-row').style.display = '';
     }
 
@@ -651,7 +659,7 @@
 
             _applyUserUI(user);
             if (user.level !== undefined) {
-                renderGameProfile(user.level, user.xp, user.coins);
+                renderGameProfile(user.level, user.xp, user.coins, undefined, user.commute_streak || 0);
             }
 
             var userRole = user.user_role || user.role || 'junior';
@@ -669,6 +677,12 @@
                         user.level = dbUser.level;
                         user.xp = dbUser.xp;
                         user.coins = dbUser.coins;
+                    }
+                    if (typeof dbUser.commute_streak === 'number') {
+                        user.commute_streak = dbUser.commute_streak;
+                    }
+                    if (dbUser.rank) {
+                        user.rank = dbUser.rank;
                     }
                     user.cyclist_tier = dbUser.cyclist_tier;
                     user.mileage_card = dbUser.mileage_card;
@@ -763,7 +777,13 @@
             var data = await res.json();
             if (data.gameProfile) {
                 var histArr = Array.isArray(data) ? data : (data.history || []);
-                renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length);
+                renderGameProfile(
+                    data.gameProfile.level,
+                    data.gameProfile.xp,
+                    data.gameProfile.coins,
+                    histArr.length,
+                    data.gameProfile.commute_streak || 0
+                );
             }
 
             var history = Array.isArray(data) ? data : (data.history || []);

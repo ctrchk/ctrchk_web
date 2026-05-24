@@ -7,6 +7,12 @@
 //   POST /api/user             → update profile (replaces update-profile.js)
 //
 import { query } from '../lib/db.js';
+import {
+  RANKS,
+  RANK_LABEL_ZH,
+  deriveMileageRank,
+  permissionContextForRank,
+} from '../lib/permission-context.js';
 
 let _ensureUsersUsernameColumnPromise = null;
 async function ensureUsersUsernameColumn() {
@@ -39,6 +45,22 @@ function getMileageCardByDistance(totalDistanceKm) {
   return '銅卡';
 }
 
+let _ensureEconomyColumnsPromise = null;
+async function ensureEconomyColumns() {
+  if (!_ensureEconomyColumnsPromise) {
+    _ensureEconomyColumnsPromise = (async () => {
+      await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS rank VARCHAR(20) DEFAULT 'bronze';`);
+      await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS mileage_365 NUMERIC(12,2) DEFAULT 0;`);
+      await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS last_commute_date DATE;`);
+      await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak INTEGER DEFAULT 0;`);
+    })().catch((err) => {
+      _ensureEconomyColumnsPromise = null;
+      throw err;
+    });
+  }
+  await _ensureEconomyColumnsPromise;
+}
+
 function getMembershipLabel(role) {
   const map = {
     junior: '普通會員',
@@ -65,6 +87,7 @@ export default async function handler(req, res) {
     }
 
     try {
+      await ensureEconomyColumns();
       const { google_id, email, user_id } = req.query;
 
       if (!google_id && !email && !user_id) {
@@ -74,7 +97,7 @@ export default async function handler(req, res) {
       let result;
       const SELECT = `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.phone, u.profile_completed,
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
-                             gp.level, gp.xp, gp.coins,
+                             gp.level, gp.xp, gp.coins, gp.rank, gp.mileage_365, gp.commute_streak,
                              COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km
                         FROM users u
                         LEFT JOIN user_game_profile gp ON gp.user_id = u.id`;
@@ -96,10 +119,40 @@ export default async function handler(req, res) {
         user.level = 1;
         user.xp = 0;
         user.coins = 0;
+        user.rank = RANKS.BRONZE;
+        user.mileage_365 = 0;
+        user.commute_streak = 0;
       }
       user.total_distance_km = Number(user.total_distance_km || 0);
+
+      const mileageWindowResult = await query(
+        `SELECT COALESCE(SUM(distance_km), 0) AS mileage_365
+         FROM cycling_history
+         WHERE user_id = $1
+           AND ride_date >= (CURRENT_DATE - INTERVAL '365 days')`,
+        [user.id]
+      );
+      user.mileage_365 = Number(mileageWindowResult.rows[0]?.mileage_365 || 0);
+
+      const computedRank = deriveMileageRank({
+        mileage365: user.mileage_365,
+        previousRank: user.rank || RANKS.BRONZE,
+      });
+      user.rank = computedRank;
+      user.mileage_rank_label = RANK_LABEL_ZH[computedRank];
+      user.permission_context = permissionContextForRank(computedRank);
+
+      try {
+        await query(
+          `UPDATE user_game_profile
+           SET rank = $1, mileage_365 = $2, updated_at = NOW()
+           WHERE user_id = $3`,
+          [computedRank, user.mileage_365, user.id]
+        );
+      } catch (_) {}
+
       user.cyclist_tier = getCyclistTierByLevel(user.level);
-      user.mileage_card = getMileageCardByDistance(user.total_distance_km);
+      user.mileage_card = user.mileage_rank_label || getMileageCardByDistance(user.total_distance_km);
       user.membership_status = getMembershipLabel(user.user_role);
 
       // Fetch coin-purchased route IDs for the front-end unlock cache
