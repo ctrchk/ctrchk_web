@@ -575,26 +575,34 @@
                 </div>
 
                 <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
-                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-map-marker-alt"></i> Station Management</h4>
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-map-marker-alt"></i> 站點管理</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.7em;">
-                        <input id="station-area" type="text" placeholder="Area (e.g. TKO)">
-                        <input id="station-number" type="number" min="1" placeholder="Station Number">
-                        <input id="station-name-zh" type="text" placeholder="Name (ZH)">
-                        <input id="station-name-en" type="text" placeholder="Name (EN)">
-                        <input id="station-lat" type="number" step="0.000001" placeholder="Latitude">
-                        <input id="station-lon" type="number" step="0.000001" placeholder="Longitude">
-                        <input id="station-road-name" type="text" placeholder="Road Name">
+                        <input id="station-area" type="text" placeholder="區域（例如 TKO）">
+                        <input id="station-number" type="number" min="1" placeholder="站點編號">
+                        <input id="station-name-zh" type="text" placeholder="中文站名">
+                        <input id="station-name-en" type="text" placeholder="英文站名（可選）">
+                        <input id="station-lat" type="number" step="0.000001" placeholder="緯度">
+                        <input id="station-lon" type="number" step="0.000001" placeholder="經度">
+                        <input id="station-road-name" type="text" placeholder="道路名稱（可選）">
                     </div>
                     <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap;">
                         <button class="cta-button" onclick="saveStationAdmin()"><i class="fas fa-save"></i> 儲存站點</button>
                         <button onclick="resetStationAdminForm()" style="padding:0.65em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">清除</button>
                         <span id="station-admin-msg" style="font-size:0.9em; align-self:center;"></span>
                     </div>
+                    <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap; align-items:center;">
+                        <input id="station-csv-file" type="file" accept=".csv,text/csv">
+                        <button type="button" onclick="importStationsCsv()" style="padding:0.65em 1em; border:1px solid #2c3e50; border-radius:8px; background:#2c3e50; color:#fff; cursor:pointer;">
+                            <i class="fas fa-file-import"></i> 導入站點 CSV
+                        </button>
+                        <span id="station-csv-msg" style="font-size:0.9em; align-self:center; color:#555;"></span>
+                    </div>
+                    <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：area, station_number, name_zh, name_en, lat, lon, road_name</p>
                     <div style="overflow:auto; margin-top:1em;">
                         <table class="users-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th><th>Area</th><th>No.</th><th>站名</th><th>Road</th><th>Routes</th><th>操作</th>
+                                    <th>ID</th><th>區域</th><th>編號</th><th>站名</th><th>道路</th><th>關聯路線</th><th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="station-admin-tbody"></tbody>
@@ -603,39 +611,47 @@
                 </div>
 
                 <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
-                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-route"></i> Route Management</h4>
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-route"></i> 路線管理</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em;">
-                        <input id="rm-dept" type="text" placeholder="Dept">
-                        <input id="rm-route-number" type="text" placeholder="Route Number">
-                        <select id="rm-start-station"><option value="">Start Station</option></select>
-                        <select id="rm-end-station"><option value="">End Station</option></select>
+                        <input id="rm-dept" type="text" placeholder="部門">
+                        <input id="rm-route-number" type="text" placeholder="路線編號">
+                        <select id="rm-start-station"><option value="">起點站</option></select>
+                        <select id="rm-end-station"><option value="">終點站</option></select>
                     </div>
                     <div style="margin-top:0.8em; display:flex; gap:1em; flex-wrap:wrap; align-items:center;">
-                        <label><input type="radio" name="rm-type" value="One-way" checked> One-way</label>
-                        <label><input type="radio" name="rm-type" value="Two-way"> Two-way</label>
-                        <label><input type="radio" name="rm-type" value="Circular"> Circular</label>
+                        <label><input type="radio" name="rm-type" value="One-way" checked> 單向</label>
+                        <label><input type="radio" name="rm-type" value="Two-way"> 雙向</label>
+                        <label><input type="radio" name="rm-type" value="Circular"> 循環</label>
                     </div>
                     <div style="margin-top:1em;">
-                        <strong>Intermediate Stops</strong>
+                        <strong>中途站</strong>
                         <div id="rm-stops-list" style="margin-top:0.5em;"></div>
                         <button onclick="addRouteStopRow()" style="margin-top:0.5em; padding:0.45em 0.9em; border:1px solid #ccc; border-radius:6px; background:#fff; cursor:pointer;">+ 新增中途站</button>
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:0.7em; margin-top:1em;">
-                        <input id="rm-reward-per-stop" type="number" min="0" placeholder="Per-stop XP">
-                        <input id="rm-reward-cross-district" type="number" min="0" placeholder="Cross-district bonus">
-                        <input id="rm-reward-completion" type="number" min="0" placeholder="Completion bonus">
-                        <input id="rm-reward-time-limit" type="number" min="0" placeholder="Time-limit bonus">
+                        <input id="rm-reward-per-stop" type="number" min="0" placeholder="每站 XP">
+                        <input id="rm-reward-cross-district" type="number" min="0" placeholder="跨區加成">
+                        <input id="rm-reward-completion" type="number" min="0" placeholder="完成獎勵">
+                        <input id="rm-reward-time-limit" type="number" min="0" placeholder="限時獎勵">
                     </div>
                     <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap;">
                         <button class="cta-button" onclick="saveManagedRoute()"><i class="fas fa-save"></i> 儲存路線</button>
                         <button onclick="resetManagedRouteForm()" style="padding:0.65em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">清除</button>
                         <span id="route-admin-msg" style="font-size:0.9em; align-self:center;"></span>
                     </div>
+                    <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap; align-items:center;">
+                        <input id="route-csv-file" type="file" accept=".csv,text/csv">
+                        <button type="button" onclick="importRoutesCsv()" style="padding:0.65em 1em; border:1px solid #2c3e50; border-radius:8px; background:#2c3e50; color:#fff; cursor:pointer;">
+                            <i class="fas fa-file-import"></i> 導入路線 CSV
+                        </button>
+                        <span id="route-csv-msg" style="font-size:0.9em; align-self:center; color:#555;"></span>
+                    </div>
+                    <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：dept, route_number, start_station_id, end_station_id, type, stops(JSON), rewards(JSON)</p>
                     <div style="overflow:auto; margin-top:1em;">
                         <table class="users-table">
                             <thead>
                                 <tr>
-                                    <th>Route</th><th>Type</th><th>Start</th><th>End</th><th>Stops</th><th>操作</th>
+                                    <th>路線</th><th>類型</th><th>起點</th><th>終點</th><th>中途站數</th><th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="route-admin-tbody"></tbody>
@@ -1923,10 +1939,10 @@
             row.innerHTML = `
                 <select class="rm-stop-station">${stationOptions}</select>
                 <select class="rm-stop-nature">
-                    <option value="both">Both ways</option>
-                    <option value="a_direction">A direction</option>
-                    <option value="b_direction">B direction</option>
-                    <option value="temporary_cancel">Temporary Cancel</option>
+                    <option value="both">雙向</option>
+                    <option value="a_direction">A 方向</option>
+                    <option value="b_direction">B 方向</option>
+                    <option value="temporary_cancel">臨時取消</option>
                 </select>
                 <button type="button" onclick="this.parentElement.remove()" style="border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">移除</button>
             `;
@@ -2055,6 +2071,69 @@
                 if (!resp.ok) throw new Error(data.message || '刪除失敗');
                 msgEl.style.color = 'green';
                 msgEl.textContent = `✅ 已刪除 ${dept}-${routeNumber}`;
+                await loadStationRouteAdminData();
+            } catch (e) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = `❌ ${e.message}`;
+            }
+        }
+
+        async function readCsvFile(inputId) {
+            const input = document.getElementById(inputId);
+            const file = input?.files?.[0];
+            if (!file) throw new Error('請先選擇 CSV 檔案');
+            return await file.text();
+        }
+
+        async function importStationsCsv() {
+            const msgEl = document.getElementById('station-csv-msg');
+            msgEl.style.color = '#555';
+            msgEl.textContent = '導入中...';
+            try {
+                const csvContent = await readCsvFile('station-csv-file');
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'import_stations_csv', csv_content: csvContent }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.message || '導入失敗');
+                msgEl.style.color = 'green';
+                msgEl.textContent = `✅ 成功 ${data.imported || 0} 筆；失敗 ${data.failed || 0} 筆`;
+                if (Array.isArray(data.errors) && data.errors.length) {
+                    msgEl.style.color = '#d35400';
+                    msgEl.textContent += `（部分錯誤：${data.errors.slice(0, 2).join('；')}）`;
+                }
+                await loadStationRouteAdminData();
+            } catch (e) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = `❌ ${e.message}`;
+            }
+        }
+
+        async function importRoutesCsv() {
+            const msgEl = document.getElementById('route-csv-msg');
+            msgEl.style.color = '#555';
+            msgEl.textContent = '導入中...';
+            try {
+                const csvContent = await readCsvFile('route-csv-file');
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'import_routes_csv', csv_content: csvContent }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.message || '導入失敗');
+                msgEl.style.color = 'green';
+                msgEl.textContent = `✅ 成功 ${data.imported || 0} 筆；失敗 ${data.failed || 0} 筆`;
+                if (Array.isArray(data.errors) && data.errors.length) {
+                    msgEl.style.color = '#d35400';
+                    msgEl.textContent += `（部分錯誤：${data.errors.slice(0, 2).join('；')}）`;
+                }
                 await loadStationRouteAdminData();
             } catch (e) {
                 msgEl.style.color = 'red';
