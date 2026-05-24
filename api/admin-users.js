@@ -31,6 +31,102 @@ function calcLevel(xp) {
   return Math.floor(n) + 1;
 }
 
+function buildStationId(area, stationNumber) {
+  return `${String(area || '').trim().toUpperCase()}${String(parseInt(stationNumber, 10)).padStart(2, '0')}`;
+}
+
+function parseJsonSafe(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === 'object') return value;
+  try { return JSON.parse(value); } catch (_) { return fallback; }
+}
+
+function parseCsvText(csvText) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < csvText.length; i += 1) {
+    const ch = csvText[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (csvText[i + 1] === '"') {
+          field += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += ch;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inQuotes = true;
+      continue;
+    }
+    if (ch === ',') {
+      row.push(field);
+      field = '';
+      continue;
+    }
+    if (ch === '\n') {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = '';
+      continue;
+    }
+    if (ch === '\r') continue;
+    field += ch;
+  }
+
+  row.push(field);
+  if (row.some((v) => String(v || '').trim() !== '')) {
+    rows.push(row);
+  }
+  return rows;
+}
+
+function csvRowsToObjects(csvText) {
+  const rows = parseCsvText(csvText);
+  if (!rows.length) return [];
+  const headers = rows[0].map((h) => String(h || '').trim().toLowerCase());
+  const objs = [];
+  for (let i = 1; i < rows.length; i += 1) {
+    const values = rows[i];
+    if (!values || values.every((v) => String(v || '').trim() === '')) continue;
+    const obj = {};
+    headers.forEach((h, idx) => {
+      obj[h] = values[idx] == null ? '' : String(values[idx]).trim();
+    });
+    objs.push(obj);
+  }
+  return objs;
+}
+
+function pickCsvValue(obj, keys, fallback = '') {
+  for (const k of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, k)) {
+      const v = obj[k];
+      if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+    }
+  }
+  return fallback;
+}
+
+function normalizeRouteType(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (lower === 'one-way' || raw === '單向') return 'One-way';
+  if (lower === 'two-way' || raw === '雙向') return 'Two-way';
+  if (lower === 'circular' || raw === '循環') return 'Circular';
+  return raw;
+}
+
 /**
  * 驗證管理員身份的中間件
  */
@@ -38,16 +134,6 @@ function verifyAdmin(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { error: 'Unauthorized: Missing token', status: 401 };
-  }
-
-  function buildStationId(area, stationNumber) {
-    return `${String(area || '').trim().toUpperCase()}${String(parseInt(stationNumber, 10)).padStart(2, '0')}`;
-  }
-
-  function parseJsonSafe(value, fallback) {
-    if (value == null) return fallback;
-    if (typeof value === 'object') return value;
-    try { return JSON.parse(value); } catch (_) { return fallback; }
   }
 
   const token = authHeader.split(' ')[1];
@@ -326,6 +412,60 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, id });
       }
 
+      if (action === 'import_stations_csv') {
+        const csvContent = String(body.csv_content || '');
+        if (!csvContent.trim()) {
+          return res.status(400).json({ message: 'csv_content is required' });
+        }
+        const rows = csvRowsToObjects(csvContent);
+        if (!rows.length) {
+          return res.status(400).json({ message: 'CSV 內容為空或格式無效' });
+        }
+        let imported = 0;
+        let failed = 0;
+        const errors = [];
+        for (let i = 0; i < rows.length; i += 1) {
+          const lineNo = i + 2;
+          const r = rows[i];
+          try {
+            const area = pickCsvValue(r, ['area']);
+            const stationNumberRaw = pickCsvValue(r, ['station_number', 'stationnumber', 'number', 'no']);
+            const nameZh = pickCsvValue(r, ['name_zh', 'namezh', 'name']);
+            const nameEn = pickCsvValue(r, ['name_en', 'nameen'], null);
+            const latRaw = pickCsvValue(r, ['lat', 'latitude']);
+            const lonRaw = pickCsvValue(r, ['lon', 'lng', 'longitude']);
+            const roadName = pickCsvValue(r, ['road_name', 'roadname', 'road'], null);
+
+            const stationNumber = parseInt(stationNumberRaw, 10);
+            const latNum = Number(latRaw);
+            const lonNum = Number(lonRaw);
+            if (!area || !Number.isFinite(stationNumber) || stationNumber <= 0 || !nameZh || !Number.isFinite(latNum) || !Number.isFinite(lonNum)) {
+              throw new Error('欄位不足或格式錯誤（需要 area, station_number, name_zh, lat, lon）');
+            }
+            const id = buildStationId(area, stationNumber);
+            await query(
+              `INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+               ON CONFLICT (id) DO UPDATE SET
+                 area = EXCLUDED.area,
+                 station_number = EXCLUDED.station_number,
+                 name_zh = EXCLUDED.name_zh,
+                 name_en = EXCLUDED.name_en,
+                 lat = EXCLUDED.lat,
+                 lon = EXCLUDED.lon,
+                 road_name = EXCLUDED.road_name,
+                 updated_at = NOW()`,
+              [id, String(area).trim().toUpperCase(), stationNumber, nameZh, nameEn || null, latNum, lonNum, roadName || null]
+            );
+            imported += 1;
+          } catch (e) {
+            failed += 1;
+            if (errors.length < 20) errors.push(`第 ${lineNo} 行：${e.message}`);
+          }
+        }
+        return res.status(200).json({ success: true, imported, failed, errors });
+      }
+
       if (action === 'delete_station') {
         const { station_id } = body;
         if (!station_id) return res.status(400).json({ message: 'station_id is required' });
@@ -375,6 +515,82 @@ export default async function handler(req, res) {
           ]
         );
         return res.status(200).json({ success: true });
+      }
+
+      if (action === 'import_routes_csv') {
+        const csvContent = String(body.csv_content || '');
+        if (!csvContent.trim()) {
+          return res.status(400).json({ message: 'csv_content is required' });
+        }
+        const rows = csvRowsToObjects(csvContent);
+        if (!rows.length) {
+          return res.status(400).json({ message: 'CSV 內容為空或格式無效' });
+        }
+        let imported = 0;
+        let failed = 0;
+        const errors = [];
+        for (let i = 0; i < rows.length; i += 1) {
+          const lineNo = i + 2;
+          const r = rows[i];
+          try {
+            const dept = pickCsvValue(r, ['dept', 'department']);
+            const routeNumber = pickCsvValue(r, ['route_number', 'routenumber', 'route']);
+            const startStationId = pickCsvValue(r, ['start_station_id', 'start_station', 'start']);
+            const endStationId = pickCsvValue(r, ['end_station_id', 'end_station', 'end']);
+            const type = normalizeRouteType(pickCsvValue(r, ['type']));
+            if (!dept || !routeNumber || !startStationId || !endStationId || !type) {
+              throw new Error('欄位不足（需要 dept, route_number, start_station_id, end_station_id, type）');
+            }
+            const validTypes = ['One-way', 'Two-way', 'Circular'];
+            if (!validTypes.includes(type)) {
+              throw new Error('type 必須為 One-way / Two-way / Circular（或 單向/雙向/循環）');
+            }
+
+            const stopsRaw = pickCsvValue(r, ['stops'], '[]');
+            const rewardsRaw = pickCsvValue(r, ['rewards'], '{}');
+            let safeStops = [];
+            let safeRewards = {};
+            try {
+              safeStops = parseJsonSafe(stopsRaw, []);
+              if (!Array.isArray(safeStops)) safeStops = [];
+            } catch (_) {
+              safeStops = [];
+            }
+            try {
+              safeRewards = parseJsonSafe(rewardsRaw, {});
+              if (!safeRewards || typeof safeRewards !== 'object' || Array.isArray(safeRewards)) safeRewards = {};
+            } catch (_) {
+              safeRewards = {};
+            }
+
+            await query(
+              `INSERT INTO routes
+                (dept, route_number, start_station_id, end_station_id, type, stops, rewards, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,NOW())
+               ON CONFLICT (dept, route_number) DO UPDATE SET
+                 start_station_id = EXCLUDED.start_station_id,
+                 end_station_id = EXCLUDED.end_station_id,
+                 type = EXCLUDED.type,
+                 stops = EXCLUDED.stops,
+                 rewards = EXCLUDED.rewards,
+                 updated_at = NOW()`,
+              [
+                String(dept).trim(),
+                String(routeNumber).trim(),
+                String(startStationId).trim(),
+                String(endStationId).trim(),
+                type,
+                JSON.stringify(safeStops),
+                JSON.stringify(safeRewards),
+              ]
+            );
+            imported += 1;
+          } catch (e) {
+            failed += 1;
+            if (errors.length < 20) errors.push(`第 ${lineNo} 行：${e.message}`);
+          }
+        }
+        return res.status(200).json({ success: true, imported, failed, errors });
       }
 
       if (action === 'delete_managed_route') {
