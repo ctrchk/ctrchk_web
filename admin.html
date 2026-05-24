@@ -573,6 +573,75 @@
                     <div id="route-config-list" style="margin-bottom:1em;"></div>
                     <div id="route-config-loading" style="text-align:center; color:#888;">載入中...</div>
                 </div>
+
+                <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-map-marker-alt"></i> Station Management</h4>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.7em;">
+                        <input id="station-area" type="text" placeholder="Area (e.g. TKO)">
+                        <input id="station-number" type="number" min="1" placeholder="Station Number">
+                        <input id="station-name-zh" type="text" placeholder="Name (ZH)">
+                        <input id="station-name-en" type="text" placeholder="Name (EN)">
+                        <input id="station-lat" type="number" step="0.000001" placeholder="Latitude">
+                        <input id="station-lon" type="number" step="0.000001" placeholder="Longitude">
+                        <input id="station-road-name" type="text" placeholder="Road Name">
+                    </div>
+                    <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap;">
+                        <button class="cta-button" onclick="saveStationAdmin()"><i class="fas fa-save"></i> 儲存站點</button>
+                        <button onclick="resetStationAdminForm()" style="padding:0.65em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">清除</button>
+                        <span id="station-admin-msg" style="font-size:0.9em; align-self:center;"></span>
+                    </div>
+                    <div style="overflow:auto; margin-top:1em;">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th><th>Area</th><th>No.</th><th>站名</th><th>Road</th><th>Routes</th><th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="station-admin-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-route"></i> Route Management</h4>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em;">
+                        <input id="rm-dept" type="text" placeholder="Dept">
+                        <input id="rm-route-number" type="text" placeholder="Route Number">
+                        <select id="rm-start-station"><option value="">Start Station</option></select>
+                        <select id="rm-end-station"><option value="">End Station</option></select>
+                    </div>
+                    <div style="margin-top:0.8em; display:flex; gap:1em; flex-wrap:wrap; align-items:center;">
+                        <label><input type="radio" name="rm-type" value="One-way" checked> One-way</label>
+                        <label><input type="radio" name="rm-type" value="Two-way"> Two-way</label>
+                        <label><input type="radio" name="rm-type" value="Circular"> Circular</label>
+                    </div>
+                    <div style="margin-top:1em;">
+                        <strong>Intermediate Stops</strong>
+                        <div id="rm-stops-list" style="margin-top:0.5em;"></div>
+                        <button onclick="addRouteStopRow()" style="margin-top:0.5em; padding:0.45em 0.9em; border:1px solid #ccc; border-radius:6px; background:#fff; cursor:pointer;">+ 新增中途站</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:0.7em; margin-top:1em;">
+                        <input id="rm-reward-per-stop" type="number" min="0" placeholder="Per-stop XP">
+                        <input id="rm-reward-cross-district" type="number" min="0" placeholder="Cross-district bonus">
+                        <input id="rm-reward-completion" type="number" min="0" placeholder="Completion bonus">
+                        <input id="rm-reward-time-limit" type="number" min="0" placeholder="Time-limit bonus">
+                    </div>
+                    <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap;">
+                        <button class="cta-button" onclick="saveManagedRoute()"><i class="fas fa-save"></i> 儲存路線</button>
+                        <button onclick="resetManagedRouteForm()" style="padding:0.65em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">清除</button>
+                        <span id="route-admin-msg" style="font-size:0.9em; align-self:center;"></span>
+                    </div>
+                    <div style="overflow:auto; margin-top:1em;">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Route</th><th>Type</th><th>Start</th><th>End</th><th>Stops</th><th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="route-admin-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -620,6 +689,10 @@
     <script src="/js/login.js"></script>
     <script>
         let currentPage = 1;
+        let stationAdminData = [];
+        let managedRoutesData = [];
+        let managedRouteEditingKey = null;
+        let stationEditingId = null;
 
         /**
          * 統一處理 API 回應中的 Token 錯誤（401/403）。
@@ -1705,6 +1778,287 @@
                 }
             } catch(e) {
                 document.getElementById('route-config-loading').textContent = '載入失敗';
+            }
+
+            await loadStationRouteAdminData();
+        }
+
+        async function loadStationRouteAdminData() {
+            const token = localStorage.getItem('accessToken');
+            try {
+                const [stationResp, routeResp] = await Promise.all([
+                    fetch('/api/admin-users?action=get-stations', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch('/api/admin-users?action=get-managed-routes', { headers: { 'Authorization': `Bearer ${token}` } }),
+                ]);
+                if (handleTokenError(stationResp) || handleTokenError(routeResp)) return;
+                const stationData = stationResp.ok ? await stationResp.json() : { stations: [] };
+                const routeData = routeResp.ok ? await routeResp.json() : { routes: [] };
+                stationAdminData = stationData.stations || [];
+                managedRoutesData = routeData.routes || [];
+                renderStationAdminTable();
+                renderRouteAdminTable();
+                refreshStationSelectOptions();
+            } catch (e) {
+                console.error('[Admin] loadStationRouteAdminData error:', e);
+            }
+        }
+
+        function refreshStationSelectOptions() {
+            const options = ['<option value="">請選擇站點</option>']
+                .concat(stationAdminData.map(s =>
+                    `<option value="${escapeHtml(s.id)}">${escapeHtml(s.id)} - ${escapeHtml(s.name_zh || '')}</option>`
+                ))
+                .join('');
+            ['rm-start-station', 'rm-end-station'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = options;
+            });
+        }
+
+        function renderStationAdminTable() {
+            const tbody = document.getElementById('station-admin-tbody');
+            if (!tbody) return;
+            if (!stationAdminData.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">沒有站點資料</td></tr>';
+                return;
+            }
+            tbody.innerHTML = stationAdminData.map(st => `
+                <tr>
+                    <td>${escapeHtml(st.id)}</td>
+                    <td>${escapeHtml(st.area)}</td>
+                    <td>${st.station_number}</td>
+                    <td>${escapeHtml(st.name_zh || '-')}<br><span style="font-size:0.8em;color:#666;">${escapeHtml(st.name_en || '')}</span></td>
+                    <td>${escapeHtml(st.road_name || '-')}</td>
+                    <td style="font-size:0.85em;">${(st.route_refs || []).map(escapeHtml).join(', ') || '-'}</td>
+                    <td>
+                        <button class="action-btn btn-admin" onclick="editStationAdmin('${escapeHtml(st.id)}')">編輯</button>
+                        <button class="action-btn btn-delete" onclick="deleteStationAdmin('${escapeHtml(st.id)}')">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editStationAdmin(id) {
+            const st = stationAdminData.find(s => s.id === id);
+            if (!st) return;
+            stationEditingId = st.id;
+            document.getElementById('station-area').value = st.area || '';
+            document.getElementById('station-number').value = st.station_number || '';
+            document.getElementById('station-name-zh').value = st.name_zh || '';
+            document.getElementById('station-name-en').value = st.name_en || '';
+            document.getElementById('station-lat').value = st.lat ?? '';
+            document.getElementById('station-lon').value = st.lon ?? '';
+            document.getElementById('station-road-name').value = st.road_name || '';
+            document.getElementById('station-admin-msg').textContent = `正在編輯 ${st.id}`;
+        }
+
+        function resetStationAdminForm() {
+            stationEditingId = null;
+            ['station-area', 'station-number', 'station-name-zh', 'station-name-en', 'station-lat', 'station-lon', 'station-road-name']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('station-admin-msg').textContent = '';
+        }
+
+        async function saveStationAdmin() {
+            const payload = {
+                action: 'upsert_station',
+                area: document.getElementById('station-area').value.trim(),
+                station_number: parseInt(document.getElementById('station-number').value, 10),
+                name_zh: document.getElementById('station-name-zh').value.trim(),
+                name_en: document.getElementById('station-name-en').value.trim() || null,
+                lat: Number(document.getElementById('station-lat').value),
+                lon: Number(document.getElementById('station-lon').value),
+                road_name: document.getElementById('station-road-name').value.trim() || null,
+            };
+            const msgEl = document.getElementById('station-admin-msg');
+            msgEl.textContent = '儲存中...';
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.message || '儲存失敗');
+                msgEl.style.color = 'green';
+                msgEl.textContent = `✅ 已儲存站點 ${data.id || ''}`;
+                resetStationAdminForm();
+                await loadStationRouteAdminData();
+            } catch (e) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = `❌ ${e.message}`;
+            }
+        }
+
+        async function deleteStationAdmin(id) {
+            if (!confirm(`確定刪除站點 ${id}？`)) return;
+            const msgEl = document.getElementById('station-admin-msg');
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_station', station_id: id }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.message || '刪除失敗');
+                msgEl.style.color = 'green';
+                msgEl.textContent = `✅ 已刪除 ${id}`;
+                await loadStationRouteAdminData();
+            } catch (e) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = `❌ ${e.message}`;
+            }
+        }
+
+        function createRouteStopRow(stop = {}) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:grid; grid-template-columns:2fr 1.5fr auto; gap:0.5em; margin-bottom:0.45em;';
+            const stationOptions = ['<option value="">選擇站點</option>']
+                .concat(stationAdminData.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.id)} - ${escapeHtml(s.name_zh || '')}</option>`))
+                .join('');
+            row.innerHTML = `
+                <select class="rm-stop-station">${stationOptions}</select>
+                <select class="rm-stop-nature">
+                    <option value="both">Both ways</option>
+                    <option value="a_direction">A direction</option>
+                    <option value="b_direction">B direction</option>
+                    <option value="temporary_cancel">Temporary Cancel</option>
+                </select>
+                <button type="button" onclick="this.parentElement.remove()" style="border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">移除</button>
+            `;
+            if (stop.station_id) row.querySelector('.rm-stop-station').value = stop.station_id;
+            if (stop.nature) row.querySelector('.rm-stop-nature').value = stop.nature;
+            return row;
+        }
+
+        function addRouteStopRow(stop = null) {
+            const list = document.getElementById('rm-stops-list');
+            if (!list) return;
+            list.appendChild(createRouteStopRow(stop || {}));
+        }
+
+        function resetManagedRouteForm() {
+            managedRouteEditingKey = null;
+            ['rm-dept', 'rm-route-number', 'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('rm-start-station').value = '';
+            document.getElementById('rm-end-station').value = '';
+            const typeEl = document.querySelector('input[name="rm-type"][value="One-way"]');
+            if (typeEl) typeEl.checked = true;
+            const list = document.getElementById('rm-stops-list');
+            if (list) list.innerHTML = '';
+            document.getElementById('route-admin-msg').textContent = '';
+        }
+
+        function renderRouteAdminTable() {
+            const tbody = document.getElementById('route-admin-tbody');
+            if (!tbody) return;
+            if (!managedRoutesData.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">沒有路線資料</td></tr>';
+                return;
+            }
+            tbody.innerHTML = managedRoutesData.map(r => `
+                <tr>
+                    <td>${escapeHtml(r.dept)}-${escapeHtml(r.route_number)}</td>
+                    <td>${escapeHtml(r.type || '-')}</td>
+                    <td>${escapeHtml(r.start_station_id || '-')}</td>
+                    <td>${escapeHtml(r.end_station_id || '-')}</td>
+                    <td>${Array.isArray(r.stops) ? r.stops.length : 0}</td>
+                    <td>
+                        <button class="action-btn btn-admin" onclick="editManagedRoute('${escapeHtml(r.dept)}','${escapeHtml(r.route_number)}')">編輯</button>
+                        <button class="action-btn btn-delete" onclick="deleteManagedRoute('${escapeHtml(r.dept)}','${escapeHtml(r.route_number)}')">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editManagedRoute(dept, routeNumber) {
+            const route = managedRoutesData.find(r => r.dept === dept && r.route_number === routeNumber);
+            if (!route) return;
+            managedRouteEditingKey = `${dept}-${routeNumber}`;
+            document.getElementById('rm-dept').value = route.dept || '';
+            document.getElementById('rm-route-number').value = route.route_number || '';
+            document.getElementById('rm-start-station').value = route.start_station_id || '';
+            document.getElementById('rm-end-station').value = route.end_station_id || '';
+            const typeEl = document.querySelector(`input[name="rm-type"][value="${route.type || 'One-way'}"]`);
+            if (typeEl) typeEl.checked = true;
+            const stopsList = document.getElementById('rm-stops-list');
+            stopsList.innerHTML = '';
+            (Array.isArray(route.stops) ? route.stops : []).forEach(stop => addRouteStopRow(stop));
+            const rewards = route.rewards || {};
+            document.getElementById('rm-reward-per-stop').value = rewards.per_stop_xp ?? '';
+            document.getElementById('rm-reward-cross-district').value = rewards.cross_district_bonus ?? '';
+            document.getElementById('rm-reward-completion').value = rewards.completion_bonus ?? '';
+            document.getElementById('rm-reward-time-limit').value = rewards.time_limit_bonus ?? '';
+            document.getElementById('route-admin-msg').textContent = `正在編輯 ${managedRouteEditingKey}`;
+        }
+
+        async function saveManagedRoute() {
+            const stops = Array.from(document.querySelectorAll('#rm-stops-list > div')).map((row, idx) => ({
+                order: idx + 1,
+                station_id: row.querySelector('.rm-stop-station')?.value || '',
+                nature: row.querySelector('.rm-stop-nature')?.value || 'both',
+            })).filter(s => s.station_id);
+            const payload = {
+                action: 'upsert_managed_route',
+                dept: document.getElementById('rm-dept').value.trim(),
+                route_number: document.getElementById('rm-route-number').value.trim(),
+                start_station_id: document.getElementById('rm-start-station').value,
+                end_station_id: document.getElementById('rm-end-station').value,
+                type: document.querySelector('input[name="rm-type"]:checked')?.value || 'One-way',
+                stops,
+                rewards: {
+                    per_stop_xp: Number(document.getElementById('rm-reward-per-stop').value || 0),
+                    cross_district_bonus: Number(document.getElementById('rm-reward-cross-district').value || 0),
+                    completion_bonus: Number(document.getElementById('rm-reward-completion').value || 0),
+                    time_limit_bonus: Number(document.getElementById('rm-reward-time-limit').value || 0),
+                },
+            };
+            const msgEl = document.getElementById('route-admin-msg');
+            msgEl.textContent = '儲存中...';
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.message || '儲存失敗');
+                msgEl.style.color = 'green';
+                msgEl.textContent = '✅ 已儲存路線';
+                resetManagedRouteForm();
+                await loadStationRouteAdminData();
+            } catch (e) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = `❌ ${e.message}`;
+            }
+        }
+
+        async function deleteManagedRoute(dept, routeNumber) {
+            if (!confirm(`確定刪除路線 ${dept}-${routeNumber}？`)) return;
+            const msgEl = document.getElementById('route-admin-msg');
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_managed_route', dept, route_number: routeNumber }),
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.message || '刪除失敗');
+                msgEl.style.color = 'green';
+                msgEl.textContent = `✅ 已刪除 ${dept}-${routeNumber}`;
+                await loadStationRouteAdminData();
+            } catch (e) {
+                msgEl.style.color = 'red';
+                msgEl.textContent = `❌ ${e.message}`;
             }
         }
 
