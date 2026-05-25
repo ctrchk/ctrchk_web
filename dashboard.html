@@ -432,6 +432,65 @@
         border: 1px solid #555;
         margin-left: 0.6em;
     }
+    /* ── Streak / Poster / Permissions ─────────────────────────────── */
+    .db-streak-card,
+    .db-poster-card {
+        margin: 0 1em 0.8em;
+        background: var(--app-bg-card, #1e3820);
+        border: 1px solid var(--app-border, #2d4d2d);
+        border-radius: 14px;
+        padding: 1em 1.2em;
+    }
+    .db-streak-title { font-size: 0.85em; color: var(--app-text-secondary, #a8d8a0); margin-bottom: 0.4em; }
+    .db-streak-val { font-size: 1.4em; font-weight: 800; color: var(--app-accent, #6dba65); }
+    .db-streak-sub { font-size: 0.8em; color: var(--app-text-secondary, #a8d8a0); margin-top: 0.3em; }
+    .db-streak-btn {
+        margin-top: 0.6em;
+        width: 100%;
+        background: #BFE340;
+        color: #1a252f;
+        border: none;
+        border-radius: 10px;
+        padding: 0.65em 1em;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .db-poster-card h3 { margin: 0 0 0.4em; font-size: 0.95em; }
+    .db-poster-card p { font-size: 0.82em; color: var(--app-text-secondary, #a8d8a0); margin: 0 0 0.6em; }
+    .db-poster-btn {
+        display: inline-block;
+        background: var(--app-accent, #6dba65);
+        color: #121f14;
+        border: none;
+        padding: 0.55em 1.2em;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .db-permission-list {
+        margin: 0 1em 1em;
+        display: grid;
+        gap: 0.6em;
+    }
+    .db-permission-item {
+        background: var(--app-bg-card, #1e3820);
+        border: 1px solid var(--app-border, #2d4d2d);
+        border-radius: 12px;
+        padding: 0.7em 0.9em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6em;
+        font-size: 0.85em;
+    }
+    .db-permission-item.locked { opacity: 0.5; }
+    .db-permission-tag {
+        font-size: 0.7em;
+        padding: 0.15em 0.5em;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.1);
+        color: var(--app-text-secondary, #a8d8a0);
+    }
     </style>
 
     <script>
@@ -505,6 +564,21 @@
             </div>
         </div>
 
+        <!-- Commute streak -->
+        <div class="db-streak-card" id="db-streak-card" style="display:none;">
+            <div class="db-streak-title">🔥 連續通勤</div>
+            <div class="db-streak-val" id="db-streak-value">0 天</div>
+            <div class="db-streak-sub" id="db-streak-sub">保持通勤連勝，提升你的里程聲望</div>
+            <button class="db-streak-btn" id="db-streak-repair-btn" style="display:none;">花費 100 里程幣修復連勝</button>
+        </div>
+
+        <!-- IG Story poster export -->
+        <div class="db-poster-card" id="db-poster-card" style="display:none;">
+            <h3>📸 IG Story 數據海報</h3>
+            <p id="db-poster-desc">自動生成省下交通費與減碳成果海報。</p>
+            <button class="db-poster-btn" id="db-poster-btn">匯出海報</button>
+        </div>
+
         <!-- Email verify notice -->
         <div id="email-verify-notice" style="display:none;">
             <i class="fas fa-envelope" style="color:#ff9800;"></i>
@@ -517,6 +591,10 @@
             <p>完善你的個人資料即可升級，解鎖所有功能！</p>
             <a href="/profile" class="db-cta-btn"><i class="fas fa-arrow-right"></i> 立即完善資料</a>
         </div>
+
+        <!-- Permissions -->
+        <div class="db-section-title">會員權益</div>
+        <div class="db-permission-list" id="db-permission-list"></div>
 
         <!-- Ride history -->
         <div class="db-section-title" style="margin-top:0.4em;">騎行記錄</div>
@@ -552,6 +630,9 @@
         <div class="db-more-grid app-only">
             <a href="/leaderboard" class="db-more-item">
                 <i class="fas fa-trophy"></i><span>排行榜</span>
+            </a>
+            <a href="/leaderboard" class="db-more-item" id="db-local-domination">
+                <i class="fas fa-crown"></i><span>區域霸主</span>
             </a>
             <a href="/tasks" class="db-more-item">
                 <i class="fas fa-tasks"></i><span>任務</span>
@@ -598,6 +679,138 @@
         if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
         if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
         return String(n);
+    }
+
+    function formatKm(n) {
+        return (n || 0).toFixed(1);
+    }
+
+    function getPermissionContext() {
+        if (window.getPermissionContext) {
+            return window.getPermissionContext();
+        }
+        return { permissions: {}, list: [] };
+    }
+
+    function applyPermissionTheme() {
+        if (window.getPermissionContext) {
+            window.CTRCHK_PERMISSION_CONTEXT = window.getPermissionContext();
+        }
+    }
+
+    function renderPermissionList() {
+        const listEl = document.getElementById('db-permission-list');
+        if (!listEl) return;
+        const ctx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
+        const defs = window.CTRCHK_PERMISSION_DEFS || [];
+        if (!defs.length) return;
+        listEl.innerHTML = defs.map(def => {
+            const enabled = ctx.permissions && ctx.permissions[def.key];
+            const rankLabel = def.rank === 'gold' ? '金卡' : (def.rank === 'silver' ? '銀卡' : '銅卡');
+            return `<div class="db-permission-item ${enabled ? '' : 'locked'}">
+                        <span>${enabled ? '✅' : '🔒'} ${def.label}</span>
+                        <span class="db-permission-tag">${rankLabel}</span>
+                    </div>`;
+        }).join('');
+    }
+
+    function renderStreakCard(gameProfile, userCoins) {
+        const card = document.getElementById('db-streak-card');
+        if (!card || !gameProfile) return;
+        const streakVal = Number(gameProfile.commute_streak || 0);
+        const pending = Number(gameProfile.commute_streak_pending || 0);
+        const pendingDate = gameProfile.commute_streak_pending_date
+            ? String(gameProfile.commute_streak_pending_date).slice(0, 10)
+            : null;
+        const today = new Date().toISOString().slice(0, 10);
+        const hasRepair = pending > 0 && pendingDate === today && userCoins >= 100;
+
+        card.style.display = '';
+        document.getElementById('db-streak-value').textContent = `🔥 ${streakVal} 天`;
+        document.getElementById('db-streak-sub').textContent = pending > 0
+            ? '連勝已中斷，可使用里程幣修復'
+            : '持續通勤可累積更高里程卡';
+        const repairBtn = document.getElementById('db-streak-repair-btn');
+        repairBtn.style.display = hasRepair ? '' : 'none';
+        if (hasRepair) {
+            repairBtn.onclick = async () => {
+                if (!confirm('是否花費 100 里程幣修復連勝？')) return;
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const resp = await fetch('/api/getHistory?action=repair-streak', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        alert(data.message || '修復失敗');
+                        return;
+                    }
+                    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    storedUser.coins = data.coins ?? storedUser.coins;
+                    localStorage.setItem('user', JSON.stringify(storedUser));
+                    gameProfile.commute_streak = data.commute_streak;
+                    gameProfile.commute_streak_pending = 0;
+                    renderStreakCard(gameProfile, storedUser.coins || 0);
+                    renderGameProfile(storedUser.level || 1, storedUser.xp || 0, storedUser.coins || 0);
+                } catch (e) {
+                    alert('修復失敗：' + e.message);
+                }
+            };
+        }
+    }
+
+    function renderPosterCard(totalKm, context) {
+        const card = document.getElementById('db-poster-card');
+        if (!card) return;
+        const canUse = context.permissions && context.permissions.poster_basic;
+        card.style.display = canUse ? '' : 'none';
+        if (!canUse) return;
+        const desc = document.getElementById('db-poster-desc');
+        desc.textContent = `近一年累積里程 ${formatKm(totalKm)} km，立即生成你的戰績海報。`;
+    }
+
+    function exportPoster(totalKm, context) {
+        const HKD_PER_KM = 2.5;
+        const CO2_PER_KM = 0.21;
+        const CO2_PER_TREE = 21;
+        const savedCost = totalKm * HKD_PER_KM;
+        const co2 = totalKm * CO2_PER_KM;
+        const trees = co2 / CO2_PER_TREE;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1920;
+        const ctx2d = canvas.getContext('2d');
+        ctx2d.fillStyle = context.permissions.theme_gold ? '#0b0c0f' : (context.permissions.theme_silver ? '#1f2428' : '#1a2d1c');
+        ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+        ctx2d.fillStyle = context.permissions.theme_gold ? '#d4af37' : '#BFE340';
+        ctx2d.font = 'bold 72px sans-serif';
+        ctx2d.fillText('CTRCHK Ride Report', 90, 200);
+        ctx2d.fillStyle = '#ffffff';
+        ctx2d.font = 'bold 140px sans-serif';
+        ctx2d.fillText(`${formatKm(totalKm)} km`, 90, 380);
+        ctx2d.font = '48px sans-serif';
+        ctx2d.fillText(`省下交通費 HK$${savedCost.toFixed(1)}`, 90, 520);
+        ctx2d.fillText(`減少碳排 ${co2.toFixed(1)} kg`, 90, 600);
+        ctx2d.fillText(`等同種樹 ${trees.toFixed(1)} 棵`, 90, 680);
+        if (context.permissions.poster_gold_copy) {
+            ctx2d.fillStyle = '#d4af37';
+            ctx2d.font = 'bold 52px sans-serif';
+            ctx2d.fillText('擊敗了 99% 同時段搭巴士鄰居', 90, 820);
+        }
+        if (!context.permissions.poster_no_watermark) {
+            ctx2d.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx2d.font = 'bold 80px sans-serif';
+            ctx2d.rotate(-Math.PI / 12);
+            ctx2d.fillText('CTRCHK', 200, 1200);
+            ctx2d.rotate(Math.PI / 12);
+        }
+
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = 'ctrchk_story.png';
+        link.click();
     }
 
     function renderGameProfile(level, xp, coins, ridesCount) {
@@ -653,6 +866,8 @@
             if (user.level !== undefined) {
                 renderGameProfile(user.level, user.xp, user.coins);
             }
+            applyPermissionTheme();
+            renderPermissionList();
 
             var userRole = user.user_role || user.role || 'junior';
 
@@ -672,17 +887,25 @@
                     }
                     user.cyclist_tier = dbUser.cyclist_tier;
                     user.mileage_card = dbUser.mileage_card;
+                    user.mileage_rank = dbUser.mileage_rank;
+                    user.mileage_rolling_km = dbUser.mileage_rolling_km;
+                    user.permission_rank = dbUser.permission_rank;
+                    user.permissions = dbUser.permissions;
                     if (Array.isArray(dbUser.unlocked_coin_routes)) {
                         localStorage.setItem('unlockedCoinRoutes', JSON.stringify(dbUser.unlocked_coin_routes));
                     }
                     localStorage.setItem('user', JSON.stringify(user));
                     _applyUserUI(user);
                     _applyStatusSummary(user);
+                    applyPermissionTheme();
+                    renderPermissionList();
                 }
             } catch (e) { /* use cached data */ }
 
             _applyRoleUI(userRole);
             _applyStatusSummary(user);
+            applyPermissionTheme();
+            renderPermissionList();
             await loadHistory();
 
         } catch (e) {
@@ -739,7 +962,9 @@
         if (!el) return;
         var cyclistTier = user.cyclist_tier || '入門車手';
         var mileageCard = user.mileage_card || '銅卡';
-        el.textContent = '車手等級：' + cyclistTier + '｜里程卡：' + mileageCard;
+        var rollingKm = Number(user.mileage_rolling_km || 0);
+        var mileageSuffix = rollingKm > 0 ? `（${formatKm(rollingKm)} km / 365天）` : '';
+        el.textContent = '車手等級：' + cyclistTier + '｜里程卡：' + mileageCard + mileageSuffix;
     }
 
     function _sessionExpired(container) {
@@ -764,10 +989,23 @@
             if (data.gameProfile) {
                 var histArr = Array.isArray(data) ? data : (data.history || []);
                 renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length);
+                renderStreakCard(data.gameProfile, data.gameProfile.coins || 0);
             }
 
             var history = Array.isArray(data) ? data : (data.history || []);
             list.innerHTML = '';
+
+            var totalKm = history.reduce(function (sum, ride) {
+                return sum + (parseFloat(ride.distance_km) || 0);
+            }, 0);
+            var permCtx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
+            renderPosterCard(totalKm, permCtx);
+            var posterBtn = document.getElementById('db-poster-btn');
+            if (posterBtn) {
+                posterBtn.onclick = function () {
+                    exportPoster(totalKm, permCtx);
+                };
+            }
 
             if (history.length === 0) {
                 var emptyEl = document.getElementById('db-history-empty');
