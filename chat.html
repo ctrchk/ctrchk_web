@@ -486,10 +486,15 @@
                 <div class="msg-panel" id="msg-panel">
                     <div class="msg-empty" id="msg-empty">
                         <i class="fas fa-comment-dots"></i>
-                        <span>選擇對話或開始新的聊天</span>
+                        <span id="msg-empty-text">選擇對話或開始新的聊天</span>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
                         <button class="btn-new-chat" style="margin-top:0.3em;" onclick="openConvPanel()"><i class="fas fa-list"></i> 查看對話</button>
+                        <button class="btn-new-chat" style="margin-top:0.3em; background:#6dba65;" onclick="(function(){ setMsgEmpty(SUPPORT_NOTICE_TEXT); startSupportThread(); })();">
+                            <i class="fas fa-headset"></i> 客服
+                        </button>
+
                     </div>
+
                     <div class="msg-header" id="msg-header" style="display:none;">
                         <button class="btn-back-to-list" onclick="openConvPanel()" title="返回列表"><i class="fas fa-chevron-left"></i></button>
                         <div class="msg-header-avatar" id="msg-header-avatar"><i class="fas fa-user"></i></div>
@@ -868,6 +873,164 @@
         function loadAllUsers() {
             apiGet(`/api/chat?action=users&user_id=${ME.id}`).then(renderUserResults).catch(() => {});
         }
+
+        // ── Support Mode (客服模式) ──────────────────────────────────────────
+        const SUPPORT_AGENT_LABEL = '客服';
+        const SUPPORT_NOTICE_TEXT = '客服人數有限 您可以先離開此頁面 我們將會儘快回復您 請耐心等候 您亦可選擇discord內的客服';
+
+        // Current support thread context
+        let supportThreadId = null;
+        let isSupportMode = false;
+        let supportOldestMsgId = null;
+        let supportNewestMsgId = null;
+        let supportMsgCache = [];
+        let supportPollTimer = null;
+
+        window.isSupportMode = function() { return isSupportMode; };
+
+        function setMsgEmpty(text) {
+            const el = document.getElementById('msg-empty-text');
+            if (el) el.textContent = text;
+        }
+
+        function renderSupportMessages(messages, container, { reset = false } = {}) {
+            if (!Array.isArray(messages)) return;
+            if (reset) container.innerHTML = '';
+            const frag = document.createDocumentFragment();
+            messages.forEach(m => {
+                const mine = String(m.sender_id) === String(ME.id);
+                const wrap = document.createElement('div');
+                wrap.className = 'msg-bubble-wrap' + (mine ? ' mine' : '');
+                wrap.dataset.msgId = m.id;
+                wrap.innerHTML = `
+                    <div class="bubble-avatar">${avatarHtml(m.sender_avatar || '', 28)}</div>
+                    <div class="msg-inner">
+                        <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(m.content)}</div>
+                        <div class="msg-time">${timeStr(m.created_at)}</div>
+                    </div>
+                `;
+                frag.appendChild(wrap);
+            });
+            container.appendChild(frag);
+        }
+
+        async function startSupportThread() {
+            // Create a support thread and enter it
+            try {
+                const data = await apiPost('/api/chat', {
+                    action: 'start_support_thread',
+                    user_id: ME.id,
+                });
+                if (!data || !data.thread_id) {
+                    alert(data?.message || '無法啟動客服模式');
+                    return;
+                }
+                openSupportThread(data.thread_id);
+            } catch (e) {
+                alert(e.message || '啟動客服失敗');
+            }
+        }
+
+        window.startSupportThread = startSupportThread;
+
+        function openSupportThread(threadId) {
+            supportThreadId = threadId;
+            isSupportMode = true;
+
+            currentPeerId = null;
+            currentPeerName = '';
+            currentPeerAvatar = '';
+            oldestMsgId = null;
+            newestMsgId = null;
+
+            supportOldestMsgId = null;
+            supportNewestMsgId = null;
+            supportMsgCache = [];
+
+            // UI: hide conversation list, show header/list/input
+            document.getElementById('msg-empty').style.display = 'none';
+            document.getElementById('msg-header').style.display = 'flex';
+            document.getElementById('msg-list').style.display = 'flex';
+            document.getElementById('msg-input-bar').style.display = 'flex';
+
+            // Set header to客服
+            document.getElementById('msg-header-name').textContent = SUPPORT_AGENT_LABEL;
+            document.getElementById('msg-header-avatar').innerHTML = '<i class="fas fa-headset"></i>';
+
+            // disable normal conversations list interactions
+            if (isMobile()) closeConvPanel();
+
+            // Start polling support messages
+            loadSupportMessages({ reset: true });
+            if (supportPollTimer) clearInterval(supportPollTimer);
+            supportPollTimer = setInterval(() => {
+                loadSupportMessages({ reset: false });
+            }, 3000);
+
+            // Also stop normal polling
+            if (pollTimer) clearInterval(pollTimer);
+        }
+
+        async function loadSupportMessages({ reset } = {}) {
+            if (!supportThreadId) return;
+            const params = new URLSearchParams({
+                action: 'support_messages',
+                user_id: ME.id,
+                thread_id: supportThreadId,
+                limit: '40'
+            });
+            if (!reset && supportNewestMsgId) params.set('after', supportNewestMsgId);
+            // reset path uses initial fetch
+            try {
+                const messages = await apiGet(`/api/chat?${params}`);
+                if (!Array.isArray(messages)) return;
+
+                const list = document.getElementById('msg-list');
+                if (reset) {
+                    supportMsgCache = messages;
+                    list.innerHTML = '';
+                    renderSupportMessages(messages, list, { reset: true });
+                    supportOldestMsgId = messages.length ? messages[0].id : null;
+                    supportNewestMsgId = messages.length ? messages[messages.length - 1].id : null;
+                    list.scrollTop = list.scrollHeight;
+                } else {
+                    if (!messages.length) return;
+                    supportMsgCache = [...supportMsgCache, ...messages];
+                    renderSupportMessages(messages, list, { reset: false });
+                    supportNewestMsgId = messages[messages.length - 1].id;
+                    list.scrollTop = list.scrollHeight;
+                }
+            } catch (e) {}
+        }
+
+        // Override sendMessage in support mode
+        const _origSendMessage = window.sendMessage;
+        window.sendMessage = function() {
+            if (!isSupportMode) return _origSendMessage();
+            const input = document.getElementById('msg-input');
+            const text = (input.value || '').trim();
+            if (!text || !supportThreadId) return;
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true;
+            input.value = '';
+            input.style.height = 'auto';
+            apiPost('/api/chat', {
+                action: 'support_send',
+                thread_id: supportThreadId,
+                sender_id: ME.id,
+                content: text,
+            }).then(msg => {
+                btn.disabled = false;
+                // optimistic render
+                if (msg && msg.id) {
+                    document.getElementById('msg-list').innerHTML = document.getElementById('msg-list').innerHTML; // noop
+                    loadSupportMessages({ reset: true });
+                }
+            }).catch(() => {
+                btn.disabled = false;
+            });
+        };
+
 
         window.searchUsers = function(q) {
             clearTimeout(userSearchTimer);
