@@ -35,6 +35,42 @@ function getUserRoleFromToken(req) {
   return payload ? (payload.role || payload.user_role || null) : null;
 }
 
+let _ensureSupportSchemaPromise = null;
+async function ensureSupportSchema() {
+  if (_ensureSupportSchemaPromise) return _ensureSupportSchemaPromise;
+  _ensureSupportSchemaPromise = (async () => {
+    await query(`
+      CREATE TABLE IF NOT EXISTS support_threads (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        claimed_by_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS thread_id INTEGER`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_support_threads_user ON support_threads(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_support_threads_status_updated ON support_threads(status, updated_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_id ON chat_messages(thread_id)`);
+  })().catch((err) => {
+    _ensureSupportSchemaPromise = null;
+    throw err;
+  });
+  return _ensureSupportSchemaPromise;
+}
+
+async function resolveUserRole(req, hintedUserId = null) {
+  const roleInToken = String(getUserRoleFromToken(req) || '').toLowerCase();
+  if (roleInToken) return roleInToken;
+  const tokenUserId = parseInt(getUserIdFromToken(req), 10);
+  const candidateUserId = Number.isFinite(tokenUserId) && tokenUserId > 0
+    ? tokenUserId
+    : parseInt(hintedUserId, 10);
+  if (!candidateUserId) return '';
+  const { rows } = await query(`SELECT user_role FROM users WHERE id = $1 LIMIT 1`, [candidateUserId]);
+  return String(rows[0]?.user_role || '').toLowerCase();
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -51,7 +87,8 @@ export default async function handler(req, res) {
     try {
       // ── 客服 threads：取得列表
       if (action === 'support_threads') {
-        const role = getUserRoleFromToken(req);
+        await ensureSupportSchema();
+        const role = await resolveUserRole(req, uid);
         if (role !== 'senior_admin') {
           const { rows } = await query(
             `SELECT id, user_id, claimed_by_admin_id, status, created_at, updated_at
@@ -75,10 +112,11 @@ export default async function handler(req, res) {
 
       // ── 客服 threads：取得某 thread 訊息
       if (action === 'support_messages') {
+        await ensureSupportSchema();
         const threadId = parseInt(req.query.thread_id, 10);
         if (!threadId) return res.status(400).json({ message: 'thread_id required' });
 
-        const role = getUserRoleFromToken(req);
+        const role = await resolveUserRole(req, uid);
         const isAdmin = role === 'senior_admin';
 
         if (!isAdmin) {
@@ -250,6 +288,7 @@ export default async function handler(req, res) {
 
       // ── 客服：建立 thread（user → support）
       if (action === 'start_support_thread') {
+        await ensureSupportSchema();
         const text = String(content || '').trim();
         const uid2 = parseInt(user_id, 10);
         if (!uid2) return res.status(400).json({ message: 'user_id required' });
@@ -339,9 +378,10 @@ export default async function handler(req, res) {
 
       // ── 客服：claim（senior_admin）
       if (action === 'support_claim') {
+        await ensureSupportSchema();
         const adminId = parseInt(user_id, 10);
         const threadId = parseInt(req.body.thread_id, 10);
-        const role = getUserRoleFromToken(req);
+        const role = await resolveUserRole(req, adminId);
         if (!adminId || !threadId) return res.status(400).json({ message: 'user_id and thread_id required' });
         if (role !== 'senior_admin') return res.status(403).json({ message: 'Forbidden: senior_admin only' });
 
@@ -365,10 +405,11 @@ export default async function handler(req, res) {
 
       // ── 客服：回覆（user 與 senior_admin）
       if (action === 'support_send') {
+        await ensureSupportSchema();
         const senderId = parseInt(user_id, 10);
         const threadId = parseInt(req.body.thread_id, 10);
         const text = String(content || '').trim();
-        const role = getUserRoleFromToken(req);
+        const role = await resolveUserRole(req, senderId);
         if (!senderId || !threadId) return res.status(400).json({ message: 'user_id and thread_id required' });
         if (!text) return res.status(400).json({ message: 'Message content required' });
         if (text.length > 2000) return res.status(400).json({ message: 'Message too long (max 2000 chars)' });

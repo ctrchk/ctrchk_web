@@ -404,9 +404,7 @@ export default async function handler(req, res) {
       try {
         gameProfile = await ensureGameProfile(userData.userId);
         if (gameProfile) {
-          const mileageUpdate = await updateMileageProfile(userData.userId, gameProfile.mileage_rank);
-          gameProfile.mileage_km_365 = mileageUpdate.rollingKm;
-          gameProfile.mileage_rank = mileageUpdate.rank;
+          gameProfile.mileage_rolling_km = await getRollingMileageKm(userData.userId);
         }
       } catch (e) {
         // game tables 可能尚未建立；忽略錯誤
