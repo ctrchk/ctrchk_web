@@ -779,7 +779,9 @@ export default async function handler(req, res) {
           `SELECT u.id, u.email, u.full_name,
                   COALESCE(gp.level, 1)  AS level,
                   COALESCE(gp.xp,    0)  AS xp,
-                  COALESCE(gp.coins, 0)  AS coins
+                  COALESCE(gp.coins, 0)  AS coins,
+                  COALESCE(gp.mileage_km_365, 0) AS mileage_km_365,
+                  LOWER(COALESCE(gp.mileage_rank, 'bronze')) AS mileage_rank
            FROM users u
            LEFT JOIN user_game_profile gp ON gp.user_id = u.id
            WHERE u.id = $1`,
@@ -804,17 +806,27 @@ export default async function handler(req, res) {
       }
 
       if (action === 'set_game_stats') {
-        // 更新用戶的 XP、里程幣（等級由 XP 自動計算）
-        const { xp, coins } = req.body;
+        // 更新用戶的 XP、里程幣、里程與里程卡級（等級由 XP 自動計算）
+        const { xp, coins, mileage_km_365, mileage_rank } = req.body;
+        const normalizedMileageRank =
+          mileage_rank === undefined || mileage_rank === null
+            ? undefined
+            : String(mileage_rank).trim().toLowerCase();
 
-        if (xp === undefined && coins === undefined) {
-          return res.status(400).json({ message: 'At least one of xp, coins must be provided' });
+        if (xp === undefined && coins === undefined && mileage_km_365 === undefined && normalizedMileageRank === undefined) {
+          return res.status(400).json({ message: 'At least one of xp, coins, mileage_km_365, mileage_rank must be provided' });
         }
         if (xp !== undefined && (typeof xp !== 'number' || xp < 0)) {
           return res.status(400).json({ message: 'xp must be a non-negative number' });
         }
         if (coins !== undefined && (typeof coins !== 'number' || coins < 0)) {
           return res.status(400).json({ message: 'coins must be a non-negative number' });
+        }
+        if (mileage_km_365 !== undefined && (typeof mileage_km_365 !== 'number' || mileage_km_365 < 0)) {
+          return res.status(400).json({ message: 'mileage_km_365 must be a non-negative number' });
+        }
+        if (normalizedMileageRank !== undefined && !['bronze', 'silver', 'gold'].includes(normalizedMileageRank)) {
+          return res.status(400).json({ message: 'mileage_rank must be bronze, silver, or gold' });
         }
 
         // 若有提供 XP，自動計算對應等級
@@ -825,17 +837,21 @@ export default async function handler(req, res) {
 
         // 確保 user_game_profile 列存在，並更新
         await query(
-          `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
-           VALUES ($1, COALESCE($2, 1), COALESCE($3, 0), COALESCE($4, 0), NOW())
+          `INSERT INTO user_game_profile (user_id, level, xp, coins, mileage_km_365, mileage_rank, updated_at)
+           VALUES ($1, COALESCE($2, 1), COALESCE($3, 0), COALESCE($4, 0), COALESCE($5, 0), COALESCE($6, 'bronze'), NOW())
            ON CONFLICT (user_id) DO UPDATE SET
              level      = CASE WHEN $2 IS NOT NULL THEN $2 ELSE user_game_profile.level END,
              xp         = CASE WHEN $3 IS NOT NULL THEN $3 ELSE user_game_profile.xp   END,
              coins      = CASE WHEN $4 IS NOT NULL THEN $4 ELSE user_game_profile.coins END,
+             mileage_km_365 = CASE WHEN $5 IS NOT NULL THEN $5 ELSE user_game_profile.mileage_km_365 END,
+             mileage_rank   = CASE WHEN $6 IS NOT NULL THEN $6 ELSE user_game_profile.mileage_rank END,
              updated_at = NOW()`,
           [user_id,
            newLevel !== undefined ? newLevel : null,
            xp    !== undefined ? xp    : null,
-           coins !== undefined ? coins : null]
+           coins !== undefined ? coins : null,
+           mileage_km_365 !== undefined ? mileage_km_365 : null,
+           normalizedMileageRank !== undefined ? normalizedMileageRank : null]
         );
         await triggerDiscordBotSyncForUser(user_id);
         syncDiscordRolesForUser(user_id).catch(e =>

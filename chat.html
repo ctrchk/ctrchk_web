@@ -473,6 +473,9 @@
                         <button class="btn-panel-toggle" id="btn-panel-toggle" onclick="toggleConvPanel()" title="對話列表"><i class="fas fa-bars"></i></button>
                         <h3><i class="fas fa-comments"></i> 聊天</h3>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
+                        <button class="btn-new-chat" style="background:#6dba65;" onclick="(function(){ setMsgEmpty(SUPPORT_NOTICE_TEXT); startSupportThread(); })();">
+                            <i class="fas fa-headset"></i> 客服
+                        </button>
                     </div>
                     <div class="conv-search">
                         <input type="text" id="conv-search-input" placeholder="搜尋對話…" oninput="filterConvList(this.value)">
@@ -489,10 +492,6 @@
                         <span id="msg-empty-text">選擇對話或開始新的聊天</span>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
                         <button class="btn-new-chat" style="margin-top:0.3em;" onclick="openConvPanel()"><i class="fas fa-list"></i> 查看對話</button>
-                        <button class="btn-new-chat" style="margin-top:0.3em; background:#6dba65;" onclick="(function(){ setMsgEmpty(SUPPORT_NOTICE_TEXT); startSupportThread(); })();">
-                            <i class="fas fa-headset"></i> 客服
-                        </button>
-
                     </div>
 
                     <div class="msg-header" id="msg-header" style="display:none;">
@@ -982,7 +981,8 @@
             if (!reset && supportNewestMsgId) params.set('after', supportNewestMsgId);
             // reset path uses initial fetch
             try {
-                const messages = await apiGet(`/api/chat?${params}`);
+                const payload = await apiGet(`/api/chat?${params}`);
+                const messages = Array.isArray(payload) ? payload : (payload?.messages || []);
                 if (!Array.isArray(messages)) return;
 
                 const list = document.getElementById('msg-list');
@@ -1017,7 +1017,7 @@
             apiPost('/api/chat', {
                 action: 'support_send',
                 thread_id: supportThreadId,
-                sender_id: ME.id,
+                user_id: ME.id,
                 content: text,
             }).then(msg => {
                 btn.disabled = false;
