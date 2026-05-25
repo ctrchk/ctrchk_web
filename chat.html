@@ -473,7 +473,7 @@
                         <button class="btn-panel-toggle" id="btn-panel-toggle" onclick="toggleConvPanel()" title="對話列表"><i class="fas fa-bars"></i></button>
                         <h3><i class="fas fa-comments"></i> 聊天</h3>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
-                        <button class="btn-new-chat" style="background:#6dba65;" onclick="(function(){ setMsgEmpty(SUPPORT_NOTICE_TEXT); startSupportThread(); })();">
+                        <button class="btn-new-chat" id="support-entry-btn" style="background:#6dba65;" onclick="(function(){ setMsgEmpty(SUPPORT_NOTICE_TEXT); startSupportThread(); })();">
                             <i class="fas fa-headset"></i> 客服
                         </button>
                     </div>
@@ -534,6 +534,10 @@
         if (!userData) { window.location.replace('/login'); return; }
         const ME = JSON.parse(userData);
         const TOKEN = localStorage.getItem('accessToken') || '';
+        const IS_SENIOR_ADMIN = String(ME.user_role || ME.role || '').toLowerCase() === 'senior_admin';
+        const urlParams = new URLSearchParams(window.location.search);
+        const SUPPORT_QUERY_MODE = urlParams.get('support') === '1';
+        const SUPPORT_QUERY_THREAD_ID = parseInt(urlParams.get('thread_id') || '0', 10) || null;
         let currentPeerId = null;
         let currentPeerName = '';
         let currentPeerAvatar = '';
@@ -570,15 +574,28 @@
         };
 
         // ── Helpers ────────────────────────────────────────────────────────
+        async function parseApiResponse(r) {
+            let data = null;
+            try {
+                data = await r.json();
+            } catch (_) {
+                data = null;
+            }
+            if (!r.ok) {
+                const msg = data?.message || `HTTP ${r.status}`;
+                throw new Error(msg);
+            }
+            return data;
+        }
         function apiGet(url) {
-            return fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` } }).then(r => r.json());
+            return fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` } }).then(parseApiResponse);
         }
         function apiPost(url, body) {
             return fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` },
                 body: JSON.stringify(body)
-            }).then(r => r.json());
+            }).then(parseApiResponse);
         }
         async function ensureChatUsername() {
             const current = (ME.username || '').trim();
@@ -639,6 +656,10 @@
 
         // ── Conversation List ───────────────────────────────────────────────
         function loadConversations() {
+            if (isSupportAdminMode) {
+                loadSupportThreads({ focusThreadId: supportThreadId || SUPPORT_QUERY_THREAD_ID || null });
+                return;
+            }
             apiGet(`/api/chat?action=conversations&user_id=${ME.id}`).then(rows => {
                 conversations = rows || [];
                 if (conversations.length && !lastInboxMessageAt) {
@@ -691,6 +712,12 @@
 
         // ── Open Conversation ───────────────────────────────────────────────
         window.openConversation = function(peerId, peerName, peerAvatar) {
+            isSupportMode = false;
+            isSupportAdminMode = false;
+            supportThreadId = null;
+            supportThreadMeta = null;
+            if (supportPollTimer) clearInterval(supportPollTimer);
+            updateSupportComposerState();
             currentPeerId = peerId;
             currentPeerName = peerName;
             currentPeerAvatar = peerAvatar;
@@ -879,13 +906,142 @@
 
         // Current support thread context
         let supportThreadId = null;
+        let supportThreadMeta = null;
+        let supportThreads = [];
         let isSupportMode = false;
+        let isSupportAdminMode = false;
         let supportOldestMsgId = null;
         let supportNewestMsgId = null;
         let supportMsgCache = [];
         let supportPollTimer = null;
 
         window.isSupportMode = function() { return isSupportMode; };
+
+        function threadLabel(t) {
+            const status = t?.status === 'claimed' ? '已認領' : '待認領';
+            return `#${t?.id || ''}｜用戶 ${t?.user_id || '-'}｜${status}`;
+        }
+        function ensureSupportClaimButton() {
+            let btn = document.getElementById('support-claim-btn');
+            if (btn) return btn;
+            const header = document.getElementById('msg-header');
+            if (!header) return null;
+            btn = document.createElement('button');
+            btn.id = 'support-claim-btn';
+            btn.className = 'btn-new-chat';
+            btn.style.marginLeft = 'auto';
+            btn.style.fontSize = '0.78em';
+            btn.style.padding = '0.4em 0.65em';
+            btn.innerHTML = '<i class="fas fa-hand-paper"></i> Claim';
+            btn.onclick = claimCurrentSupportThread;
+            header.appendChild(btn);
+            return btn;
+        }
+        function updateSupportComposerState() {
+            const input = document.getElementById('msg-input');
+            const sendBtn = document.getElementById('btn-send');
+            const claimBtn = ensureSupportClaimButton();
+            if (!input || !sendBtn) return;
+
+            if (!isSupportMode) {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.placeholder = '輸入訊息… (最多 2000 字)';
+                if (claimBtn) claimBtn.style.display = 'none';
+                return;
+            }
+
+            if (!isSupportAdminMode) {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.placeholder = '輸入訊息… (最多 2000 字)';
+                if (claimBtn) claimBtn.style.display = 'none';
+                return;
+            }
+
+            const myId = Number(ME.id);
+            const claimedBy = Number(supportThreadMeta?.claimed_by_admin_id || 0);
+            const canReply = claimedBy && claimedBy === myId;
+            input.disabled = !canReply;
+            sendBtn.disabled = !canReply;
+            if (!claimedBy) input.placeholder = '此對話尚未 Claim，請先 Claim 後回覆';
+            else if (!canReply) input.placeholder = '此對話已由其他高級管理員 Claim（唯讀）';
+            else input.placeholder = '輸入客服回覆…';
+            if (claimBtn) claimBtn.style.display = (!claimedBy || canReply) ? '' : 'none';
+        }
+        function renderSupportThreadList() {
+            const el = document.getElementById('conv-list');
+            if (!el) return;
+            if (!supportThreads.length) {
+                el.innerHTML = '<div style="padding:1em;color:#5a8a5a;font-size:0.85em;text-align:center;">目前沒有客服對話</div>';
+                return;
+            }
+            const myId = Number(ME.id);
+            el.innerHTML = supportThreads.map((t) => {
+                const claimedBy = Number(t.claimed_by_admin_id || 0);
+                const mine = claimedBy && claimedBy === myId;
+                const locked = claimedBy && claimedBy !== myId;
+                const stateText = mine ? '你已 Claim' : (locked ? `已由 #${claimedBy} Claim` : '待 Claim');
+                return `
+                    <div class="conv-item${Number(supportThreadId) === Number(t.id) ? ' active' : ''}" onclick="openSupportThreadAsAdmin(${t.id})">
+                        <div class="conv-avatar"><i class="fas fa-headset"></i></div>
+                        <div class="conv-info">
+                            <div class="conv-name">客服對話 #${t.id}</div>
+                            <div class="conv-last">${stateText}｜用戶 ${t.user_id}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        async function loadSupportThreads({ focusThreadId } = {}) {
+            if (!IS_SENIOR_ADMIN) return;
+            try {
+                const payload = await apiGet(`/api/chat?action=support_threads&user_id=${ME.id}`);
+                supportThreads = Array.isArray(payload?.threads) ? payload.threads : [];
+                renderSupportThreadList();
+
+                const activeExists = supportThreads.some((t) => Number(t.id) === Number(supportThreadId));
+                const targetId = focusThreadId || SUPPORT_QUERY_THREAD_ID || (!activeExists ? supportThreads[0]?.id : null);
+                if (targetId && Number(targetId) !== Number(supportThreadId)) {
+                    const targetMeta = supportThreads.find((t) => Number(t.id) === Number(targetId)) || null;
+                    openSupportThread(targetId, { adminMode: true, threadMeta: targetMeta });
+                } else if (activeExists) {
+                    const freshMeta = supportThreads.find((t) => Number(t.id) === Number(supportThreadId)) || null;
+                    supportThreadMeta = freshMeta;
+                    if (isSupportMode) {
+                        document.getElementById('msg-header-name').textContent = threadLabel(freshMeta || { id: supportThreadId });
+                        updateSupportComposerState();
+                    }
+                } else {
+                    setMsgEmpty('目前沒有客服對話');
+                }
+            } catch (e) {
+                setMsgEmpty(e.message || '載入客服對話失敗');
+            }
+        }
+        window.openSupportThreadAsAdmin = function(threadId) {
+            const meta = supportThreads.find((t) => Number(t.id) === Number(threadId)) || null;
+            openSupportThread(threadId, { adminMode: true, threadMeta: meta });
+        };
+        async function claimCurrentSupportThread() {
+            if (!isSupportAdminMode || !supportThreadId) return;
+            try {
+                const data = await apiPost('/api/chat', {
+                    action: 'support_claim',
+                    user_id: ME.id,
+                    thread_id: supportThreadId
+                });
+                supportThreadMeta = Object.assign({}, supportThreadMeta || {}, {
+                    claimed_by_admin_id: data?.claimed_by_admin_id || ME.id,
+                    status: 'claimed'
+                });
+                updateSupportComposerState();
+                await loadSupportThreads({ focusThreadId: supportThreadId });
+            } catch (e) {
+                alert(e.message || 'Claim 失敗');
+                await loadSupportThreads({ focusThreadId: supportThreadId });
+            }
+        }
 
         function setMsgEmpty(text) {
             const el = document.getElementById('msg-empty-text');
@@ -914,6 +1070,10 @@
         }
 
         async function startSupportThread() {
+            if (IS_SENIOR_ADMIN) {
+                window.location.href = '/chat?support=1';
+                return;
+            }
             // Create a support thread and enter it
             try {
                 const data = await apiPost('/api/chat', {
@@ -932,9 +1092,11 @@
 
         window.startSupportThread = startSupportThread;
 
-        function openSupportThread(threadId) {
-            supportThreadId = threadId;
+        function openSupportThread(threadId, { adminMode = false, threadMeta = null } = {}) {
+            supportThreadId = parseInt(threadId, 10);
+            supportThreadMeta = threadMeta;
             isSupportMode = true;
+            isSupportAdminMode = !!adminMode;
 
             currentPeerId = null;
             currentPeerName = '';
@@ -952,9 +1114,12 @@
             document.getElementById('msg-list').style.display = 'flex';
             document.getElementById('msg-input-bar').style.display = 'flex';
 
-            // Set header to客服
-            document.getElementById('msg-header-name').textContent = SUPPORT_AGENT_LABEL;
+            // Set header to客服 / 客服 thread
+            document.getElementById('msg-header-name').textContent = isSupportAdminMode
+                ? threadLabel(supportThreadMeta || { id: supportThreadId })
+                : SUPPORT_AGENT_LABEL;
             document.getElementById('msg-header-avatar').innerHTML = '<i class="fas fa-headset"></i>';
+            updateSupportComposerState();
 
             // disable normal conversations list interactions
             if (isMobile()) closeConvPanel();
@@ -993,6 +1158,14 @@
                     supportOldestMsgId = messages.length ? messages[0].id : null;
                     supportNewestMsgId = messages.length ? messages[messages.length - 1].id : null;
                     list.scrollTop = list.scrollHeight;
+                    if (isSupportAdminMode) {
+                        const freshMeta = supportThreads.find((t) => Number(t.id) === Number(supportThreadId));
+                        if (freshMeta) {
+                            supportThreadMeta = freshMeta;
+                            document.getElementById('msg-header-name').textContent = threadLabel(freshMeta);
+                            updateSupportComposerState();
+                        }
+                    }
                 } else {
                     if (!messages.length) return;
                     supportMsgCache = [...supportMsgCache, ...messages];
@@ -1025,9 +1198,11 @@
                 if (msg && msg.id) {
                     document.getElementById('msg-list').innerHTML = document.getElementById('msg-list').innerHTML; // noop
                     loadSupportMessages({ reset: true });
+                    if (isSupportAdminMode) loadSupportThreads({ focusThreadId: supportThreadId });
                 }
-            }).catch(() => {
+            }).catch((err) => {
                 btn.disabled = false;
+                alert(err.message || '發送客服訊息失敗');
             });
         };
 
@@ -1102,6 +1277,10 @@
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission().catch(() => {});
             }
+            const supportBtn = document.getElementById('support-entry-btn');
+            if (IS_SENIOR_ADMIN && supportBtn) {
+                supportBtn.style.display = 'none';
+            }
             try {
                 const ok = await ensureChatUsername();
                 if (!ok) { window.location.replace('/dashboard'); return; }
@@ -1110,7 +1289,13 @@
                 window.location.replace('/dashboard');
                 return;
             }
-            loadConversations();
+            if (IS_SENIOR_ADMIN && SUPPORT_QUERY_MODE) {
+                isSupportAdminMode = true;
+                setMsgEmpty('載入客服對話中…');
+                await loadSupportThreads({ focusThreadId: SUPPORT_QUERY_THREAD_ID || null });
+            } else {
+                loadConversations();
+            }
             // Single conversation-list refresh timer (also handles unread badge updates)
             convRefreshTimer = setInterval(loadConversations, 6000);
             // On mobile, open the conversation panel on first load so users can see their conversations

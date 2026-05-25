@@ -83,10 +83,15 @@
       document.body.classList.add('rank-silver');
     }
   }
+  function refreshMembershipTheme() {
+    window.CTRCHK_PERMISSION_CONTEXT = resolvePermissionContext();
+    applyMembershipTheme(window.CTRCHK_PERMISSION_CONTEXT);
+  }
 
   window.CTRCHK_PERMISSION_DEFS = PERMISSION_DEFS;
   window.CTRCHK_PERMISSION_CONTEXT = resolvePermissionContext();
   window.getPermissionContext = resolvePermissionContext;
+  window.refreshMembershipTheme = refreshMembershipTheme;
   window.hasPermission = function (key) {
     const ctx = window.CTRCHK_PERMISSION_CONTEXT || resolvePermissionContext();
     return !!(ctx.permissions && ctx.permissions[key]);
@@ -296,8 +301,13 @@
       detectLiquidGlass();
     }
     // Apply mileage-rank theme regardless of standalone
-    window.CTRCHK_PERMISSION_CONTEXT = resolvePermissionContext();
-    applyMembershipTheme(window.CTRCHK_PERMISSION_CONTEXT);
+    refreshMembershipTheme();
+  });
+  window.addEventListener('pageshow', refreshMembershipTheme);
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'user' || event.key === 'silverThemeDisabled' || event.key === 'goldThemeDisabled') {
+      refreshMembershipTheme();
+    }
   });
 
   // ── 推送通知權限申請 ────────────────────────────────────────────────────

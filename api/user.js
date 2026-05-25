@@ -33,16 +33,6 @@ function getCyclistTierByLevel(level) {
   return '入門車手';
 }
 
-function calcMileageRank(rollingKm, previousRank) {
-  const km = Number(rollingKm || 0);
-  const prev = normalizeMileageRank(previousRank);
-  if (km >= 2000) return 'gold';
-  if (prev === 'gold' && km >= 1500) return 'gold';
-  if (km >= 500) return 'silver';
-  if (prev === 'silver' && km >= 400) return 'silver';
-  return 'bronze';
-}
-
 function getMileageCardByRank(rankKey) {
   return MILEAGE_RANK_LABELS[normalizeMileageRank(rankKey)] || '銅卡';
 }
@@ -167,26 +157,20 @@ export default async function handler(req, res) {
       }
       user.total_distance_km = Number(user.total_distance_km || 0);
       const rollingKm = Number(user.rolling_distance_km || 0);
-      const prevRank = user.mileage_rank || 'bronze';
-      const mileageRank = calcMileageRank(rollingKm, prevRank);
-      user.mileage_rank = mileageRank;
-      user.mileage_card = getMileageCardByRank(mileageRank);
+      const storedRank = normalizeMileageRank(user.mileage_rank || 'bronze');
+      const storedMileageKm = Number(
+        user.mileage_km_365 === null || user.mileage_km_365 === undefined
+          ? rollingKm
+          : user.mileage_km_365
+      );
+      user.mileage_rank = storedRank;
+      user.mileage_km_365 = storedMileageKm;
+      user.mileage_card = getMileageCardByRank(storedRank);
       user.mileage_rolling_km = rollingKm;
       user.cyclist_tier = getCyclistTierByLevel(user.level);
       user.membership_status = getMembershipLabel(user.user_role);
 
-      try {
-        await query(
-          `UPDATE user_game_profile
-           SET mileage_rank = $1, mileage_km_365 = $2, updated_at = NOW()
-           WHERE user_id = $3`,
-          [mileageRank, rollingKm, user.id]
-        );
-      } catch (e) {
-        // ignore update if profile missing
-      }
-
-      const permContext = buildPermissionContext(mileageRank);
+      const permContext = buildPermissionContext(storedRank);
       user.permissions = permContext.permissions;
       user.permission_rank = permContext.rank;
 

@@ -689,6 +689,10 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                 <i class="fas fa-comments"></i>
                 <span>聊天</span>
             </a>
+            <a href="/chat?support=1" class="app-quick-item" id="app-support-mode-entry" style="display:none;">
+                <i class="fas fa-headset"></i>
+                <span>客服模式</span>
+            </a>
             <a href="https://discord.gg/hkQNZ6UADC" target="_blank" rel="noopener noreferrer" class="app-quick-item">
                 <i class="fab fa-discord"></i>
                 <span>加入 Discord</span>
@@ -867,6 +871,13 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         }
     }
 
+    function updateSupportModeEntry(userData) {
+        const entry = document.getElementById('app-support-mode-entry');
+        if (!entry) return;
+        const role = String(userData?.user_role || userData?.role || '').toLowerCase();
+        entry.style.display = role === 'senior_admin' ? '' : 'none';
+    }
+
     let _appHomeInited = false;
     async function initAppHome({ silent = false } = {}) {
         const appHome = document.getElementById('app-home');
@@ -894,6 +905,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
 
         if (!token) {
             document.getElementById('app-not-loggedin').style.display = '';
+            updateSupportModeEntry(null);
             if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-lock"></i>請先登入</div>';
             _hideSplash(splashEl);
             return;
@@ -921,6 +933,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                 }
             } catch (_) {}
         }
+        updateSupportModeEntry(userData);
 
         try {
             const res = await fetch('/api/getHistory', {

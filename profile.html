@@ -859,12 +859,14 @@
         if (enabled) localStorage.removeItem('silverThemeDisabled');
         else localStorage.setItem('silverThemeDisabled', '1');
         applyMembershipThemePreferenceClass();
+        if (typeof window.refreshMembershipTheme === 'function') window.refreshMembershipTheme();
     };
 
     window.onGoldThemeToggle = function(enabled) {
         if (enabled) localStorage.removeItem('goldThemeDisabled');
         else localStorage.setItem('goldThemeDisabled', '1');
         applyMembershipThemePreferenceClass();
+        if (typeof window.refreshMembershipTheme === 'function') window.refreshMembershipTheme();
     };
 
     // ── 密碼重設 (inline) ─────────────────────────────────────────────────────
