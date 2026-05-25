@@ -909,15 +909,6 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             const data = await res.json();
             const profile = data.gameProfile || { level: 1, xp: 0, coins: 0 };
             const history = data.history || [];
-            try {
-                const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                cachedUser.level = profile.level ?? cachedUser.level;
-                cachedUser.xp = profile.xp ?? cachedUser.xp;
-                cachedUser.coins = profile.coins ?? cachedUser.coins;
-                cachedUser.mileage_rolling_km = profile.mileage_km_365 ?? cachedUser.mileage_rolling_km;
-                cachedUser.mileage_rank = profile.mileage_rank ?? cachedUser.mileage_rank;
-                localStorage.setItem('user', JSON.stringify(cachedUser));
-            } catch (_) {}
             // Update cached avatar_url in localStorage if API returned a fresh value
             if (typeof data.avatar_url !== 'undefined') {
                 try {
