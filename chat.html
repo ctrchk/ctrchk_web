@@ -473,7 +473,7 @@
                         <button class="btn-panel-toggle" id="btn-panel-toggle" onclick="toggleConvPanel()" title="對話列表"><i class="fas fa-bars"></i></button>
                         <h3><i class="fas fa-comments"></i> 聊天</h3>
                         <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
-                        <button class="btn-new-chat" id="support-entry-btn" style="background:#6dba65;" onclick="(function(){ setMsgEmpty(SUPPORT_NOTICE_TEXT); startSupportThread(); })();">
+                        <button class="btn-new-chat" id="support-entry-btn" style="background:#6dba65;" onclick="startSupportThread()">
                             <i class="fas fa-headset"></i> 客服
                         </button>
                     </div>
@@ -1016,6 +1016,10 @@
                     setMsgEmpty('目前沒有客服對話');
                 }
             } catch (e) {
+                const listEl = document.getElementById('conv-list');
+                if (listEl) {
+                    listEl.innerHTML = `<div style="padding:1em;color:#b04f4f;font-size:0.85em;text-align:center;">載入客服對話失敗：${escHtml(e.message || '未知錯誤')}</div>`;
+                }
                 setMsgEmpty(e.message || '載入客服對話失敗');
             }
         }
@@ -1070,6 +1074,7 @@
         }
 
         async function startSupportThread() {
+            setMsgEmpty(SUPPORT_NOTICE_TEXT);
             if (IS_SENIOR_ADMIN) {
                 window.location.href = '/chat?support=1';
                 return;
