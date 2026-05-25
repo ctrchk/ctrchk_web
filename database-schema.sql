@@ -97,6 +97,9 @@ ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS end_time TIMESTAMP;
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS duration_minutes INTEGER;
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS avg_speed_kmh DECIMAL(5,2);
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_reached JSONB;        -- 已到達的站點列表（例如 [1,2,3]）
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_count INTEGER DEFAULT 0;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS all_stops BOOLEAN DEFAULT FALSE;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS districts_count INTEGER DEFAULT 0;
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS xp_earned INTEGER DEFAULT 0; -- 此次騎行獲得的 XP
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS gpx_track TEXT;              -- 可選：實際騎行 GeoJSON
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web'; -- 'web' | 'pwa' | 'app'
@@ -181,9 +184,11 @@ CREATE TABLE IF NOT EXISTS routes_config (
   route_id     VARCHAR(20) PRIMARY KEY,
   unlock_level INTEGER NOT NULL DEFAULT 1, -- 需要幾級才能騎行解鎖
   unlock_cost  INTEGER,                    -- NULL = 騎行解鎖；數字 = 里程幣購買
+  promo_cost   INTEGER,                    -- NULL = 無優惠價；數字 = 優惠價
   xp_reward    INTEGER NOT NULL DEFAULT 100,
   is_special   BOOLEAN DEFAULT FALSE       -- TRUE = 只能購買，不能騎行解鎖
 );
+ALTER TABLE routes_config ADD COLUMN IF NOT EXISTS promo_cost INTEGER;
 
 -- =========================================================
 -- 站點與路線管理（Admin Dashboard 動態維護）

@@ -431,6 +431,44 @@ export default async function handler(req, res) {
 
   // ── POST：提交新騎行紀錄 or 每日簽到 ────────────────────────────────────
   if (req.method === 'POST') {
+    // ── POST?action=repair-streak：里程幣修復連勝 ───────────────────────
+    if (req.query.action === 'repair-streak') {
+      try {
+        const profile = await ensureGameProfile(userData.userId);
+        const pending = Number(profile.commute_streak_pending || 0);
+        const pendingDate = profile.commute_streak_pending_date
+          ? new Date(profile.commute_streak_pending_date).toISOString().slice(0, 10)
+          : null;
+        const today = new Date().toISOString().slice(0, 10);
+        if (!pending || pendingDate !== today) {
+          return res.status(400).json({ message: '沒有可修復的連勝記錄' });
+        }
+        if (profile.coins < STREAK_REPAIR_COST) {
+          return res.status(400).json({ message: '里程幣不足', required: STREAK_REPAIR_COST, current: profile.coins });
+        }
+        const newCoins = profile.coins - STREAK_REPAIR_COST;
+        const newStreak = pending + 1;
+        await query(
+          `UPDATE user_game_profile
+           SET coins = $1,
+               commute_streak = $2,
+               commute_streak_pending = 0,
+               commute_streak_pending_date = NULL,
+               updated_at = NOW()
+           WHERE user_id = $3`,
+          [newCoins, newStreak, userData.userId]
+        );
+        return res.status(200).json({
+          success: true,
+          commute_streak: newStreak,
+          coins: newCoins,
+        });
+      } catch (error) {
+        console.error('[repair-streak] error:', error);
+        return res.status(500).json({ message: 'Failed to repair streak' });
+      }
+    }
+
     // ── POST?action=purchase-route：里程幣購買路線 ──────────────────────
     if (req.query.action === 'purchase-route') {
       try {
@@ -523,44 +561,6 @@ export default async function handler(req, res) {
         );
         if (existRows.length) {
           return res.status(200).json({ already_unlocked: true, gameProfile: profile });
-        }
-
-        // ── POST?action=repair-streak：里程幣修復連勝 ───────────────────────
-        if (req.query.action === 'repair-streak') {
-          try {
-            const profile = await ensureGameProfile(userData.userId);
-            const pending = Number(profile.commute_streak_pending || 0);
-            const pendingDate = profile.commute_streak_pending_date
-              ? new Date(profile.commute_streak_pending_date).toISOString().slice(0, 10)
-              : null;
-            const today = new Date().toISOString().slice(0, 10);
-            if (!pending || pendingDate !== today) {
-              return res.status(400).json({ message: '沒有可修復的連勝記錄' });
-            }
-            if (profile.coins < STREAK_REPAIR_COST) {
-              return res.status(400).json({ message: '里程幣不足', required: STREAK_REPAIR_COST, current: profile.coins });
-            }
-            const newCoins = profile.coins - STREAK_REPAIR_COST;
-            const newStreak = pending + 1;
-            await query(
-              `UPDATE user_game_profile
-               SET coins = $1,
-                   commute_streak = $2,
-                   commute_streak_pending = 0,
-                   commute_streak_pending_date = NULL,
-                   updated_at = NOW()
-               WHERE user_id = $3`,
-              [newCoins, newStreak, userData.userId]
-            );
-            return res.status(200).json({
-              success: true,
-              commute_streak: newStreak,
-              coins: newCoins,
-            });
-          } catch (error) {
-            console.error('[repair-streak] error:', error);
-            return res.status(500).json({ message: 'Failed to repair streak' });
-          }
         }
 
         if (profile.coins < cost) {

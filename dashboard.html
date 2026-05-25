@@ -491,6 +491,18 @@
         background: rgba(255,255,255,0.1);
         color: var(--app-text-secondary, #a8d8a0);
     }
+    .db-show-more-btn {
+        width: calc(100% - 2em);
+        margin: -0.2em 1em 1em;
+        border: 1px solid rgba(109,186,101,0.35);
+        background: rgba(109,186,101,0.08);
+        color: var(--app-accent, #6dba65);
+        border-radius: 10px;
+        padding: 0.55em 0.8em;
+        font-size: 0.86em;
+        font-weight: 700;
+        cursor: pointer;
+    }
     </style>
 
     <script>
@@ -595,6 +607,7 @@
         <!-- Permissions -->
         <div class="db-section-title">會員權益</div>
         <div class="db-permission-list" id="db-permission-list"></div>
+        <button class="db-show-more-btn" id="db-permission-more-btn" style="display:none;">查看更多權益</button>
 
         <!-- Ride history -->
         <div class="db-section-title" style="margin-top:0.4em;">騎行記錄</div>
@@ -604,6 +617,7 @@
                 尚無騎行記錄，<a href="/routes" style="color:var(--app-accent,#6dba65);">去選一條路線</a>出發吧！
             </div>
         </div>
+        <button class="db-show-more-btn" id="db-history-more-btn" style="display:none;">查看更多騎行</button>
 
         <!-- Admin panel -->
         <div id="admin-section" class="db-admin-card" style="display:none;">
@@ -674,6 +688,10 @@
         4000,5100,6500,8100,10000,12200,14800,17800,21200,25200,
         Infinity
     ];
+    var permissionExpanded = false;
+    var historyExpanded = false;
+    var HISTORY_INITIAL_COUNT = 8;
+    var PERMISSION_INITIAL_COUNT = 8;
 
     function formatNum(n) {
         if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
@@ -701,10 +719,15 @@
     function renderPermissionList() {
         const listEl = document.getElementById('db-permission-list');
         if (!listEl) return;
+        const moreBtn = document.getElementById('db-permission-more-btn');
         const ctx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
         const defs = window.CTRCHK_PERMISSION_DEFS || [];
-        if (!defs.length) return;
-        listEl.innerHTML = defs.map(def => {
+        if (!defs.length) {
+            if (moreBtn) moreBtn.style.display = 'none';
+            return;
+        }
+        const visibleDefs = permissionExpanded ? defs : defs.slice(0, PERMISSION_INITIAL_COUNT);
+        listEl.innerHTML = visibleDefs.map(def => {
             const enabled = ctx.permissions && ctx.permissions[def.key];
             const rankLabel = def.rank === 'gold' ? '金卡' : (def.rank === 'silver' ? '銀卡' : '銅卡');
             return `<div class="db-permission-item ${enabled ? '' : 'locked'}">
@@ -712,6 +735,18 @@
                         <span class="db-permission-tag">${rankLabel}</span>
                     </div>`;
         }).join('');
+        if (moreBtn) {
+            if (defs.length > PERMISSION_INITIAL_COUNT) {
+                moreBtn.style.display = '';
+                moreBtn.textContent = permissionExpanded ? '收起權益' : `查看更多權益（+${defs.length - visibleDefs.length}）`;
+                moreBtn.onclick = function () {
+                    permissionExpanded = !permissionExpanded;
+                    renderPermissionList();
+                };
+            } else {
+                moreBtn.style.display = 'none';
+            }
+        }
     }
 
     function renderStreakCard(gameProfile, userCoins) {
@@ -1011,11 +1046,14 @@
                 var emptyEl = document.getElementById('db-history-empty');
                 emptyEl.style.display = '';
                 list.appendChild(emptyEl);
+                var emptyMoreBtn = document.getElementById('db-history-more-btn');
+                if (emptyMoreBtn) emptyMoreBtn.style.display = 'none';
                 return;
             }
 
             var sourceIcon = { pwa: '📱', app: '📲', gpx: '📂' };
-            history.forEach(function (ride) {
+            var historyToRender = historyExpanded ? history : history.slice(0, HISTORY_INITIAL_COUNT);
+            historyToRender.forEach(function (ride) {
                 var dateStr = ride.ride_date ? ride.ride_date.slice(0, 10) : '';
                 var icon = sourceIcon[ride.source] || '🌐';
                 var metaParts = [];
@@ -1035,6 +1073,19 @@
                     (ride.xp_earned ? '<span class="db-ride-xp">+' + ride.xp_earned + ' XP</span>' : '');
                 list.appendChild(item);
             });
+            var moreBtn = document.getElementById('db-history-more-btn');
+            if (moreBtn) {
+                if (history.length > HISTORY_INITIAL_COUNT) {
+                    moreBtn.style.display = '';
+                    moreBtn.textContent = historyExpanded ? '收起騎行' : `查看更多騎行（+${history.length - historyToRender.length}）`;
+                    moreBtn.onclick = function () {
+                        historyExpanded = !historyExpanded;
+                        loadHistory();
+                    };
+                } else {
+                    moreBtn.style.display = 'none';
+                }
+            }
         } catch (e) {
             console.error('載入歷史失敗:', e);
             list.innerHTML = '<div style="padding:1em;color:var(--app-text-secondary,#a8d8a0);font-size:0.88em;">載入失敗，請稍後再試。</div>';

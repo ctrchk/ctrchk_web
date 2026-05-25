@@ -5,6 +5,62 @@
 
 ---
 
+## v2.0 beta（Aviation-Grade）落地說明
+
+### 1) 三軌制 SQL 結構（核心表）
+
+- `user_game_profile`
+  - `xp`, `level`：XP 升級軌
+  - `coins`：里程幣軌
+  - `mileage_km_365`, `mileage_rank`：365 天滾動里程與里程卡軌
+  - `commute_streak`, `commute_streak_pending*`：通勤連勝與修復狀態
+- `cycling_history`
+  - `distance_km`, `avg_speed_kmh`：里程/反作弊判定來源
+  - `xp_earned`, `random_bonus_xp`, `random_bonus_coins`：結算獎勵與盲盒隨機獎勵
+  - `anti_cheat`, `anti_cheat_reason`：行程作廢記錄
+- `routes_config` + `routes`
+  - 路線解鎖條件（Level / 里程幣）、路線別稱、底色、預計時間、標籤
+- `stations`
+  - `is_terminal`：總站管理，對接 App 騎行頁地圖總站入口
+
+### 2) 三軌制邏輯（後端）
+
+- XP 軌：`POST /api/getHistory`
+  - 旅遊 `x1.5`、通勤 `x1.0`、自由 `x0.8`
+  - 結算加入隨機盲盒 `+1~10 XP`
+- 里程軌：每次讀取/結算時計算近 365 天 `SUM(distance_km)`，並更新
+  - Gold：`>=2000km`（保級 `>=1500km`）
+  - Silver：`>=500km`（保級 `>=400km`）
+- 里程幣軌：
+  - 升級獎勵 + 路線完成獎勵 + 盲盒 `+1~10`
+  - Silver `+5%`、Gold `+15%` 永久乘區
+  - 支援花費 `100` 里程幣修復當日中斷通勤連勝
+
+### 3) 手動調整資料庫測試 25 項特權（Permission Context）
+
+> 先在測試帳戶確認 `user_id`，再手動更新里程與卡等級，重新整理 `/dashboard` 檢查「會員權益」鎖定狀態。
+
+```sql
+-- Bronze（預設 1-6）
+UPDATE user_game_profile
+SET mileage_km_365 = 120, mileage_rank = 'bronze', updated_at = NOW()
+WHERE user_id = <USER_ID>;
+
+-- Silver（解鎖 1-15）
+UPDATE user_game_profile
+SET mileage_km_365 = 600, mileage_rank = 'silver', updated_at = NOW()
+WHERE user_id = <USER_ID>;
+
+-- Gold（解鎖全部 1-25）
+UPDATE user_game_profile
+SET mileage_km_365 = 2200, mileage_rank = 'gold', updated_at = NOW()
+WHERE user_id = <USER_ID>;
+```
+
+對應權益字典由 `lib/permissions.js` 維護（固定 25 項，依 rank 嚴格鎖定）。
+
+---
+
 ## ✅ 常見問題：三個關鍵問題
 
 ### Q1：App 的開發方式跟現在的網頁一樣嗎？

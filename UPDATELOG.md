@@ -4,6 +4,27 @@
 
 ---
 
+## v2.0 beta — 2026-05-25
+
+### 新功能 (New Features)
+- **三軌制經濟正式落地** — XP（含旅遊/通勤/自由倍率）、365 天滾動里程 Rank（含 Silver/Gold 保級）、里程幣乘區（Silver +5% / Gold +15%）整合到騎行與簽到結算。
+- **IG 心理上癮模組上線** — 通勤連勝顯示與 100 里程幣修復、結算盲盒隨機獎勵（XP/里程幣 +1~10）、反作弊作廢（>45km/h 或疑似高速軌跡）與幽默警告文案。
+- **完整 25 項航空級權限字典啟用** — 依 Bronze/Silver/Gold 嚴格鎖定權益，前後端以 Permission Context 同步控制。
+- **管理員後台路線/總站接軌 App** — 路線管理支援底色、別稱、預計時間、解鎖條件（Level/Coins）與標籤；新增總站管理並同步到騎行頁地圖入口。
+
+### 修復 (Bug Fixes)
+- **主頁歡迎卡同步修復** — PWA 首頁歡迎區改為以最新伺服器遊戲進度回寫本機快取，修復 XP/里程幣不同步；同時新增 365 天里程顯示。
+- **我的頁面長列表體驗修復** — 會員權益與騎行記錄改為預設顯示部分內容，支援「查看更多 / 收起」。
+- **管理員里程幣優惠載入失敗修復** — 補齊 `routes_config.promo_cost` 遷移與 API 相容處理。
+- **站點/路線管理儲存與總站切換修復** — 修正總站切換函式作用域與路線/站點欄位遷移，恢復後台儲存並可與 App 騎行頁對接。
+- **連勝修復 API 路由修正** — `repair-streak` 由錯誤巢狀分支改為正式 POST action 分支。
+
+### 資料遷移 (Data Migration)
+- 新增舊資料庫向前相容遷移：`cycling_history`（stops_count/all_stops/districts_count/anti_cheat/random bonus）、`routes`（alias/bg_color/estimated/unlock/tags）、`stations.is_terminal`、`routes_config.promo_cost`。
+- 既有舊帳戶不需重建，部署後自動補齊欄位並沿用原有騎行資料。
+
+---
+
 ## v1.11 — 2026-05-24
 
 ### 新功能 (New Features)
