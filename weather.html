@@ -7,14 +7,17 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .wx-wrap { max-width: 900px; margin: 0 auto; padding: 1.1em 1em 2em; color: #e6f2e8; }
-        .wx-card { border:1px solid #2f4c36; background:#1a2c1f; border-radius:14px; padding: 1em; margin-bottom: 0.75em; }
+        .wx-wrap { max-width: 900px; margin: 0 auto; padding: 1.1em 1em 2em; color: var(--app-text-primary, #e6f2e8); }
+        .wx-card { border:1px solid var(--app-border, #2f4c36); background: var(--app-bg-card, #1a2c1f); border-radius:14px; padding: 1em; margin-bottom: 0.75em; }
+
         .wx-main { display:flex; align-items:center; justify-content:space-between; gap:0.8em; }
         .wx-main h1 { margin:0; font-size:1.25em; color:#BFE340; }
         .wx-temp { font-size:2.2em; font-weight: 800; line-height:1; }
-        .wx-meta { color:#aac2ad; font-size:0.85em; margin-top:0.25em; }
+        .wx-meta { color: var(--app-text-secondary, #aac2ad); font-size:0.85em; margin-top:0.25em; }
+
         .wx-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:0.65em; }
-        .wx-item { border:1px solid #36573e; background:#16241b; border-radius:10px; padding:0.7em; }
+        .wx-item { border:1px solid var(--app-border, #36573e); background: var(--app-bg-card2, #16241b); border-radius:10px; padding:0.7em; }
+
         .wx-item .k { color:#9db4a0; font-size:0.76em; }
         .wx-item .v { font-size:1.02em; font-weight:700; margin-top:0.2em; }
         .wx-warning { color:#ffe29b; font-size:0.9em; line-height:1.5; margin-top:0.35em; }
