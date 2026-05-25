@@ -10,7 +10,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         .ml-wrap { max-width: 980px; margin: 0 auto; padding: 1.2em 1em 2.2em; color: #e8f3e9; }
-        .ml-hero { background: linear-gradient(145deg,#1b2f22,#16241b); border:1px solid #2e4a35; border-radius: 16px; padding: 1.15em; margin-bottom: 1em; }
+        .ml-hero {
+            background: linear-gradient(145deg,#1b2f22,#16241b);
+            border:1px solid #2e4a35;
+            border-radius: 16px;
+            padding: 1.15em;
+            margin-bottom: 1em;
+        }
         .ml-hero h1 { margin: 0 0 0.45em; font-size: 1.45em; color: #BFE340; }
         .ml-stats { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
         .ml-stat { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.7em; }
@@ -20,19 +26,93 @@
         .ml-progress-bar { height: 12px; border-radius: 999px; background: #132018; overflow: hidden; border:1px solid #2f4b36; }
         .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#6dba65,#BFE340); }
         .ml-progress-label { font-size: 0.78em; margin-top: 0.35em; color: #a7c1aa; }
-        .ml-cards { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.7em; margin-top:1em; }
-        .ml-card { border-radius: 14px; padding: 0.95em; border:1px solid #324f38; background: #1a2b1f; }
-        .ml-card h3 { margin: 0 0 0.4em; font-size: 1.02em; }
-        .ml-card ul { margin:0; padding-left: 1.2em; color: #d4e8d6; font-size: 0.86em; line-height: 1.55; }
+        .ml-section-title { margin:1.15em 0 0.35em; font-size:1em; color:#BFE340; }
+        .ml-section-desc { margin: 0 0 0.8em; color:#9cb29e; font-size:0.82em; line-height:1.55; }
+        .ml-benefits-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.7em; margin-top:0.3em; }
+        .ml-card {
+            border-radius: 14px;
+            padding: 0.95em;
+            border:1px solid #324f38;
+            background: #1a2b1f;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+        }
+        .ml-card-head { margin-bottom: 0.65em; }
+        .ml-card h3 { margin: 0 0 0.25em; font-size: 1.02em; }
+        .ml-card p { margin: 0; font-size:0.8em; color:#b9cfbc; line-height:1.5; }
+        .ml-card ul { margin:0; padding-left: 1.15em; color: #d4e8d6; font-size: 0.86em; line-height: 1.58; }
+        .ml-card li + li { margin-top: 0.35em; }
         .ml-card.bronze h3 { color:#d8a56b; }
         .ml-card.silver h3 { color:#d1d9df; }
         .ml-card.gold h3 { color:#f0d372; }
-        .ml-section-title { margin:1.15em 0 0.6em; font-size:1em; color:#BFE340; }
+        .ml-tag {
+            display:inline-flex;
+            align-items:center;
+            gap:0.35em;
+            padding:0.18em 0.65em;
+            border-radius:999px;
+            font-size:0.72em;
+            font-weight:700;
+            letter-spacing:0.03em;
+            margin-bottom:0.45em;
+            border:1px solid currentColor;
+        }
+        .ml-tag.bronze { color:#d8a56b; background: rgba(216,165,107,0.12); }
+        .ml-tag.silver { color:#d1d9df; background: rgba(209,217,223,0.12); }
+        .ml-tag.gold { color:#f0d372; background: rgba(240,211,114,0.14); }
         .ml-action-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
         .ml-action { text-decoration:none; text-align:center; border-radius: 10px; border:1px solid #325239; background:#1c3122; color:#d9efdb; padding:0.7em 0.65em; font-weight: 700; font-size:0.85em; }
         .ml-note { margin-top:0.8em; color:#9cb29e; font-size:0.8em; line-height:1.55; }
+        body.app-light-theme .ml-wrap { color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .ml-hero {
+            background: linear-gradient(145deg, #ffffff, #f0f8f0);
+            border-color: var(--app-border, #c8e6c9);
+            box-shadow: 0 8px 24px rgba(46,125,50,0.08);
+        }
+        body.app-light-theme .ml-hero h1,
+        body.app-light-theme .ml-section-title { color: var(--app-accent, #2e7d32); }
+        body.app-light-theme .ml-stat,
+        body.app-light-theme .ml-card,
+        body.app-light-theme .ml-action {
+            background: var(--app-bg-card, #ffffff);
+            border-color: var(--app-border, #c8e6c9);
+        }
+        body.app-light-theme .ml-stat .k,
+        body.app-light-theme .ml-progress-label,
+        body.app-light-theme .ml-section-desc,
+        body.app-light-theme .ml-card p,
+        body.app-light-theme .ml-note,
+        body.app-light-theme .ml-card ul { color: var(--app-text-secondary, #2e7d32); }
+        body.app-light-theme .ml-progress-bar { background: rgba(0,0,0,0.08); border-color: var(--app-border, #c8e6c9); }
+        body.app-light-theme .ml-action { color: var(--app-text-primary, #1b3a1f); }
+        body.app-light-theme .ml-tag.bronze { color:#a56a31; background: rgba(216,165,107,0.16); }
+        body.app-light-theme .ml-tag.silver { color:#65727c; background: rgba(209,217,223,0.16); }
+        body.app-light-theme .ml-tag.gold { color:#8d6a00; background: rgba(240,211,114,0.22); }
+        @media (prefers-color-scheme: light) {
+            body:not(.app-theme-explicit) .ml-wrap { color: var(--app-text-primary, #1b3a1f); }
+            body:not(.app-theme-explicit) .ml-hero {
+                background: linear-gradient(145deg, #ffffff, #f0f8f0);
+                border-color: var(--app-border, #c8e6c9);
+                box-shadow: 0 8px 24px rgba(46,125,50,0.08);
+            }
+            body:not(.app-theme-explicit) .ml-hero h1,
+            body:not(.app-theme-explicit) .ml-section-title { color: var(--app-accent, #2e7d32); }
+            body:not(.app-theme-explicit) .ml-stat,
+            body:not(.app-theme-explicit) .ml-card,
+            body:not(.app-theme-explicit) .ml-action {
+                background: var(--app-bg-card, #ffffff);
+                border-color: var(--app-border, #c8e6c9);
+            }
+            body:not(.app-theme-explicit) .ml-stat .k,
+            body:not(.app-theme-explicit) .ml-progress-label,
+            body:not(.app-theme-explicit) .ml-section-desc,
+            body:not(.app-theme-explicit) .ml-card p,
+            body:not(.app-theme-explicit) .ml-note,
+            body:not(.app-theme-explicit) .ml-card ul { color: var(--app-text-secondary, #2e7d32); }
+            body:not(.app-theme-explicit) .ml-progress-bar { background: rgba(0,0,0,0.08); border-color: var(--app-border, #c8e6c9); }
+            body:not(.app-theme-explicit) .ml-action { color: var(--app-text-primary, #1b3a1f); }
+        }
         @media (max-width: 760px) {
-            .ml-stats, .ml-cards, .ml-action-grid { grid-template-columns: 1fr; }
+            .ml-stats, .ml-benefits-grid, .ml-action-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -52,33 +132,9 @@
             </div>
         </section>
 
-        <div class="ml-section-title">金銀銅卡權益說明</div>
-        <section class="ml-cards">
-            <article class="ml-card bronze">
-                <h3>銅卡（起步）</h3>
-                <ul>
-                    <li>完整騎行記錄與里程累積</li>
-                    <li>騎行海報標準版（可預覽/下載）</li>
-                    <li>里程幣與 XP 基本結算</li>
-                </ul>
-            </article>
-            <article class="ml-card silver">
-                <h3>銀卡（500 km）</h3>
-                <ul>
-                    <li>里程幣結算加成 +5%</li>
-                    <li>銀卡主題介面與進階分享樣式</li>
-                    <li>優先獲得活動與功能更新通知</li>
-                </ul>
-            </article>
-            <article class="ml-card gold">
-                <h3>金卡（2000 km）</h3>
-                <ul>
-                    <li>里程幣結算加成 +15%</li>
-                    <li>金卡主題介面與進階海報文案</li>
-                    <li>Beta 新功能優先體驗資格</li>
-                </ul>
-            </article>
-        </section>
+        <div class="ml-section-title">金銀銅卡權益總覽</div>
+        <p class="ml-section-desc">以下整理自「我的」頁面會員權益，並依里程卡等級重新編排；你可以直接看見目前可用與下一階段可解鎖的內容。</p>
+        <section class="ml-benefits-grid" id="ml-benefits-grid"></section>
 
         <div class="ml-section-title">快速體驗</div>
         <section class="ml-action-grid">
@@ -95,8 +151,40 @@
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
     <script>
+    function renderMileageBenefits() {
+        const grid = document.getElementById('ml-benefits-grid');
+        const defs = Array.isArray(window.CTRCHK_PERMISSION_DEFS) ? window.CTRCHK_PERMISSION_DEFS : [];
+        if (!grid || !defs.length) return;
+
+        const groups = {
+            bronze: defs.filter(def => def.rank === 'bronze'),
+            silver: defs.filter(def => def.rank === 'silver'),
+            gold: defs.filter(def => def.rank === 'gold'),
+        };
+        const copy = {
+            bronze: { title: '銅卡｜穩健起步', desc: '打好基礎，先把導航、數據、海報與獎勵都準備好。' },
+            silver: { title: '銀卡｜進階加速', desc: '解鎖更順手的地圖、通知與加成，騎行體驗再升級。' },
+            gold: { title: '金卡｜旗艦禮遇', desc: '最高階支援與專屬體驗，讓每次出發都更有存在感。' },
+        };
+
+        grid.innerHTML = ['bronze', 'silver', 'gold'].map(rank => {
+            const items = groups[rank].map(def => `<li>${def.label}</li>`).join('');
+            return `
+                <article class="ml-card ${rank}">
+                    <div class="ml-card-head">
+                        <div class="ml-tag ${rank}">${rank === 'gold' ? '金卡' : (rank === 'silver' ? '銀卡' : '銅卡')}</div>
+                        <h3>${copy[rank].title}</h3>
+                        <p>${copy[rank].desc}</p>
+                    </div>
+                    <ul>${items}</ul>
+                </article>
+            `;
+        }).join('');
+    }
+
     (async function initMileagePage() {
         const token = localStorage.getItem('accessToken');
+        renderMileageBenefits();
         if (!token) return;
         try {
             const cached = JSON.parse(localStorage.getItem('user') || '{}');

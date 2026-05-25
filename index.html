@@ -905,14 +905,27 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             }
         } catch (_) {}
 
+        let userData = JSON.parse(localStorage.getItem('user') || '{}');
+        if (userData.id) {
+            try {
+                const userResp = await fetch('/api/user?user_id=' + userData.id, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (userResp.ok) {
+                    userData = await userResp.json();
+                    localStorage.setItem('user', JSON.stringify(userData));
+                }
+            } catch (_) {}
+        }
+
         try {
             const res = await fetch('/api/getHistory', {
                 headers: { 'Authorization': 'Bearer ' + token }
             });
             if (!res.ok) throw new Error('API error');
             const data = await res.json();
-            const profile = data.gameProfile || { level: 1, xp: 0, coins: 0 };
-            const history = data.history || [];
+            const history = Array.isArray(data.history) ? data.history : [];
+            const profile = Object.assign({}, userData, data.gameProfile || {});
             try {
                 const rollingKm = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
                 const gameProfileCache = {
@@ -922,7 +935,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                     mileage_rolling_km: rollingKm,
                     mileage_km_365: rollingKm,
                     mileage_rank: profile.mileage_rank || 'bronze',
-                    total_rides: Array.isArray(history) ? history.length : 0
+                    total_rides: history.length
                 };
                 localStorage.setItem('gameProfileCache', JSON.stringify(gameProfileCache));
             } catch (_) {}
@@ -930,24 +943,24 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         } catch (e) {
             console.warn('[app-home] getHistory failed:', e);
             const card = document.getElementById('app-user-card');
-            const userData = JSON.parse(localStorage.getItem('user') || '{}');
             const gameProfileCache = JSON.parse(localStorage.getItem('gameProfileCache') || '{}');
-            const localLvl = Math.max(1, parseInt(gameProfileCache.level || userData.level || 1));
-            const localXp = Math.max(0, parseInt(gameProfileCache.xp || userData.xp || 0));
-            const localCoins = Math.max(0, parseInt(gameProfileCache.coins || userData.coins || 0));
-            const localMileage = Number(gameProfileCache.mileage_rolling_km || userData.mileage_rolling_km || 0);
+            const fallbackProfile = Object.assign({}, userData, gameProfileCache);
+            const localLvl = Math.max(1, parseInt(fallbackProfile.level || 1));
+            const localXp = Math.max(0, parseInt(fallbackProfile.xp || 0));
+            const localCoins = Math.max(0, parseInt(fallbackProfile.coins || 0));
+            const localMileage = Number(fallbackProfile.mileage_rolling_km || fallbackProfile.mileage_km_365 || 0);
             const localNextXp = getNextThreshold(localLvl);
             const localPrevXp = THRESHOLDS[localLvl - 1] || 0;
             const localPct = localNextXp > localPrevXp ? Math.min(100, Math.round((localXp - localPrevXp) / (localNextXp - localPrevXp) * 100)) : 100;
             card.style.display = '';
             document.getElementById('app-home-name').textContent =
-                userData.full_name || userData.username || '騎士';
+                fallbackProfile.full_name || fallbackProfile.username || '騎士';
             document.getElementById('app-home-level').textContent = 'Lv.' + localLvl;
             document.getElementById('app-home-title').textContent = getTitle(localLvl);
             document.getElementById('app-home-xp-bar').style.width = Math.max(localPct, 1) + '%';
             document.getElementById('app-home-xp-label').textContent = localXp.toLocaleString() + ' / ' + localNextXp.toLocaleString() + ' XP';
             document.getElementById('app-home-xp-total').textContent = formatNum(localXp);
-            document.getElementById('app-home-rides').textContent = Number(gameProfileCache.total_rides || userData.total_rides || 0);
+            document.getElementById('app-home-rides').textContent = Number(fallbackProfile.total_rides || 0);
             document.getElementById('app-home-coins').textContent = formatNum(localCoins);
             document.getElementById('app-home-mileage').textContent = localMileage.toFixed(1);
             if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法載入記錄</div>';
