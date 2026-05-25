@@ -578,3 +578,24 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_sender   ON chat_messages(sender_id
 CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver ON chat_messages(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
   ON chat_messages(LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id));
+
+-- =========================================================
+-- 客服模式：支援 claim/lock 的工單（Support Threads）
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS support_threads (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  claimed_by_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'open', -- open | claimed | closed
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_threads_user_id ON support_threads(user_id);
+CREATE INDEX IF NOT EXISTS idx_support_threads_claimed_admin ON support_threads(claimed_by_admin_id);
+
+-- 客服訊息：使用既有 chat_messages 表，但額外加 thread_id 來把客服記錄串起
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS thread_id INTEGER REFERENCES support_threads(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_id ON chat_messages(thread_id);
+

@@ -1,3 +1,4 @@
+
 // /api/chat.js
 // 用戶聊天訊息 API
 //
@@ -12,17 +13,28 @@ import { query } from '../lib/db.js';
 import { sendPushToUser } from '../lib/push-helper.js';
 
 // Simple JWT decode (no crypto verification; auth is expected on trusted infra)
-function getUserIdFromToken(req) {
+function decodeJwtPayload(req) {
   const auth = req.headers['authorization'] || '';
   const token = auth.replace(/^Bearer\s+/i, '');
   if (!token) return null;
   try {
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload.userId || payload.user_id || payload.sub || null;
+    return payload || null;
   } catch (_) {
     return null;
   }
 }
+
+function getUserIdFromToken(req) {
+  const payload = decodeJwtPayload(req);
+  return payload ? (payload.userId || payload.user_id || payload.sub || null) : null;
+}
+
+function getUserRoleFromToken(req) {
+  const payload = decodeJwtPayload(req);
+  return payload ? (payload.role || payload.user_role || null) : null;
+}
+
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -37,6 +49,57 @@ export default async function handler(req, res) {
     if (!uid) return res.status(400).json({ message: 'user_id required' });
 
     try {
+      // ── 客服 threads：取得列表
+      if (action === 'support_threads') {
+        const role = getUserRoleFromToken(req);
+        if (role !== 'senior_admin') {
+          const { rows } = await query(
+            `SELECT id, user_id, claimed_by_admin_id, status, created_at, updated_at
+             FROM support_threads
+             WHERE user_id = $1
+             ORDER BY updated_at DESC
+             LIMIT 20`,
+            [uid]
+          );
+          return res.status(200).json({ threads: rows });
+        }
+
+        const { rows } = await query(
+          `SELECT id, user_id, claimed_by_admin_id, status, created_at, updated_at
+           FROM support_threads
+           ORDER BY status ASC, updated_at DESC
+           LIMIT 50`
+        );
+        return res.status(200).json({ threads: rows });
+      }
+
+      // ── 客服 threads：取得某 thread 訊息
+      if (action === 'support_messages') {
+        const threadId = parseInt(req.query.thread_id, 10);
+        if (!threadId) return res.status(400).json({ message: 'thread_id required' });
+
+        const role = getUserRoleFromToken(req);
+        const isAdmin = role === 'senior_admin';
+
+        if (!isAdmin) {
+          const { rows: trows } = await query(
+            `SELECT id FROM support_threads WHERE id = $1 AND user_id = $2`,
+            [threadId, uid]
+          );
+          if (!trows.length) return res.status(404).json({ message: 'Thread not found' });
+        }
+
+        const { rows } = await query(
+          `SELECT id, sender_id, receiver_id, content, is_read, created_at, thread_id
+           FROM chat_messages
+           WHERE thread_id = $1
+           ORDER BY created_at ASC
+           LIMIT 200`,
+          [threadId]
+        );
+        return res.status(200).json({ messages: rows });
+      }
+
       // ── 對話列表（最近聯絡人 + 最後一條訊息 + 未讀數）
       if (!action || action === 'conversations') {
         const { rows } = await query(
@@ -73,6 +136,7 @@ export default async function handler(req, res) {
         );
         return res.status(200).json(rows);
       }
+
 
       // ── 訊息記錄
       if (action === 'messages') {
@@ -184,7 +248,165 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Marked as read' });
       }
 
-      // ── 發送訊息
+      // ── 客服：建立 thread（user → support）
+      if (action === 'start_support_thread') {
+        const text = String(content || '').trim();
+        const uid2 = parseInt(user_id, 10);
+        if (!uid2) return res.status(400).json({ message: 'user_id required' });
+
+        if (!text) {
+          // 預設首訊息內容
+          const defaultText = '客服人數有限 您可以先離開此頁面 我們將會儘快回復您 請耐心等候 您亦可選擇discord内的客服';
+          return await (async () => {
+            const { rows: adminRows } = await query(
+              `SELECT id FROM users WHERE user_role = 'senior_admin' ORDER BY id ASC`
+            );
+            if (!adminRows.length) {
+              return res.status(503).json({ message: 'No senior_admin available' });
+            }
+
+            // 建立 thread（每次 user 點客服都建新 thread；如需合併可再改）
+            const { rows: tRows } = await query(
+              `INSERT INTO support_threads (user_id, status)
+               VALUES ($1, 'open')
+               RETURNING id, user_id, claimed_by_admin_id, status, created_at, updated_at`,
+              [uid2]
+            );
+            const threadId = tRows[0]?.id;
+
+            await query(
+              `INSERT INTO chat_messages (sender_id, receiver_id, content, thread_id)
+               VALUES ($1, $2, $3, $4)`,
+              [uid2, adminRows[0].id, defaultText, threadId]
+            );
+
+            // 對所有 senior_admin 都推送通知（receiver 以每個 admin 的 id）
+            const MAX_PUSH_PREVIEW_LENGTH = 80;
+            const preview = defaultText.length > MAX_PUSH_PREVIEW_LENGTH ? defaultText.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : defaultText;
+            await Promise.all(
+              adminRows.map((a) =>
+                sendPushToUser(a.id, {
+                  title: '有新客服需求',
+                  body: preview,
+                  url: `/chat?support=1&thread_id=${threadId}`,
+                  tag: `ctrc-support-${threadId}-${a.id}`,
+                })
+              )
+            ).catch(() => {});
+
+            return res.status(201).json({ thread_id: threadId });
+          })();
+        }
+
+
+        // 有內容時同樣建立 thread 並寫入首訊息
+        const { rows: adminRows } = await query(
+          `SELECT id FROM users WHERE user_role = 'senior_admin' ORDER BY id ASC`
+        );
+        if (!adminRows.length) {
+          return res.status(503).json({ message: 'No senior_admin available' });
+        }
+
+        const { rows: tRows } = await query(
+          `INSERT INTO support_threads (user_id, status)
+           VALUES ($1, 'open')
+           RETURNING id, user_id, claimed_by_admin_id, status, created_at, updated_at`,
+          [uid2]
+        );
+        const threadId = tRows[0]?.id;
+
+        await query(
+          `INSERT INTO chat_messages (sender_id, receiver_id, content, thread_id)
+           VALUES ($1, $2, $3, $4)`,
+          [uid2, adminRows[0].id, text, threadId]
+        );
+
+        const MAX_PUSH_PREVIEW_LENGTH = 80;
+        const preview = text.length > MAX_PUSH_PREVIEW_LENGTH ? text.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : text;
+        await Promise.all(
+          adminRows.map((a) =>
+            sendPushToUser(a.id, {
+              title: '有新客服需求',
+              body: preview,
+              url: `/chat?support=1&thread_id=${threadId}`,
+              tag: `ctrc-support-${threadId}-${a.id}`,
+            })
+          )
+        ).catch(() => {});
+
+        return res.status(201).json({ thread_id: threadId });
+      }
+
+      // ── 客服：claim（senior_admin）
+      if (action === 'support_claim') {
+        const adminId = parseInt(user_id, 10);
+        const threadId = parseInt(req.body.thread_id, 10);
+        const role = getUserRoleFromToken(req);
+        if (!adminId || !threadId) return res.status(400).json({ message: 'user_id and thread_id required' });
+        if (role !== 'senior_admin') return res.status(403).json({ message: 'Forbidden: senior_admin only' });
+
+        const { rows } = await query(
+          `UPDATE support_threads
+           SET claimed_by_admin_id = COALESCE(claimed_by_admin_id, $1),
+               status = CASE WHEN claimed_by_admin_id IS NULL THEN 'claimed' ELSE status END,
+               updated_at = NOW()
+           WHERE id = $2 AND status IN ('open','claimed')
+           RETURNING id, claimed_by_admin_id, status`,
+          [adminId, threadId]
+        );
+        if (!rows.length) return res.status(404).json({ message: 'Thread not found' });
+
+        const claimedAdminId = rows[0].claimed_by_admin_id;
+        if (claimedAdminId !== adminId) {
+          return res.status(409).json({ message: 'Already claimed by other admin', claimed_by_admin_id: claimedAdminId });
+        }
+        return res.status(200).json({ message: 'Claimed', claimed_by_admin_id: adminId, thread_id: threadId });
+      }
+
+      // ── 客服：回覆（只有 claimed 的 senior_admin 可送）
+      if (action === 'support_send') {
+        const adminId = parseInt(user_id, 10);
+        const threadId = parseInt(req.body.thread_id, 10);
+        const text = String(content || '').trim();
+        const role = getUserRoleFromToken(req);
+        if (!adminId || !threadId) return res.status(400).json({ message: 'user_id and thread_id required' });
+        if (role !== 'senior_admin') return res.status(403).json({ message: 'Forbidden: senior_admin only' });
+        if (!text) return res.status(400).json({ message: 'Message content required' });
+        if (text.length > 2000) return res.status(400).json({ message: 'Message too long (max 2000 chars)' });
+
+        const { rows: tRows } = await query(
+          `SELECT claimed_by_admin_id, user_id FROM support_threads WHERE id = $1`,
+          [threadId]
+        );
+        if (!tRows.length) return res.status(404).json({ message: 'Thread not found' });
+        const thread = tRows[0];
+
+        if (thread.claimed_by_admin_id !== adminId) {
+          return res.status(403).json({ message: 'Forbidden: this thread is claimed by other admin' });
+        }
+
+        // 寫入訊息（receiver 以 thread user_id 為目標，且 thread_id 綁定）
+        const { rows: msgRows } = await query(
+          `INSERT INTO chat_messages (sender_id, receiver_id, content, thread_id, is_read)
+           VALUES ($1, $2, $3, $4, FALSE)
+           RETURNING id, sender_id, receiver_id, content, is_read, created_at, thread_id`,
+          [adminId, thread.user_id, text, threadId]
+        );
+
+        // push 给 user
+        const MAX_PUSH_PREVIEW_LENGTH = 80;
+        const preview = text.length > MAX_PUSH_PREVIEW_LENGTH ? text.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : text;
+        sendPushToUser(thread.user_id, {
+          title: '客服回覆',
+          body: preview,
+          url: `/chat?support=1&thread_id=${threadId}`,
+          tag: `ctrc-support-user-${threadId}-${thread.user_id}`,
+        }).catch(() => {});
+
+        return res.status(201).json(msgRows[0]);
+      }
+
+      // ── 發送訊息（原本一般聊天）
       const sid = parseInt(sender_id, 10);
       const rid = parseInt(receiver_id, 10);
       if (!sid || !rid) return res.status(400).json({ message: 'sender_id and receiver_id required' });
@@ -199,6 +421,7 @@ export default async function handler(req, res) {
          RETURNING id, sender_id, receiver_id, content, is_read, created_at`,
         [sid, rid, text]
       );
+
 
       // Fire push notification to receiver (non-blocking)
       const MAX_PUSH_PREVIEW_LENGTH = 80;
