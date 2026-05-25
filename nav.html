@@ -2022,7 +2022,34 @@
             if (typeof data.level === 'number') user.level = data.level;
             if (typeof data.xp === 'number') user.xp = data.xp;
             if (typeof data.coins === 'number') user.coins = data.coins;
+            if (typeof data.mileage_km_365 === 'number') {
+              user.mileage_km_365 = data.mileage_km_365;
+              user.mileage_rolling_km = data.mileage_km_365;
+            }
+            if (data.mileage_rank) {
+              user.mileage_rank = data.mileage_rank;
+              user.mileage_card = data.mileage_rank === 'gold' ? '金卡' : (data.mileage_rank === 'silver' ? '銀卡' : '銅卡');
+            }
+            user.total_rides = Number(user.total_rides || 0) + (data.skipped || data.voided ? 0 : 1);
             localStorage.setItem('user', JSON.stringify(user));
+          }
+        } catch (e) {}
+        try {
+          if (!data.skipped && !data.voided) {
+            const history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
+            history.push({
+              route_id: payload.route_id,
+              date: payload.ride_date,
+              start_time: payload.start_time,
+              duration_minutes: payload.duration_minutes || 0,
+              distance_km: payload.distance_km || 0,
+              stops_count: payload.stops_count || 0,
+              stops_reached: payload.stops_reached || [],
+              all_stops: !!payload.all_stops,
+              districts_count: payload.districts_count || 0,
+            });
+            if (history.length > 200) history.splice(0, history.length - 200);
+            localStorage.setItem('rideHistory', JSON.stringify(history));
           }
         } catch (e) {}
         return { xpEarned: data.xp_earned || summary.xpEarned, saved: true };

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1f2f25">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>里程計劃 - 城市運輸單車</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .ml-wrap { max-width: 980px; margin: 0 auto; padding: 1.2em 1em 2.2em; color: #e8f3e9; }
+        .ml-hero { background: linear-gradient(145deg,#1b2f22,#16241b); border:1px solid #2e4a35; border-radius: 16px; padding: 1.15em; margin-bottom: 1em; }
+        .ml-hero h1 { margin: 0 0 0.45em; font-size: 1.45em; color: #BFE340; }
+        .ml-stats { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
+        .ml-stat { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.7em; }
+        .ml-stat .k { font-size: 0.76em; color:#a7c1aa; }
+        .ml-stat .v { font-size: 1.15em; font-weight: 800; margin-top: 0.2em; }
+        .ml-progress { margin-top: 0.8em; }
+        .ml-progress-bar { height: 12px; border-radius: 999px; background: #132018; overflow: hidden; border:1px solid #2f4b36; }
+        .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#6dba65,#BFE340); }
+        .ml-progress-label { font-size: 0.78em; margin-top: 0.35em; color: #a7c1aa; }
+        .ml-cards { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.7em; margin-top:1em; }
+        .ml-card { border-radius: 14px; padding: 0.95em; border:1px solid #324f38; background: #1a2b1f; }
+        .ml-card h3 { margin: 0 0 0.4em; font-size: 1.02em; }
+        .ml-card ul { margin:0; padding-left: 1.2em; color: #d4e8d6; font-size: 0.86em; line-height: 1.55; }
+        .ml-card.bronze h3 { color:#d8a56b; }
+        .ml-card.silver h3 { color:#d1d9df; }
+        .ml-card.gold h3 { color:#f0d372; }
+        .ml-section-title { margin:1.15em 0 0.6em; font-size:1em; color:#BFE340; }
+        .ml-action-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
+        .ml-action { text-decoration:none; text-align:center; border-radius: 10px; border:1px solid #325239; background:#1c3122; color:#d9efdb; padding:0.7em 0.65em; font-weight: 700; font-size:0.85em; }
+        .ml-note { margin-top:0.8em; color:#9cb29e; font-size:0.8em; line-height:1.55; }
+        @media (max-width: 760px) {
+            .ml-stats, .ml-cards, .ml-action-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+    <main class="ml-wrap">
+        <section class="ml-hero">
+            <h1><i class="fas fa-road"></i> 里程計劃</h1>
+            <div class="ml-stats">
+                <div class="ml-stat"><div class="k">目前里程卡</div><div class="v" id="ml-card">銅卡</div></div>
+                <div class="ml-stat"><div class="k">近 365 天里程</div><div class="v" id="ml-km">0.0 km</div></div>
+                <div class="ml-stat"><div class="k">騎行次數</div><div class="v" id="ml-rides">0</div></div>
+            </div>
+            <div class="ml-progress">
+                <div class="ml-progress-bar"><div class="ml-progress-fill" id="ml-progress-fill"></div></div>
+                <div class="ml-progress-label" id="ml-progress-label">完成騎行後會自動更新里程進度</div>
+            </div>
+        </section>
+
+        <div class="ml-section-title">金銀銅卡權益說明</div>
+        <section class="ml-cards">
+            <article class="ml-card bronze">
+                <h3>銅卡（起步）</h3>
+                <ul>
+                    <li>完整騎行記錄與里程累積</li>
+                    <li>騎行海報標準版（可預覽/下載）</li>
+                    <li>里程幣與 XP 基本結算</li>
+                </ul>
+            </article>
+            <article class="ml-card silver">
+                <h3>銀卡（500 km）</h3>
+                <ul>
+                    <li>里程幣結算加成 +5%</li>
+                    <li>銀卡主題介面與進階分享樣式</li>
+                    <li>優先獲得活動與功能更新通知</li>
+                </ul>
+            </article>
+            <article class="ml-card gold">
+                <h3>金卡（2000 km）</h3>
+                <ul>
+                    <li>里程幣結算加成 +15%</li>
+                    <li>金卡主題介面與進階海報文案</li>
+                    <li>Beta 新功能優先體驗資格</li>
+                </ul>
+            </article>
+        </section>
+
+        <div class="ml-section-title">快速體驗</div>
+        <section class="ml-action-grid">
+            <a class="ml-action" href="/routes"><i class="fas fa-biking"></i> 立即開始騎行</a>
+            <a class="ml-action" href="/dashboard"><i class="fas fa-chart-line"></i> 查看我的進度</a>
+            <a class="ml-action" href="/weather"><i class="fas fa-cloud-sun"></i> 查看天氣資訊</a>
+        </section>
+        <p class="ml-note">
+            里程卡依近 365 天騎行總里程計算：銅卡 0–499.9 km、銀卡 500–1999.9 km、金卡 2000 km 以上。金卡保級線為 1500 km，銀卡保級線為 400 km。
+        </p>
+    </main>
+    <footer><p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p></footer>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (async function initMileagePage() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        try {
+            const cached = JSON.parse(localStorage.getItem('user') || '{}');
+            const userId = cached.id;
+            if (userId) {
+                const userResp = await fetch('/api/user?user_id=' + userId, { headers: { Authorization: 'Bearer ' + token } });
+                if (userResp.ok) {
+                    const user = await userResp.json();
+                    const km = Number(user.mileage_rolling_km || user.mileage_km_365 || 0);
+                    const rides = Number(user.total_rides || 0);
+                    const card = user.mileage_card || '銅卡';
+                    renderMileage(card, km, rides);
+                }
+            }
+            const histResp = await fetch('/api/getHistory', { headers: { Authorization: 'Bearer ' + token } });
+            if (histResp.ok) {
+                const data = await histResp.json();
+                const profile = data.gameProfile || {};
+                const history = Array.isArray(data.history) ? data.history : [];
+                const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
+                const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
+                renderMileage(card, km, history.length);
+            }
+        } catch (_) {}
+    })();
+
+    function renderMileage(card, km, rides) {
+        const cardEl = document.getElementById('ml-card');
+        const kmEl = document.getElementById('ml-km');
+        const ridesEl = document.getElementById('ml-rides');
+        const fill = document.getElementById('ml-progress-fill');
+        const label = document.getElementById('ml-progress-label');
+        cardEl.textContent = card || '銅卡';
+        kmEl.textContent = (Number(km || 0)).toFixed(1) + ' km';
+        ridesEl.textContent = Number(rides || 0).toLocaleString();
+        const v = Number(km || 0);
+        let pct = 0;
+        let msg = '距離銀卡還有 ' + Math.max(0, 500 - v).toFixed(1) + ' km';
+        if (v >= 2000) {
+            pct = 100;
+            msg = '已達金卡，維持 1500 km 可保級';
+        } else if (v >= 500) {
+            pct = Math.max(5, Math.min(100, ((v - 500) / 1500) * 100));
+            msg = '距離金卡還有 ' + Math.max(0, 2000 - v).toFixed(1) + ' km';
+        } else {
+            pct = Math.max(3, (v / 500) * 100);
+        }
+        fill.style.width = pct.toFixed(1) + '%';
+        label.textContent = msg;
+    }
+    </script>
+</body>
+</html>
