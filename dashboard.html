@@ -678,11 +678,6 @@
             <a href="/profile" class="db-cta-btn"><i class="fas fa-arrow-right"></i> 立即完善資料</a>
         </div>
 
-        <!-- Permissions -->
-        <div class="db-section-title">會員權益</div>
-        <div class="db-permission-list" id="db-permission-list"></div>
-        <button class="db-show-more-btn" id="db-permission-more-btn" style="display:none;">查看更多權益</button>
-
         <!-- Ride history -->
         <div class="db-section-title" style="margin-top:0.4em;">騎行記錄</div>
         <div class="db-history-list" id="db-history-list">
@@ -765,10 +760,8 @@
         4000,5100,6500,8100,10000,12200,14800,17800,21200,25200,
         Infinity
     ];
-    var permissionExpanded = false;
     var historyExpanded = false;
     var HISTORY_INITIAL_COUNT = 8;
-    var PERMISSION_INITIAL_COUNT = 8;
 
     function formatNum(n) {
         if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
@@ -790,39 +783,6 @@
     function applyPermissionTheme() {
         if (window.getPermissionContext) {
             window.CTRCHK_PERMISSION_CONTEXT = window.getPermissionContext();
-        }
-    }
-
-    function renderPermissionList() {
-        const listEl = document.getElementById('db-permission-list');
-        if (!listEl) return;
-        const moreBtn = document.getElementById('db-permission-more-btn');
-        const ctx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
-        const defs = window.CTRCHK_PERMISSION_DEFS || [];
-        if (!defs.length) {
-            if (moreBtn) moreBtn.style.display = 'none';
-            return;
-        }
-        const visibleDefs = permissionExpanded ? defs : defs.slice(0, PERMISSION_INITIAL_COUNT);
-        listEl.innerHTML = visibleDefs.map(def => {
-            const enabled = ctx.permissions && ctx.permissions[def.key];
-            const rankLabel = def.rank === 'gold' ? '金卡' : (def.rank === 'silver' ? '銀卡' : '銅卡');
-            return `<div class="db-permission-item ${enabled ? '' : 'locked'}">
-                        <span>${enabled ? '✅' : '🔒'} ${def.label}</span>
-                        <span class="db-permission-tag">${rankLabel}</span>
-                    </div>`;
-        }).join('');
-        if (moreBtn) {
-            if (defs.length > PERMISSION_INITIAL_COUNT) {
-                moreBtn.style.display = '';
-                moreBtn.textContent = permissionExpanded ? '收起權益' : `查看更多權益（+${defs.length - visibleDefs.length}）`;
-                moreBtn.onclick = function () {
-                    permissionExpanded = !permissionExpanded;
-                    renderPermissionList();
-                };
-            } else {
-                moreBtn.style.display = 'none';
-            }
         }
     }
 
@@ -1024,7 +984,6 @@
                 renderGameProfile(user.level, user.xp, user.coins, cachedRidesCount);
             }
             applyPermissionTheme();
-            renderPermissionList();
 
             var userRole = user.user_role || user.role || 'junior';
 
@@ -1055,14 +1014,12 @@
                     _applyUserUI(user);
                     _applyStatusSummary(user);
                     applyPermissionTheme();
-                    renderPermissionList();
                 }
             } catch (e) { /* use cached data */ }
 
             _applyRoleUI(userRole);
             _applyStatusSummary(user);
             applyPermissionTheme();
-            renderPermissionList();
             await loadHistory();
 
         } catch (e) {

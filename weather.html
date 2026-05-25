@@ -69,13 +69,18 @@
                 ? '銀卡：可優先獲得天氣提醒相關功能更新。'
                 : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
         try {
-            const [rhr, warn] = await Promise.all([
+            const [rhrResult, warnResult] = await Promise.allSettled([
                 fetch('/api/_weather/rhrread?lang=tc'),
                 fetch('/api/_weather/warnsum?lang=tc')
             ]);
-            if (!rhr.ok || !warn.ok) throw new Error('weather api failed');
-            const rhrData = await rhr.json();
-            const warnData = await warn.json();
+            if (rhrResult.status !== 'fulfilled' || !rhrResult.value.ok) {
+                throw new Error('weather api failed');
+            }
+            const rhrData = await rhrResult.value.json();
+            let warnData = {};
+            if (warnResult.status === 'fulfilled' && warnResult.value.ok) {
+                warnData = await warnResult.value.json();
+            }
             renderWeather(rhrData, warnData);
         } catch (_) {
             document.getElementById('wx-updated').textContent = '天氣資料載入失敗，請稍後再試';
