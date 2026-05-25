@@ -363,14 +363,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Claimed', claimed_by_admin_id: adminId, thread_id: threadId });
       }
 
-      // ── 客服：回覆（只有 claimed 的 senior_admin 可送）
+      // ── 客服：回覆（user 與 senior_admin）
       if (action === 'support_send') {
-        const adminId = parseInt(user_id, 10);
+        const senderId = parseInt(user_id, 10);
         const threadId = parseInt(req.body.thread_id, 10);
         const text = String(content || '').trim();
         const role = getUserRoleFromToken(req);
-        if (!adminId || !threadId) return res.status(400).json({ message: 'user_id and thread_id required' });
-        if (role !== 'senior_admin') return res.status(403).json({ message: 'Forbidden: senior_admin only' });
+        if (!senderId || !threadId) return res.status(400).json({ message: 'user_id and thread_id required' });
         if (!text) return res.status(400).json({ message: 'Message content required' });
         if (text.length > 2000) return res.status(400).json({ message: 'Message too long (max 2000 chars)' });
 
@@ -381,27 +380,67 @@ export default async function handler(req, res) {
         if (!tRows.length) return res.status(404).json({ message: 'Thread not found' });
         const thread = tRows[0];
 
-        if (thread.claimed_by_admin_id !== adminId) {
+        const isAdminSender = role === 'senior_admin';
+        const isThreadOwner = senderId === thread.user_id;
+
+        if (!isAdminSender && !isThreadOwner) {
+          return res.status(403).json({ message: 'Forbidden: sender is not in this support thread' });
+        }
+        if (isAdminSender && thread.claimed_by_admin_id !== senderId) {
           return res.status(403).json({ message: 'Forbidden: this thread is claimed by other admin' });
         }
 
-        // 寫入訊息（receiver 以 thread user_id 為目標，且 thread_id 綁定）
+        let receiverId = thread.user_id;
+        if (isThreadOwner) {
+          receiverId = thread.claimed_by_admin_id || null;
+          if (!receiverId) {
+           const { rows: adminRows } = await query(
+             `SELECT id FROM users WHERE user_role = 'senior_admin' ORDER BY id ASC LIMIT 1`
+           );
+           receiverId = adminRows[0]?.id || null;
+          }
+          if (!receiverId) return res.status(503).json({ message: 'No senior_admin available' });
+        }
+
+        // 寫入訊息（thread_id 綁定）
         const { rows: msgRows } = await query(
           `INSERT INTO chat_messages (sender_id, receiver_id, content, thread_id, is_read)
            VALUES ($1, $2, $3, $4, FALSE)
            RETURNING id, sender_id, receiver_id, content, is_read, created_at, thread_id`,
-          [adminId, thread.user_id, text, threadId]
+          [senderId, receiverId, text, threadId]
         );
 
-        // push 给 user
         const MAX_PUSH_PREVIEW_LENGTH = 80;
         const preview = text.length > MAX_PUSH_PREVIEW_LENGTH ? text.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : text;
-        sendPushToUser(thread.user_id, {
-          title: '客服回覆',
-          body: preview,
-          url: `/chat?support=1&thread_id=${threadId}`,
-          tag: `ctrc-support-user-${threadId}-${thread.user_id}`,
-        }).catch(() => {});
+        if (isAdminSender) {
+          sendPushToUser(thread.user_id, {
+           title: '客服回覆',
+           body: preview,
+           url: `/chat?support=1&thread_id=${threadId}`,
+           tag: `ctrc-support-user-${threadId}-${thread.user_id}`,
+          }).catch(() => {});
+        } else if (thread.claimed_by_admin_id) {
+          sendPushToUser(thread.claimed_by_admin_id, {
+           title: '用戶有新客服訊息',
+           body: preview,
+           url: `/chat?support=1&thread_id=${threadId}`,
+           tag: `ctrc-support-admin-${threadId}-${thread.claimed_by_admin_id}`,
+          }).catch(() => {});
+        } else {
+          const { rows: adminRows } = await query(
+           `SELECT id FROM users WHERE user_role = 'senior_admin' ORDER BY id ASC`
+          );
+          await Promise.all(
+           adminRows.map((a) =>
+             sendPushToUser(a.id, {
+               title: '有新客服需求',
+               body: preview,
+               url: `/chat?support=1&thread_id=${threadId}`,
+               tag: `ctrc-support-${threadId}-${a.id}`,
+             })
+           )
+          ).catch(() => {});
+        }
 
         return res.status(201).json(msgRows[0]);
       }

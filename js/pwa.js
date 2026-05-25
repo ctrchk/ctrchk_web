@@ -73,10 +73,13 @@
 
   function applyMembershipTheme(context) {
     if (!document.body || !context) return;
+    const rank = String(context.rank || '').toLowerCase();
+    const silverEnabled = localStorage.getItem('silverThemeDisabled') !== '1';
+    const goldEnabled = localStorage.getItem('goldThemeDisabled') !== '1';
     document.body.classList.remove('rank-silver', 'rank-gold');
-    if (context.permissions.theme_gold) {
+    if (rank === 'gold' && context.permissions.theme_gold && goldEnabled) {
       document.body.classList.add('rank-gold');
-    } else if (context.permissions.theme_silver) {
+    } else if (rank === 'silver' && context.permissions.theme_silver && silverEnabled) {
       document.body.classList.add('rank-silver');
     }
   }

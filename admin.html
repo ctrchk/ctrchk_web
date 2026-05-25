@@ -410,9 +410,9 @@
                     </div>
 
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5em; align-items:start;">
-                        <!-- XP / 里程幣 編輯面板（等級由 XP 自動計算） -->
+                        <!-- XP / 里程幣 / 里程卡 編輯面板（等級由 XP 自動計算） -->
                         <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-                            <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-star"></i> XP / 里程幣</h4>
+                            <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-star"></i> XP / 里程幣 / 里程卡</h4>
                             <div style="margin-bottom:1em; background:#f0f7ff; border-radius:6px; padding:0.7em 1em; font-size:0.9em;">
                                 <i class="fas fa-info-circle" style="color:#3498db;"></i>
                                 等級將根據 XP 值自動計算，目前等級：<strong id="gp-level-display">—</strong>
@@ -426,6 +426,20 @@
                                 <label style="display:block; font-weight:bold; margin-bottom:0.3em;">里程幣（≥ 0）</label>
                                 <input type="number" id="gp-coins" min="0" step="1"
                                     style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:1em;">
+                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">里程（公里，≥ 0）</label>
+                                <input type="number" id="gp-mileage-km" min="0" step="0.01"
+                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:1.2em;">
+                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">里程卡級</label>
+                                <select id="gp-mileage-rank"
+                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
+                                    <option value="bronze">銅卡</option>
+                                    <option value="silver">銀卡</option>
+                                    <option value="gold">金卡</option>
+                                </select>
                             </div>
                             <button class="cta-button" onclick="saveGameStats()" style="width:100%;">
                                 <i class="fas fa-save"></i> 儲存更改
@@ -1510,6 +1524,8 @@
                 document.getElementById('gp-level-display').textContent = user.level;
                 document.getElementById('gp-xp').value          = user.xp;
                 document.getElementById('gp-coins').value       = user.coins;
+                document.getElementById('gp-mileage-km').value  = Number(user.mileage_km_365 || 0).toFixed(2);
+                document.getElementById('gp-mileage-rank').value = String(user.mileage_rank || 'bronze').toLowerCase();
                 document.getElementById('gp-stats-msg').textContent = '';
                 document.getElementById('gp-route-msg').textContent = '';
 
@@ -1543,10 +1559,14 @@
             if (!gpCurrentUserId) return;
             const xp    = parseInt(document.getElementById('gp-xp').value,    10);
             const coins = parseInt(document.getElementById('gp-coins').value,  10);
+            const mileageKm = parseFloat(document.getElementById('gp-mileage-km').value);
+            const mileageRank = String(document.getElementById('gp-mileage-rank').value || '').toLowerCase();
             const msgEl = document.getElementById('gp-stats-msg');
 
             if (isNaN(xp)    || xp    < 0) { msgEl.style.color = 'red'; msgEl.textContent = 'XP 不可為負數。';     return; }
             if (isNaN(coins) || coins < 0) { msgEl.style.color = 'red'; msgEl.textContent = '里程幣不可為負數。'; return; }
+            if (isNaN(mileageKm) || mileageKm < 0) { msgEl.style.color = 'red'; msgEl.textContent = '里程不可為負數。'; return; }
+            if (!['bronze', 'silver', 'gold'].includes(mileageRank)) { msgEl.style.color = 'red'; msgEl.textContent = '里程卡級無效。'; return; }
 
             const pin = await promptAdminPin();
             if (pin === null) return;
@@ -1559,13 +1579,20 @@
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ action: 'set_game_stats', user_id: gpCurrentUserId, xp, coins })
+                    body: JSON.stringify({
+                        action: 'set_game_stats',
+                        user_id: gpCurrentUserId,
+                        xp,
+                        coins,
+                        mileage_km_365: mileageKm,
+                        mileage_rank: mileageRank
+                    })
                 });
                 if (handleTokenError(resp)) return;
                 const data = await resp.json();
                 if (resp.ok) {
                     msgEl.style.color = 'green';
-                    msgEl.textContent = '✅ 已更新！等級已自動根據 XP 計算。';
+                    msgEl.textContent = '✅ 已更新！等級已自動根據 XP 計算，里程與里程卡級已更新。';
                     // Refresh the level display
                     await refreshGameProfile();
                 } else {
@@ -1685,6 +1712,8 @@
                     document.getElementById('gp-level-display').textContent = data.user.level;
                     document.getElementById('gp-xp').value   = data.user.xp;
                     document.getElementById('gp-coins').value = data.user.coins;
+                    document.getElementById('gp-mileage-km').value = Number(data.user.mileage_km_365 || 0).toFixed(2);
+                    document.getElementById('gp-mileage-rank').value = String(data.user.mileage_rank || 'bronze').toLowerCase();
                     renderUnlockedRoutes(data.unlocked_routes);
                 }
             } catch (e) { console.error('[Admin] refreshGameProfile error:', e); }
