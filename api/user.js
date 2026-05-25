@@ -67,6 +67,13 @@ export default async function handler(req, res) {
   // ── GET → public route metadata (for app route list) ────────────────────
   if (req.method === 'GET' && req.query.action === 'route-data') {
     try {
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS alias VARCHAR(255)`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS bg_color VARCHAR(7)`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level'`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
+      await query(`ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE`);
       const { rows: routes } = await query(
         `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags
          FROM routes

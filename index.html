@@ -633,6 +633,10 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                     <span class="val" id="app-home-coins">0</span>
                     <span class="lbl">里程幣</span>
                 </div>
+                <div class="app-stat-pill">
+                    <span class="val" id="app-home-mileage">0.0</span>
+                    <span class="lbl">365天里程 km</span>
+                </div>
             </div>
         </div>
 
@@ -793,6 +797,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         const lvl = profile.level || 1;
         const xp = profile.xp || 0;
         const coins = profile.coins || 0;
+        const mileage = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
         const nextXp = getNextThreshold(lvl);
         const prevXp = THRESHOLDS[lvl - 1] || 0;
         const pct = nextXp > prevXp ? Math.min(100, Math.round((xp - prevXp) / (nextXp - prevXp) * 100)) : 100;
@@ -808,6 +813,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         document.getElementById('app-home-xp-total').textContent = formatNum(xp);
         document.getElementById('app-home-rides').textContent = history.length;
         document.getElementById('app-home-coins').textContent = formatNum(coins);
+        document.getElementById('app-home-mileage').textContent = mileage.toFixed(1);
 
         // Avatar
         const avatarUrl = userData.avatar_url;
@@ -903,6 +909,15 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             const data = await res.json();
             const profile = data.gameProfile || { level: 1, xp: 0, coins: 0 };
             const history = data.history || [];
+            try {
+                const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                cachedUser.level = profile.level ?? cachedUser.level;
+                cachedUser.xp = profile.xp ?? cachedUser.xp;
+                cachedUser.coins = profile.coins ?? cachedUser.coins;
+                cachedUser.mileage_rolling_km = profile.mileage_km_365 ?? cachedUser.mileage_rolling_km;
+                cachedUser.mileage_rank = profile.mileage_rank ?? cachedUser.mileage_rank;
+                localStorage.setItem('user', JSON.stringify(cachedUser));
+            } catch (_) {}
             // Update cached avatar_url in localStorage if API returned a fresh value
             if (typeof data.avatar_url !== 'undefined') {
                 try {
@@ -921,6 +936,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             const localLvl = Math.max(1, parseInt(userData.level || 1));
             const localXp = Math.max(0, parseInt(userData.xp || 0));
             const localCoins = Math.max(0, parseInt(userData.coins || 0));
+            const localMileage = Number(userData.mileage_rolling_km || 0);
             const localNextXp = getNextThreshold(localLvl);
             const localPrevXp = THRESHOLDS[localLvl - 1] || 0;
             const localPct = localNextXp > localPrevXp ? Math.min(100, Math.round((localXp - localPrevXp) / (localNextXp - localPrevXp) * 100)) : 100;
@@ -933,6 +949,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             document.getElementById('app-home-xp-label').textContent = localXp.toLocaleString() + ' / ' + localNextXp.toLocaleString() + ' XP';
             document.getElementById('app-home-xp-total').textContent = formatNum(localXp);
             document.getElementById('app-home-coins').textContent = formatNum(localCoins);
+            document.getElementById('app-home-mileage').textContent = localMileage.toFixed(1);
             if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法載入記錄</div>';
         }
         _hideSplash(splashEl);

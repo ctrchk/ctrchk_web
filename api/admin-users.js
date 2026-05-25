@@ -179,6 +179,17 @@ async function triggerDiscordBotSyncForUser(userId) {
   }
 }
 
+async function ensureAdminRouteSchema() {
+  await query(`ALTER TABLE routes_config ADD COLUMN IF NOT EXISTS promo_cost INTEGER`);
+  await query(`ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS alias VARCHAR(255)`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS bg_color VARCHAR(7)`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level'`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
+}
+
 export default async function handler(req, res) {
   // CORS headers for admin panel
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -199,6 +210,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     if (req.query.action === 'get-stations') {
       try {
+        await ensureAdminRouteSchema();
         const { rows: stations } = await query(
           `SELECT id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal
            FROM stations
@@ -237,6 +249,7 @@ export default async function handler(req, res) {
 
     if (req.query.action === 'get-managed-routes') {
       try {
+        await ensureAdminRouteSchema();
         const { rows } = await query(
           `SELECT r.dept, r.route_number, r.start_station_id, r.end_station_id, r.type, r.stops, r.rewards,
                   r.alias, r.bg_color, r.estimated_minutes, r.unlock_type, r.unlock_value, r.tags,
@@ -275,6 +288,7 @@ export default async function handler(req, res) {
     // GET route configs (coin routes only)
     if (req.query.action === 'get-route-config') {
       try {
+        await ensureAdminRouteSchema();
         const { rows } = await query(`SELECT route_id, unlock_cost, promo_cost, is_special FROM routes_config WHERE is_special = TRUE ORDER BY route_id`);
         return res.status(200).json({ routes: rows });
       } catch (e) {
@@ -376,6 +390,7 @@ export default async function handler(req, res) {
 
       // Update route promo price
       if (action === 'update-route-promo') {
+        await ensureAdminRouteSchema();
         const { route_id, promo_cost } = body;
         if (!route_id) return res.status(400).json({ message: 'route_id is required' });
         await query(
@@ -386,6 +401,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'upsert_station') {
+        await ensureAdminRouteSchema();
         const { area, station_number, name_zh, name_en, lat, lon, road_name } = body;
         const stationNumber = parseInt(station_number, 10);
         if (!area || !Number.isFinite(stationNumber) || stationNumber <= 0 || !name_zh) {
@@ -477,6 +493,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'set_terminal_station') {
+        await ensureAdminRouteSchema();
         const { station_id, is_terminal } = body;
         if (!station_id) return res.status(400).json({ message: 'station_id is required' });
         await query(
@@ -487,6 +504,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'upsert_managed_route') {
+        await ensureAdminRouteSchema();
         const {
           dept,
           route_number,
@@ -583,6 +601,7 @@ export default async function handler(req, res) {
       }
 
       if (action === 'import_routes_csv') {
+        await ensureAdminRouteSchema();
         const csvContent = String(body.csv_content || '');
         if (!csvContent.trim()) {
           return res.status(400).json({ message: 'csv_content is required' });

@@ -2151,25 +2151,25 @@
                 msgEl.style.color = 'red';
                 msgEl.textContent = `❌ ${e.message}`;
             }
+        }
 
-            async function toggleTerminalStation(stationId, isTerminal) {
-                try {
-                    const token = localStorage.getItem('accessToken');
-                    const resp = await fetch('/api/admin-users', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'set_terminal_station', station_id: stationId, is_terminal: isTerminal }),
-                    });
-                    if (handleTokenError(resp)) return;
-                    if (!resp.ok) {
-                        const data = await resp.json();
-                        alert(data.message || '更新失敗');
-                        return;
-                    }
-                    await loadStationRouteAdminData();
-                } catch (e) {
-                    alert('更新失敗：' + e.message);
+        async function toggleTerminalStation(stationId, isTerminal) {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'set_terminal_station', station_id: stationId, is_terminal: isTerminal }),
+                });
+                if (handleTokenError(resp)) return;
+                if (!resp.ok) {
+                    const data = await resp.json();
+                    alert(data.message || '更新失敗');
+                    return;
                 }
+                await loadStationRouteAdminData();
+            } catch (e) {
+                alert('更新失敗：' + e.message);
             }
         }
 
