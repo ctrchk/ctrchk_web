@@ -467,6 +467,60 @@
         font-weight: bold;
         cursor: pointer;
     }
+    .db-poster-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.72);
+        z-index: 3000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1em;
+    }
+    .db-poster-modal.show { display: flex; }
+    .db-poster-sheet {
+        width: min(94vw, 520px);
+        max-height: 92vh;
+        overflow: auto;
+        background: #102217;
+        border: 1px solid #33513a;
+        border-radius: 14px;
+        padding: 0.9em;
+    }
+    .db-poster-preview-wrap {
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #0c1710;
+        border: 1px solid #2d4d2d;
+    }
+    .db-poster-preview-wrap img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+    .db-poster-actions {
+        margin-top: 0.75em;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5em;
+    }
+    .db-poster-action {
+        border: none;
+        border-radius: 10px;
+        padding: 0.62em 0.8em;
+        font-size: 0.86em;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .db-poster-action.primary { background: #BFE340; color: #1b271b; }
+    .db-poster-action.secondary { background: #2a4330; color: #d2f0d4; border: 1px solid #3e6747; }
+    .db-poster-disclaimer {
+        margin-top: 0.65em;
+        color: #9fb4a1;
+        font-size: 0.74em;
+        line-height: 1.45;
+    }
     .db-permission-list {
         margin: 0 1em 1em;
         display: grid;
@@ -587,8 +641,28 @@
         <!-- IG Story poster export -->
         <div class="db-poster-card" id="db-poster-card" style="display:none;">
             <h3>📸 IG Story 數據海報</h3>
-            <p id="db-poster-desc">自動生成省下交通費與減碳成果海報。</p>
-            <button class="db-poster-btn" id="db-poster-btn">匯出海報</button>
+            <p id="db-poster-desc">生成可分享戰績海報，先預覽再保存或分享。</p>
+            <button class="db-poster-btn" id="db-poster-btn">預覽並匯出海報</button>
+        </div>
+
+        <div class="db-poster-modal" id="db-poster-modal" aria-hidden="true">
+            <div class="db-poster-sheet">
+                <div class="db-poster-preview-wrap">
+                    <img id="db-poster-preview-img" alt="海報預覽">
+                </div>
+                <div class="db-poster-actions">
+                    <button class="db-poster-action primary" id="db-poster-save-btn"><i class="fas fa-download"></i> 保存圖片</button>
+                    <button class="db-poster-action secondary" id="db-poster-share-btn"><i class="fas fa-share-alt"></i> 系統分享</button>
+                    <button class="db-poster-action secondary" id="db-poster-ig-btn"><i class="fab fa-instagram"></i> 前往 Instagram</button>
+                    <button class="db-poster-action secondary" id="db-poster-wa-btn"><i class="fab fa-whatsapp"></i> 前往 WhatsApp</button>
+                </div>
+                <div class="db-poster-disclaimer">
+                    Instagram 與 WhatsApp 為 Meta Platforms, Inc. 旗下服務及商標，僅供跳轉分享用途，與本服務無直接關聯。
+                </div>
+                <div class="db-poster-actions" style="grid-template-columns:1fr;">
+                    <button class="db-poster-action secondary" id="db-poster-close-btn">關閉預覽</button>
+                </div>
+            </div>
         </div>
 
         <!-- Email verify notice -->
@@ -650,6 +724,9 @@
             </a>
             <a href="/tasks" class="db-more-item">
                 <i class="fas fa-tasks"></i><span>任務</span>
+            </a>
+            <a href="/mileage" class="db-more-item">
+                <i class="fas fa-road"></i><span>里程</span>
             </a>
             <a href="/chat" class="db-more-item">
                 <i class="fas fa-comments"></i><span>聊天</span>
@@ -821,7 +898,7 @@
         ctx2d.fillRect(0, 0, canvas.width, canvas.height);
         ctx2d.fillStyle = context.permissions.theme_gold ? '#d4af37' : '#BFE340';
         ctx2d.font = 'bold 72px sans-serif';
-        ctx2d.fillText('CTRCHK Ride Report', 90, 200);
+        ctx2d.fillText('城市運輸單車｜騎行報告', 90, 200);
         ctx2d.fillStyle = '#ffffff';
         ctx2d.font = 'bold 140px sans-serif';
         ctx2d.fillText(`${formatKm(totalKm)} km`, 90, 380);
@@ -832,20 +909,61 @@
         if (context.permissions.poster_gold_copy) {
             ctx2d.fillStyle = '#d4af37';
             ctx2d.font = 'bold 52px sans-serif';
-            ctx2d.fillText('擊敗了 99% 同時段搭巴士鄰居', 90, 820);
+            ctx2d.fillText('今日通勤也完成了高效綠色出行', 90, 820);
         }
         if (!context.permissions.poster_no_watermark) {
             ctx2d.fillStyle = 'rgba(255,255,255,0.18)';
             ctx2d.font = 'bold 80px sans-serif';
             ctx2d.rotate(-Math.PI / 12);
-            ctx2d.fillText('CTRCHK', 200, 1200);
+            ctx2d.fillText('城市運輸單車', 200, 1200);
             ctx2d.rotate(Math.PI / 12);
         }
+        const dataUrl = canvas.toDataURL('image/png');
+        const modal = document.getElementById('db-poster-modal');
+        const preview = document.getElementById('db-poster-preview-img');
+        const saveBtn = document.getElementById('db-poster-save-btn');
+        const shareBtn = document.getElementById('db-poster-share-btn');
+        const igBtn = document.getElementById('db-poster-ig-btn');
+        const waBtn = document.getElementById('db-poster-wa-btn');
+        const closeBtn = document.getElementById('db-poster-close-btn');
+        if (!modal || !preview) return;
+        preview.src = dataUrl;
+        modal.classList.add('show');
 
-        const link = document.createElement('a');
-        link.href = canvas.toDataURL('image/png');
-        link.download = 'ctrchk_story.png';
-        link.click();
+        const saveImage = () => {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = 'city-transport-bike-story.png';
+            link.click();
+        };
+        const shareImage = async () => {
+            try {
+                if (!navigator.share) {
+                    saveImage();
+                    return;
+                }
+                const resp = await fetch(dataUrl);
+                const blob = await resp.blob();
+                const file = new File([blob], 'city-transport-bike-story.png', { type: 'image/png' });
+                const canShareFile = navigator.canShare && navigator.canShare({ files: [file] });
+                if (canShareFile) {
+                    await navigator.share({ files: [file], title: '城市運輸單車 騎行海報' });
+                } else {
+                    await navigator.share({ title: '城市運輸單車 騎行海報', text: '我剛完成騎行，來看看我的里程成果！' });
+                }
+            } catch (_) {}
+        };
+        const closeModal = () => {
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+        saveBtn.onclick = saveImage;
+        shareBtn.onclick = shareImage;
+        igBtn.onclick = () => window.open('instagram://app', '_blank') || window.open('https://www.instagram.com/', '_blank');
+        waBtn.onclick = () => window.open('whatsapp://send', '_blank') || window.open('https://wa.me/', '_blank');
+        closeBtn.onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+        modal.setAttribute('aria-hidden', 'false');
     }
 
     function renderGameProfile(level, xp, coins, ridesCount) {
@@ -899,7 +1017,11 @@
 
             _applyUserUI(user);
             if (user.level !== undefined) {
-                renderGameProfile(user.level, user.xp, user.coins);
+                var cachedRidesCount = 0;
+                try {
+                    cachedRidesCount = JSON.parse(localStorage.getItem('rideHistory') || '[]').length;
+                } catch (_) {}
+                renderGameProfile(user.level, user.xp, user.coins, cachedRidesCount);
             }
             applyPermissionTheme();
             renderPermissionList();
@@ -1025,9 +1147,24 @@
                 var histArr = Array.isArray(data) ? data : (data.history || []);
                 renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length);
                 renderStreakCard(data.gameProfile, data.gameProfile.coins || 0);
+                try {
+                    var rollingKm = Number(data.gameProfile.mileage_km_365 || data.gameProfile.mileage_rolling_km || 0);
+                    localStorage.setItem('gameProfileCache', JSON.stringify({
+                        level: Number(data.gameProfile.level || 1),
+                        xp: Number(data.gameProfile.xp || 0),
+                        coins: Number(data.gameProfile.coins || 0),
+                        mileage_km_365: rollingKm,
+                        mileage_rolling_km: rollingKm,
+                        mileage_rank: data.gameProfile.mileage_rank || 'bronze',
+                        total_rides: histArr.length
+                    }));
+                } catch (_) {}
             }
 
             var history = Array.isArray(data) ? data : (data.history || []);
+            try {
+                localStorage.setItem('rideHistory', JSON.stringify(Array.isArray(data.normalized_history) ? data.normalized_history : []));
+            } catch (_) {}
             list.innerHTML = '';
 
             var totalKm = history.reduce(function (sum, ride) {

@@ -3,27 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="5;url=/index.html">
-    <title>天氣功能已停用 - 城市運輸單車</title>
+    <title>天氣資訊 - 城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .wx-wrap { max-width: 900px; margin: 0 auto; padding: 1.1em 1em 2em; color: #e6f2e8; }
+        .wx-card { border:1px solid #2f4c36; background:#1a2c1f; border-radius:14px; padding: 1em; margin-bottom: 0.75em; }
+        .wx-main { display:flex; align-items:center; justify-content:space-between; gap:0.8em; }
+        .wx-main h1 { margin:0; font-size:1.25em; color:#BFE340; }
+        .wx-temp { font-size:2.2em; font-weight: 800; line-height:1; }
+        .wx-meta { color:#aac2ad; font-size:0.85em; margin-top:0.25em; }
+        .wx-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:0.65em; }
+        .wx-item { border:1px solid #36573e; background:#16241b; border-radius:10px; padding:0.7em; }
+        .wx-item .k { color:#9db4a0; font-size:0.76em; }
+        .wx-item .v { font-size:1.02em; font-weight:700; margin-top:0.2em; }
+        .wx-warning { color:#ffe29b; font-size:0.9em; line-height:1.5; margin-top:0.35em; }
+        .wx-rank-tip { font-size:0.82em; color:#a9c2ac; margin-top:0.5em; }
+        .wx-actions { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; margin-top:0.7em; }
+        .wx-btn { text-decoration:none; text-align:center; border:1px solid #3b6044; background:#1e3224; color:#d8eedb; border-radius:10px; padding:0.65em; font-weight:700; font-size:0.84em; }
+        @media (max-width: 720px) {
+            .wx-grid, .wx-actions { grid-template-columns: 1fr; }
+            .wx-main { align-items:flex-start; flex-direction:column; }
+        }
+    </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
+    <main class="wx-wrap">
+        <section class="wx-card">
+            <div class="wx-main">
+                <div>
+                    <h1><i class="fas fa-cloud-sun"></i> 即時天氣資訊</h1>
+                    <div class="wx-meta" id="wx-updated">載入中...</div>
+                </div>
+                <div class="wx-temp" id="wx-temp">--°C</div>
+            </div>
+            <div class="wx-rank-tip" id="wx-rank-tip">你可以在本頁快速查看出發前所需的天氣重點。</div>
+        </section>
 
-    <main>
-        <section class="hero" style="min-height: 60vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <i class="fas fa-cloud-rain" style="font-size:4em; margin-bottom:0.5em; opacity:0.6;"></i>
-            <h1 style="margin-bottom:0.5em;">天氣功能已停用</h1>
-            <p style="max-width:500px; text-align:center;">此功能為早期實驗性功能，現已停用。你將在 5 秒後自動跳轉至主頁。</p>
-            <a href="/" class="cta-button" style="margin-top:1.5em;"><i class="fas fa-home"></i> 返回主頁</a>
+        <section class="wx-grid">
+            <div class="wx-item"><div class="k">相對濕度</div><div class="v" id="wx-humidity">--%</div></div>
+            <div class="wx-item"><div class="k">天氣描述</div><div class="v" id="wx-desc">--</div></div>
+            <div class="wx-item"><div class="k">天氣警告</div><div class="v" id="wx-warning-title">目前沒有警告</div></div>
+            <div class="wx-item"><div class="k">體感提醒</div><div class="v" id="wx-advice">出發前請先檢查路況與裝備</div></div>
+        </section>
+        <div class="wx-warning" id="wx-warning-list"></div>
+
+        <section class="wx-actions">
+            <a class="wx-btn" href="/routes"><i class="fas fa-biking"></i> 開始騎行</a>
+            <a class="wx-btn" href="/mileage"><i class="fas fa-road"></i> 查看里程計劃</a>
+            <a class="wx-btn" href="/dashboard"><i class="fas fa-chart-line"></i> 我的進度</a>
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
-    </footer>
-
+    <footer><p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p></footer>
     <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (async function initWeather() {
+        const rank = resolveRankFromUser();
+        const rankTip = document.getElementById('wx-rank-tip');
+        rankTip.textContent = rank === 'gold'
+            ? '金卡：可優先體驗天氣相關新功能，建議持續留意更新。'
+            : (rank === 'silver'
+                ? '銀卡：可優先獲得天氣提醒相關功能更新。'
+                : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
+        try {
+            const [rhr, warn] = await Promise.all([
+                fetch('/api/_weather/rhrread?lang=tc'),
+                fetch('/api/_weather/warnsum?lang=tc')
+            ]);
+            if (!rhr.ok || !warn.ok) throw new Error('weather api failed');
+            const rhrData = await rhr.json();
+            const warnData = await warn.json();
+            renderWeather(rhrData, warnData);
+        } catch (_) {
+            document.getElementById('wx-updated').textContent = '天氣資料載入失敗，請稍後再試';
+        }
+    })();
+
+    function resolveRankFromUser() {
+        try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            const raw = String(u.permission_rank || u.mileage_rank || u.mileage_card || '').toLowerCase();
+            if (raw.includes('gold') || raw.includes('金')) return 'gold';
+            if (raw.includes('silver') || raw.includes('銀')) return 'silver';
+        } catch (_) {}
+        return 'bronze';
+    }
+
+    function renderWeather(rhrData, warnData) {
+        const temp = Number(rhrData?.temperature?.data?.[0]?.value ?? NaN);
+        const humidity = Number(rhrData?.humidity?.data?.[0]?.value ?? NaN);
+        const desc = rhrData?.icon?.length ? '香港天文台最新天氣' : '資料更新中';
+        document.getElementById('wx-temp').textContent = Number.isFinite(temp) ? `${temp}°C` : '--°C';
+        document.getElementById('wx-humidity').textContent = Number.isFinite(humidity) ? `${humidity}%` : '--%';
+        document.getElementById('wx-desc').textContent = desc;
+        document.getElementById('wx-updated').textContent = '更新時間：' + (rhrData?.updateTime || new Date().toISOString()).replace('T', ' ').slice(0, 16);
+
+        const warningKeys = Object.keys(warnData || {});
+        const warningTitle = document.getElementById('wx-warning-title');
+        const warningList = document.getElementById('wx-warning-list');
+        if (!warningKeys.length) {
+            warningTitle.textContent = '目前沒有警告';
+            warningList.textContent = '';
+            document.getElementById('wx-advice').textContent = '天氣穩定，祝你騎行順利';
+            return;
+        }
+        warningTitle.textContent = `現有 ${warningKeys.length} 項警告`;
+        warningList.textContent = warningKeys.map(k => `• ${k}`).join(' ');
+        document.getElementById('wx-advice').textContent = '建議檢查裝備、防水與路面狀況後再出發';
+    }
+    </script>
 </body>
 </html>

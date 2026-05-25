@@ -712,10 +712,11 @@ export default async function handler(req, res) {
         });
       }
 
-      // 過濾過短的騎行（少於2個車站且少於1公里，不計算入歷史）
+      // 過濾過短的騎行（少於2個車站 + 少於0.5公里 + 少於3分鐘，不計算入歷史）
       const stopsCount = Array.isArray(stops_reached) ? stops_reached.length : 0;
       const distKmVal = parseFloat(distance_km) || 0;
-      if (stopsCount < 2 && distKmVal < 1) {
+      const durationMinutesVal = parseFloat(duration_minutes) || 0;
+      if (stopsCount < 2 && distKmVal < 0.5 && durationMinutesVal < 3) {
         let profile = { level: 1, xp: 0, coins: 0 };
         try { profile = await ensureGameProfile(userData.userId); } catch(e) {}
         return res.status(200).json({

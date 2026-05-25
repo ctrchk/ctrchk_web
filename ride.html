@@ -1105,6 +1105,15 @@
                 u.level = apiResult.level;
                 u.xp = apiResult.xp;
                 u.coins = apiResult.coins;
+                if (typeof apiResult.mileage_km_365 === 'number') {
+                  u.mileage_km_365 = apiResult.mileage_km_365;
+                  u.mileage_rolling_km = apiResult.mileage_km_365;
+                }
+                if (apiResult.mileage_rank) {
+                  u.mileage_rank = apiResult.mileage_rank;
+                  u.mileage_card = apiResult.mileage_rank === 'gold' ? '金卡' : (apiResult.mileage_rank === 'silver' ? '銀卡' : '銅卡');
+                }
+                u.total_rides = Number(u.total_rides || 0) + (apiResult.skipped || apiResult.voided ? 0 : 1);
                 localStorage.setItem('user', JSON.stringify(u));
               }
             } catch (e) {}
