@@ -1025,15 +1025,15 @@ body.rank-silver {
 }
 body.rank-gold {
   --app-accent: #d4af37;
-  --app-accent-light: #f6d365;
-  --app-accent-bright: #e7bf4f;
-  --app-bg-primary: #0b0c0f;
-  --app-bg-secondary: #101217;
-  --app-bg-card: #151821;
-  --app-bg-card2: #1c202a;
-  --app-border: #2f3440;
-  --app-text-primary: #f8efcf;
-  --app-text-secondary: #c8bc95;
+  --app-accent-light: #d4af37;
+  --app-accent-bright: #d4af37;
+  --app-bg-primary: #000000;
+  --app-bg-secondary: #000000;
+  --app-bg-card: #3a3a3a;
+  --app-bg-card2: #3a3a3a;
+  --app-border: #5a5a5a;
+  --app-text-primary: #d4af37;
+  --app-text-secondary: #d4af37;
 }
 body.rank-silver .db-avatar,
 body.rank-silver .tasks-hero-avatar {
@@ -1047,7 +1047,7 @@ body.rank-gold .tasks-hero-avatar {
 }
 body.rank-gold #nav-topbar,
 body.rank-gold #planner-panel {
-  background: linear-gradient(to bottom, rgba(11,12,15,0.96) 75%, transparent);
+  background: #000000;
 }
 body.rank-gold,
 body.rank-gold main,
@@ -1056,53 +1056,43 @@ body.rank-gold .content-wrapper,
 body.rank-gold .dashboard-content,
 body.rank-gold .app-page-header,
 body.rank-gold .hero {
-  color: var(--app-text-primary, #f8efcf);
-  background-color: var(--app-bg-primary, #0b0c0f);
+  color: var(--app-text-primary, #d4af37) !important;
+  background-color: var(--app-bg-primary, #000000);
 }
-body.rank-gold .content h1,
-body.rank-gold .content h2,
-body.rank-gold .content h3,
-body.rank-gold .content h4,
-body.rank-gold .content h5,
-body.rank-gold .content h6 {
-  color: var(--app-accent-light, #f6d365);
+body.rank-gold * {
+  color: var(--app-text-primary, #d4af37);
 }
-body.rank-gold .profile-card,
-body.rank-gold .game-card,
-body.rank-gold .history-card,
-body.rank-gold .stat-card,
-body.rank-gold .member-card,
-body.rank-gold .task-card,
-body.rank-gold .modal-box,
-body.rank-gold .app-route-card,
-body.rank-gold .route-card,
-body.rank-gold .forum-card {
-  background: linear-gradient(160deg, rgba(28,32,42,0.95), rgba(18,20,27,0.92)) !important;
-  border: 1px solid rgba(212,175,55,0.22) !important;
-  color: var(--app-text-primary, #f8efcf) !important;
+body.rank-gold .card,
+body.rank-gold [class$="-card"],
+body.rank-gold [class*="-card "],
+body.rank-gold .modal-box {
+  background: var(--app-bg-card, #3a3a3a) !important;
+  background-image: none !important;
+  border: 1px solid var(--app-border, #5a5a5a) !important;
+  color: var(--app-text-primary, #d4af37) !important;
 }
 body.rank-gold .cta-button,
 body.rank-gold button:not(.lang-switcher-btn) {
-  background-color: #caa73a;
-  color: #151515 !important;
-  border-color: rgba(212,175,55,0.55);
+  background-color: #3a3a3a;
+  color: var(--app-text-primary, #d4af37) !important;
+  border-color: var(--app-border, #5a5a5a);
 }
 body.rank-gold input,
 body.rank-gold select,
 body.rank-gold textarea {
-  background: #12161f;
-  border: 1px solid var(--app-border, #2f3440);
-  color: var(--app-text-primary, #f8efcf);
+  background: #000000;
+  border: 1px solid var(--app-border, #5a5a5a);
+  color: var(--app-text-primary, #d4af37);
 }
 body.rank-gold input::placeholder,
 body.rank-gold textarea::placeholder {
-  color: rgba(248,239,207,0.6);
+  color: rgba(212, 175, 55, 0.75);
 }
 body.rank-gold a {
-  color: #f0d372;
+  color: var(--app-text-primary, #d4af37);
 }
 body.rank-gold footer,
 body.rank-gold header {
-  background: #0d1016;
-  border-color: rgba(212,175,55,0.25);
+  background: #000000;
+  border-color: var(--app-border, #5a5a5a);
 }
