@@ -7,6 +7,7 @@
 //   POST /api/user             → update profile (replaces update-profile.js)
 //
 import { query } from '../lib/db.js';
+import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } from '../lib/permissions.js';
 
 let _ensureUsersUsernameColumnPromise = null;
 async function ensureUsersUsernameColumn() {
@@ -32,11 +33,18 @@ function getCyclistTierByLevel(level) {
   return '入門車手';
 }
 
-function getMileageCardByDistance(totalDistanceKm) {
-  const km = Number(totalDistanceKm || 0);
-  if (km >= 1000) return '金卡';
-  if (km >= 300) return '銀卡';
-  return '銅卡';
+function calcMileageRank(rollingKm, previousRank) {
+  const km = Number(rollingKm || 0);
+  const prev = normalizeMileageRank(previousRank);
+  if (km >= 2000) return 'gold';
+  if (prev === 'gold' && km >= 1500) return 'gold';
+  if (km >= 500) return 'silver';
+  if (prev === 'silver' && km >= 400) return 'silver';
+  return 'bronze';
+}
+
+function getMileageCardByRank(rankKey) {
+  return MILEAGE_RANK_LABELS[normalizeMileageRank(rankKey)] || '銅卡';
 }
 
 function getMembershipLabel(role) {
@@ -56,6 +64,53 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
+  // ── GET → public route metadata (for app route list) ────────────────────
+  if (req.method === 'GET' && req.query.action === 'route-data') {
+    try {
+      const { rows: routes } = await query(
+        `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags
+         FROM routes
+         ORDER BY dept, route_number`
+      );
+      const { rows: terminals } = await query(
+        `SELECT id, name_zh, lat, lon, area
+         FROM stations
+         WHERE is_terminal = TRUE
+         ORDER BY area, station_number`
+      );
+      return res.status(200).json({
+        routes: routes.map(r => {
+          let tags = [];
+          if (Array.isArray(r.tags)) {
+            tags = r.tags;
+          } else if (r.tags) {
+            try { tags = JSON.parse(r.tags); } catch (_) { tags = []; }
+          }
+          return {
+            route_id: r.route_number,
+            dept: r.dept,
+            alias: r.alias,
+            bg_color: r.bg_color,
+            estimated_minutes: r.estimated_minutes,
+            unlock_type: r.unlock_type || 'level',
+            unlock_value: r.unlock_value,
+            tags,
+          };
+        }),
+        terminals: terminals.map(t => ({
+          id: t.id,
+          name: t.name_zh,
+          lat: t.lat,
+          lng: t.lon,
+          dept: String(t.area || '').toLowerCase(),
+        })),
+      });
+    } catch (error) {
+      console.error('Get route-data error:', error);
+      return res.status(500).json({ message: 'Failed to fetch route data', routes: [], terminals: [] });
+    }
+  }
+
   // ── GET → fetch user info ───────────────────────────────────────────────
   if (req.method === 'GET') {
     // action=config → return public config (replaces config.js)
@@ -74,8 +129,14 @@ export default async function handler(req, res) {
       let result;
       const SELECT = `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.phone, u.profile_completed,
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
-                             gp.level, gp.xp, gp.coins,
-                             COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km
+                             gp.level, gp.xp, gp.coins, gp.mileage_rank, gp.mileage_km_365,
+                             gp.commute_streak, gp.commute_streak_last_date, gp.commute_streak_pending,
+                             gp.commute_streak_pending_date,
+                             COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
+                             COALESCE((SELECT SUM(ch.distance_km)
+                                       FROM cycling_history ch
+                                       WHERE ch.user_id = u.id
+                                         AND ch.ride_date >= (CURRENT_DATE - INTERVAL '365 days')), 0) AS rolling_distance_km
                         FROM users u
                         LEFT JOIN user_game_profile gp ON gp.user_id = u.id`;
 
@@ -98,9 +159,29 @@ export default async function handler(req, res) {
         user.coins = 0;
       }
       user.total_distance_km = Number(user.total_distance_km || 0);
+      const rollingKm = Number(user.rolling_distance_km || 0);
+      const prevRank = user.mileage_rank || 'bronze';
+      const mileageRank = calcMileageRank(rollingKm, prevRank);
+      user.mileage_rank = mileageRank;
+      user.mileage_card = getMileageCardByRank(mileageRank);
+      user.mileage_rolling_km = rollingKm;
       user.cyclist_tier = getCyclistTierByLevel(user.level);
-      user.mileage_card = getMileageCardByDistance(user.total_distance_km);
       user.membership_status = getMembershipLabel(user.user_role);
+
+      try {
+        await query(
+          `UPDATE user_game_profile
+           SET mileage_rank = $1, mileage_km_365 = $2, updated_at = NOW()
+           WHERE user_id = $3`,
+          [mileageRank, rollingKm, user.id]
+        );
+      } catch (e) {
+        // ignore update if profile missing
+      }
+
+      const permContext = buildPermissionContext(mileageRank);
+      user.permissions = permContext.permissions;
+      user.permission_rank = permContext.rank;
 
       // Fetch coin-purchased route IDs for the front-end unlock cache
       try {

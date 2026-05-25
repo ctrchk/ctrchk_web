@@ -5,6 +5,10 @@ import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
+const STREAK_REPAIR_COST = 100;
+const MAX_AVG_SPEED_KMH = 45;
+const RANDOM_BONUS_MIN = 1;
+const RANDOM_BONUS_MAX = 10;
 const XP_MODE_MULTIPLIER = {
   tourism: 1.5,
   commuter: 1.0,
@@ -18,6 +22,22 @@ function normalizeRideMode(mode) {
   if (['commuter', 'commute', '通勤', 'mixed', '混合', 'drt'].includes(m)) return 'commuter';
   if (['free', 'free_mode', 'free-mode', 'navigation', 'nav', '自由'].includes(m)) return 'free';
   return 'commuter';
+}
+
+function calcMileageRank(rollingKm, previousRank) {
+  const km = Number(rollingKm || 0);
+  const prev = String(previousRank || 'bronze').toLowerCase();
+  if (km >= 2000) return 'gold';
+  if (prev === 'gold' && km >= 1500) return 'gold';
+  if (km >= 500) return 'silver';
+  if (prev === 'silver' && km >= 400) return 'silver';
+  return 'bronze';
+}
+
+function calcCoinMultiplier(rankKey) {
+  if (rankKey === 'gold') return 1.15;
+  if (rankKey === 'silver') return 1.05;
+  return 1.0;
 }
 
 // 28-day daily check-in reward table — must match tasks.html CHECKIN_REWARDS
@@ -129,15 +149,49 @@ function calcLevel(xp) {
 // 確保用戶有遊戲進度記錄（若無則初始化）
 async function ensureGameProfile(userId) {
   const { rows } = await query(
-    'SELECT level, xp, coins FROM user_game_profile WHERE user_id = $1',
+    `SELECT level, xp, coins, mileage_km_365, mileage_rank,
+            commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date
+     FROM user_game_profile WHERE user_id = $1`,
     [userId]
   );
   if (rows.length > 0) return rows[0];
   await query(
-    'INSERT INTO user_game_profile (user_id, level, xp, coins) VALUES ($1, 1, 0, 0) ON CONFLICT DO NOTHING',
+    `INSERT INTO user_game_profile
+      (user_id, level, xp, coins, mileage_km_365, mileage_rank, commute_streak, commute_streak_pending)
+     VALUES ($1, 1, 0, 0, 0, 'bronze', 0, 0) ON CONFLICT DO NOTHING`,
     [userId]
   );
-  return { level: 1, xp: 0, coins: 0 };
+  return {
+    level: 1,
+    xp: 0,
+    coins: 0,
+    mileage_km_365: 0,
+    mileage_rank: 'bronze',
+    commute_streak: 0,
+    commute_streak_pending: 0,
+  };
+}
+
+async function getRollingMileageKm(userId) {
+  const { rows } = await query(
+    `SELECT COALESCE(SUM(distance_km), 0) AS total
+     FROM cycling_history
+     WHERE user_id = $1 AND ride_date >= (CURRENT_DATE - INTERVAL '365 days')`,
+    [userId]
+  );
+  return Number(rows[0]?.total || 0);
+}
+
+async function updateMileageProfile(userId, previousRank) {
+  const rollingKm = await getRollingMileageKm(userId);
+  const newRank = calcMileageRank(rollingKm, previousRank);
+  await query(
+    `UPDATE user_game_profile
+     SET mileage_km_365 = $1, mileage_rank = $2, updated_at = NOW()
+     WHERE user_id = $3`,
+    [rollingKm, newRank, userId]
+  );
+  return { rollingKm, rank: newRank };
 }
 
 async function triggerDiscordBotSyncForUser(userId) {
@@ -349,6 +403,11 @@ export default async function handler(req, res) {
       let gameProfile = null;
       try {
         gameProfile = await ensureGameProfile(userData.userId);
+        if (gameProfile) {
+          const mileageUpdate = await updateMileageProfile(userData.userId, gameProfile.mileage_rank);
+          gameProfile.mileage_km_365 = mileageUpdate.rollingKm;
+          gameProfile.mileage_rank = mileageUpdate.rank;
+        }
       } catch (e) {
         // game tables 可能尚未建立；忽略錯誤
       }
@@ -466,6 +525,44 @@ export default async function handler(req, res) {
           return res.status(200).json({ already_unlocked: true, gameProfile: profile });
         }
 
+        // ── POST?action=repair-streak：里程幣修復連勝 ───────────────────────
+        if (req.query.action === 'repair-streak') {
+          try {
+            const profile = await ensureGameProfile(userData.userId);
+            const pending = Number(profile.commute_streak_pending || 0);
+            const pendingDate = profile.commute_streak_pending_date
+              ? new Date(profile.commute_streak_pending_date).toISOString().slice(0, 10)
+              : null;
+            const today = new Date().toISOString().slice(0, 10);
+            if (!pending || pendingDate !== today) {
+              return res.status(400).json({ message: '沒有可修復的連勝記錄' });
+            }
+            if (profile.coins < STREAK_REPAIR_COST) {
+              return res.status(400).json({ message: '里程幣不足', required: STREAK_REPAIR_COST, current: profile.coins });
+            }
+            const newCoins = profile.coins - STREAK_REPAIR_COST;
+            const newStreak = pending + 1;
+            await query(
+              `UPDATE user_game_profile
+               SET coins = $1,
+                   commute_streak = $2,
+                   commute_streak_pending = 0,
+                   commute_streak_pending_date = NULL,
+                   updated_at = NOW()
+               WHERE user_id = $3`,
+              [newCoins, newStreak, userData.userId]
+            );
+            return res.status(200).json({
+              success: true,
+              commute_streak: newStreak,
+              coins: newCoins,
+            });
+          } catch (error) {
+            console.error('[repair-streak] error:', error);
+            return res.status(500).json({ message: 'Failed to repair streak' });
+          }
+        }
+
         if (profile.coins < cost) {
           return res.status(400).json({ message: '里程幣不足', required: cost, current: profile.coins });
         }
@@ -528,8 +625,11 @@ export default async function handler(req, res) {
         // Update game profile
         const profile = await ensureGameProfile(userData.userId);
         const oldLevel = profile.level;
+        const mileageRank = calcMileageRank(profile.mileage_km_365, profile.mileage_rank);
+        const coinMultiplier = calcCoinMultiplier(mileageRank);
+        const adjustedCoinsEarned = Math.floor(coinsEarned * coinMultiplier);
         const newXp = profile.xp + xpEarned;
-        const newCoins = profile.coins + coinsEarned;
+        const newCoins = profile.coins + adjustedCoinsEarned;
         const newLevel = calcLevel(newXp);
         const levelUp = newLevel > oldLevel;
 
@@ -545,11 +645,12 @@ export default async function handler(req, res) {
           console.warn('[getHistory] Discord role sync failed:', e.message)
         );
 
-        const gameProfile = { level: newLevel, xp: newXp, coins: newCoins };
+        const gameProfile = { level: newLevel, xp: newXp, coins: newCoins, mileage_rank: mileageRank };
         return res.status(200).json({
           success: true,
           xp_earned: xpEarned,
-          coins_earned: coinsEarned,
+          coins_earned: adjustedCoinsEarned,
+          coin_multiplier: coinMultiplier,
           streak: newStreak,
           cycle_day: cycleDay,
           level_up: levelUp,
@@ -580,10 +681,35 @@ export default async function handler(req, res) {
         ride_mode,
         xp_earned_override,   // per-stop + district-change XP calculated client-side
         bonus_coins,          // e.g. +5 for finishing within 45 min
+        anti_bus_flag,
+        anti_bus_reason,
       } = req.body || {};
 
       if (!ride_date) {
         return res.status(400).json({ message: 'ride_date is required' });
+      }
+
+      const avgSpeedValue = parseFloat(avg_speed_kmh) || 0;
+      const antiCheatReason = anti_bus_flag
+        ? (anti_bus_reason || '偵測到疑似高速公路/隧道軌跡重合')
+        : (avgSpeedValue > MAX_AVG_SPEED_KMH ? `偵測到均速 ${avgSpeedValue} km/h（超過 ${MAX_AVG_SPEED_KMH} km/h）` : '');
+      if (antiCheatReason) {
+        let profile = { level: 1, xp: 0, coins: 0, mileage_rank: 'bronze', mileage_km_365: 0 };
+        try { profile = await ensureGameProfile(userData.userId); } catch (e) {}
+        return res.status(200).json({
+          success: true,
+          voided: true,
+          warning: `🚍 反作弊系統啟動：${antiCheatReason}。本次行程作廢，請用雙腳與意志力再挑戰一次！`,
+          xp_earned: 0,
+          level: profile.level,
+          xp: profile.xp,
+          coins: profile.coins,
+          level_up: false,
+          coins_earned: 0,
+          bonus_coins_earned: 0,
+          random_bonus_xp: 0,
+          random_bonus_coins: 0,
+        });
       }
 
       // 過濾過短的騎行（少於2個車站且少於1公里，不計算入歷史）
@@ -602,6 +728,9 @@ export default async function handler(req, res) {
           level_up: false,
           coins_earned: 0,
           bonus_coins_earned: 0,
+          random_bonus_xp: 0,
+          random_bonus_coins: 0,
+          coin_multiplier: 1,
         });
       }
 
@@ -637,14 +766,19 @@ export default async function handler(req, res) {
       const normalizedRideMode = normalizeRideMode(ride_mode);
       const multiplier = XP_MODE_MULTIPLIER[normalizedRideMode] ?? 1.0;
       xpReward = Math.max(0, Math.round(xpReward * multiplier));
+      const randomBonus = Math.floor(Math.random() * (RANDOM_BONUS_MAX - RANDOM_BONUS_MIN + 1)) + RANDOM_BONUS_MIN;
+      const randomBonusXp = randomBonus;
+      const randomBonusCoins = randomBonus;
+      xpReward += randomBonusXp;
 
       // 2. 插入騎行記錄
       const { rows: newRide } = await query(
           `INSERT INTO cycling_history
             (user_id, ride_date, distance_km, route_name, route_id,
              start_time, end_time, duration_minutes, avg_speed_kmh,
-             stops_reached, stops_count, all_stops, districts_count, xp_earned, gpx_track, source)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+             stops_reached, stops_count, all_stops, districts_count, xp_earned, gpx_track, source,
+             anti_cheat, anti_cheat_reason, random_bonus_xp, random_bonus_coins)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
           RETURNING id`,
         [
           userData.userId,
@@ -663,6 +797,10 @@ export default async function handler(req, res) {
           xpReward,
           gpx_track || null,
           source,
+          false,
+          null,
+          randomBonusXp,
+          randomBonusCoins,
         ]
       );
       const rideId = newRide[0].id;
@@ -674,7 +812,6 @@ export default async function handler(req, res) {
         const oldLevel = profile.level;
         const newXp = profile.xp + xpReward;
         const newLevel = calcLevel(newXp);
-        let newCoins = profile.coins;
         let coinsEarned = 0;
         let levelUp = newLevel > oldLevel;
 
@@ -685,7 +822,6 @@ export default async function handler(req, res) {
             [oldLevel, newLevel]
           );
           coinsEarned = parseInt(levelRows[0]?.total || 0);
-          newCoins += coinsEarned;
         }
 
         // 45分鐘內完成路線的額外里程幣獎勵（客戶端傳入）
@@ -693,16 +829,75 @@ export default async function handler(req, res) {
           ? Math.min(bonus_coins, MAX_BONUS_COINS_PER_RIDE)  // cap to prevent abuse
           : 0;
         if (bonusCoinsEarned > 0) {
-          newCoins += bonusCoinsEarned;
           coinsEarned += bonusCoinsEarned;
+        }
+        coinsEarned += randomBonusCoins;
+
+        const mileageUpdate = await updateMileageProfile(userData.userId, profile.mileage_rank);
+        const coinMultiplier = calcCoinMultiplier(mileageUpdate.rank);
+        const adjustedCoinsEarned = Math.floor(coinsEarned * coinMultiplier);
+        const newCoins = profile.coins + adjustedCoinsEarned;
+
+        let commuteStreak = Number(profile.commute_streak || 0);
+        let commuteLastDate = profile.commute_streak_last_date
+          ? new Date(profile.commute_streak_last_date).toISOString().slice(0, 10)
+          : null;
+        let commutePending = Number(profile.commute_streak_pending || 0);
+        let commutePendingDate = profile.commute_streak_pending_date
+          ? new Date(profile.commute_streak_pending_date).toISOString().slice(0, 10)
+          : null;
+        let streakBroken = false;
+        const rideDateKey = String(ride_date).slice(0, 10);
+
+        if (commutePendingDate && commutePendingDate !== rideDateKey) {
+          commutePending = 0;
+          commutePendingDate = null;
+        }
+
+        if (normalizedRideMode === 'commuter') {
+          if (!commuteLastDate) {
+            commuteStreak = 1;
+          } else {
+            const lastDateObj = new Date(commuteLastDate + 'T00:00:00Z');
+            const rideDateObj = new Date(rideDateKey + 'T00:00:00Z');
+            const diffDays = Math.round((rideDateObj - lastDateObj) / 86400000);
+            if (diffDays === 0) {
+              // same day, keep streak
+            } else if (diffDays === 1) {
+              commuteStreak += 1;
+            } else if (diffDays > 1) {
+              commutePending = commuteStreak;
+              commutePendingDate = rideDateKey;
+              commuteStreak = 1;
+              streakBroken = commutePending > 0;
+            }
+          }
+          commuteLastDate = rideDateKey;
         }
 
         await query(
-          `INSERT INTO user_game_profile (user_id, level, xp, coins, updated_at)
-           VALUES ($1, $2, $3, $4, NOW())
+          `INSERT INTO user_game_profile
+             (user_id, level, xp, coins, mileage_km_365, mileage_rank,
+              commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
            ON CONFLICT (user_id) DO UPDATE
-             SET level = $2, xp = $3, coins = $4, updated_at = NOW()`,
-          [userData.userId, newLevel, newXp, newCoins]
+             SET level = $2, xp = $3, coins = $4,
+                 mileage_km_365 = $5, mileage_rank = $6,
+                 commute_streak = $7, commute_streak_last_date = $8,
+                 commute_streak_pending = $9, commute_streak_pending_date = $10,
+                 updated_at = NOW()`,
+          [
+            userData.userId,
+            newLevel,
+            newXp,
+            newCoins,
+            mileageUpdate.rollingKm,
+            mileageUpdate.rank,
+            commuteStreak,
+            commuteLastDate,
+            commutePending,
+            commutePendingDate,
+          ]
         );
         await triggerDiscordBotSyncForUser(userData.userId);
         syncDiscordRolesForUser(userData.userId).catch(e =>
@@ -717,8 +912,17 @@ export default async function handler(req, res) {
           xp_multiplier: multiplier,
           coins: newCoins,
           level_up: levelUp,
-          coins_earned: coinsEarned,
+          coins_earned: adjustedCoinsEarned,
           bonus_coins_earned: bonusCoinsEarned,
+          random_bonus_xp: randomBonusXp,
+          random_bonus_coins: randomBonusCoins,
+          coin_multiplier: coinMultiplier,
+          mileage_rank: mileageUpdate.rank,
+          mileage_km_365: mileageUpdate.rollingKm,
+          commute_streak: commuteStreak,
+          streak_broken: streakBroken,
+          streak_repair_available: streakBroken && newCoins >= STREAK_REPAIR_COST && commutePending > 0,
+          streak_repair_cost: STREAK_REPAIR_COST,
           unlocked_routes: [],
         };
       } catch (e) {

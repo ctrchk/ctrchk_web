@@ -100,6 +100,10 @@ ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS stops_reached JSONB;       
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS xp_earned INTEGER DEFAULT 0; -- 此次騎行獲得的 XP
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS gpx_track TEXT;              -- 可選：實際騎行 GeoJSON
 ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'web'; -- 'web' | 'pwa' | 'app'
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS anti_cheat BOOLEAN DEFAULT FALSE;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS anti_cheat_reason TEXT;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS random_bonus_xp INTEGER DEFAULT 0;
+ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS random_bonus_coins INTEGER DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_cycling_history_route_id ON cycling_history(route_id);
 CREATE INDEX IF NOT EXISTS idx_cycling_history_start_time ON cycling_history(start_time);
@@ -113,8 +117,21 @@ CREATE TABLE IF NOT EXISTS user_game_profile (
   level       INTEGER NOT NULL DEFAULT 1,
   xp          INTEGER NOT NULL DEFAULT 0,
   coins       INTEGER NOT NULL DEFAULT 0,
+  mileage_km_365 DECIMAL(10,2) DEFAULT 0,
+  mileage_rank   VARCHAR(10) DEFAULT 'bronze',
+  commute_streak INTEGER DEFAULT 0,
+  commute_streak_last_date DATE,
+  commute_streak_pending INTEGER DEFAULT 0,
+  commute_streak_pending_date DATE,
   updated_at  TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS mileage_km_365 DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS mileage_rank VARCHAR(10) DEFAULT 'bronze';
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak INTEGER DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_last_date DATE;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_pending INTEGER DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_pending_date DATE;
 
 -- =========================================================
 -- 遊戲化：用戶已解鎖路線
@@ -182,11 +199,14 @@ CREATE TABLE IF NOT EXISTS stations (
   lon            DOUBLE PRECISION NOT NULL,
   coordinates    POINT GENERATED ALWAYS AS (POINT(lon, lat)) STORED,
   road_name      VARCHAR(255),
+  is_terminal    BOOLEAN DEFAULT FALSE,
   created_at     TIMESTAMP DEFAULT NOW(),
   updated_at     TIMESTAMP DEFAULT NOW(),
   UNIQUE(area, station_number),
   CHECK (id = UPPER(area) || LPAD(station_number::TEXT, 2, '0'))
 );
+
+ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_stations_area ON stations(area);
 
@@ -198,10 +218,23 @@ CREATE TABLE IF NOT EXISTS routes (
   type              VARCHAR(20) NOT NULL CHECK (type IN ('One-way', 'Two-way', 'Circular')),
   stops             JSONB NOT NULL DEFAULT '[]'::jsonb,
   rewards           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  alias             VARCHAR(255),
+  bg_color          VARCHAR(7),
+  estimated_minutes INTEGER,
+  unlock_type       VARCHAR(20) DEFAULT 'level',
+  unlock_value      INTEGER,
+  tags              JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at        TIMESTAMP DEFAULT NOW(),
   updated_at        TIMESTAMP DEFAULT NOW(),
   PRIMARY KEY (dept, route_number)
 );
+
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS alias VARCHAR(255);
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS bg_color VARCHAR(7);
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER;
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level';
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER;
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_routes_start_station ON routes(start_station_id);
 CREATE INDEX IF NOT EXISTS idx_routes_end_station ON routes(end_station_id);

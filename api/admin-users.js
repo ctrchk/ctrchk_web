@@ -200,7 +200,7 @@ export default async function handler(req, res) {
     if (req.query.action === 'get-stations') {
       try {
         const { rows: stations } = await query(
-          `SELECT id, area, station_number, name_zh, name_en, lat, lon, road_name
+          `SELECT id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal
            FROM stations
            ORDER BY area, station_number`
         );
@@ -239,6 +239,7 @@ export default async function handler(req, res) {
       try {
         const { rows } = await query(
           `SELECT r.dept, r.route_number, r.start_station_id, r.end_station_id, r.type, r.stops, r.rewards,
+                  r.alias, r.bg_color, r.estimated_minutes, r.unlock_type, r.unlock_value, r.tags,
                   s1.name_zh AS start_station_name_zh, s2.name_zh AS end_station_name_zh
            FROM routes r
            LEFT JOIN stations s1 ON s1.id = r.start_station_id
@@ -251,6 +252,7 @@ export default async function handler(req, res) {
             route_id: `${r.dept}-${r.route_number}`,
             stops: parseJsonSafe(r.stops, []),
             rewards: parseJsonSafe(r.rewards, {}),
+            tags: parseJsonSafe(r.tags, []),
           })),
         });
       } catch (e) {
@@ -474,6 +476,16 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      if (action === 'set_terminal_station') {
+        const { station_id, is_terminal } = body;
+        if (!station_id) return res.status(400).json({ message: 'station_id is required' });
+        await query(
+          `UPDATE stations SET is_terminal = $1, updated_at = NOW() WHERE id = $2`,
+          [!!is_terminal, station_id]
+        );
+        return res.status(200).json({ success: true });
+      }
+
       if (action === 'upsert_managed_route') {
         const {
           dept,
@@ -483,6 +495,12 @@ export default async function handler(req, res) {
           type,
           stops,
           rewards,
+          alias,
+          bg_color,
+          estimated_minutes,
+          unlock_type,
+          unlock_value,
+          tags,
         } = body;
         if (!dept || !route_number || !start_station_id || !end_station_id || !type) {
           return res.status(400).json({ message: 'dept, route_number, start_station_id, end_station_id, type 為必填' });
@@ -493,16 +511,38 @@ export default async function handler(req, res) {
         }
         const safeStops = Array.isArray(stops) ? stops : [];
         const safeRewards = rewards && typeof rewards === 'object' ? rewards : {};
+        const cleanColor = bg_color ? String(bg_color).trim() : null;
+        if (cleanColor && !/^#[0-9A-Fa-f]{6}$/.test(cleanColor)) {
+          return res.status(400).json({ message: '底色必須為 6 位色碼（例如 #AABBCC）' });
+        }
+        const normalizedUnlockType = unlock_type === 'coins' ? 'coins' : 'level';
+        const unlockValue = unlock_value != null && unlock_value !== ''
+          ? Math.max(0, parseInt(unlock_value, 10))
+          : null;
+        const tagList = Array.isArray(tags)
+          ? tags
+          : String(tags || '')
+            .split(',')
+            .map(t => t.trim())
+            .filter(Boolean);
+
         await query(
           `INSERT INTO routes
-            (dept, route_number, start_station_id, end_station_id, type, stops, rewards, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,NOW())
+            (dept, route_number, start_station_id, end_station_id, type, stops, rewards,
+             alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,NOW())
            ON CONFLICT (dept, route_number) DO UPDATE SET
              start_station_id = EXCLUDED.start_station_id,
              end_station_id = EXCLUDED.end_station_id,
              type = EXCLUDED.type,
              stops = EXCLUDED.stops,
              rewards = EXCLUDED.rewards,
+             alias = EXCLUDED.alias,
+             bg_color = EXCLUDED.bg_color,
+             estimated_minutes = EXCLUDED.estimated_minutes,
+             unlock_type = EXCLUDED.unlock_type,
+             unlock_value = EXCLUDED.unlock_value,
+             tags = EXCLUDED.tags,
              updated_at = NOW()`,
           [
             String(dept).trim(),
@@ -512,8 +552,33 @@ export default async function handler(req, res) {
             type,
             JSON.stringify(safeStops),
             JSON.stringify(safeRewards),
+            alias ? String(alias).trim() : null,
+            cleanColor,
+            estimated_minutes != null && estimated_minutes !== '' ? parseInt(estimated_minutes, 10) : null,
+            normalizedUnlockType,
+            unlockValue,
+            JSON.stringify(tagList),
           ]
         );
+
+        const routeId = String(route_number).trim();
+        if (normalizedUnlockType === 'coins') {
+          await query(
+            `INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
+             VALUES ($1, 1, $2, 0, true)
+             ON CONFLICT (route_id) DO UPDATE
+               SET unlock_cost = $2, is_special = true`,
+            [routeId, unlockValue || 0]
+          );
+        } else if (unlockValue != null) {
+          await query(
+            `INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
+             VALUES ($1, $2, NULL, 0, false)
+             ON CONFLICT (route_id) DO UPDATE
+               SET unlock_level = $2, unlock_cost = NULL, is_special = false`,
+            [routeId, unlockValue]
+          );
+        }
         return res.status(200).json({ success: true });
       }
 
@@ -538,12 +603,21 @@ export default async function handler(req, res) {
             const startStationId = pickCsvValue(r, ['start_station_id', 'start_station', 'start']);
             const endStationId = pickCsvValue(r, ['end_station_id', 'end_station', 'end']);
             const type = normalizeRouteType(pickCsvValue(r, ['type']));
+            const alias = pickCsvValue(r, ['alias', 'name'], null);
+            const bgColor = pickCsvValue(r, ['bg_color', 'color'], null);
+            const estimatedMinutesRaw = pickCsvValue(r, ['estimated_minutes', 'time', 'minutes'], null);
+            const unlockTypeRaw = pickCsvValue(r, ['unlock_type', 'unlock'], 'level');
+            const unlockValueRaw = pickCsvValue(r, ['unlock_value', 'unlock_level', 'unlock_cost', 'unlockcoins'], null);
+            const tagsRaw = pickCsvValue(r, ['tags'], '');
             if (!dept || !routeNumber || !startStationId || !endStationId || !type) {
               throw new Error('欄位不足（需要 dept, route_number, start_station_id, end_station_id, type）');
             }
             const validTypes = ['One-way', 'Two-way', 'Circular'];
             if (!validTypes.includes(type)) {
               throw new Error('type 必須為 One-way / Two-way / Circular（或 單向/雙向/循環）');
+            }
+            if (bgColor && !/^#[0-9A-Fa-f]{6}$/.test(bgColor)) {
+              throw new Error('bg_color 必須為 6 位色碼（例如 #AABBCC）');
             }
 
             const stopsRaw = pickCsvValue(r, ['stops'], '[]');
@@ -562,17 +636,31 @@ export default async function handler(req, res) {
             } catch (_) {
               safeRewards = {};
             }
+            const tagList = tagsRaw
+              ? String(tagsRaw).split(',').map(t => t.trim()).filter(Boolean)
+              : [];
+            const normalizedUnlockType = unlockTypeRaw === 'coins' ? 'coins' : 'level';
+            const unlockValue = unlockValueRaw !== null && unlockValueRaw !== ''
+              ? Math.max(0, parseInt(unlockValueRaw, 10))
+              : null;
 
             await query(
               `INSERT INTO routes
-                (dept, route_number, start_station_id, end_station_id, type, stops, rewards, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,NOW())
+                (dept, route_number, start_station_id, end_station_id, type, stops, rewards,
+                 alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,NOW())
                ON CONFLICT (dept, route_number) DO UPDATE SET
                  start_station_id = EXCLUDED.start_station_id,
                  end_station_id = EXCLUDED.end_station_id,
                  type = EXCLUDED.type,
                  stops = EXCLUDED.stops,
                  rewards = EXCLUDED.rewards,
+                 alias = EXCLUDED.alias,
+                 bg_color = EXCLUDED.bg_color,
+                 estimated_minutes = EXCLUDED.estimated_minutes,
+                 unlock_type = EXCLUDED.unlock_type,
+                 unlock_value = EXCLUDED.unlock_value,
+                 tags = EXCLUDED.tags,
                  updated_at = NOW()`,
               [
                 String(dept).trim(),
@@ -582,8 +670,32 @@ export default async function handler(req, res) {
                 type,
                 JSON.stringify(safeStops),
                 JSON.stringify(safeRewards),
+                alias ? String(alias).trim() : null,
+                bgColor || null,
+                estimatedMinutesRaw != null && estimatedMinutesRaw !== '' ? parseInt(estimatedMinutesRaw, 10) : null,
+                normalizedUnlockType,
+                unlockValue,
+                JSON.stringify(tagList),
               ]
             );
+
+            if (normalizedUnlockType === 'coins') {
+              await query(
+                `INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
+                 VALUES ($1, 1, $2, 0, true)
+                 ON CONFLICT (route_id) DO UPDATE
+                   SET unlock_cost = $2, is_special = true`,
+                [String(routeNumber).trim(), unlockValue || 0]
+              );
+            } else if (unlockValue != null) {
+              await query(
+                `INSERT INTO routes_config (route_id, unlock_level, unlock_cost, xp_reward, is_special)
+                 VALUES ($1, $2, NULL, 0, false)
+                 ON CONFLICT (route_id) DO UPDATE
+                   SET unlock_level = $2, unlock_cost = NULL, is_special = false`,
+                [String(routeNumber).trim(), unlockValue]
+              );
+            }
             imported += 1;
           } catch (e) {
             failed += 1;

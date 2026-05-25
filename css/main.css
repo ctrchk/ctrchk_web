@@ -1018,3 +1018,30 @@ body.liquid-glass .history-card {
     box-shadow: var(--lg-shadow) !important;
     border-radius: var(--lg-radius) !important;
 }
+/* ── Mileage rank themes (Silver / Gold) ───────────────────────────── */
+body.rank-silver {
+  --app-accent: #c0c0c0;
+  --app-accent-light: #e0e0e0;
+}
+body.rank-gold {
+  --app-accent: #d4af37;
+  --app-accent-light: #f6d365;
+  --app-bg-primary: #0b0c0f;
+  --app-bg-card: #14151a;
+  --app-bg-card2: #1a1b22;
+  --app-border: #2a2c35;
+}
+body.rank-silver .db-avatar,
+body.rank-silver .tasks-hero-avatar {
+  border-color: rgba(192, 192, 192, 0.75);
+  box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.35);
+}
+body.rank-gold .db-avatar,
+body.rank-gold .tasks-hero-avatar {
+  border-color: rgba(212, 175, 55, 0.8);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.35), 0 0 12px rgba(212, 175, 55, 0.25);
+}
+body.rank-gold #nav-topbar,
+body.rank-gold #planner-panel {
+  background: linear-gradient(to bottom, rgba(11,12,15,0.96) 75%, transparent);
+}

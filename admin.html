@@ -618,6 +618,19 @@
                         <select id="rm-start-station"><option value="">起點站</option></select>
                         <select id="rm-end-station"><option value="">終點站</option></select>
                     </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
+                        <input id="rm-alias" type="text" placeholder="別稱（顯示名稱）">
+                        <input id="rm-bg-color" type="text" placeholder="底色 #RRGGBB">
+                        <input id="rm-estimated-minutes" type="number" min="1" placeholder="預計時間（分鐘）">
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
+                        <select id="rm-unlock-type">
+                            <option value="level">解鎖條件：Level</option>
+                            <option value="coins">解鎖條件：里程幣購買</option>
+                        </select>
+                        <input id="rm-unlock-value" type="number" min="0" placeholder="解鎖數值（Level 或 里程幣）">
+                        <input id="rm-tags" type="text" placeholder="標籤（逗號分隔，可留空）">
+                    </div>
                     <div style="margin-top:0.8em; display:flex; gap:1em; flex-wrap:wrap; align-items:center;">
                         <label><input type="radio" name="rm-type" value="One-way" checked> 單向</label>
                         <label><input type="radio" name="rm-type" value="Two-way"> 雙向</label>
@@ -646,15 +659,30 @@
                         </button>
                         <span id="route-csv-msg" style="font-size:0.9em; align-self:center; color:#555;"></span>
                     </div>
-                    <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：dept, route_number, start_station_id, end_station_id, type, stops(JSON), rewards(JSON)</p>
+                    <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：dept, route_number, start_station_id, end_station_id, type, alias, bg_color, estimated_minutes, unlock_type(level/coins), unlock_value, tags, stops(JSON), rewards(JSON)</p>
                     <div style="overflow:auto; margin-top:1em;">
                         <table class="users-table">
                             <thead>
                                 <tr>
-                                    <th>路線</th><th>類型</th><th>起點</th><th>終點</th><th>中途站數</th><th>操作</th>
+                                    <th>路線</th><th>類型</th><th>起點</th><th>終點</th><th>中途站數</th><th>解鎖</th><th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="route-admin-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-flag-checkered"></i> 總站管理</h4>
+                    <p style="font-size:0.85em; color:#666;">設定要在 App 騎行地圖顯示的「總站」清單。</p>
+                    <div style="overflow:auto; margin-top:0.8em;">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>站點</th><th>區域</th><th>站名</th><th>總站</th>
+                                </tr>
+                            </thead>
+                            <tbody id="terminal-admin-tbody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -1813,6 +1841,7 @@
                 managedRoutesData = routeData.routes || [];
                 renderStationAdminTable();
                 renderRouteAdminTable();
+                renderTerminalAdminTable();
                 refreshStationSelectOptions();
             } catch (e) {
                 console.error('[Admin] loadStationRouteAdminData error:', e);
@@ -1849,6 +1878,28 @@
                     <td>
                         <button class="action-btn btn-admin" onclick="editStationAdmin('${escapeHtml(st.id)}')">編輯</button>
                         <button class="action-btn btn-delete" onclick="deleteStationAdmin('${escapeHtml(st.id)}')">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTerminalAdminTable() {
+            const tbody = document.getElementById('terminal-admin-tbody');
+            if (!tbody) return;
+            if (!stationAdminData.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">沒有站點資料</td></tr>';
+                return;
+            }
+            tbody.innerHTML = stationAdminData.map(st => `
+                <tr>
+                    <td>${escapeHtml(st.id)}</td>
+                    <td>${escapeHtml(st.area)}</td>
+                    <td>${escapeHtml(st.name_zh || '-')}</td>
+                    <td>
+                        <label style="display:flex; align-items:center; gap:0.4em; font-size:0.85em;">
+                            <input type="checkbox" ${st.is_terminal ? 'checked' : ''} onchange="toggleTerminalStation('${escapeHtml(st.id)}', this.checked)">
+                            <span>${st.is_terminal ? '已設為總站' : '設為總站'}</span>
+                        </label>
                     </td>
                 </tr>
             `).join('');
@@ -1959,10 +2010,12 @@
 
         function resetManagedRouteForm() {
             managedRouteEditingKey = null;
-            ['rm-dept', 'rm-route-number', 'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit']
+            ['rm-dept', 'rm-route-number', 'rm-alias', 'rm-bg-color', 'rm-estimated-minutes', 'rm-unlock-value', 'rm-tags',
+             'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('rm-start-station').value = '';
             document.getElementById('rm-end-station').value = '';
+            document.getElementById('rm-unlock-type').value = 'level';
             const typeEl = document.querySelector('input[name="rm-type"][value="One-way"]');
             if (typeEl) typeEl.checked = true;
             const list = document.getElementById('rm-stops-list');
@@ -1974,8 +2027,17 @@
             const tbody = document.getElementById('route-admin-tbody');
             if (!tbody) return;
             if (!managedRoutesData.length) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">沒有路線資料</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">沒有路線資料</td></tr>';
                 return;
+            }
+            function formatUnlock(route) {
+                if (route.unlock_type === 'coins') {
+                    return `🪙 ${route.unlock_value || 0}`;
+                }
+                if (route.unlock_value != null) {
+                    return `Lv.${route.unlock_value}`;
+                }
+                return '-';
             }
             tbody.innerHTML = managedRoutesData.map(r => `
                 <tr>
@@ -1984,6 +2046,7 @@
                     <td>${escapeHtml(r.start_station_id || '-')}</td>
                     <td>${escapeHtml(r.end_station_id || '-')}</td>
                     <td>${Array.isArray(r.stops) ? r.stops.length : 0}</td>
+                    <td>${formatUnlock(r)}</td>
                     <td>
                         <button class="action-btn btn-admin" onclick="editManagedRoute('${escapeHtml(r.dept)}','${escapeHtml(r.route_number)}')">編輯</button>
                         <button class="action-btn btn-delete" onclick="deleteManagedRoute('${escapeHtml(r.dept)}','${escapeHtml(r.route_number)}')">刪除</button>
@@ -1998,6 +2061,12 @@
             managedRouteEditingKey = `${dept}-${routeNumber}`;
             document.getElementById('rm-dept').value = route.dept || '';
             document.getElementById('rm-route-number').value = route.route_number || '';
+            document.getElementById('rm-alias').value = route.alias || '';
+            document.getElementById('rm-bg-color').value = route.bg_color || '';
+            document.getElementById('rm-estimated-minutes').value = route.estimated_minutes ?? '';
+            document.getElementById('rm-unlock-type').value = route.unlock_type || 'level';
+            document.getElementById('rm-unlock-value').value = route.unlock_value ?? '';
+            document.getElementById('rm-tags').value = Array.isArray(route.tags) ? route.tags.join(', ') : '';
             document.getElementById('rm-start-station').value = route.start_station_id || '';
             document.getElementById('rm-end-station').value = route.end_station_id || '';
             const typeEl = document.querySelector(`input[name="rm-type"][value="${route.type || 'One-way'}"]`);
@@ -2023,6 +2092,12 @@
                 action: 'upsert_managed_route',
                 dept: document.getElementById('rm-dept').value.trim(),
                 route_number: document.getElementById('rm-route-number').value.trim(),
+                alias: document.getElementById('rm-alias').value.trim(),
+                bg_color: document.getElementById('rm-bg-color').value.trim() || null,
+                estimated_minutes: document.getElementById('rm-estimated-minutes').value,
+                unlock_type: document.getElementById('rm-unlock-type').value,
+                unlock_value: document.getElementById('rm-unlock-value').value,
+                tags: document.getElementById('rm-tags').value,
                 start_station_id: document.getElementById('rm-start-station').value,
                 end_station_id: document.getElementById('rm-end-station').value,
                 type: document.querySelector('input[name="rm-type"]:checked')?.value || 'One-way',
@@ -2075,6 +2150,26 @@
             } catch (e) {
                 msgEl.style.color = 'red';
                 msgEl.textContent = `❌ ${e.message}`;
+            }
+
+            async function toggleTerminalStation(stationId, isTerminal) {
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const resp = await fetch('/api/admin-users', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'set_terminal_station', station_id: stationId, is_terminal: isTerminal }),
+                    });
+                    if (handleTokenError(resp)) return;
+                    if (!resp.ok) {
+                        const data = await resp.json();
+                        alert(data.message || '更新失敗');
+                        return;
+                    }
+                    await loadStationRouteAdminData();
+                } catch (e) {
+                    alert('更新失敗：' + e.message);
+                }
             }
         }
 
