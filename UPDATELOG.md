@@ -10,7 +10,7 @@
 - **客服功能** - 新增全新客服系統，App或網頁內可直接聯絡技術人員。
 
 ### 修復 (Bug Fixes)
-- **PATCH** - 第36行，`/workspaces/ctrchk_web/js/pwa.js` 不可行利益
+- **PATCH** - 第36行，`/workspaces/ctrchk_web/js/pwa.js` 不可行利益 <br>  
 處理方式：移除相關文字
 
 
