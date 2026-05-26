@@ -1062,6 +1062,10 @@ body.rank-gold .hero {
 body.rank-gold * {
   color: var(--app-text-primary, #d4af37);
 }
+body.rank-gold .app-route-id,
+body.rank-gold #ride-route-label {
+  color: #fff !important;
+}
 body.rank-gold .db-level-badge,
 body.rank-gold .tasks-hero-level-badge,
 body.rank-gold .app-level-badge,

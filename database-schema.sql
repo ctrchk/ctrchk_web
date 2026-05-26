@@ -229,6 +229,8 @@ CREATE TABLE IF NOT EXISTS routes (
   unlock_type       VARCHAR(20) DEFAULT 'level',
   unlock_value      INTEGER,
   tags              JSONB NOT NULL DEFAULT '[]'::jsonb,
+  gpx               JSONB NOT NULL DEFAULT '[]'::jsonb,
+  length_text       VARCHAR(32),
   created_at        TIMESTAMP DEFAULT NOW(),
   updated_at        TIMESTAMP DEFAULT NOW(),
   PRIMARY KEY (dept, route_number)
@@ -240,6 +242,8 @@ ALTER TABLE routes ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER;
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level';
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER;
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32);
 
 CREATE INDEX IF NOT EXISTS idx_routes_start_station ON routes(start_station_id);
 CREATE INDEX IF NOT EXISTS idx_routes_end_station ON routes(end_station_id);
@@ -598,4 +602,3 @@ CREATE INDEX IF NOT EXISTS idx_support_threads_claimed_admin ON support_threads(
 -- 客服訊息：使用既有 chat_messages 表，但額外加 thread_id 來把客服記錄串起
 ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS thread_id INTEGER REFERENCES support_threads(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_id ON chat_messages(thread_id);
-

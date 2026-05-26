@@ -188,6 +188,8 @@ async function ensureAdminRouteSchema() {
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level'`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
 }
 
 export default async function handler(req, res) {
@@ -252,7 +254,7 @@ export default async function handler(req, res) {
         await ensureAdminRouteSchema();
         const { rows } = await query(
           `SELECT r.dept, r.route_number, r.start_station_id, r.end_station_id, r.type, r.stops, r.rewards,
-                  r.alias, r.bg_color, r.estimated_minutes, r.unlock_type, r.unlock_value, r.tags,
+                 r.alias, r.bg_color, r.estimated_minutes, r.unlock_type, r.unlock_value, r.tags, r.gpx, r.length_text,
                   s1.name_zh AS start_station_name_zh, s2.name_zh AS end_station_name_zh
            FROM routes r
            LEFT JOIN stations s1 ON s1.id = r.start_station_id
@@ -266,6 +268,8 @@ export default async function handler(req, res) {
             stops: parseJsonSafe(r.stops, []),
             rewards: parseJsonSafe(r.rewards, {}),
             tags: parseJsonSafe(r.tags, []),
+            gpx: parseJsonSafe(r.gpx, []),
+            length_text: r.length_text || null,
           })),
         });
       } catch (e) {
@@ -519,9 +523,11 @@ export default async function handler(req, res) {
           unlock_type,
           unlock_value,
           tags,
+          gpx,
+          length_text,
         } = body;
-        if (!dept || !route_number || !start_station_id || !end_station_id || !type) {
-          return res.status(400).json({ message: 'dept, route_number, start_station_id, end_station_id, type 為必填' });
+        if (!dept || !route_number || !type) {
+          return res.status(400).json({ message: 'dept, route_number, type 為必填' });
         }
         const validTypes = ['One-way', 'Two-way', 'Circular'];
         if (!validTypes.includes(type)) {
@@ -543,12 +549,29 @@ export default async function handler(req, res) {
             .split(',')
             .map(t => t.trim())
             .filter(Boolean);
+        const gpxListRaw = parseJsonSafe(gpx, []);
+        const gpxList = Array.isArray(gpxListRaw)
+          ? gpxListRaw
+             .map((item) => {
+               const label = String(item?.label || '').trim();
+               const file = String(item?.file || '').trim();
+               if (!file) return null;
+               const out = { label: label || file.replace(/\.gpx$/i, ''), file };
+               if (item?.dir_filter) out.dir_filter = String(item.dir_filter).trim();
+               return out;
+             })
+             .filter(Boolean)
+          : [];
+        const lengthText = length_text == null ? null : String(length_text).trim();
+        if (lengthText && lengthText.length > 32) {
+          return res.status(400).json({ message: 'length_text 長度不可超過 32 字元' });
+        }
 
         await query(
           `INSERT INTO routes
             (dept, route_number, start_station_id, end_station_id, type, stops, rewards,
-             alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,NOW())
+             alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,NOW())
            ON CONFLICT (dept, route_number) DO UPDATE SET
              start_station_id = EXCLUDED.start_station_id,
              end_station_id = EXCLUDED.end_station_id,
@@ -561,12 +584,14 @@ export default async function handler(req, res) {
              unlock_type = EXCLUDED.unlock_type,
              unlock_value = EXCLUDED.unlock_value,
              tags = EXCLUDED.tags,
+             gpx = EXCLUDED.gpx,
+             length_text = EXCLUDED.length_text,
              updated_at = NOW()`,
           [
             String(dept).trim(),
             String(route_number).trim(),
-            String(start_station_id).trim(),
-            String(end_station_id).trim(),
+            start_station_id ? String(start_station_id).trim() : null,
+            end_station_id ? String(end_station_id).trim() : null,
             type,
             JSON.stringify(safeStops),
             JSON.stringify(safeRewards),
@@ -576,6 +601,8 @@ export default async function handler(req, res) {
             normalizedUnlockType,
             unlockValue,
             JSON.stringify(tagList),
+            JSON.stringify(gpxList),
+            lengthText || null,
           ]
         );
 
@@ -628,8 +655,10 @@ export default async function handler(req, res) {
             const unlockTypeRaw = pickCsvValue(r, ['unlock_type', 'unlock'], 'level');
             const unlockValueRaw = pickCsvValue(r, ['unlock_value', 'unlock_level', 'unlock_cost', 'unlockcoins'], null);
             const tagsRaw = pickCsvValue(r, ['tags'], '');
-            if (!dept || !routeNumber || !startStationId || !endStationId || !type) {
-              throw new Error('欄位不足（需要 dept, route_number, start_station_id, end_station_id, type）');
+            const gpxRaw = pickCsvValue(r, ['gpx', 'gpx_json'], '[]');
+            const lengthText = pickCsvValue(r, ['length_text', 'length', 'distance'], null);
+            if (!dept || !routeNumber || !type) {
+              throw new Error('欄位不足（需要 dept, route_number, type）');
             }
             const validTypes = ['One-way', 'Two-way', 'Circular'];
             if (!validTypes.includes(type)) {
@@ -662,12 +691,13 @@ export default async function handler(req, res) {
             const unlockValue = unlockValueRaw !== null && unlockValueRaw !== ''
               ? Math.max(0, parseInt(unlockValueRaw, 10))
               : null;
+            const safeGpx = parseJsonSafe(gpxRaw, []);
 
             await query(
               `INSERT INTO routes
                 (dept, route_number, start_station_id, end_station_id, type, stops, rewards,
-                 alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,NOW())
+                 alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,NOW())
                ON CONFLICT (dept, route_number) DO UPDATE SET
                  start_station_id = EXCLUDED.start_station_id,
                  end_station_id = EXCLUDED.end_station_id,
@@ -680,12 +710,14 @@ export default async function handler(req, res) {
                  unlock_type = EXCLUDED.unlock_type,
                  unlock_value = EXCLUDED.unlock_value,
                  tags = EXCLUDED.tags,
+                 gpx = EXCLUDED.gpx,
+                 length_text = EXCLUDED.length_text,
                  updated_at = NOW()`,
               [
                 String(dept).trim(),
                 String(routeNumber).trim(),
-                String(startStationId).trim(),
-                String(endStationId).trim(),
+                startStationId ? String(startStationId).trim() : null,
+                endStationId ? String(endStationId).trim() : null,
                 type,
                 JSON.stringify(safeStops),
                 JSON.stringify(safeRewards),
@@ -695,6 +727,8 @@ export default async function handler(req, res) {
                 normalizedUnlockType,
                 unlockValue,
                 JSON.stringify(tagList),
+                JSON.stringify(Array.isArray(safeGpx) ? safeGpx : []),
+                lengthText || null,
               ]
             );
 
