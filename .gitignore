@@ -1,3 +1,5 @@
+# Ignore the local ctrc.login folder
+ctrc.login/
 # Dependencies
 node_modules/
 .pnp
@@ -37,3 +39,4 @@ pnpm-debug.log*
 
 # OS files
 Thumbs.db
+ctrc.login/
