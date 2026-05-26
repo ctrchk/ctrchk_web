@@ -8,6 +8,8 @@
     "nodemailer": "^8.0.1",
     "pg": "^8.13.3",
     "web-push": "^3.6.7"
+    "@octokit/rest": "^21.0.0",
+    "@google/generative-ai": "^0.21.0"
   },
   "name": "ctrchk",
   "version": "1.0.0",
