@@ -12,7 +12,10 @@
 ### 修復 (Bug Fixes)
 - **PATCH** - 第36行，`/workspaces/ctrchk_web/js/pwa.js` 不可行權益 <br>  
 處理方式：移除相關文字
-
+- **PATCH** - 刪除舊文件夾 `/ctrc.login` [已棄用]<br>  
+`git rm -r --cached ctrc.login`
+`echo "ctrc.login/" >> .gitignore`
+`git add .gitignore`
 
 ## v2.0 Beta — 2026-05-25
 
