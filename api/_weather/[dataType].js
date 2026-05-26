@@ -19,27 +19,30 @@ export default async function handler(req, res) {
     }
     
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
         const hkoUrl = `https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=${dataType}&lang=${encodeURIComponent(lang)}`;
         const response = await fetch(hkoUrl, {
             headers: {
                 // Some gateways need an explicit accept for JSON.
                 'Accept': 'application/json',
             },
-        });
+            signal: controller.signal,
+        }).finally(() => clearTimeout(timeout));
 
         if (!response.ok) {
             const text = await response.text().catch(() => '');
             throw new Error(`HKO API error: ${response.status} ${text}`);
         }
 
-        // HKO 應該回 JSON；若不是，避免 render 時默默爆掉
-        const contentType = response.headers.get('content-type') || '';
-        if (!contentType.toLowerCase().includes('application/json')) {
-            const text = await response.text().catch(() => '');
-            throw new Error(`HKO response is not JSON (content-type=${contentType}). body=${text.slice(0, 300)}`);
+        const raw = await response.text();
+        let data = null;
+        try {
+            data = JSON.parse(raw);
+        } catch (parseErr) {
+            const contentType = response.headers.get('content-type') || '';
+            throw new Error(`HKO response parse failed (content-type=${contentType}): ${String(parseErr.message || parseErr)}`);
         }
-
-        const data = await response.json();
 
         
         // Cache for 5 minutes

@@ -73,12 +73,19 @@
 
   function applyMembershipTheme(context) {
     if (!document.body || !context) return;
+    if (!isStandalone) {
+      document.body.classList.remove('rank-silver', 'rank-gold');
+      return;
+    }
     const rank = String(context.rank || '').toLowerCase();
     const silverEnabled = localStorage.getItem('silverThemeDisabled') !== '1';
     const goldEnabled = localStorage.getItem('goldThemeDisabled') !== '1';
     document.body.classList.remove('rank-silver', 'rank-gold');
     if (rank === 'gold' && context.permissions.theme_gold && goldEnabled) {
       document.body.classList.add('rank-gold');
+      localStorage.setItem('appTheme', 'dark');
+      document.body.classList.add('app-theme-explicit');
+      document.body.classList.remove('app-light-theme');
     } else if (rank === 'silver' && context.permissions.theme_silver && silverEnabled) {
       document.body.classList.add('rank-silver');
     }
@@ -103,6 +110,7 @@
   const isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true;
+  window.CTRCHK_IS_STANDALONE = isStandalone;
 
   if (isStandalone) {
     // Apply to body once DOM is ready (body may not exist at script parse time).
@@ -300,7 +308,7 @@
       // Apply iOS Liquid Glass if applicable
       detectLiquidGlass();
     }
-    // Apply mileage-rank theme regardless of standalone
+    // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();
   });
   window.addEventListener('pageshow', refreshMembershipTheme);

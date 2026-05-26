@@ -114,6 +114,8 @@ export default async function handler(req, res) {
       if (action === 'support_messages') {
         await ensureSupportSchema();
         const threadId = parseInt(req.query.thread_id, 10);
+        const afterId = parseInt(req.query.after, 10) || null;
+        const msgLimit = Math.min(parseInt(req.query.limit, 10) || 40, 200);
         if (!threadId) return res.status(400).json({ message: 'thread_id required' });
 
         const role = await resolveUserRole(req, uid);
@@ -127,15 +129,27 @@ export default async function handler(req, res) {
           if (!trows.length) return res.status(404).json({ message: 'Thread not found' });
         }
 
+        if (afterId) {
+          const { rows } = await query(
+            `SELECT id, sender_id, receiver_id, content, is_read, created_at, thread_id
+             FROM chat_messages
+             WHERE thread_id = $1 AND id > $2
+             ORDER BY id ASC
+             LIMIT $3`,
+            [threadId, afterId, msgLimit]
+          );
+          return res.status(200).json({ messages: rows });
+        }
+
         const { rows } = await query(
           `SELECT id, sender_id, receiver_id, content, is_read, created_at, thread_id
            FROM chat_messages
            WHERE thread_id = $1
-           ORDER BY created_at ASC
-           LIMIT 200`,
-          [threadId]
+           ORDER BY id DESC
+           LIMIT $2`,
+          [threadId, msgLimit]
         );
-        return res.status(200).json({ messages: rows });
+        return res.status(200).json({ messages: rows.reverse() });
       }
 
       // ── 對話列表（最近聯絡人 + 最後一條訊息 + 未讀數）
@@ -294,47 +308,34 @@ export default async function handler(req, res) {
         if (!uid2) return res.status(400).json({ message: 'user_id required' });
 
         if (!text) {
-          // 預設首訊息內容
-          const defaultText = '客服人數有限 您可以先離開此頁面 我們將會儘快回復您 請耐心等候 您亦可選擇discord内的客服';
-          return await (async () => {
-            const { rows: adminRows } = await query(
-              `SELECT id FROM users WHERE user_role = 'senior_admin' ORDER BY id ASC`
-            );
-            if (!adminRows.length) {
-              return res.status(503).json({ message: 'No senior_admin available' });
-            }
+          const { rows: adminRows } = await query(
+            `SELECT id FROM users WHERE user_role = 'senior_admin' ORDER BY id ASC`
+          );
+          if (!adminRows.length) {
+            return res.status(503).json({ message: 'No senior_admin available' });
+          }
 
-            // 建立 thread（每次 user 點客服都建新 thread；如需合併可再改）
-            const { rows: tRows } = await query(
-              `INSERT INTO support_threads (user_id, status)
-               VALUES ($1, 'open')
-               RETURNING id, user_id, claimed_by_admin_id, status, created_at, updated_at`,
-              [uid2]
-            );
-            const threadId = tRows[0]?.id;
+          // 建立 thread（不再自動寫入系統句子，提示由前端顯示）
+          const { rows: tRows } = await query(
+            `INSERT INTO support_threads (user_id, status)
+             VALUES ($1, 'open')
+             RETURNING id, user_id, claimed_by_admin_id, status, created_at, updated_at`,
+            [uid2]
+          );
+          const threadId = tRows[0]?.id;
 
-            await query(
-              `INSERT INTO chat_messages (sender_id, receiver_id, content, thread_id)
-               VALUES ($1, $2, $3, $4)`,
-              [uid2, adminRows[0].id, defaultText, threadId]
-            );
+          await Promise.all(
+            adminRows.map((a) =>
+              sendPushToUser(a.id, {
+                title: '有新客服需求',
+                body: '用戶已開啟客服對話，等待回覆',
+                url: `/chat?support=1&thread_id=${threadId}`,
+                tag: `ctrc-support-${threadId}-${a.id}`,
+              })
+            )
+          ).catch(() => {});
 
-            // 對所有 senior_admin 都推送通知（receiver 以每個 admin 的 id）
-            const MAX_PUSH_PREVIEW_LENGTH = 80;
-            const preview = defaultText.length > MAX_PUSH_PREVIEW_LENGTH ? defaultText.slice(0, MAX_PUSH_PREVIEW_LENGTH) + '…' : defaultText;
-            await Promise.all(
-              adminRows.map((a) =>
-                sendPushToUser(a.id, {
-                  title: '有新客服需求',
-                  body: preview,
-                  url: `/chat?support=1&thread_id=${threadId}`,
-                  tag: `ctrc-support-${threadId}-${a.id}`,
-                })
-              )
-            ).catch(() => {});
-
-            return res.status(201).json({ thread_id: threadId });
-          })();
+          return res.status(201).json({ thread_id: threadId });
         }
 
 

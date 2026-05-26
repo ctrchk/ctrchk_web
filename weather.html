@@ -73,8 +73,8 @@
                 : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
         try {
             const [rhrResult, warnResult] = await Promise.allSettled([
-                fetch('/api/_weather/rhrread?lang=tc'),
-                fetch('/api/_weather/warnsum?lang=tc')
+                fetchWeatherApi('rhrread'),
+                fetchWeatherApi('warnsum')
             ]);
             if (rhrResult.status !== 'fulfilled' || !rhrResult.value.ok) {
                 throw new Error('weather api failed');
@@ -89,6 +89,17 @@
             document.getElementById('wx-updated').textContent = '天氣資料載入失敗，請稍後再試';
         }
     })();
+
+    async function fetchWeatherApi(dataType) {
+        const langs = ['tc', 'zh', 'en'];
+        let lastResp = null;
+        for (const lang of langs) {
+            const resp = await fetch(`/api/_weather/${dataType}?lang=${encodeURIComponent(lang)}`);
+            if (resp.ok) return resp;
+            lastResp = resp;
+        }
+        return lastResp;
+    }
 
     function resolveRankFromUser() {
         try {
