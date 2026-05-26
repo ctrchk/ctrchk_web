@@ -779,13 +779,37 @@
             const isLight = stored === 'light' ||
                 (!stored && window.matchMedia('(prefers-color-scheme: light)').matches);
             themeToggle.checked = isLight;
+            if (!isStandaloneAppMode()) {
+                themeToggle.checked = false;
+                themeToggle.disabled = true;
+            }
         }
         initMembershipThemeToggles();
     });
 
     window.onThemeToggle = function(isLight) {
+        if (!isStandaloneAppMode()) return;
+        const ctx = getRankThemeContext();
+        const rank = String(ctx.rank || '').toLowerCase();
+        if (rank === 'gold') {
+            setAppTheme('dark');
+            const themeToggle = document.getElementById('light-theme-toggle');
+            if (themeToggle) {
+                themeToggle.checked = false;
+                themeToggle.disabled = true;
+            }
+            return;
+        }
         setAppTheme(isLight ? 'light' : 'dark');
     };
+
+    function isStandaloneAppMode() {
+        return (
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true ||
+            document.body.classList.contains('is-pwa')
+        );
+    }
 
     function getRankThemeContext() {
         try {
@@ -811,6 +835,10 @@
     }
 
     function applyMembershipThemePreferenceClass() {
+        if (!isStandaloneAppMode()) {
+            document.body.classList.remove('rank-silver', 'rank-gold');
+            return;
+        }
         const ctx = getRankThemeContext();
         const perms = ctx.permissions || {};
         const rank = String(ctx.rank || '').toLowerCase();
@@ -828,13 +856,15 @@
         const ctx = getRankThemeContext();
         const perms = ctx.permissions || {};
         const rank = String(ctx.rank || '').toLowerCase();
+        const appMode = isStandaloneAppMode();
         const silverRow = document.getElementById('silver-theme-row');
         const silverToggle = document.getElementById('silver-theme-toggle');
         const goldRow = document.getElementById('gold-theme-row');
         const goldToggle = document.getElementById('gold-theme-toggle');
+        const themeToggle = document.getElementById('light-theme-toggle');
 
         if (silverRow && silverToggle) {
-            if (rank === 'silver' && perms.theme_silver) {
+            if (appMode && rank === 'silver' && perms.theme_silver) {
                 silverRow.style.display = '';
                 silverToggle.checked = localStorage.getItem('silverThemeDisabled') !== '1';
             } else {
@@ -844,14 +874,20 @@
         }
 
         if (goldRow && goldToggle) {
-            if (rank === 'gold' && perms.theme_gold) {
-                goldRow.style.display = '';
-                goldToggle.checked = localStorage.getItem('goldThemeDisabled') !== '1';
+            if (appMode && rank === 'gold' && perms.theme_gold) {
+                goldRow.style.display = 'none';
+                localStorage.removeItem('goldThemeDisabled');
+                setAppTheme('dark');
+                if (themeToggle) {
+                    themeToggle.checked = false;
+                    themeToggle.disabled = true;
+                }
             } else {
                 goldRow.style.display = 'none';
                 localStorage.removeItem('goldThemeDisabled');
             }
         }
+        if (themeToggle && appMode && rank !== 'gold') themeToggle.disabled = false;
         applyMembershipThemePreferenceClass();
     }
 

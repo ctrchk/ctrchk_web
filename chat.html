@@ -1072,6 +1072,19 @@
             });
             container.appendChild(frag);
         }
+        function renderClientSupportNotice(container) {
+            if (!container) return;
+            const wrap = document.createElement('div');
+            wrap.className = 'msg-bubble-wrap';
+            wrap.innerHTML = `
+                <div class="bubble-avatar"><i class="fas fa-headset"></i></div>
+                <div class="msg-inner">
+                    <div class="msg-bubble theirs">${escHtml(SUPPORT_NOTICE_TEXT)}</div>
+                    <div class="msg-time">${timeStr(new Date().toISOString())}</div>
+                </div>
+            `;
+            container.appendChild(wrap);
+        }
 
         async function startSupportThread() {
             setMsgEmpty(SUPPORT_NOTICE_TEXT);
@@ -1079,8 +1092,14 @@
                 window.location.href = '/chat?support=1';
                 return;
             }
-            // Create a support thread and enter it
+            // Reuse latest support thread if exists, otherwise create new
             try {
+                const existing = await apiGet(`/api/chat?action=support_threads&user_id=${ME.id}`);
+                const threads = Array.isArray(existing?.threads) ? existing.threads : [];
+                if (threads.length) {
+                    openSupportThread(threads[0].id);
+                    return;
+                }
                 const data = await apiPost('/api/chat', {
                     action: 'start_support_thread',
                     user_id: ME.id,
@@ -1134,7 +1153,7 @@
             if (supportPollTimer) clearInterval(supportPollTimer);
             supportPollTimer = setInterval(() => {
                 loadSupportMessages({ reset: false });
-            }, 3000);
+            }, 2000);
 
             // Also stop normal polling
             if (pollTimer) clearInterval(pollTimer);
@@ -1160,6 +1179,7 @@
                     supportMsgCache = messages;
                     list.innerHTML = '';
                     renderSupportMessages(messages, list, { reset: true });
+                    if (!messages.length && !isSupportAdminMode) renderClientSupportNotice(list);
                     supportOldestMsgId = messages.length ? messages[0].id : null;
                     supportNewestMsgId = messages.length ? messages[messages.length - 1].id : null;
                     list.scrollTop = list.scrollHeight;
