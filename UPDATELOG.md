@@ -16,7 +16,7 @@
 `git rm -r --cached ctrc.login`
 `echo "ctrc.login/" >> .gitignore`
 `git add .gitignore`<br>  
-- **PATCH** - `suspended_ifneed.html`已被移至.gitignore
+- **PATCH** - `suspended_ifneed.html`已被移至`.gitignore`
 
 ## v2.0 Beta — 2026-05-25
 
