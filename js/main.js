@@ -10,7 +10,19 @@ console.log('--- main.js 檔案已成功載入並開始執行！ ---');
 // =========================================================================
 // 主題 (深色/淺色) 初始化
 // =========================================================================
+function isStandaloneAppMode() {
+    return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true ||
+        document.body.classList.contains('is-pwa')
+    );
+}
+
 (function initAppTheme() {
+    if (!isStandaloneAppMode()) {
+        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+        return;
+    }
     const stored = localStorage.getItem('appTheme'); // 'dark' | 'light' | null
     if (stored === 'dark') {
         document.body.classList.add('app-theme-explicit');
@@ -28,6 +40,10 @@ console.log('--- main.js 檔案已成功載入並開始執行！ ---');
  * @param {'dark'|'light'|'auto'} theme
  */
 function setAppTheme(theme) {
+    if (!isStandaloneAppMode()) {
+        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+        return;
+    }
     localStorage.setItem('appTheme', theme);
     if (theme === 'light') {
         document.body.classList.add('app-theme-explicit', 'app-light-theme');

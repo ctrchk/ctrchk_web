@@ -1062,6 +1062,13 @@ body.rank-gold .hero {
 body.rank-gold * {
   color: var(--app-text-primary, #d4af37);
 }
+body.rank-gold .db-level-badge,
+body.rank-gold .tasks-hero-level-badge,
+body.rank-gold .app-level-badge,
+body.rank-gold #levelup-badge,
+body.rank-gold #tasks-levelup-badge {
+  color: #121f14 !important;
+}
 body.rank-gold .card,
 body.rank-gold [class$="-card"],
 body.rank-gold [class*="-card "],
