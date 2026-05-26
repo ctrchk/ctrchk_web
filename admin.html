@@ -638,6 +638,14 @@
                         <input id="rm-estimated-minutes" type="number" min="1" placeholder="預計時間（分鐘）">
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
+                        <input id="rm-length-text" type="text" placeholder="距離（自動計算）" readonly>
+                        <button type="button" onclick="addRouteGpxRow()" style="padding:0.55em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">+ 新增方向 GPX</button>
+                    </div>
+                    <div style="margin-top:0.8em;">
+                        <strong>方向 / GPX（來自 /gpx）</strong>
+                        <div id="rm-gpx-list" style="margin-top:0.5em;"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
                         <select id="rm-unlock-type">
                             <option value="level">解鎖條件：Level</option>
                             <option value="coins">解鎖條件：里程幣購買</option>
@@ -673,7 +681,7 @@
                         </button>
                         <span id="route-csv-msg" style="font-size:0.9em; align-self:center; color:#555;"></span>
                     </div>
-                    <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：dept, route_number, start_station_id, end_station_id, type, alias, bg_color, estimated_minutes, unlock_type(level/coins), unlock_value, tags, stops(JSON), rewards(JSON)</p>
+                    <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：dept, route_number, type, start_station_id, end_station_id, alias, bg_color, estimated_minutes, unlock_type(level/coins), unlock_value, length_text, gpx(JSON), tags, stops(JSON), rewards(JSON)</p>
                     <div style="overflow:auto; margin-top:1em;">
                         <table class="users-table">
                             <thead>
@@ -749,6 +757,8 @@
         let currentPage = 1;
         let stationAdminData = [];
         let managedRoutesData = [];
+        let legacyRoutesData = [];
+        let gpxFileOptions = [];
         let managedRouteEditingKey = null;
         let stationEditingId = null;
 
@@ -1020,6 +1030,11 @@
                 } catch (err) {
                     alert('錯誤: ' + err.message);
                 }
+            });
+
+            ['rm-start-station', 'rm-end-station'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', refreshStopNatureLabels);
             });
         });
 
@@ -1814,6 +1829,97 @@
         });
 
         // ── 路線管理功能 ────────────────────────────────────────────────────
+        function normalizeDeptId(raw) {
+            const v = String(raw || '').trim().toLowerCase();
+            if (!v) return 'tko';
+            if (['tko', 'tk', 'poa', 'hah', 'tik', 'lhp'].includes(v)) return 'tko';
+            if (['hki', 'hk', 'island', 'east'].includes(v)) return 'hki';
+            if (['st', 'shatin'].includes(v)) return 'st';
+            return v;
+        }
+
+        function inferDeptFromRoute(route) {
+            if (route.dept_id) return normalizeDeptId(route.dept_id);
+            const tags = Array.isArray(route.tags) ? route.tags : [];
+            if (tags.some(t => String(t).includes('港島'))) return 'hki';
+            if (tags.some(t => String(t).includes('沙田'))) return 'st';
+            return 'tko';
+        }
+
+        function normalizeLegacyManagedRoute(route) {
+            const dept = inferDeptFromRoute(route);
+            const type = (Array.isArray(route.gpx) && route.gpx.length > 1)
+                ? ((Array.isArray(route.tags) && route.tags.includes('循環線')) ? 'Circular' : 'Two-way')
+                : 'One-way';
+            return {
+                dept,
+                route_number: route.id,
+                start_station_id: null,
+                end_station_id: null,
+                start_station_name_zh: route.start || '',
+                end_station_name_zh: route.end || '',
+                type,
+                stops: [],
+                rewards: {},
+                alias: route.alias || '',
+                bg_color: route.color || '',
+                estimated_minutes: route.time || null,
+                unlock_type: route.is_special ? 'coins' : 'level',
+                unlock_value: route.is_special ? (route.unlock_cost || 0) : (route.unlock_level || 1),
+                tags: Array.isArray(route.tags) ? route.tags : [],
+                gpx: Array.isArray(route.gpx) ? route.gpx : [],
+                length_text: route.length || '',
+                is_legacy_route: true,
+            };
+        }
+
+        function mergeLegacyAndManagedRoutes(legacyRoutes, managedRoutes) {
+            const map = new Map();
+            (legacyRoutes || []).forEach(r => {
+                const norm = normalizeLegacyManagedRoute(r);
+                map.set(`${norm.dept}::${norm.route_number}`, norm);
+            });
+            (managedRoutes || []).forEach(r => {
+                const dept = normalizeDeptId(r.dept);
+                const key = `${dept}::${r.route_number}`;
+                const base = map.get(key) || {};
+                map.set(key, {
+                    ...base,
+                    ...r,
+                    dept,
+                    tags: Array.isArray(r.tags) ? r.tags : [],
+                    gpx: Array.isArray(r.gpx) ? r.gpx : [],
+                    is_legacy_route: !!base.is_legacy_route,
+                });
+            });
+            return Array.from(map.values()).sort((a, b) => {
+                if (a.dept !== b.dept) return a.dept.localeCompare(b.dept);
+                return String(a.route_number).localeCompare(String(b.route_number), 'en', { numeric: true });
+            });
+        }
+
+        async function loadLegacyRoutesJson() {
+            try {
+                const resp = await fetch('/routes.json');
+                if (!resp.ok) return [];
+                const data = await resp.json();
+                return Array.isArray(data.routes) ? data.routes : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        async function loadGpxOptions() {
+            try {
+                const resp = await fetch('/api/user?action=gpx-list');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                gpxFileOptions = Array.isArray(data.files) ? data.files : [];
+            } catch (_) {
+                gpxFileOptions = [];
+            }
+        }
+
         async function loadRouteMgmt() {
             const token = localStorage.getItem('accessToken');
 
@@ -1853,21 +1959,23 @@
                 document.getElementById('route-config-loading').textContent = '載入失敗';
             }
 
-            await loadStationRouteAdminData();
+            await Promise.all([loadGpxOptions(), loadStationRouteAdminData()]);
         }
 
         async function loadStationRouteAdminData() {
             const token = localStorage.getItem('accessToken');
             try {
-                const [stationResp, routeResp] = await Promise.all([
+                const [stationResp, routeResp, legacyRoutes] = await Promise.all([
                     fetch('/api/admin-users?action=get-stations', { headers: { 'Authorization': `Bearer ${token}` } }),
                     fetch('/api/admin-users?action=get-managed-routes', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    loadLegacyRoutesJson(),
                 ]);
                 if (handleTokenError(stationResp) || handleTokenError(routeResp)) return;
                 const stationData = stationResp.ok ? await stationResp.json() : { stations: [] };
                 const routeData = routeResp.ok ? await routeResp.json() : { routes: [] };
                 stationAdminData = stationData.stations || [];
-                managedRoutesData = routeData.routes || [];
+                legacyRoutesData = legacyRoutes || [];
+                managedRoutesData = mergeLegacyAndManagedRoutes(legacyRoutesData, routeData.routes || []);
                 renderStationAdminTable();
                 renderRouteAdminTable();
                 renderTerminalAdminTable();
@@ -2010,9 +2118,35 @@
             }
         }
 
+        function getCurrentRouteEndpointNames() {
+            const startSel = document.getElementById('rm-start-station');
+            const endSel = document.getElementById('rm-end-station');
+            const stopsList = document.getElementById('rm-stops-list');
+            const defaultStartName = stopsList?.dataset?.defaultStartName || '';
+            const defaultEndName = stopsList?.dataset?.defaultEndName || '';
+            const startName = startSel?.selectedOptions?.[0]?.textContent?.split(' - ')[1]?.trim()
+                || defaultStartName
+                || document.getElementById('rm-route-number').value.trim()
+                || 'A 端總站';
+            const endName = endSel?.selectedOptions?.[0]?.textContent?.split(' - ')[1]?.trim()
+                || defaultEndName
+                || document.getElementById('rm-route-number').value.trim()
+                || 'B 端總站';
+            return { startName, endName };
+        }
+
+        function refreshStopNatureLabels() {
+            const { startName, endName } = getCurrentRouteEndpointNames();
+            document.querySelectorAll('.rm-stop-nature').forEach(sel => {
+                if (sel.options[1]) sel.options[1].textContent = `往 ${startName}`;
+                if (sel.options[2]) sel.options[2].textContent = `往 ${endName}`;
+            });
+        }
+
         function createRouteStopRow(stop = {}) {
             const row = document.createElement('div');
             row.style.cssText = 'display:grid; grid-template-columns:2fr 1.5fr auto; gap:0.5em; margin-bottom:0.45em;';
+            const { startName, endName } = getCurrentRouteEndpointNames();
             const stationOptions = ['<option value="">選擇站點</option>']
                 .concat(stationAdminData.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.id)} - ${escapeHtml(s.name_zh || '')}</option>`))
                 .join('');
@@ -2020,9 +2154,10 @@
                 <select class="rm-stop-station">${stationOptions}</select>
                 <select class="rm-stop-nature">
                     <option value="both">雙向</option>
-                    <option value="a_direction">A 方向</option>
-                    <option value="b_direction">B 方向</option>
-                    <option value="temporary_cancel">臨時取消</option>
+                    <option value="a_direction">往 ${escapeHtml(startName)}</option>
+                    <option value="b_direction">往 ${escapeHtml(endName)}</option>
+                    <option value="temporary_cancel">臨時停用</option>
+                    <option value="temporary_stop">臨時站</option>
                 </select>
                 <button type="button" onclick="this.parentElement.remove()" style="border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">移除</button>
             `;
@@ -2035,12 +2170,78 @@
             const list = document.getElementById('rm-stops-list');
             if (!list) return;
             list.appendChild(createRouteStopRow(stop || {}));
+            refreshStopNatureLabels();
+        }
+
+        function createGpxRow(entry = {}) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:grid; grid-template-columns:1.2fr 2fr auto; gap:0.5em; margin-bottom:0.45em;';
+            const gpxOptions = ['<option value="">選擇 GPX 檔案</option>']
+                .concat(gpxFileOptions.map(file => `<option value="${escapeHtml(file)}">${escapeHtml(file)}</option>`))
+                .join('');
+            row.innerHTML = `
+                <input class="rm-gpx-label" type="text" placeholder="方向名稱（如 往寶琳）" value="${escapeHtml(entry.label || '')}">
+                <select class="rm-gpx-file">${gpxOptions}</select>
+                <button type="button" onclick="this.parentElement.remove(); recalcManagedRouteDistance();" style="border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">移除</button>
+            `;
+            const sel = row.querySelector('.rm-gpx-file');
+            if (entry.file) sel.value = entry.file;
+            sel.addEventListener('change', recalcManagedRouteDistance);
+            return row;
+        }
+
+        function addRouteGpxRow(entry = null) {
+            const list = document.getElementById('rm-gpx-list');
+            if (!list) return;
+            list.appendChild(createGpxRow(entry || {}));
+        }
+
+        async function estimateGpxDistanceKm(file) {
+            if (!file) return 0;
+            const resp = await fetch('/gpx/' + encodeURIComponent(file));
+            if (!resp.ok) return 0;
+            const xml = await resp.text();
+            const doc = new DOMParser().parseFromString(xml, 'application/xml');
+            const pts = Array.from(doc.querySelectorAll('trkpt,rtept')).map(p => ({
+                lat: Number(p.getAttribute('lat')),
+                lon: Number(p.getAttribute('lon')),
+            })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+            if (pts.length < 2) return 0;
+            let totalM = 0;
+            for (let i = 1; i < pts.length; i += 1) {
+                totalM += haversineM(pts[i - 1].lat, pts[i - 1].lon, pts[i].lat, pts[i].lon);
+            }
+            return totalM / 1000;
+        }
+
+        function haversineM(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const toRad = Math.PI / 180;
+            const dLat = (lat2 - lat1) * toRad;
+            const dLon = (lon2 - lon1) * toRad;
+            const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        async function recalcManagedRouteDistance() {
+            const lengthInput = document.getElementById('rm-length-text');
+            const files = Array.from(document.querySelectorAll('#rm-gpx-list .rm-gpx-file'))
+                .map(el => el.value)
+                .filter(Boolean);
+            if (!files.length) {
+                lengthInput.value = '';
+                return;
+            }
+            const kms = await Promise.all(files.map(f => estimateGpxDistanceKm(f).catch(() => 0)));
+            const maxKm = Math.max(...kms, 0);
+            lengthInput.value = maxKm > 0 ? `${maxKm.toFixed(1)}km` : '';
         }
 
         function resetManagedRouteForm() {
             managedRouteEditingKey = null;
             ['rm-dept', 'rm-route-number', 'rm-alias', 'rm-bg-color', 'rm-estimated-minutes', 'rm-unlock-value', 'rm-tags',
-             'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit']
+             'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit', 'rm-length-text']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('rm-start-station').value = '';
             document.getElementById('rm-end-station').value = '';
@@ -2048,7 +2249,13 @@
             const typeEl = document.querySelector('input[name="rm-type"][value="One-way"]');
             if (typeEl) typeEl.checked = true;
             const list = document.getElementById('rm-stops-list');
-            if (list) list.innerHTML = '';
+            if (list) {
+                list.innerHTML = '';
+                delete list.dataset.defaultStartName;
+                delete list.dataset.defaultEndName;
+            }
+            const gpxList = document.getElementById('rm-gpx-list');
+            if (gpxList) gpxList.innerHTML = '';
             document.getElementById('route-admin-msg').textContent = '';
         }
 
@@ -2071,9 +2278,9 @@
             tbody.innerHTML = managedRoutesData.map(r => `
                 <tr>
                     <td>${escapeHtml(r.dept)}-${escapeHtml(r.route_number)}</td>
-                    <td>${escapeHtml(r.type || '-')}</td>
-                    <td>${escapeHtml(r.start_station_id || '-')}</td>
-                    <td>${escapeHtml(r.end_station_id || '-')}</td>
+                    <td>${escapeHtml(r.type || '-')}${r.is_legacy_route ? '<br><span style="font-size:0.76em;color:#666;">(內建路線)</span>' : ''}</td>
+                    <td>${escapeHtml(r.start_station_name_zh || r.start_station_id || '-')}</td>
+                    <td>${escapeHtml(r.end_station_name_zh || r.end_station_id || '-')}</td>
                     <td>${Array.isArray(r.stops) ? r.stops.length : 0}</td>
                     <td>${formatUnlock(r)}</td>
                     <td>
@@ -2098,11 +2305,19 @@
             document.getElementById('rm-tags').value = Array.isArray(route.tags) ? route.tags.join(', ') : '';
             document.getElementById('rm-start-station').value = route.start_station_id || '';
             document.getElementById('rm-end-station').value = route.end_station_id || '';
+            document.getElementById('rm-length-text').value = route.length_text || '';
             const typeEl = document.querySelector(`input[name="rm-type"][value="${route.type || 'One-way'}"]`);
             if (typeEl) typeEl.checked = true;
             const stopsList = document.getElementById('rm-stops-list');
             stopsList.innerHTML = '';
+            stopsList.dataset.defaultStartName = route.start_station_name_zh || route.start || '';
+            stopsList.dataset.defaultEndName = route.end_station_name_zh || route.end || '';
             (Array.isArray(route.stops) ? route.stops : []).forEach(stop => addRouteStopRow(stop));
+            refreshStopNatureLabels();
+            const gpxList = document.getElementById('rm-gpx-list');
+            gpxList.innerHTML = '';
+            (Array.isArray(route.gpx) ? route.gpx : []).forEach(entry => addRouteGpxRow(entry));
+            recalcManagedRouteDistance();
             const rewards = route.rewards || {};
             document.getElementById('rm-reward-per-stop').value = rewards.per_stop_xp ?? '';
             document.getElementById('rm-reward-cross-district').value = rewards.cross_district_bonus ?? '';
@@ -2117,6 +2332,10 @@
                 station_id: row.querySelector('.rm-stop-station')?.value || '',
                 nature: row.querySelector('.rm-stop-nature')?.value || 'both',
             })).filter(s => s.station_id);
+            const gpx = Array.from(document.querySelectorAll('#rm-gpx-list > div')).map((row) => ({
+                label: row.querySelector('.rm-gpx-label')?.value?.trim() || '',
+                file: row.querySelector('.rm-gpx-file')?.value || '',
+            })).filter(g => g.file);
             const payload = {
                 action: 'upsert_managed_route',
                 dept: document.getElementById('rm-dept').value.trim(),
@@ -2127,10 +2346,12 @@
                 unlock_type: document.getElementById('rm-unlock-type').value,
                 unlock_value: document.getElementById('rm-unlock-value').value,
                 tags: document.getElementById('rm-tags').value,
-                start_station_id: document.getElementById('rm-start-station').value,
-                end_station_id: document.getElementById('rm-end-station').value,
+                start_station_id: document.getElementById('rm-start-station').value || null,
+                end_station_id: document.getElementById('rm-end-station').value || null,
                 type: document.querySelector('input[name="rm-type"]:checked')?.value || 'One-way',
                 stops,
+                gpx,
+                length_text: document.getElementById('rm-length-text').value.trim() || null,
                 rewards: {
                     per_stop_xp: Number(document.getElementById('rm-reward-per-stop').value || 0),
                     cross_district_bonus: Number(document.getElementById('rm-reward-cross-district').value || 0),

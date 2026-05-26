@@ -8,6 +8,8 @@
 //
 import { query } from '../lib/db.js';
 import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } from '../lib/permissions.js';
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
 
 let _ensureUsersUsernameColumnPromise = null;
 async function ensureUsersUsernameColumn() {
@@ -48,6 +50,15 @@ function getMembershipLabel(role) {
   return map[role] || role || '普通會員';
 }
 
+function normalizeDeptId(input) {
+  const raw = String(input || '').trim().toLowerCase();
+  if (!raw) return 'tko';
+  if (['tko', 'tko部', 'tk', 'poa', 'hah', 'tik', 'lhp'].includes(raw)) return 'tko';
+  if (['hki', 'hk', 'island', '港島', 'east'].includes(raw)) return 'hki';
+  if (['st', 'shatin', '沙田'].includes(raw)) return 'st';
+  return raw;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -63,9 +74,11 @@ export default async function handler(req, res) {
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level'`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
       await query(`ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE`);
       const { rows: routes } = await query(
-        `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags
+        `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text
          FROM routes
          ORDER BY dept, route_number`
       );
@@ -92,6 +105,8 @@ export default async function handler(req, res) {
             unlock_type: r.unlock_type || 'level',
             unlock_value: r.unlock_value,
             tags,
+            gpx: Array.isArray(r.gpx) ? r.gpx : parseSafeJsonArray(r.gpx),
+            length_text: r.length_text || null,
           };
         }),
         terminals: terminals.map(t => ({
@@ -99,7 +114,7 @@ export default async function handler(req, res) {
           name: t.name_zh,
           lat: t.lat,
           lng: t.lon,
-          dept: String(t.area || '').toLowerCase(),
+          dept: normalizeDeptId(t.area),
         })),
       });
     } catch (error) {
@@ -110,10 +125,35 @@ export default async function handler(req, res) {
 
   // ── GET → fetch user info ───────────────────────────────────────────────
   if (req.method === 'GET') {
+    if (req.query.action === 'gpx-list') {
+      try {
+        const gpxDir = path.join(process.cwd(), 'gpx');
+        const files = (await readdir(gpxDir, { withFileTypes: true }))
+          .filter((d) => d.isFile() && d.name.toLowerCase().endsWith('.gpx'))
+          .map((d) => d.name)
+          .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+        return res.status(200).json({ files });
+      } catch (error) {
+        console.error('Get gpx-list error:', error);
+        return res.status(500).json({ message: 'Failed to fetch gpx list', files: [] });
+      }
+    }
+
     // action=config → return public config (replaces config.js)
     if (req.query.action === 'config') {
       res.setHeader('Cache-Control', 'public, max-age=3600');
       return res.status(200).json({ googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
+    }
+
+    function parseSafeJsonArray(value) {
+      if (Array.isArray(value)) return value;
+      if (!value) return [];
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
     }
 
     try {

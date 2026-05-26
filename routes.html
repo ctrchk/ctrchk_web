@@ -658,6 +658,30 @@ const DEFAULT_TERMINALS = [
 let TERMINALS = DEFAULT_TERMINALS.slice();
 // Map of terminal name to terminal ID for route matching
 let TERMINAL_NAMES = {};
+function normalizeDeptId(raw) {
+    const v = String(raw || '').trim().toLowerCase();
+    if (!v) return 'tko';
+    if (['tko', 'tk', 'poa', 'hah', 'tik', 'lhp'].includes(v)) return 'tko';
+    if (['hki', 'hk', 'island', 'east'].includes(v)) return 'hki';
+    if (['st', 'shatin'].includes(v)) return 'st';
+    return v;
+}
+function mergeTerminalLists(defaultList, overrideList) {
+    const map = new Map();
+    (defaultList || []).forEach(t => {
+        map.set(String(t.id), { ...t, dept: normalizeDeptId(t.dept) });
+    });
+    (overrideList || []).forEach(t => {
+        const key = String(t.id || '').trim();
+        if (!key) return;
+        map.set(key, {
+            ...t,
+            id: key,
+            dept: normalizeDeptId(t.dept),
+        });
+    });
+    return Array.from(map.values());
+}
 function rebuildTerminalIndex() {
     TERMINAL_NAMES = {};
     TERMINALS.forEach(t => { TERMINAL_NAMES[t.name] = t.id; });
@@ -1450,10 +1474,13 @@ async function initAppRidePage() {
                     const unlockType = o.unlock_type || r.unlock_type;
                     const unlockValue = o.unlock_value != null ? o.unlock_value : r.unlock_value;
                     return Object.assign({}, r, {
+                        dept_id: normalizeDeptId(o.dept || r.dept_id),
                         alias: o.alias || r.alias,
                         color: o.bg_color || r.color,
                         time: o.estimated_minutes || r.time,
+                        length: o.length_text || r.length,
                         tags: Array.isArray(o.tags) && o.tags.length ? o.tags : r.tags,
+                        gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : r.gpx,
                         unlock_type: unlockType,
                         unlock_value: unlockValue,
                         coin_cost: unlockType === 'coins' ? (unlockValue || r.coin_cost) : r.coin_cost,
@@ -1462,11 +1489,37 @@ async function initAppRidePage() {
                         unlock_cost: unlockType === 'coins' ? (unlockValue || r.unlock_cost) : r.unlock_cost,
                     });
                 });
-                if (Array.isArray(overrideData.terminals) && overrideData.terminals.length) {
-                    TERMINALS = overrideData.terminals;
-                    rebuildTerminalIndex();
-                    renderTerminalMarkers();
-                }
+
+                // Include managed routes not present in routes.json
+                (overrideData.routes || []).forEach(o => {
+                    if (appRoutes.some(r => r.id === o.route_id)) return;
+                    const unlockType = o.unlock_type || 'level';
+                    const unlockValue = o.unlock_value != null ? o.unlock_value : 1;
+                    appRoutes.push({
+                        id: o.route_id,
+                        alias: o.alias || o.route_id,
+                        start: '',
+                        end: '',
+                        via: '',
+                        nature: '',
+                        time: o.estimated_minutes || null,
+                        length: o.length_text || '',
+                        tags: Array.isArray(o.tags) ? o.tags : [],
+                        color: o.bg_color || '#4caf50',
+                        dept_id: normalizeDeptId(o.dept),
+                        gpx: Array.isArray(o.gpx) ? o.gpx : [],
+                        unlock_type: unlockType,
+                        unlock_value: unlockValue,
+                        is_special: unlockType === 'coins',
+                        unlock_level: unlockType === 'level' ? unlockValue : 1,
+                        unlock_cost: unlockType === 'coins' ? unlockValue : null,
+                        coin_cost: unlockType === 'coins' ? unlockValue : null,
+                    });
+                });
+
+                TERMINALS = mergeTerminalLists(DEFAULT_TERMINALS, overrideData.terminals || []);
+                rebuildTerminalIndex();
+                renderTerminalMarkers();
             }
         } catch (e) { /* ignore overrides */ }
 

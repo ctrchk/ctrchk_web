@@ -45,6 +45,7 @@
         </section>
 
         <section class="wx-grid">
+            <div class="wx-item"><div class="k">你的位置</div><div class="v" id="wx-location">定位中...</div></div>
             <div class="wx-item"><div class="k">相對濕度</div><div class="v" id="wx-humidity">--%</div></div>
             <div class="wx-item"><div class="k">天氣描述</div><div class="v" id="wx-desc">--</div></div>
             <div class="wx-item"><div class="k">天氣警告</div><div class="v" id="wx-warning-title">目前沒有警告</div></div>
@@ -71,6 +72,15 @@
             : (rank === 'silver'
                 ? '銀卡：可優先獲得天氣提醒相關功能更新。'
                 : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
+        let userPos = null;
+        let localCurrent = null;
+        try {
+            userPos = await getUserPosition();
+            document.getElementById('wx-location').textContent = `${userPos.coords.latitude.toFixed(5)}, ${userPos.coords.longitude.toFixed(5)}`;
+            localCurrent = await fetchOpenMeteoCurrent(userPos.coords.latitude, userPos.coords.longitude);
+        } catch (_) {
+            document.getElementById('wx-location').textContent = '未能取得定位（已改用香港整體天氣）';
+        }
         try {
             const [rhrResult, warnResult] = await Promise.allSettled([
                 fetchWeatherApi('rhrread'),
@@ -84,7 +94,7 @@
             if (warnResult.status === 'fulfilled' && warnResult.value.ok) {
                 warnData = await warnResult.value.json();
             }
-            renderWeather(rhrData, warnData);
+            renderWeather(rhrData, warnData, localCurrent);
         } catch (_) {
             document.getElementById('wx-updated').textContent = '天氣資料載入失敗，請稍後再試';
         }
@@ -94,11 +104,39 @@
         const langs = ['tc', 'zh', 'en'];
         let lastResp = null;
         for (const lang of langs) {
-            const resp = await fetch(`/api/_weather/${dataType}?lang=${encodeURIComponent(lang)}`);
-            if (resp.ok) return resp;
-            lastResp = resp;
+            const proxyUrl = `/api/_weather/${dataType}?lang=${encodeURIComponent(lang)}`;
+            const directUrl = `https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=${encodeURIComponent(dataType)}&lang=${encodeURIComponent(lang)}`;
+            let resp = await fetch(proxyUrl).catch(() => null);
+            if (!resp || !resp.ok) {
+                resp = await fetch(directUrl).catch(() => null);
+            }
+            if (resp && resp.ok) return resp;
+            if (resp) lastResp = resp;
         }
         return lastResp;
+    }
+
+    function getUserPosition() {
+        if (!('geolocation' in navigator)) return Promise.reject(new Error('geolocation unsupported'));
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: 60000
+            });
+        });
+    }
+
+    async function fetchOpenMeteoCurrent(lat, lon) {
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,relative_humidity_2m`;
+            const resp = await fetch(url);
+            if (!resp.ok) return null;
+            const data = await resp.json();
+            return data?.current || null;
+        } catch (_) {
+            return null;
+        }
     }
 
     function resolveRankFromUser() {
@@ -111,10 +149,12 @@
         return 'bronze';
     }
 
-    function renderWeather(rhrData, warnData) {
-        const temp = Number(rhrData?.temperature?.data?.[0]?.value ?? NaN);
-        const humidity = Number(rhrData?.humidity?.data?.[0]?.value ?? NaN);
-        const desc = rhrData?.icon?.length ? '香港天文台最新天氣' : '資料更新中';
+    function renderWeather(rhrData, warnData, localCurrent) {
+        const tempFromHko = Number(rhrData?.temperature?.data?.[0]?.value ?? NaN);
+        const humidityFromHko = Number(rhrData?.humidity?.data?.[0]?.value ?? NaN);
+        const temp = Number.isFinite(Number(localCurrent?.temperature_2m)) ? Number(localCurrent.temperature_2m) : tempFromHko;
+        const humidity = Number.isFinite(Number(localCurrent?.relative_humidity_2m)) ? Number(localCurrent.relative_humidity_2m) : humidityFromHko;
+        const desc = localCurrent ? '你附近的即時天氣' : (rhrData?.icon?.length ? '香港天文台最新天氣' : '資料更新中');
         document.getElementById('wx-temp').textContent = Number.isFinite(temp) ? `${temp}°C` : '--°C';
         document.getElementById('wx-humidity').textContent = Number.isFinite(humidity) ? `${humidity}%` : '--%';
         document.getElementById('wx-desc').textContent = desc;
