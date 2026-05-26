@@ -33,7 +33,7 @@
     { id: 22, key: 'beta_priority', rank: 'gold', label: '新功能 Beta 優先體驗' },
     { id: 23, key: 'discord_emergency', rank: 'gold', label: '客服快速協助通道（規劃中）' },
     { id: 24, key: 'weekend_double_preview', rank: 'gold', label: '週末雙倍里程活動優先通知' },
-    { id: 25, key: 'discord_gold_role', rank: 'gold', label: 'Discord「黃金領騎」稱號與進場特效' },
+    { id: 25, key: 'discord_gold_role', rank: 'gold', label: 'Discord「黃金領騎」稱號及身份組' },
   ];
 
   function normalizeRank(rankInput) {
