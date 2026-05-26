@@ -1,4 +1,3 @@
-# Ignore the local ctrc.login folder
 ctrc.login/
 # Dependencies
 node_modules/
