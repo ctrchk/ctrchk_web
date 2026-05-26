@@ -6,7 +6,8 @@
 
 ## v2.0.1 - 2026-05-26
 
-- ** PATCH ** - 第36行，/workspaces/ctrchk_web/js/pwa.js 不可行序列
+- **PATCH** - 第36行，`/workspaces/ctrchk_web/js/pwa.js` 不可行利益
+處理方式：移除相關文字
 
 ## v2.0 beta — 2026-05-25
 
