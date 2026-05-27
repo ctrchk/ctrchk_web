@@ -205,6 +205,18 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
+  export default async function handler(req, res) {
+    // ... 你原本的身份驗證代碼 ... (isAdmin 檢查等)
+    
+    // --- 插入這一段：AI 功能攔截器 ---
+    if (req.method === 'POST' && req.body && req.body.action === 'ai-dev') {
+        return await handleAiDev(req, res);
+    }
+    // --- 結束插入 ---
+
+    // ... 這裡是原本那一千行處理 GET/POST 用戶管理、Relay 的邏輯 ...
+}
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
