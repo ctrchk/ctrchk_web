@@ -4,6 +4,13 @@ import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
+import { Octokit } from "@octokit/rest";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from '@supabase/supabase-js';
+
+// 初始化 AI 工具 (放在 handler 外部)
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 根據累計 XP 計算等級（與 getHistory.js 保持一致）
 function calcLevel(xp) {
@@ -987,4 +994,36 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ message: 'Method Not Allowed' });
+}
+
+async function handleAiDev(req, res) {
+    const { prompt, path } = req.body;
+    if (!prompt || !path) return res.status(400).json({ error: '缺少指令或檔案路徑' });
+
+    const owner = "ctrchk"; 
+    const repo = "ctrchk_web"; 
+
+    try {
+        const { data: fileRes } = await octokit.repos.getContent({ owner, repo, path });
+        const currentCode = Buffer.from(fileRes.content, 'base64').toString('utf-8');
+        const sha = fileRes.sha;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const aiPrompt = `你是一個專業工程師。目標：${path}\n需求：${prompt}\n源碼：\n${currentCode}\n\n請輸出修改後的完整代碼，不含 Markdown 標籤。`;
+
+        const result = await model.generateContent(aiPrompt);
+        let newCode = result.response.text().trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
+
+        await octokit.repos.createOrUpdateFileContents({
+            owner, repo, path,
+            message: `🤖 AI: ${prompt.substring(0, 30)}`,
+            content: Buffer.from(newCode).toString('base64'),
+            sha: sha,
+            branch: 'main'
+        });
+
+        return res.status(200).json({ success: true, message: "AI 修改成功並已推送 GitHub" });
+    } catch (err) {
+        return res.status(500).json({ error: "AI 錯誤: " + err.message });
+    }
 }
