@@ -283,6 +283,9 @@
                 <button class="tab-btn" onclick="showTab('route-mgmt'); loadRouteMgmt();">
                     <i class="fas fa-route"></i> 路線管理
                 </button>
+                <button class="tab-btn" onclick="showTab('ai-dev');">
+                    <i class="fas fa-robot"></i> AI 開發
+                </button>
             </div>
 
             <!-- 用戶管理標籤 -->
@@ -709,6 +712,22 @@
                     </div>
                 </div>
             </div>
+            <div id="tab-ai-dev" style="display:none;">
+    <div class="card" style="margin-top: 20px; border: 1px solid #6c5ce7; background: white; border-radius: 8px; padding: 1.5em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <h3 style="margin-top:0; color:#2c3e50;"><i class="fas fa-robot"></i> AI 自動代碼開發</h3>
+        <p style="color:#666; font-size:0.9em; margin-bottom:1em;">輸入目標檔案與指令，AI 特工將自動讀取專案、修改代碼並推送到 GitHub。</p>
+        
+        <input type="text" id="ai-path" placeholder="檔案路徑 (例如: public/index.html 或 api/user.js)" style="width:100%; margin-bottom:10px; padding:0.8em; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;">
+        
+        <textarea id="ai-prompt" placeholder="請輸入修改指令... (例如：幫我在首頁按鈕加上綠色漸層，並加上點擊動畫)" style="width:100%; height:100px; padding:0.8em; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; resize: vertical;"></textarea>
+        
+        <button onclick="executeAiDev()" id="ai-btn" class="cta-button" style="background:#6c5ce7; width:100%; margin-top:10px;">
+            <i class="fas fa-magic"></i> 執行 AI 修改
+        </button>
+        
+        <div id="ai-status" style="margin-top:15px; font-size:0.95em; color:#666; white-space: pre-wrap; font-family: monospace;"></div>
+    </div>
+</div>
         </div>
     </main>
 
@@ -2647,5 +2666,71 @@
             </div>
         </div>
     </div>
+    <script>
+async function executeAiDev() {
+    const path = document.getElementById('ai-path').value.trim();
+    const prompt = document.getElementById('ai-prompt').value.trim();
+    const btn = document.getElementById('ai-btn');
+    const status = document.getElementById('ai-status');
+
+    // 1. 簡單的防呆檢查
+    if(!path || !prompt) {
+        alert("請填寫「檔案路徑」與「修改指令」！");
+        return;
+    }
+    
+    if(!confirm("警告：AI 將直接修改你的 GitHub 原始碼，這將會觸發 Vercel 重新部署。\n\n確定要繼續嗎？")) {
+        return;
+    }
+
+    // 2. 改變按鈕狀態，防止重複點擊
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 特工正在分析與編寫代碼 (約需 15~30 秒)...';
+    status.innerHTML = "⏳ 正在連接 AI 特工...";
+    status.style.color = "#666";
+
+    try {
+        // 取得管理員的登入 Token
+        const token = localStorage.getItem('accessToken');
+        
+        // 3. 發送請求到我們之前改好的 admin-users API
+        // 注意：如果你後端檔案名字不同，請把 '/api/admin-users' 改成你的檔名
+        const response = await fetch('/api/admin-users', { 
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                action: 'ai-dev', // 這個 action 會觸發後端的 AI 邏輯
+                path: path, 
+                prompt: prompt 
+            })
+        });
+
+        const result = await response.json();
+        
+        // 4. 處理回傳結果
+        if (result.success) {
+            status.innerHTML = `<span style="color:#04D93C; font-weight:bold;">✅ 修改成功！</span>\n\nAI 已將代碼推送到 GitHub，Vercel 正在自動部署，約 1~2 分鐘後生效。\n\n<a href="${result.commitUrl}" target="_blank" style="color:#3498db; text-decoration:underline;">🔗 點此前往 GitHub 查看具體修改了什麼代碼</a>`;
+            btn.style.background = "#04D93C";
+            btn.innerHTML = '<i class="fas fa-check"></i> 完成';
+        } else {
+            status.innerHTML = `<span style="color:#e74c3c; font-weight:bold;">❌ 失敗：</span> ${result.error}`;
+            btn.innerHTML = '<i class="fas fa-magic"></i> 執行 AI 修改';
+        }
+    } catch (e) {
+        status.innerHTML = `<span style="color:#e74c3c; font-weight:bold;">❌ 發生連線錯誤：</span> ${e.message}`;
+        btn.innerHTML = '<i class="fas fa-magic"></i> 執行 AI 修改';
+    } finally {
+        // 3 秒後把按鈕恢復原狀，允許下一次修改
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.style.background = "#6c5ce7";
+            btn.innerHTML = '<i class="fas fa-magic"></i> 執行 AI 修改';
+        }, 3000);
+    }
+}
+</script>
 </body>
 </html>
