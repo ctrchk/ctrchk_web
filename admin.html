@@ -747,6 +747,14 @@
         </div>
     </div>
 
+    <div class="card" style="margin-top: 20px; border: 1px solid #6c5ce7;">
+    <h3><i class="fas fa-robot"></i> AI 自動代碼開發</h3>
+    <input type="text" id="ai-path" placeholder="檔案路徑 (例如: public/index.html)" style="width:100%; margin-bottom:10px; padding:8px;">
+    <textarea id="ai-prompt" placeholder="請輸入修改指令..." style="width:100%; height:80px; padding:8px;"></textarea>
+    <button onclick="executeAiDev()" id="ai-btn" class="cta-button" style="background:#6c5ce7; width:100%;">執行 AI 修改</button>
+    <div id="ai-status" style="margin-top:10px; font-size:0.9em; color:#666;"></div>
+</div>
+
     <footer>
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
@@ -2325,6 +2333,7 @@
             document.getElementById('rm-reward-time-limit').value = rewards.time_limit_bonus ?? '';
             document.getElementById('route-admin-msg').textContent = `正在編輯 ${managedRouteEditingKey}`;
         }
+    
 
         async function saveManagedRoute() {
             const stops = Array.from(document.querySelectorAll('#rm-stops-list > div')).map((row, idx) => ({
@@ -2589,6 +2598,42 @@
                 msgEl.style.color = 'red';
             }
         }
+
+        async function executeAiDev() {
+    const path = document.getElementById('ai-path').value;
+    const prompt = document.getElementById('ai-prompt').value;
+    const btn = document.getElementById('ai-btn');
+    const status = document.getElementById('ai-status');
+
+    if(!path || !prompt) return alert("請填寫完整資訊");
+    if(!confirm("確定讓 AI 直接修改 GitHub 源碼嗎？")) return;
+
+    btn.disabled = true;
+    status.innerText = "AI 正在分析並修改代碼，請稍候...";
+
+    try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch('/api/admin-users', { // 確保路徑與你實際的 api 檔名一致
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action: 'ai-dev', path, prompt })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            status.innerHTML = "<b style='color:green'>✅ 修改成功！Vercel 正在重新部署...</b>";
+        } else {
+            status.innerHTML = "<b style='color:red'>❌ 失敗：</b>" + result.error;
+        }
+    } catch (e) {
+        status.innerText = "發生錯誤: " + e.message;
+    } finally {
+        btn.disabled = false;
+    }
+}
     </script>
 
     <!-- 安全密碼驗證 Modal -->
