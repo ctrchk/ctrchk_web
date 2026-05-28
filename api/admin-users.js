@@ -295,7 +295,7 @@ export default async function handler(req, res) {
     // GET department configs
     if (req.query.action === 'get-dept-config') {
       try {
-        const { rows } = await query('SELECT dept_id, name, unlock_cost, promo_cost, is_promo FROM department_config ORDER BY dept_id');
+        const { rows } = await query('SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, promo_cost, is_promo, available FROM department_config ORDER BY dept_id');
         return res.status(200).json({ departments: rows });
       } catch (e) {
         console.error('[admin-users] get-dept-config error:', e.message);
@@ -388,6 +388,49 @@ export default async function handler(req, res) {
     try {
       const body = req.body;
       const { action } = body;
+
+      // Upsert a department record (create or update)
+      if (action === 'upsert_dept') {
+        const { dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, available, is_promo, promo_cost } = body;
+        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
+        await query(
+          `INSERT INTO department_config (dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, available, is_promo, promo_cost)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+           ON CONFLICT (dept_id) DO UPDATE SET
+             name = EXCLUDED.name,
+             region = EXCLUDED.region,
+             description = EXCLUDED.description,
+             map_center_lat = EXCLUDED.map_center_lat,
+             map_center_lng = EXCLUDED.map_center_lng,
+             map_zoom = EXCLUDED.map_zoom,
+             unlock_cost = EXCLUDED.unlock_cost,
+             available = EXCLUDED.available,
+             is_promo = EXCLUDED.is_promo,
+             promo_cost = EXCLUDED.promo_cost`,
+          [
+            String(dept_id).trim().toLowerCase(),
+            name || null,
+            region || null,
+            description || null,
+            map_center_lat != null ? Number(map_center_lat) : null,
+            map_center_lng != null ? Number(map_center_lng) : null,
+            map_zoom != null ? parseInt(map_zoom, 10) : null,
+            unlock_cost != null ? parseInt(unlock_cost, 10) : null,
+            available !== undefined ? !!available : true,
+            !!is_promo,
+            promo_cost != null ? parseInt(promo_cost, 10) : null,
+          ]
+        );
+        return res.status(200).json({ success: true });
+      }
+
+      // Delete a department record
+      if (action === 'delete_dept') {
+        const { dept_id } = body;
+        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
+        await query(`DELETE FROM department_config WHERE dept_id = $1`, [String(dept_id).trim().toLowerCase()]);
+        return res.status(200).json({ success: true });
+      }
 
       // Update department config (standard price + promo settings)
       if (action === 'update-dept-config') {

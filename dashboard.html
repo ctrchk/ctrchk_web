@@ -491,7 +491,14 @@
         width: 100%;
         border-radius: 10px;
         overflow: hidden;
-        background: #0c1710;
+        /* Checkerboard to show transparency */
+        background-color: #888;
+        background-image: linear-gradient(45deg, #555 25%, transparent 25%),
+            linear-gradient(-45deg, #555 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #555 75%),
+            linear-gradient(-45deg, transparent 75%, #555 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         border: 1px solid #2d4d2d;
     }
     .db-poster-preview-wrap img {
@@ -842,7 +849,7 @@
         desc.textContent = `近一年累積里程 ${formatKm(totalKm)} km，立即生成你的戰績海報。`;
     }
 
-    function exportPoster(totalKm, context) {
+    function exportPoster(totalKm, context, history) {
         const HKD_PER_KM = 2.5;
         const CO2_PER_KM = 0.21;
         const CO2_PER_TREE = 21;
@@ -850,34 +857,251 @@
         const co2 = totalKm * CO2_PER_KM;
         const trees = co2 / CO2_PER_TREE;
 
+        const isGold   = context.permissions && context.permissions.theme_gold;
+        const isSilver = context.permissions && context.permissions.theme_silver;
+
+        // Accent and text colours
+        const accentColor = isGold ? '#d4af37' : '#BFE340';
+        const textColor   = isGold ? '#d4af37' : '#ffffff';
+        const subColor    = isGold ? 'rgba(212,175,55,0.75)' : 'rgba(255,255,255,0.65)';
+
         const canvas = document.createElement('canvas');
-        canvas.width = 1080;
+        canvas.width  = 1080;
         canvas.height = 1920;
         const ctx2d = canvas.getContext('2d');
-        ctx2d.fillStyle = context.permissions.theme_gold ? '#0b0c0f' : (context.permissions.theme_silver ? '#1f2428' : '#1a2d1c');
-        ctx2d.fillRect(0, 0, canvas.width, canvas.height);
-        ctx2d.fillStyle = context.permissions.theme_gold ? '#d4af37' : '#BFE340';
-        ctx2d.font = 'bold 72px sans-serif';
-        ctx2d.fillText('城市運輸單車｜騎行報告', 90, 200);
-        ctx2d.fillStyle = '#ffffff';
-        ctx2d.font = 'bold 140px sans-serif';
-        ctx2d.fillText(`${formatKm(totalKm)} km`, 90, 380);
-        ctx2d.font = '48px sans-serif';
-        ctx2d.fillText(`省下交通費 HK$${savedCost.toFixed(1)}`, 90, 520);
-        ctx2d.fillText(`減少碳排 ${co2.toFixed(1)} kg`, 90, 600);
-        ctx2d.fillText(`等同種樹 ${trees.toFixed(1)} 棵`, 90, 680);
-        if (context.permissions.poster_gold_copy) {
-            ctx2d.fillStyle = '#d4af37';
+
+        // ── Transparent background (for IG Story overlay) ──
+        ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Subtle frosted-glass panel behind content
+        const panelGrad = ctx2d.createLinearGradient(0, 0, 0, canvas.height);
+        if (isGold) {
+            panelGrad.addColorStop(0,   'rgba(0,0,0,0.82)');
+            panelGrad.addColorStop(1,   'rgba(20,15,0,0.88)');
+        } else if (isSilver) {
+            panelGrad.addColorStop(0,   'rgba(15,20,25,0.82)');
+            panelGrad.addColorStop(1,   'rgba(25,30,35,0.88)');
+        } else {
+            panelGrad.addColorStop(0,   'rgba(10,22,12,0.82)');
+            panelGrad.addColorStop(1,   'rgba(18,31,20,0.88)');
+        }
+        ctx2d.fillStyle = panelGrad;
+        // Rounded rect panel
+        const pad = 60;
+        const rr = 48;
+        ctx2d.beginPath();
+        ctx2d.moveTo(pad + rr, pad);
+        ctx2d.lineTo(canvas.width - pad - rr, pad);
+        ctx2d.quadraticCurveTo(canvas.width - pad, pad, canvas.width - pad, pad + rr);
+        ctx2d.lineTo(canvas.width - pad, canvas.height - pad - rr);
+        ctx2d.quadraticCurveTo(canvas.width - pad, canvas.height - pad, canvas.width - pad - rr, canvas.height - pad);
+        ctx2d.lineTo(pad + rr, canvas.height - pad);
+        ctx2d.quadraticCurveTo(pad, canvas.height - pad, pad, canvas.height - pad - rr);
+        ctx2d.lineTo(pad, pad + rr);
+        ctx2d.quadraticCurveTo(pad, pad, pad + rr, pad);
+        ctx2d.closePath();
+        ctx2d.fill();
+
+        // Accent border
+        ctx2d.strokeStyle = isGold ? 'rgba(212,175,55,0.5)' : 'rgba(191,227,64,0.4)';
+        ctx2d.lineWidth = 3;
+        ctx2d.stroke();
+
+        const cx = canvas.width / 2;
+
+        // ── Brand header ──
+        ctx2d.fillStyle = accentColor;
+        ctx2d.font = 'bold 52px sans-serif';
+        ctx2d.textAlign = 'center';
+        ctx2d.fillText('城市運輸單車', cx, 200);
+        ctx2d.fillStyle = subColor;
+        ctx2d.font = '36px sans-serif';
+        ctx2d.fillText('CITY TRANSPORT CYCLING', cx, 258);
+
+        // Divider line
+        ctx2d.strokeStyle = isGold ? 'rgba(212,175,55,0.35)' : 'rgba(191,227,64,0.3)';
+        ctx2d.lineWidth = 2;
+        ctx2d.beginPath();
+        ctx2d.moveTo(pad + 80, 290); ctx2d.lineTo(canvas.width - pad - 80, 290);
+        ctx2d.stroke();
+
+        // ── Historical ride track map circle ──
+        const mapCX = cx;
+        const mapCY = 620;
+        const mapR  = 340;
+
+        // Outer glow ring
+        const glowGrad = ctx2d.createRadialGradient(mapCX, mapCY, mapR - 20, mapCX, mapCY, mapR + 30);
+        glowGrad.addColorStop(0, isGold ? 'rgba(212,175,55,0.35)' : 'rgba(4,217,60,0.3)');
+        glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx2d.fillStyle = glowGrad;
+        ctx2d.beginPath();
+        ctx2d.arc(mapCX, mapCY, mapR + 30, 0, Math.PI * 2);
+        ctx2d.fill();
+
+        // Map circle background
+        ctx2d.save();
+        ctx2d.beginPath();
+        ctx2d.arc(mapCX, mapCY, mapR, 0, Math.PI * 2);
+        ctx2d.clip();
+
+        // Dark map base
+        const mapBg = ctx2d.createRadialGradient(mapCX, mapCY - 60, 0, mapCX, mapCY, mapR);
+        if (isGold) {
+            mapBg.addColorStop(0, '#1a1400');
+            mapBg.addColorStop(1, '#0a0800');
+        } else {
+            mapBg.addColorStop(0, '#0d2010');
+            mapBg.addColorStop(1, '#060e07');
+        }
+        ctx2d.fillStyle = mapBg;
+        ctx2d.fillRect(mapCX - mapR, mapCY - mapR, mapR * 2, mapR * 2);
+
+        // Draw stylised ride tracks from history
+        const rideHistory = Array.isArray(history) ? history : [];
+        const uniqueRoutes = [...new Set(rideHistory.map(r => r.route_id || r.route_name).filter(Boolean))];
+
+        // Generate pseudo-random track lines based on route IDs (deterministic)
+        function seededRand(seed) {
+            let s = seed;
+            return function() {
+                s = (s * 1664525 + 1013904223) & 0xffffffff;
+                return (s >>> 0) / 0xffffffff;
+            };
+        }
+
+        if (uniqueRoutes.length > 0) {
+            uniqueRoutes.slice(0, 20).forEach((routeId, i) => {
+                const rng = seededRand(routeId.split('').reduce((a, c) => a + c.charCodeAt(0), i * 137));
+                const numPts = 4 + Math.floor(rng() * 5);
+                const pts = [];
+                const startAngle = rng() * Math.PI * 2;
+                const arcSpan   = (0.3 + rng() * 0.5) * Math.PI;
+                for (let j = 0; j < numPts; j++) {
+                    const t = j / (numPts - 1);
+                    const angle = startAngle + t * arcSpan;
+                    const r2 = (0.25 + rng() * 0.65) * mapR;
+                    pts.push([mapCX + Math.cos(angle) * r2, mapCY + Math.sin(angle) * r2]);
+                }
+                const alpha = 0.25 + rng() * 0.45;
+                ctx2d.strokeStyle = isGold
+                    ? `rgba(212,175,55,${alpha})`
+                    : `rgba(4,217,60,${alpha})`;
+                ctx2d.lineWidth = 1.5 + rng() * 2.5;
+                ctx2d.lineCap = 'round';
+                ctx2d.lineJoin = 'round';
+                ctx2d.beginPath();
+                ctx2d.moveTo(pts[0][0], pts[0][1]);
+                for (let j = 1; j < pts.length; j++) {
+                    const mx = (pts[j-1][0] + pts[j][0]) / 2;
+                    const my = (pts[j-1][1] + pts[j][1]) / 2;
+                    ctx2d.quadraticCurveTo(pts[j-1][0], pts[j-1][1], mx, my);
+                }
+                ctx2d.lineTo(pts[pts.length-1][0], pts[pts.length-1][1]);
+                ctx2d.stroke();
+            });
+        } else {
+            // Placeholder spiral when no history
+            ctx2d.strokeStyle = isGold ? 'rgba(212,175,55,0.3)' : 'rgba(4,217,60,0.25)';
+            ctx2d.lineWidth = 2;
+            ctx2d.beginPath();
+            for (let a = 0; a < Math.PI * 6; a += 0.05) {
+                const r2 = (a / (Math.PI * 6)) * mapR * 0.85;
+                const x = mapCX + Math.cos(a) * r2;
+                const y = mapCY + Math.sin(a) * r2;
+                if (a === 0) ctx2d.moveTo(x, y); else ctx2d.lineTo(x, y);
+            }
+            ctx2d.stroke();
+        }
+
+        // Grid lines (map-like)
+        ctx2d.strokeStyle = isGold ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.06)';
+        ctx2d.lineWidth = 1;
+        for (let gx = mapCX - mapR; gx <= mapCX + mapR; gx += 60) {
+            ctx2d.beginPath(); ctx2d.moveTo(gx, mapCY - mapR); ctx2d.lineTo(gx, mapCY + mapR); ctx2d.stroke();
+        }
+        for (let gy = mapCY - mapR; gy <= mapCY + mapR; gy += 60) {
+            ctx2d.beginPath(); ctx2d.moveTo(mapCX - mapR, gy); ctx2d.lineTo(mapCX + mapR, gy); ctx2d.stroke();
+        }
+
+        ctx2d.restore();
+
+        // Circle border
+        ctx2d.strokeStyle = isGold ? 'rgba(212,175,55,0.6)' : 'rgba(4,217,60,0.5)';
+        ctx2d.lineWidth = 4;
+        ctx2d.beginPath();
+        ctx2d.arc(mapCX, mapCY, mapR, 0, Math.PI * 2);
+        ctx2d.stroke();
+
+        // Ride count label inside circle
+        ctx2d.fillStyle = textColor;
+        ctx2d.font = 'bold 64px sans-serif';
+        ctx2d.textAlign = 'center';
+        ctx2d.fillText(`${rideHistory.length}`, mapCX, mapCY + 22);
+        ctx2d.fillStyle = subColor;
+        ctx2d.font = '30px sans-serif';
+        ctx2d.fillText('次騎行', mapCX, mapCY + 68);
+
+        // ── Stats section ──
+        const statsY = mapCY + mapR + 80;
+        const statW  = (canvas.width - pad * 2 - 80) / 3;
+        const statX0 = pad + 40;
+
+        function drawStat(x, y, w, label, value, unit) {
+            // Stat card background
+            ctx2d.fillStyle = isGold ? 'rgba(212,175,55,0.1)' : 'rgba(4,217,60,0.08)';
+            ctx2d.beginPath();
+            ctx2d.roundRect(x, y, w - 16, 160, 16);
+            ctx2d.fill();
+            ctx2d.strokeStyle = isGold ? 'rgba(212,175,55,0.25)' : 'rgba(4,217,60,0.2)';
+            ctx2d.lineWidth = 1.5;
+            ctx2d.stroke();
+
+            ctx2d.fillStyle = accentColor;
             ctx2d.font = 'bold 52px sans-serif';
-            ctx2d.fillText('今日通勤也完成了高效綠色出行', 90, 820);
+            ctx2d.textAlign = 'center';
+            ctx2d.fillText(value, x + (w - 16) / 2, y + 72);
+            ctx2d.fillStyle = subColor;
+            ctx2d.font = '26px sans-serif';
+            ctx2d.fillText(unit, x + (w - 16) / 2, y + 108);
+            ctx2d.fillStyle = isGold ? 'rgba(212,175,55,0.55)' : 'rgba(255,255,255,0.45)';
+            ctx2d.font = '24px sans-serif';
+            ctx2d.fillText(label, x + (w - 16) / 2, y + 148);
         }
-        if (!context.permissions.poster_no_watermark) {
-            ctx2d.fillStyle = 'rgba(255,255,255,0.18)';
-            ctx2d.font = 'bold 80px sans-serif';
-            ctx2d.rotate(-Math.PI / 12);
-            ctx2d.fillText('城市運輸單車', 200, 1200);
-            ctx2d.rotate(Math.PI / 12);
+
+        drawStat(statX0,              statsY, statW, '總里程',   `${formatKm(totalKm)}`, 'km');
+        drawStat(statX0 + statW,      statsY, statW, '省交通費', `$${savedCost.toFixed(0)}`, 'HKD');
+        drawStat(statX0 + statW * 2,  statsY, statW, '減碳',     `${co2.toFixed(1)}`, 'kg CO₂');
+
+        // ── Gold motivational copy ──
+        if (context.permissions && context.permissions.poster_gold_copy) {
+            ctx2d.fillStyle = '#d4af37';
+            ctx2d.font = 'bold 42px sans-serif';
+            ctx2d.textAlign = 'center';
+            ctx2d.fillText('今日通勤也完成了高效綠色出行', cx, statsY + 220);
         }
+
+        // ── Watermark ──
+        if (!(context.permissions && context.permissions.poster_no_watermark)) {
+            ctx2d.save();
+            ctx2d.globalAlpha = 0.12;
+            ctx2d.fillStyle = '#ffffff';
+            ctx2d.font = 'bold 72px sans-serif';
+            ctx2d.textAlign = 'center';
+            ctx2d.translate(cx, canvas.height - 200);
+            ctx2d.rotate(-Math.PI / 14);
+            ctx2d.fillText('城市運輸單車 CTRC', 0, 0);
+            ctx2d.restore();
+        }
+
+        // ── Footer ──
+        ctx2d.globalAlpha = 1;
+        ctx2d.fillStyle = subColor;
+        ctx2d.font = '28px sans-serif';
+        ctx2d.textAlign = 'center';
+        const year = new Date().getFullYear();
+        ctx2d.fillText(`ctrchk.vercel.app  ·  ${year}`, cx, canvas.height - pad - 40);
+
         const dataUrl = canvas.toDataURL('image/png');
         const modal = document.getElementById('db-poster-modal');
         const preview = document.getElementById('db-poster-preview-img');
@@ -1132,7 +1356,7 @@
             var posterBtn = document.getElementById('db-poster-btn');
             if (posterBtn) {
                 posterBtn.onclick = function () {
-                    exportPoster(totalKm, permCtx);
+                    exportPoster(totalKm, permCtx, history);
                 };
             }
 
