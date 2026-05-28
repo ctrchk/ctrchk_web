@@ -479,12 +479,16 @@
     <div id="summary-title">騎行完成！</div>
     <div id="summary-xp-badge">+0 XP</div>
     <div id="summary-bonus-coins" style="display:none;font-size:0.9em;color:#BFE340;margin-top:0.3em;font-weight:bold;"></div>
-    <div id="summary-stats">
-      <div class="summary-stat"><div class="val" id="s-time">--</div><div class="lbl">⏱ 時間</div></div>
-      <div class="summary-stat"><div class="val" id="s-dist">--</div><div class="lbl">🚴 距離</div></div>
-      <div class="summary-stat"><div class="val" id="s-stops">--</div><div class="lbl">🚏 站點</div></div>
-      <div class="summary-stat"><div class="val" id="s-speed">--</div><div class="lbl">💨 均速</div></div>
-    </div>
+<div id="summary-stats">
+  <div class="summary-stat"><div class="val" id="s-time">--</div><div class="lbl">⏱ 時間</div></div>
+  <div class="summary-stat"><div class="val" id="s-dist">--</div><div class="lbl">🚴 距離</div></div>
+  <div class="summary-stat"><div class="val" id="s-stops">--</div><div class="lbl">🚏 站點</div></div>
+  <div class="summary-stat"><div class="val" id="s-speed">--</div><div class="lbl">💨 均速</div></div>
+  </div>
+  <div id="summary-mileage-row" style="display:none;margin-top:0.5em;text-align:center;">
+    <span id="s-mileage-pts" style="font-size:1.1em;font-weight:bold;color:#4fc3f7;">+0 里程</span>
+    <span id="s-transport-saved" style="font-size:0.9em;color:#8bc34a;margin-left:0.8em;">已節省 $0 交通費</span>
+  </div>
     <div id="summary-xp-bar-wrap">
       <div id="summary-xp-bar-label">
         <span id="s-xp-cur">XP 0</span><span id="s-xp-next">→ 下一級 80 XP</span>
@@ -1258,6 +1262,18 @@
         `${reachedStops.size} / ${routeStops.length}`;
       document.getElementById('s-speed').textContent =
         avgSpeed > 0 ? `${avgSpeed} km/h` : '--';
+
+      // Show mileage points earned and transport cost saved
+      const mileageRow = document.getElementById('summary-mileage-row');
+      const mileagePts = apiResult.mileage_points_earned || 0;
+      const transportSaved = apiResult.transport_cost_saved || 2.5;
+      if (!rideTooShort && mileagePts > 0) {
+        document.getElementById('s-mileage-pts').textContent = `+${mileagePts} 里程`;
+        document.getElementById('s-transport-saved').textContent = `已節省 $${transportSaved.toFixed(1)} 交通費`;
+        mileageRow.style.display = '';
+      } else {
+        mileageRow.style.display = 'none';
+      }
 
       // XP bar
       const lvl = apiResult.level || 1;
