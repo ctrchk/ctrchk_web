@@ -2678,35 +2678,46 @@
     <script>
 <script>
 async function executeAiDev() {
-    const path = document.getElementById('ai-path').value.trim();
+    // 1. 獲取輸入值
+    const pathInput = document.getElementById('ai-path').value.trim();
     const promptText = document.getElementById('ai-prompt').value.trim();
     const btn = document.getElementById('ai-btn');
     const status = document.getElementById('ai-status');
 
+    // 2. 基本檢查（只檢查指令是否為空，路徑允許為空）
     if (!promptText) {
         alert("請輸入修改指令！");
         return;
     }
 
-    // 🔒 6 位數安全密碼驗證
-    const pin = prompt("🔐 安全驗證：請輸入 6 位授權碼 (032024)");
+    // 3. 彈出安全密碼視窗 (這行保證會彈出)
+    const pin = prompt("🔐 安全驗證：請輸入 6 位授權碼以執行 AI 修改 (032024)");
+    
+    // 如果用戶按取消或沒輸入
+    if (pin === null) return; 
+    
     if (pin !== "032024") {
         alert("❌ 密碼錯誤，拒絕執行！");
         return;
     }
 
+    // 4. 開始執行 UI 反饋
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 特工正在跨檔案分析修改中...';
-    status.innerHTML = "⏳ 正在啟動全自動 Agent 模式，這可能需要 20-40 秒...";
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agent 執行中...';
+    status.innerHTML = "⏳ 正在啟動 Agent，分析專案結構中...";
+    status.style.color = "#666";
 
     try {
         const token = localStorage.getItem('accessToken');
         const response = await fetch('/api/admin-users', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            },
             body: JSON.stringify({ 
                 action: 'ai-dev', 
-                path: path || "AUTO", 
+                path: pathInput || "AUTO", // 如果路徑是空的，就傳送 "AUTO"
                 prompt: promptText,
                 pin: pin
             })
@@ -2714,15 +2725,14 @@ async function executeAiDev() {
 
         const result = await response.json();
         if (result.success) {
-            status.innerHTML = `<span style="color:green; font-weight:bold;">✅ 任務完成！</span>\n\nAI 成功修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank" style="color:#3498db; text-decoration:underline;">🔗 點此前往 GitHub 查看詳細變動</a>`;
+            status.innerHTML = `<span style="color:#04D93C; font-weight:bold;">✅ 任務完成！</span>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank" style="color:#3498db;">🔗 查看 GitHub 變更紀錄</a>`;
         } else {
-            status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 失敗：</span> ${result.error}`;
+            status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 失敗：</span> ${result.error || result.message}`;
         }
     } catch (e) {
-        status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 連線錯誤:</span> ${e.message}`;
+        status.innerHTML = `<span style="color:red;">❌ 連線錯誤:</span> ${e.message}`;
     } finally {
         btn.disabled = false;
-        btn.style.background = "#6c5ce7";
         btn.innerHTML = '<i class="fas fa-paper-plane"></i> 啟動特工任務';
     }
 }
