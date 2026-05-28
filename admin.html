@@ -2621,87 +2621,64 @@
             }
         }
 
-        async function executeAiDev() {
-    const path = document.getElementById('ai-path').value;
-    const prompt = document.getElementById('ai-prompt').value;
-    const btn = document.getElementById('ai-btn');
-    const status = document.getElementById('ai-status');
-
-    if(!path || !prompt) return alert("請填寫完整資訊");
-    if(!confirm("確定讓 AI 直接修改 GitHub 源碼嗎？")) return;
-
-    btn.disabled = true;
-    status.innerText = "AI 正在分析並修改代碼，請稍候...";
-
-    try {
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch('/api/admin-users', { // 確保路徑與你實際的 api 檔名一致
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ action: 'ai-dev', path, prompt })
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            status.innerHTML = "<b style='color:green'>✅ 修改成功！Vercel 正在重新部署...</b>";
-        } else {
-            status.innerHTML = "<b style='color:red'>❌ 失敗：</b>" + result.error;
-        }
-    } catch (e) {
-        status.innerText = "發生錯誤: " + e.message;
-    } finally {
-        btn.disabled = false;
-    }
-}
-    </script>
-
-    <!-- 安全密碼驗證 Modal -->
-    <div id="admin-pin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; align-items:center; justify-content:center;">
-        <div style="background:white; border-radius:12px; padding:2em; max-width:340px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
-            <h3 style="margin-top:0; color:#2c3e50;"><i class="fas fa-lock"></i> 輸入安全密碼</h3>
-            <p style="font-size:0.9em; color:#555; margin-bottom:1em;">請輸入 6 位數字安全密碼以繼續此操作。</p>
-            <input type="password" id="admin-pin-modal-input" maxlength="6" pattern="[0-9]{6}"
-                placeholder="6 位數字密碼"
-                style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:6px; font-size:1.2em; letter-spacing:0.3em; text-align:center; box-sizing:border-box;">
-            <div id="admin-pin-modal-err" style="min-height:1.4em; margin-top:0.5em; font-size:0.9em; color:red;"></div>
-            <div style="display:flex; gap:0.8em; margin-top:1em;">
-                <button id="admin-pin-modal-confirm" class="cta-button" style="flex:1;">
-                    <i class="fas fa-check"></i> 確認
-                </button>
-                <button id="admin-pin-modal-cancel" style="flex:1; padding:0.7em; border:1px solid #ccc; border-radius:8px; background:white; cursor:pointer; font-size:1em;">
-                    取消
-                </button>
-            </div>
+<div id="tab-ai-dev" style="display:none;">
+    <h3 style="margin-top:0;"><i class="fas fa-magic"></i> 全自動 AI 開發特工</h3>
+    <div style="background:#f9f9f9; padding:1.5em; border-radius:10px; border:1px solid #ddd; max-width:700px;">
+        <p style="margin-top:0; font-size:0.9em; color:#666; line-height:1.6;">
+            💡 <b>Agent 模式：</b>在路徑輸入 <code>blank</code>，AI 會自動掃描全專案。<br>
+            📍 <b>指定模式：</b>填寫確切路徑（如 api/admin-users.js）。
+        </p>
+        
+        <div style="margin-bottom:1em;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (輸入 blank 代表全自動)</label>
+            <input type="text" id="ai-path" placeholder="例如: public/index.html 或 blank" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
         </div>
+
+        <div style="margin-bottom:1em;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 修改指令</label>
+            <textarea id="ai-prompt" rows="4" placeholder="請描述你想做的事情..." style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;"></textarea>
+        </div>
+
+        <div style="margin-bottom:1em;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">3. 安全授權碼 (6位數)</label>
+            <input type="password" id="ai-pin" placeholder="請輸入 032024" maxlength="6" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
+        </div>
+
+        <button id="ai-btn" onclick="executeAiDev()" style="width:100%; padding:1em; background:#6c5ce7; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">
+            <i class="fas fa-paper-plane"></i> 啟動特工任務
+        </button>
+        <div id="ai-status" style="margin-top:1em; padding:1em; background:white; border-radius:5px; font-size:0.9em; min-height:40px; border:1px dashed #ccc; white-space:pre-wrap;">等待指令中...</div>
     </div>
-    <script>
+</div>
+
 <script>
 async function executeAiDev() {
-    // 1. 取得輸入 (即使路徑為空也沒關係)
     const pathValue = document.getElementById('ai-path').value.trim();
     const promptText = document.getElementById('ai-prompt').value.trim();
+    const pinValue = document.getElementById('ai-pin').value.trim(); // 取得密碼框的值
     const btn = document.getElementById('ai-btn');
     const status = document.getElementById('ai-status');
 
+    // 嚴格檢查三個框框都不能是空的
+    if (!pathValue) {
+        alert("請輸入檔案路徑，或輸入 blank 代表全自動！");
+        return;
+    }
     if (!promptText) {
         alert("請輸入『修改指令』！");
         return;
     }
-
-    // 2. 這裡會跳出彈窗讓你輸入密碼
-    const userPin = prompt("🔐 安全驗證：請輸入 6 位授權碼 (032024)");
-    if (userPin === null) return; // 按取消
-    if (userPin !== "032024") {
-        alert("❌ 密碼錯誤！");
+    if (!pinValue) {
+        alert("請輸入安全授權碼！");
         return;
     }
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agent 執行中...';
     status.innerHTML = "⏳ 正在分析專案結構...";
+
+    // 處理 blank 邏輯：如果是 blank，就轉換成 AUTO 傳給後端
+    const finalPath = (pathValue.toLowerCase() === 'blank') ? "AUTO" : pathValue;
 
     try {
         const token = localStorage.getItem('accessToken');
@@ -2710,15 +2687,17 @@ async function executeAiDev() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
                 action: 'ai-dev', 
-                path: pathValue || "AUTO", // 這裡就是關鍵：如果空就傳 AUTO
+                path: finalPath,
                 prompt: promptText,
-                pin: userPin
+                pin: pinValue
             })
         });
 
         const result = await response.json();
         if (result.success) {
             status.innerHTML = `<span style="color:green; font-weight:bold;">✅ 修改成功！</span>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank">🔗 前往 GitHub 查看變更</a>`;
+            // 成功後清空密碼
+            document.getElementById('ai-pin').value = '';
         } else {
             status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 失敗：</span> ${result.error || result.message}`;
         }
