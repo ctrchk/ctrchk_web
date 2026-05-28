@@ -1003,34 +1003,91 @@ export default async function handler(req, res) {
   return res.status(405).json({ message: 'Method Not Allowed' });
 }
 
+// ==========================================
+// AI Agent 核心引擎 (多檔案 & 全自動支援)
+// ==========================================
 async function handleAiDev(req, res) {
-    const { prompt, path } = req.body;
-    if (!prompt || !path) return res.status(400).json({ error: '缺少指令或檔案路徑' });
+    const { prompt, path, pin } = req.body;
+    
+    // 1. 安全檢查
+    if (pin !== "032024") return res.status(403).json({ error: "安全密碼錯誤！" });
 
+    // ⚠️ 請確認你的倉庫名稱 (如果出錯，請把 ctrchk_web 改成 ctrchk 試試)
     const owner = "ctrchk"; 
     const repo = "ctrchk_web"; 
 
     try {
-        const { data: fileRes } = await octokit.repos.getContent({ owner, repo, path });
-        const currentCode = Buffer.from(fileRes.content, 'base64').toString('utf-8');
-        const sha = fileRes.sha;
+        // 2. 獲取全專案目錄，讓 AI 了解架構
+        const { data: treeData } = await octokit.repos.getTree({ owner, repo, tree_sha: 'main', recursive: true });
+        const fileList = treeData.tree.map(f => f.path).join('\n');
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const aiPrompt = `你是一個專業工程師。目標：${path}\n需求：${prompt}\n源碼：\n${currentCode}\n\n請輸出修改後的完整代碼，不含 Markdown 標籤。`;
+        // 3. 呼叫 Gemini 3.1 Flash
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
+        
+        const systemPrompt = `你是一個高級 AI 全棧工程師。
+當前專案檔案列表：
+${fileList}
 
-        const result = await model.generateContent(aiPrompt);
-        let newCode = result.response.text().trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
+用戶需求：${prompt}
+${path !== "AUTO" ? `優先目標檔案：${path}` : "請根據需求自行判斷需要修改哪些檔案。"}
 
-        await octokit.repos.createOrUpdateFileContents({
-            owner, repo, path,
-            message: `🤖 AI: ${prompt.substring(0, 30)}`,
-            content: Buffer.from(newCode).toString('base64'),
-            sha: sha,
-            branch: 'main'
+請按以下格式輸出修改（可包含多個檔案）：
+[FILE:檔案路徑]
+這裡放修改後的完整程式碼內容
+[END_FILE]
+
+注意：
+1. 必須提供完整的程式碼，不要有 Markdown 標籤 (不要出現 \`\`\` )。
+2. 每次修改都必須以 [FILE:路徑] 開頭，[END_FILE] 結尾。
+3. 如果需要新增檔案，也可以直接輸出路徑。`;
+
+        const result = await model.generateContent(systemPrompt);
+        const aiResponse = result.response.text();
+
+        // 4. 正則解析多個檔案塊
+        const fileMatches = [...aiResponse.matchAll(/\[FILE:(.+?)\]([\s\S]*?)\[END_FILE\]/g)];
+        
+        if (fileMatches.length === 0) {
+            return res.status(500).json({ error: "AI 未能生成正確格式的代碼，請嘗試將指令寫得更具體。" });
+        }
+
+        let updatedCount = 0;
+        let lastCommitUrl = "";
+
+        // 5. 循環更新 GitHub
+        for (const match of fileMatches) {
+            const filePath = match[1].trim();
+            // 清除可能殘留的 markdown
+            const newCode = match[2].trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
+
+            try {
+                let sha;
+                try {
+                    const { data: existingFile } = await octokit.repos.getContent({ owner, repo, path: filePath });
+                    sha = existingFile.sha;
+                } catch (e) { sha = undefined; } // 找不到代表是新檔案
+
+                const commit = await octokit.repos.createOrUpdateFileContents({
+                    owner, repo, path: filePath,
+                    message: `🤖 Agent: ${prompt.substring(0, 40)}`,
+                    content: Buffer.from(newCode).toString('base64'),
+                    sha: sha,
+                    branch: 'main'
+                });
+                lastCommitUrl = commit.data.commit.html_url;
+                updatedCount++;
+            } catch (err) {
+                console.error(`更新 ${filePath} 失敗:`, err.message);
+            }
+        }
+
+        return res.status(200).json({ 
+            success: true, 
+            count: updatedCount, 
+            commitUrl: lastCommitUrl 
         });
 
-        return res.status(200).json({ success: true, message: "AI 修改成功並已推送 GitHub" });
     } catch (err) {
-        return res.status(500).json({ error: "AI 錯誤: " + err.message });
+        return res.status(500).json({ error: "Agent 執行出錯: " + err.message });
     }
 }
