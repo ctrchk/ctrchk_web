@@ -716,22 +716,27 @@
                     </div>
                 </div>
             </div>
-            <div id="tab-ai-dev" style="display:none;">
-    <div class="card" style="margin-top: 20px; border: 1px solid #6c5ce7; background: white; border-radius: 8px; padding: 1.5em; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <h3 style="margin-top:0; color:#2c3e50;"><i class="fas fa-robot"></i> AI 自動代碼開發</h3>
-        <p style="color:#666; font-size:0.9em; margin-bottom:1em;">輸入目標檔案與指令，AI 特工將自動讀取專案、修改代碼並推送到 GitHub。</p>
-        
-        <input type="text" id="ai-path" placeholder="檔案路徑 (例如: public/index.html 或 api/user.js)" style="width:100%; margin-bottom:10px; padding:0.8em; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;">
-        
-        <textarea id="ai-prompt" placeholder="請輸入修改指令... (例如：幫我在首頁按鈕加上綠色漸層，並加上點擊動畫)" style="width:100%; height:100px; padding:0.8em; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; resize: vertical;"></textarea>
-        
-        <button onclick="executeAiDev()" id="ai-btn" class="cta-button" style="background:#6c5ce7; width:100%; margin-top:10px;">
-            <i class="fas fa-magic"></i> 執行 AI 修改
-        </button>
-        
-        <div id="ai-status" style="margin-top:15px; font-size:0.95em; color:#666; white-space: pre-wrap; font-family: monospace;"></div>
-    </div>
-</div>
+<div id="tab-ai-dev" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-magic"></i> 全自動 AI 開發特工</h3>
+                <div style="background:#f9f9f9; padding:1.5em; border-radius:10px; border:1px solid #ddd; max-width:700px;">
+                    <p style="margin-top:0; font-size:0.9em; color:#666; line-height:1.6;">
+                        💡 <b>Agent 模式：</b>路徑留空，AI 會掃描全專案並自動決定改哪幾個檔案。<br>
+                        📍 <b>指定模式：</b>填寫路徑（如 api/admin-users.js）精準修改特定檔案。
+                    </p>
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (可選)</label>
+                        <input type="text" id="ai-path" placeholder="例如: public/index.html (留空則開啟全自動模式)" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:1em;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 修改指令</label>
+                        <textarea id="ai-prompt" rows="4" placeholder="請描述你想做的事情... (例如: 把所有按鈕改成綠色)" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; resize:vertical;"></textarea>
+                    </div>
+                    <button id="ai-btn" onclick="executeAiDev()" style="width:100%; padding:1em; background:#6c5ce7; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">
+                        <i class="fas fa-paper-plane"></i> 啟動特工任務
+                    </button>
+                    <div id="ai-status" style="margin-top:1em; padding:1em; background:white; border-radius:5px; font-size:0.9em; min-height:40px; border:1px dashed #ccc; white-space:pre-wrap;">等待指令中...</div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -2671,70 +2676,56 @@
         </div>
     </div>
     <script>
+<script>
 async function executeAiDev() {
     const path = document.getElementById('ai-path').value.trim();
-    const prompt = document.getElementById('ai-prompt').value.trim();
+    const promptText = document.getElementById('ai-prompt').value.trim();
     const btn = document.getElementById('ai-btn');
     const status = document.getElementById('ai-status');
 
-    // 1. 簡單的防呆檢查
-    if(!path || !prompt) {
-        alert("請填寫「檔案路徑」與「修改指令」！");
-        return;
-    }
-    
-    if(!confirm("警告：AI 將直接修改你的 GitHub 原始碼，這將會觸發 Vercel 重新部署。\n\n確定要繼續嗎？")) {
+    if (!promptText) {
+        alert("請輸入修改指令！");
         return;
     }
 
-    // 2. 改變按鈕狀態，防止重複點擊
+    // 🔒 6 位數安全密碼驗證
+    const pin = prompt("🔐 安全驗證：請輸入 6 位授權碼 (032024)");
+    if (pin !== "032024") {
+        alert("❌ 密碼錯誤，拒絕執行！");
+        return;
+    }
+
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 特工正在分析與編寫代碼 (約需 15~30 秒)...';
-    status.innerHTML = "⏳ 正在連接 AI 特工...";
-    status.style.color = "#666";
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 特工正在跨檔案分析修改中...';
+    status.innerHTML = "⏳ 正在啟動全自動 Agent 模式，這可能需要 20-40 秒...";
 
     try {
-        // 取得管理員的登入 Token
         const token = localStorage.getItem('accessToken');
-        
-        // 3. 發送請求到我們之前改好的 admin-users API
-        // 注意：如果你後端檔案名字不同，請把 '/api/admin-users' 改成你的檔名
-        const response = await fetch('/api/admin-users', { 
+        const response = await fetch('/api/admin-users', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
-                action: 'ai-dev', // 這個 action 會觸發後端的 AI 邏輯
-                path: path, 
-                prompt: prompt 
+                action: 'ai-dev', 
+                path: path || "AUTO", 
+                prompt: promptText,
+                pin: pin
             })
         });
 
         const result = await response.json();
-        
-        // 4. 處理回傳結果
         if (result.success) {
-            status.innerHTML = `<span style="color:#04D93C; font-weight:bold;">✅ 修改成功！</span>\n\nAI 已將代碼推送到 GitHub，Vercel 正在自動部署，約 1~2 分鐘後生效。\n\n<a href="${result.commitUrl}" target="_blank" style="color:#3498db; text-decoration:underline;">🔗 點此前往 GitHub 查看具體修改了什麼代碼</a>`;
-            btn.style.background = "#04D93C";
-            btn.innerHTML = '<i class="fas fa-check"></i> 完成';
+            status.innerHTML = `<span style="color:green; font-weight:bold;">✅ 任務完成！</span>\n\nAI 成功修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank" style="color:#3498db; text-decoration:underline;">🔗 點此前往 GitHub 查看詳細變動</a>`;
         } else {
-            status.innerHTML = `<span style="color:#e74c3c; font-weight:bold;">❌ 失敗：</span> ${result.error}`;
-            btn.innerHTML = '<i class="fas fa-magic"></i> 執行 AI 修改';
+            status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 失敗：</span> ${result.error}`;
         }
     } catch (e) {
-        status.innerHTML = `<span style="color:#e74c3c; font-weight:bold;">❌ 發生連線錯誤：</span> ${e.message}`;
-        btn.innerHTML = '<i class="fas fa-magic"></i> 執行 AI 修改';
+        status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 連線錯誤:</span> ${e.message}`;
     } finally {
-        // 3 秒後把按鈕恢復原狀，允許下一次修改
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.style.background = "#6c5ce7";
-            btn.innerHTML = '<i class="fas fa-magic"></i> 執行 AI 修改';
-        }, 3000);
+        btn.disabled = false;
+        btn.style.background = "#6c5ce7";
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> 啟動特工任務';
     }
 }
-</script>
+    </script>
 </body>
 </html>
