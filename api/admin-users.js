@@ -1061,53 +1061,48 @@ async function handleAiDev(req, res) {
     const repo = "ctrchk_web"; 
 
     try {
-        // 🌟 修正點：使用 octokit.git.getTree 而不是 repos.getTree
+        // 🌟 修正：獲取檔案樹的正確函數
         const { data: treeData } = await octokit.git.getTree({ 
-            owner, 
-            repo, 
-            tree_sha: 'main', 
-            recursive: true 
+            owner, repo, tree_sha: 'main', recursive: true 
         });
-        
-        const fileList = treeData.tree
-            .filter(f => f.type === 'blob') // 只拿檔案，不拿資料夾
-            .map(f => f.path)
-            .join('\n');
+        const fileList = treeData.tree.filter(f => f.type === 'blob').map(f => f.path).join('\n');
 
+        // 🌟 修正：模型 ID 改為 gemini-1.5-flash 或 gemini-1.5-flash-latest
+        // 如果你的 SDK 是新版，請確認名稱正確
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const systemPrompt = `你是一個專業開發特工。當前專案檔案：\n${fileList}\n\n需求：${prompt}\n目標：${(path === "AUTO") ? "自動判斷受影響檔案" : path}\n\n請按以下格式輸出修改：\n[FILE:路徑]\n完整程式碼\n[END_FILE]`;
+
+        const systemPrompt = `你是一個專業工程特工。當前專案檔案：\n${fileList}\n\n需求：${prompt}\n目標檔案：${path === "AUTO" ? "由你判斷" : path}\n\n請按格式輸出修改：\n[FILE:路徑]\n完整程式碼內容\n[END_FILE]`;
 
         const result = await model.generateContent(systemPrompt);
         const aiResponse = result.response.text();
 
+        // 解析 AI 結果並執行 GitHub 更新 (與之前邏輯相同)
         const fileMatches = [...aiResponse.matchAll(/\[FILE:(.+?)\]([\s\S]*?)\[END_FILE\]/g)];
-        if (fileMatches.length === 0) return res.status(500).json({ error: "AI 未能生成正確格式內容。" });
+        if (fileMatches.length === 0) return res.status(500).json({ error: "AI 生成格式錯誤" });
 
-        let updatedCount = 0;
-        let lastCommitUrl = "";
-
+        let count = 0;
+        let lastUrl = "";
         for (const match of fileMatches) {
             const filePath = match[1].trim();
             const newCode = match[2].trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
             let sha;
             try {
-                const { data: existingFile } = await octokit.repos.getContent({ owner, repo, path: filePath });
-                sha = existingFile.sha;
+                const { data: f } = await octokit.repos.getContent({ owner, repo, path: filePath });
+                sha = f.sha;
             } catch (e) { sha = undefined; }
 
             const commit = await octokit.repos.createOrUpdateFileContents({
                 owner, repo, path: filePath,
-                message: `🤖 AI Agent: ${prompt.substring(0, 30)}`,
+                message: `🤖 AI Agent Fix: ${prompt.substring(0, 30)}`,
                 content: Buffer.from(newCode).toString('base64'),
                 sha: sha,
                 branch: 'main'
             });
-            lastCommitUrl = commit.data.commit.html_url;
-            updatedCount++;
+            lastUrl = commit.data.commit.html_url;
+            count++;
         }
-        return res.status(200).json({ success: true, count: updatedCount, commitUrl: lastCommitUrl });
+        return res.status(200).json({ success: true, count, commitUrl: lastUrl });
     } catch (err) {
-        console.error("Agent Error:", err);
-        return res.status(500).json({ error: "Agent 錯誤: " + err.message });
+        return res.status(500).json({ error: "Agent 執行錯誤: " + err.message });
     }
 }
