@@ -760,18 +760,24 @@
     <h3 style="margin-top:0;"><i class="fas fa-magic"></i> 全自動 AI 開發特工</h3>
     <div style="background:#f9f9f9; padding:1.5em; border-radius:10px; border:1px solid #ddd; max-width:700px;">
         <p style="margin-top:0; font-size:0.9em; color:#666; line-height:1.6;">
-            💡 <b>Agent 模式：</b>路徑留空，AI 會自動掃描全專案。<br>
-            📍 <b>指定模式：</b>填寫路徑（如 api/admin-users.js）修改特定檔案。
+            💡 <b>操作說明：</b><br>
+            • 路徑填寫 <code>blank</code>：AI 會自動掃描全專案找檔案。<br>
+            • 路徑填寫檔案名：例如 <code>public/index.html</code> 則只修改該檔案。
         </p>
         
         <div style="margin-bottom:1em;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (留空 = 全自動模式)</label>
-            <input type="text" id="ai-path" placeholder="例如: public/index.html" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (填寫 blank 為全自動)</label>
+            <input type="text" id="ai-path" placeholder="例如: blank" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
         </div>
 
         <div style="margin-bottom:1em;">
             <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 修改指令</label>
-            <textarea id="ai-prompt" rows="4" placeholder="請描述你想做的事情..." style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;"></textarea>
+            <textarea id="ai-prompt" rows="4" placeholder="請輸入您想修改的功能..." style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;"></textarea>
+        </div>
+
+        <div style="margin-bottom:1em;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">3. 安全授權碼 (PIN)</label>
+            <input type="password" id="ai-pin" placeholder="請輸入授權碼 032024" maxlength="6" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
         </div>
 
         <button id="ai-btn" onclick="executeAiDev()" style="width:100%; padding:1em; background:#6c5ce7; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">
@@ -2796,7 +2802,7 @@
             }
         }
 
-// --- 基礎功能：切換分頁 ---
+// --- 1. 分頁切換 (解決點擊沒反應) ---
 function showTab(tabId) {
     const tabs = ['users', 'create-admin', 'blog', 'game', 'push', 'discord-relay', 'route-mgmt', 'ai-dev'];
     tabs.forEach(t => {
@@ -2806,57 +2812,48 @@ function showTab(tabId) {
     const target = document.getElementById('tab-' + tabId);
     if (target) target.style.display = 'block';
 
-    // 切換按鈕 active 樣式
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) event.currentTarget.classList.add('active');
 }
 
-// --- 基礎功能：初始載入用戶 ---
-// 這是解決「一直加載中」的關鍵，因為頁面一打開就會找這個函數
+// --- 2. 載入用戶 (解決一直加載中) ---
 async function loadUsers(page = 1) {
+    const statusEl = document.getElementById('users-table-body');
+    if (!statusEl) return;
+    
     try {
         const token = localStorage.getItem('accessToken');
         const res = await fetch(`/api/admin-users?page=${page}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        // ... 這裡應有渲染表格的邏輯，確保你的檔案裡有保留 loadUsers 的完整內容 ...
+        
+        if (data.users) {
+            renderUsersTable(data.users); // 確保您檔案裡有這個渲染函數
+            document.getElementById('loading-overlay').style.display = 'none'; // 關閉加載動畫
+        }
     } catch (e) {
-        console.error("載入失敗", e);
+        console.error("載入用戶失敗:", e);
     }
 }
 
-// 頁面進入點
-document.addEventListener('DOMContentLoaded', () => {
-    loadUsers(1); 
-});
-        
+// --- 3. AI 特工執行 ---
 async function executeAiDev() {
     const pathValue = document.getElementById('ai-path').value.trim();
     const promptText = document.getElementById('ai-prompt').value.trim();
-    const pinValue = document.getElementById('ai-pin').value.trim(); // 取得密碼框的值
+    const pinValue = document.getElementById('ai-pin').value.trim();
     const btn = document.getElementById('ai-btn');
     const status = document.getElementById('ai-status');
 
-    // 嚴格檢查三個框框都不能是空的
-    if (!pathValue) {
-        alert("請輸入檔案路徑，或輸入 blank 代表全自動！");
-        return;
-    }
-    if (!promptText) {
-        alert("請輸入『修改指令』！");
-        return;
-    }
-    if (!pinValue) {
-        alert("請輸入安全授權碼！");
+    if (!pathValue || !promptText || !pinValue) {
+        alert("三個欄位都必須填寫！");
         return;
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agent 執行中...';
-    status.innerHTML = "⏳ 正在分析專案結構...";
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 執行中...';
+    status.innerHTML = "⏳ Agent 正在處理，請稍後...";
 
-    // 處理 blank 邏輯：如果是 blank，就轉換成 AUTO 傳給後端
     const finalPath = (pathValue.toLowerCase() === 'blank') ? "AUTO" : pathValue;
 
     try {
@@ -2874,19 +2871,23 @@ async function executeAiDev() {
 
         const result = await response.json();
         if (result.success) {
-            status.innerHTML = `<span style="color:green; font-weight:bold;">✅ 修改成功！</span>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank">🔗 前往 GitHub 查看變更</a>`;
-            // 成功後清空密碼
-            document.getElementById('ai-pin').value = '';
+            status.innerHTML = `<span style="color:green; font-weight:bold;">✅ 修改成功！</span>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank">🔗 點此查看 GitHub 修改紀錄</a>`;
+            document.getElementById('ai-pin').value = ''; 
         } else {
             status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 失敗：</span> ${result.error || result.message}`;
         }
     } catch (e) {
-        status.innerHTML = `<span style="color:red;">❌ 連線錯誤:</span> ${e.message}`;
+        status.innerHTML = `<span style="color:red;">❌ 錯誤:</span> ${e.message}`;
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-paper-plane"></i> 啟動特工任務';
     }
 }
+
+// 頁面啟動
+document.addEventListener('DOMContentLoaded', () => {
+    loadUsers(1); 
+});
     </script>
 </body>
 </html>
