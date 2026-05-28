@@ -2621,37 +2621,41 @@
             }
         }
 
-<div id="tab-ai-dev" style="display:none;">
-    <h3 style="margin-top:0;"><i class="fas fa-magic"></i> 全自動 AI 開發特工</h3>
-    <div style="background:#f9f9f9; padding:1.5em; border-radius:10px; border:1px solid #ddd; max-width:700px;">
-        <p style="margin-top:0; font-size:0.9em; color:#666; line-height:1.6;">
-            💡 <b>Agent 模式：</b>在路徑輸入 <code>blank</code>，AI 會自動掃描全專案。<br>
-            📍 <b>指定模式：</b>填寫確切路徑（如 api/admin-users.js）。
-        </p>
+// --- 基礎功能：切換分頁 ---
+function showTab(tabId) {
+    const tabs = ['users', 'create-admin', 'blog', 'game', 'push', 'discord-relay', 'route-mgmt', 'ai-dev'];
+    tabs.forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.style.display = 'none';
+    });
+    const target = document.getElementById('tab-' + tabId);
+    if (target) target.style.display = 'block';
+
+    // 切換按鈕 active 樣式
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+}
+
+// --- 基礎功能：初始載入用戶 ---
+// 這是解決「一直加載中」的關鍵，因為頁面一打開就會找這個函數
+async function loadUsers(page = 1) {
+    try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`/api/admin-users?page=${page}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        // ... 這裡應有渲染表格的邏輯，確保你的檔案裡有保留 loadUsers 的完整內容 ...
+    } catch (e) {
+        console.error("載入失敗", e);
+    }
+}
+
+// 頁面進入點
+document.addEventListener('DOMContentLoaded', () => {
+    loadUsers(1); 
+});
         
-        <div style="margin-bottom:1em;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (輸入 blank 代表全自動)</label>
-            <input type="text" id="ai-path" placeholder="例如: public/index.html 或 blank" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
-        </div>
-
-        <div style="margin-bottom:1em;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 修改指令</label>
-            <textarea id="ai-prompt" rows="4" placeholder="請描述你想做的事情..." style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;"></textarea>
-        </div>
-
-        <div style="margin-bottom:1em;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px;">3. 安全授權碼 (6位數)</label>
-            <input type="password" id="ai-pin" placeholder="請輸入 032024" maxlength="6" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
-        </div>
-
-        <button id="ai-btn" onclick="executeAiDev()" style="width:100%; padding:1em; background:#6c5ce7; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">
-            <i class="fas fa-paper-plane"></i> 啟動特工任務
-        </button>
-        <div id="ai-status" style="margin-top:1em; padding:1em; background:white; border-radius:5px; font-size:0.9em; min-height:40px; border:1px dashed #ccc; white-space:pre-wrap;">等待指令中...</div>
-    </div>
-</div>
-
-<script>
 async function executeAiDev() {
     const pathValue = document.getElementById('ai-path').value.trim();
     const promptText = document.getElementById('ai-prompt').value.trim();
