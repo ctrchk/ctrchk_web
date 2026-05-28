@@ -74,11 +74,17 @@
                 : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
         let userPos = null;
         let localCurrent = null;
+        let locationName = '香港';
         try {
             userPos = await getUserPosition();
-            document.getElementById('wx-location').textContent = `${userPos.coords.latitude.toFixed(5)}, ${userPos.coords.longitude.toFixed(5)}`;
-            localCurrent = await fetchOpenMeteoCurrent(userPos.coords.latitude, userPos.coords.longitude);
-        } catch (_) {
+            const lat = userPos.coords.latitude;
+            const lon = userPos.coords.longitude;
+            // Try to reverse geocode the location
+            locationName = await reverseGeocode(lat, lon);
+            document.getElementById('wx-location').textContent = locationName;
+            localCurrent = await fetchOpenMeteoCurrent(lat, lon);
+        } catch (err) {
+            console.warn('[Weather] Location error:', err);
             document.getElementById('wx-location').textContent = '未能取得定位（已改用香港整體天氣）';
         }
         try {
@@ -94,11 +100,41 @@
             if (warnResult.status === 'fulfilled' && warnResult.value.ok) {
                 warnData = await warnResult.value.json();
             }
-            renderWeather(rhrData, warnData, localCurrent);
+            renderWeather(rhrData, warnData, localCurrent, locationName);
         } catch (_) {
             document.getElementById('wx-updated').textContent = '天氣資料載入失敗，請稍後再試';
         }
     })();
+
+    async function reverseGeocode(lat, lon) {
+        try {
+            // Use Open-Meteo geocoding for reverse geocode
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=14&accept-language=zh-TW`;
+            const resp = await fetch(url, {
+                headers: { 'User-Agent': 'CTRCHK-Weather/1.0' }
+            });
+            if (!resp.ok) throw new Error('Geocode failed');
+            const data = await resp.json();
+            // Extract meaningful location name
+            const address = data.address || {};
+            const parts = [];
+            if (address.suburb || address.neighbourhood || address.quarter) {
+                parts.push(address.suburb || address.neighbourhood || address.quarter);
+            }
+            if (address.city_district || address.district) {
+                parts.push(address.city_district || address.district);
+            }
+            if (parts.length === 0 && address.city) {
+                parts.push(address.city);
+            }
+            if (parts.length === 0) {
+                return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            }
+            return parts.join('，');
+        } catch (_) {
+            return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        }
+    }
 
     async function fetchWeatherApi(dataType) {
         const langs = ['tc', 'zh', 'en'];
@@ -149,12 +185,12 @@
         return 'bronze';
     }
 
-    function renderWeather(rhrData, warnData, localCurrent) {
+    function renderWeather(rhrData, warnData, localCurrent, locationName) {
         const tempFromHko = Number(rhrData?.temperature?.data?.[0]?.value ?? NaN);
         const humidityFromHko = Number(rhrData?.humidity?.data?.[0]?.value ?? NaN);
         const temp = Number.isFinite(Number(localCurrent?.temperature_2m)) ? Number(localCurrent.temperature_2m) : tempFromHko;
         const humidity = Number.isFinite(Number(localCurrent?.relative_humidity_2m)) ? Number(localCurrent.relative_humidity_2m) : humidityFromHko;
-        const desc = localCurrent ? '你附近的即時天氣' : (rhrData?.icon?.length ? '香港天文台最新天氣' : '資料更新中');
+        const desc = localCurrent ? `${locationName || '你附近'}的即時天氣` : (rhrData?.icon?.length ? '香港天文台最新天氣' : '資料更新中');
         document.getElementById('wx-temp').textContent = Number.isFinite(temp) ? `${temp}°C` : '--°C';
         document.getElementById('wx-humidity').textContent = Number.isFinite(humidity) ? `${humidity}%` : '--%';
         document.getElementById('wx-desc').textContent = desc;

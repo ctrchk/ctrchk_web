@@ -1082,12 +1082,72 @@ body.rank-gold .hero {
   color: var(--app-text-primary, #d4af37) !important;
   background-color: var(--app-bg-primary, #000000);
 }
+/* Gold theme: Use white for most text to ensure readability against black/dark backgrounds */
 body.rank-gold * {
-  color: var(--app-text-primary, #d4af37);
+  color: #e8e8e8;
+}
+body.rank-gold h1, body.rank-gold h2, body.rank-gold h3, body.rank-gold h4 {
+  color: var(--app-accent, #d4af37);
 }
 body.rank-gold .app-route-id,
 body.rank-gold #ride-route-label {
   color: #fff !important;
+}
+/* Tutorial overlay in gold theme - ensure readability */
+body.rank-gold .tutorial-sheet {
+  background: #1a1a1a !important;
+}
+body.rank-gold .tutorial-step-title {
+  color: var(--app-accent, #d4af37) !important;
+}
+body.rank-gold .tutorial-step-desc {
+  color: #e0e0e0 !important;
+}
+body.rank-gold .tutorial-close-btn {
+  background: var(--app-accent, #d4af37) !important;
+  color: #000 !important;
+}
+body.rank-gold .tutorial-no-show {
+  color: #b0b0b0 !important;
+}
+/* Daily rewards / checkin card in gold theme */
+body.rank-gold .checkin-title,
+body.rank-gold .task-name {
+  color: #fff !important;
+}
+body.rank-gold .checkin-subtitle,
+body.rank-gold .task-desc,
+body.rank-gold .checkin-today-reward,
+body.rank-gold .crt-xp,
+body.rank-gold .crt-coins,
+body.rank-gold .crt-day {
+  color: #d0d0d0 !important;
+}
+body.rank-gold .checkin-streak {
+  color: #ffd54f !important;
+}
+/* Settings page buttons in gold theme - ensure contrast */
+body.rank-gold .notif-setting-info strong {
+  color: #fff !important;
+}
+body.rank-gold .notif-setting-info span {
+  color: #c0c0c0 !important;
+}
+body.rank-gold .toggle-slider {
+  background: #555 !important;
+}
+body.rank-gold input:checked + .toggle-slider {
+  background: var(--app-accent, #d4af37) !important;
+}
+body.rank-gold .btn-logout {
+  border-color: #ff8a80 !important;
+  color: #ff8a80 !important;
+}
+body.rank-gold .profile-info-label {
+  color: #a0a0a0 !important;
+}
+body.rank-gold .profile-info-value {
+  color: #e0e0e0 !important;
 }
 body.rank-gold .db-level-badge,
 body.rank-gold .tasks-hero-level-badge,
@@ -1129,4 +1189,20 @@ body.rank-gold footer,
 body.rank-gold header {
   background: #000000;
   border-color: var(--app-border, #5a5a5a);
+}
+/* Navigation bar border visibility in dark/gold mode */
+body.rank-gold #app-bottom-nav {
+  border-top: 1px solid #d4af37 !important;
+  box-shadow: 0 -2px 8px rgba(212, 175, 55, 0.3) !important;
+}
+body.rank-gold #app-bottom-nav a {
+  color: #888 !important;
+}
+body.rank-gold #app-bottom-nav a.active,
+body.rank-gold #app-bottom-nav a:hover {
+  color: #d4af37 !important;
+}
+/* Improve nav bar visibility in standard dark mode too */
+#app-bottom-nav {
+  border-top: 1px solid rgba(109, 186, 101, 0.4);
 }

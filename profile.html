@@ -791,7 +791,8 @@
         if (!isStandaloneAppMode()) return;
         const ctx = getRankThemeContext();
         const rank = String(ctx.rank || '').toLowerCase();
-        if (rank === 'gold') {
+        // If gold theme is enabled, don't allow light mode
+        if (rank === 'gold' && localStorage.getItem('goldThemeDisabled') !== '1') {
             setAppTheme('dark');
             const themeToggle = document.getElementById('light-theme-toggle');
             if (themeToggle) {
@@ -875,12 +876,25 @@
 
         if (goldRow && goldToggle) {
             if (appMode && rank === 'gold' && perms.theme_gold) {
-                goldRow.style.display = 'none';
-                localStorage.removeItem('goldThemeDisabled');
-                setAppTheme('dark');
-                if (themeToggle) {
-                    themeToggle.checked = false;
-                    themeToggle.disabled = true;
+                // Show gold theme toggle for gold card users
+                goldRow.style.display = '';
+                const goldEnabled = localStorage.getItem('goldThemeDisabled') !== '1';
+                goldToggle.checked = goldEnabled;
+                
+                // If gold theme is enabled, disable light/dark toggle and force dark
+                if (goldEnabled) {
+                    setAppTheme('dark');
+                    if (themeToggle) {
+                        themeToggle.checked = false;
+                        themeToggle.disabled = true;
+                    }
+                } else {
+                    // Gold theme disabled - user can use normal light/dark toggle
+                    if (themeToggle) {
+                        themeToggle.disabled = false;
+                        const stored = localStorage.getItem('appTheme');
+                        themeToggle.checked = stored === 'light';
+                    }
                 }
             } else {
                 goldRow.style.display = 'none';
@@ -899,8 +913,22 @@
     };
 
     window.onGoldThemeToggle = function(enabled) {
-        if (enabled) localStorage.removeItem('goldThemeDisabled');
-        else localStorage.setItem('goldThemeDisabled', '1');
+        const themeToggle = document.getElementById('light-theme-toggle');
+        if (enabled) {
+            localStorage.removeItem('goldThemeDisabled');
+            // When enabling black-gold mode, force dark theme and disable light toggle
+            setAppTheme('dark');
+            if (themeToggle) {
+                themeToggle.checked = false;
+                themeToggle.disabled = true;
+            }
+        } else {
+            localStorage.setItem('goldThemeDisabled', '1');
+            // When disabling black-gold mode, enable light toggle
+            if (themeToggle) {
+                themeToggle.disabled = false;
+            }
+        }
         applyMembershipThemePreferenceClass();
         if (typeof window.refreshMembershipTheme === 'function') window.refreshMembershipTheme();
     };
@@ -950,7 +978,7 @@
         }
     };
 
-    // ── 頭像功能 ────────────────────────────────────────────────────────────
+    // ── 頭像功能 ──��─────────────────────────────────────────────────────────
     function renderAvatarPreview(url) {
         const preview = document.getElementById('avatar-preview');
         if (!url) {

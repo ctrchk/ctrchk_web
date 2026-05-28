@@ -9,6 +9,8 @@ const STREAK_REPAIR_COST = 100;
 const MAX_AVG_SPEED_KMH = 45;
 const RANDOM_BONUS_MIN = 1;
 const RANDOM_BONUS_MAX = 10;
+const MILEAGE_POINTS_MULTIPLIER = 0.8; // km x 0.8 = mileage points (rounded)
+const DEFAULT_TRANSPORT_COST = 2.5; // Default transport cost per route
 const XP_MODE_MULTIPLIER = {
   tourism: 1.5,
   commuter: 1.0,
@@ -823,7 +825,6 @@ export default async function handler(req, res) {
           coinsEarned = parseInt(levelRows[0]?.total || 0);
         }
 
-        // 45分鐘內完成路線的額外里程幣獎勵（客戶端傳入）
         const bonusCoinsEarned = (typeof bonus_coins === 'number' && bonus_coins > 0)
           ? Math.min(bonus_coins, MAX_BONUS_COINS_PER_RIDE)  // cap to prevent abuse
           : 0;
@@ -831,6 +832,10 @@ export default async function handler(req, res) {
           coinsEarned += bonusCoinsEarned;
         }
         coinsEarned += randomBonusCoins;
+
+        // Calculate mileage points earned: km x 0.8, rounded
+        const distanceKmVal = parseFloat(distance_km) || 0;
+        const mileagePointsEarned = Math.round(distanceKmVal * MILEAGE_POINTS_MULTIPLIER);
 
         const mileageUpdate = await updateMileageProfile(userData.userId, profile.mileage_rank);
         const coinMultiplier = calcCoinMultiplier(mileageUpdate.rank);
@@ -918,6 +923,8 @@ export default async function handler(req, res) {
           coin_multiplier: coinMultiplier,
           mileage_rank: mileageUpdate.rank,
           mileage_km_365: mileageUpdate.rollingKm,
+          mileage_points_earned: mileagePointsEarned,
+          transport_cost_saved: DEFAULT_TRANSPORT_COST,
           commute_streak: commuteStreak,
           streak_broken: streakBroken,
           streak_repair_available: streakBroken && newCoins >= STREAK_REPAIR_COST && commutePending > 0,
