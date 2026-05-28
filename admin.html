@@ -717,27 +717,29 @@
                 </div>
             </div>
 <div id="tab-ai-dev" style="display:none;">
-                <h3 style="margin-top:0;"><i class="fas fa-magic"></i> 全自動 AI 開發特工</h3>
-                <div style="background:#f9f9f9; padding:1.5em; border-radius:10px; border:1px solid #ddd; max-width:700px;">
-                    <p style="margin-top:0; font-size:0.9em; color:#666; line-height:1.6;">
-                        💡 <b>Agent 模式：</b>路徑留空，AI 會掃描全專案並自動決定改哪幾個檔案。<br>
-                        📍 <b>指定模式：</b>填寫路徑（如 api/admin-users.js）精準修改特定檔案。
-                    </p>
-                    <div style="margin-bottom:1em;">
-                        <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (可選)</label>
-                        <input type="text" id="ai-path" placeholder="例如: public/index.html (留空則開啟全自動模式)" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
-                    </div>
-                    <div style="margin-bottom:1em;">
-                        <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 修改指令</label>
-                        <textarea id="ai-prompt" rows="4" placeholder="請描述你想做的事情... (例如: 把所有按鈕改成綠色)" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box; resize:vertical;"></textarea>
-                    </div>
-                    <button id="ai-btn" onclick="executeAiDev()" style="width:100%; padding:1em; background:#6c5ce7; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">
-                        <i class="fas fa-paper-plane"></i> 啟動特工任務
-                    </button>
-                    <div id="ai-status" style="margin-top:1em; padding:1em; background:white; border-radius:5px; font-size:0.9em; min-height:40px; border:1px dashed #ccc; white-space:pre-wrap;">等待指令中...</div>
-                </div>
-            </div>
+    <h3 style="margin-top:0;"><i class="fas fa-magic"></i> 全自動 AI 開發特工</h3>
+    <div style="background:#f9f9f9; padding:1.5em; border-radius:10px; border:1px solid #ddd; max-width:700px;">
+        <p style="margin-top:0; font-size:0.9em; color:#666; line-height:1.6;">
+            💡 <b>Agent 模式：</b>路徑留空，AI 會自動掃描全專案。<br>
+            📍 <b>指定模式：</b>填寫路徑（如 api/admin-users.js）修改特定檔案。
+        </p>
+        
+        <div style="margin-bottom:1em;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 目標檔案路徑 (留空 = 全自動模式)</label>
+            <input type="text" id="ai-path" placeholder="例如: public/index.html" style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;">
         </div>
+
+        <div style="margin-bottom:1em;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 修改指令</label>
+            <textarea id="ai-prompt" rows="4" placeholder="請描述你想做的事情..." style="width:100%; padding:0.8em; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;"></textarea>
+        </div>
+
+        <button id="ai-btn" onclick="executeAiDev()" style="width:100%; padding:1em; background:#6c5ce7; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">
+            <i class="fas fa-paper-plane"></i> 啟動特工任務
+        </button>
+        <div id="ai-status" style="margin-top:1em; padding:1em; background:white; border-radius:5px; font-size:0.9em; min-height:40px; border:1px dashed #ccc; white-space:pre-wrap;">等待指令中...</div>
+    </div>
+</div>
     </main>
 
     <!-- 網誌編輯 Modal -->
@@ -2678,54 +2680,45 @@
     <script>
 <script>
 async function executeAiDev() {
-    // 1. 獲取輸入值
-    const pathInput = document.getElementById('ai-path').value.trim();
+    // 1. 取得輸入 (即使路徑為空也沒關係)
+    const pathValue = document.getElementById('ai-path').value.trim();
     const promptText = document.getElementById('ai-prompt').value.trim();
     const btn = document.getElementById('ai-btn');
     const status = document.getElementById('ai-status');
 
-    // 2. 基本檢查（只檢查指令是否為空，路徑允許為空）
     if (!promptText) {
-        alert("請輸入修改指令！");
+        alert("請輸入『修改指令』！");
         return;
     }
 
-    // 3. 彈出安全密碼視窗 (這行保證會彈出)
-    const pin = prompt("🔐 安全驗證：請輸入 6 位授權碼以執行 AI 修改 (032024)");
-    
-    // 如果用戶按取消或沒輸入
-    if (pin === null) return; 
-    
-    if (pin !== "032024") {
-        alert("❌ 密碼錯誤，拒絕執行！");
+    // 2. 這裡會跳出彈窗讓你輸入密碼
+    const userPin = prompt("🔐 安全驗證：請輸入 6 位授權碼 (032024)");
+    if (userPin === null) return; // 按取消
+    if (userPin !== "032024") {
+        alert("❌ 密碼錯誤！");
         return;
     }
 
-    // 4. 開始執行 UI 反饋
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agent 執行中...';
-    status.innerHTML = "⏳ 正在啟動 Agent，分析專案結構中...";
-    status.style.color = "#666";
+    status.innerHTML = "⏳ 正在分析專案結構...";
 
     try {
         const token = localStorage.getItem('accessToken');
         const response = await fetch('/api/admin-users', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
                 action: 'ai-dev', 
-                path: pathInput || "AUTO", // 如果路徑是空的，就傳送 "AUTO"
+                path: pathValue || "AUTO", // 這裡就是關鍵：如果空就傳 AUTO
                 prompt: promptText,
-                pin: pin
+                pin: userPin
             })
         });
 
         const result = await response.json();
         if (result.success) {
-            status.innerHTML = `<span style="color:#04D93C; font-weight:bold;">✅ 任務完成！</span>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank" style="color:#3498db;">🔗 查看 GitHub 變更紀錄</a>`;
+            status.innerHTML = `<span style="color:green; font-weight:bold;">✅ 修改成功！</span>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank">🔗 前往 GitHub 查看變更</a>`;
         } else {
             status.innerHTML = `<span style="color:red; font-weight:bold;">❌ 失敗：</span> ${result.error || result.message}`;
         }
