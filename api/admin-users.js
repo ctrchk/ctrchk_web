@@ -1009,9 +1009,9 @@ export default async function handler(req, res) {
 async function handleAiDev(req, res) {
     const { prompt, path, pin } = req.body;
     
-    // 1. 驗證 PIN 碼
-    if (pin !== "032024") {
-        return res.status(403).json({ error: "安全密碼錯誤，拒絕授權。" });
+// 1. 驗證 PIN 碼 (將傳入的 pin 強制轉為字串再比對，避免型別問題)
+    if (String(pin).trim() !== "032024") {
+        return res.status(403).json({ error: `安全密碼錯誤，您輸入的是: ${pin}` }); // 加入這行有助於我們除錯，看前端到底傳了什麼過來
     }
 
     // 2. 修正判斷邏輯：只檢查指令是否存在
