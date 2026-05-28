@@ -1009,12 +1009,12 @@ export default async function handler(req, res) {
 async function handleAiDev(req, res) {
     const { prompt, path, pin } = req.body;
     
-// 1. 驗證 PIN 碼 (將傳入的 pin 強制轉為字串再比對，避免型別問題)
-    if (String(pin).trim() !== "032024") {
-        return res.status(403).json({ error: `安全密碼錯誤，您輸入的是: ${pin}` }); // 加入這行有助於我們除錯，看前端到底傳了什麼過來
+    // 1. 安全檢查 (密碼)
+    if (String(pin) !== "032024") {
+        return res.status(403).json({ error: "安全密碼錯誤，拒絕授權。" });
     }
 
-    // 2. 修正判斷邏輯：只檢查指令是否存在
+    // 2. 移除 path 的強制檢查！只檢查 prompt
     if (!prompt) {
         return res.status(400).json({ error: '請提供修改指令' });
     }
@@ -1023,73 +1023,43 @@ async function handleAiDev(req, res) {
     const repo = "ctrchk_web"; 
 
     try {
-        // 3. 獲取全專案目錄 (讓 AI 能「看見」所有檔案，實現留空自動找檔案)
+        // 3. 獲取專案目錄 (讓 AI 能在留空時自己找檔案)
         const { data: treeData } = await octokit.repos.getTree({ owner, repo, tree_sha: 'main', recursive: true });
         const fileList = treeData.tree.map(f => f.path).join('\n');
 
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
-        
-        // 4. 構建強大的 Agent Prompt
-        const systemPrompt = `你是一個專業開發特工。
-當前專案檔案列表：
-${fileList}
-
-用戶需求：${prompt}
-${path === "AUTO" || !path ? "請自行判斷需要修改哪些檔案。" : `請優先修改目標檔案：${path}`}
-
-請按以下格式輸出修改（可包含多個檔案）：
-[FILE:檔案路徑]
-完整程式碼內容
-[END_FILE]
-
-注意：直接輸出完整代碼，不要 Markdown 標籤，不要多餘解釋。`;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const systemPrompt = `你是一個專業開發特工。當前專案檔案：\n${fileList}\n\n需求：${prompt}\n目標：${(path === "AUTO" || !path) ? "自動判斷受影響檔案" : path}\n\n請按以下格式輸出修改：\n[FILE:路徑]\n完整程式碼\n[END_FILE]`;
 
         const result = await model.generateContent(systemPrompt);
         const aiResponse = result.response.text();
 
-        // 5. 解析 AI 輸出的多個檔案塊
         const fileMatches = [...aiResponse.matchAll(/\[FILE:(.+?)\]([\s\S]*?)\[END_FILE\]/g)];
-        
-        if (fileMatches.length === 0) {
-            return res.status(500).json({ error: "AI 未能生成正確格式，請嘗試更具體的指令。" });
-        }
+        if (fileMatches.length === 0) return res.status(500).json({ error: "AI 未能生成正確格式，請嘗試更具體的指令。" });
 
         let updatedCount = 0;
         let lastCommitUrl = "";
 
-        // 6. 循環更新 GitHub
         for (const match of fileMatches) {
             const filePath = match[1].trim();
             const newCode = match[2].trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
-
+            let sha;
             try {
-                let sha;
-                try {
-                    const { data: existingFile } = await octokit.repos.getContent({ owner, repo, path: filePath });
-                    sha = existingFile.sha;
-                } catch (e) { sha = undefined; } // 如果找不到檔案，視為新增檔案
+                const { data: existingFile } = await octokit.repos.getContent({ owner, repo, path: filePath });
+                sha = existingFile.sha;
+            } catch (e) { sha = undefined; }
 
-                const commit = await octokit.repos.createOrUpdateFileContents({
-                    owner, repo, path: filePath,
-                    message: `🤖 AI Agent: ${prompt.substring(0, 30)}`,
-                    content: Buffer.from(newCode).toString('base64'),
-                    sha: sha,
-                    branch: 'main'
-                });
-                lastCommitUrl = commit.data.commit.html_url;
-                updatedCount++;
-            } catch (err) {
-                console.error(`更新 ${filePath} 失敗:`, err.message);
-            }
+            const commit = await octokit.repos.createOrUpdateFileContents({
+                owner, repo, path: filePath,
+                message: `🤖 AI Agent: ${prompt.substring(0, 30)}`,
+                content: Buffer.from(newCode).toString('base64'),
+                sha: sha,
+                branch: 'main'
+            });
+            lastCommitUrl = commit.data.commit.html_url;
+            updatedCount++;
         }
-
-        return res.status(200).json({ 
-            success: true, 
-            count: updatedCount, 
-            commitUrl: lastCommitUrl 
-        });
-
+        return res.status(200).json({ success: true, count: updatedCount, commitUrl: lastCommitUrl });
     } catch (err) {
-        return res.status(500).json({ error: "Agent 執行出錯: " + err.message });
+        return res.status(500).json({ error: "Agent 錯誤: " + err.message });
     }
 }
