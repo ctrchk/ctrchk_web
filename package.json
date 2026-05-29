@@ -1,5 +1,5 @@
 {
-  "dependencies": {
+"dependencies": {
     "@supabase/supabase-js": "^2.56.1",
     "@vercel/postgres": "^0.10.0",
     "@vercel/speed-insights": "^1.2.0",
@@ -7,8 +7,11 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.1",
     "pg": "^8.13.3",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@octokit/rest": "^21.0.0",
+    "@google/generative-ai": "^0.21.0"
   },
+    
   "name": "ctrchk",
   "version": "1.0.0",
   "description": "<!-- **ctrchk/ctrchk** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.",

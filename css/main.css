@@ -778,6 +778,18 @@ body.app-light-theme .filter-button.active {
     color: #fff;
     border-color: var(--app-accent, #2e7d32);
 }
+/* Light mode: buttons must contrast against light background */
+body.app-light-theme .cta-button,
+body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn) {
+    background-color: var(--app-accent, #2e7d32);
+    color: #ffffff !important;
+    border-color: var(--app-accent, #2e7d32);
+}
+body.app-light-theme .cta-button:hover,
+body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):hover {
+    background-color: #1b5e20;
+    border-color: #1b5e20;
+}
 @media (prefers-color-scheme: light) {
     body:not(.app-theme-explicit) .filter-button {
         background-color: var(--app-bg-card, #ffffff);
@@ -789,6 +801,17 @@ body.app-light-theme .filter-button.active {
         background-color: var(--app-accent, #2e7d32);
         color: #fff;
         border-color: var(--app-accent, #2e7d32);
+    }
+    body:not(.app-theme-explicit) .cta-button,
+    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn) {
+        background-color: var(--app-accent, #2e7d32);
+        color: #ffffff !important;
+        border-color: var(--app-accent, #2e7d32);
+    }
+    body:not(.app-theme-explicit) .cta-button:hover,
+    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):hover {
+        background-color: #1b5e20;
+        border-color: #1b5e20;
     }
 }
 body.app-light-theme {
@@ -1062,6 +1085,10 @@ body.rank-gold .hero {
 body.rank-gold * {
   color: var(--app-text-primary, #d4af37);
 }
+body.rank-gold .app-route-id,
+body.rank-gold #ride-route-label {
+  color: #fff !important;
+}
 body.rank-gold .db-level-badge,
 body.rank-gold .tasks-hero-level-badge,
 body.rank-gold .app-level-badge,
@@ -1080,9 +1107,9 @@ body.rank-gold .modal-box {
 }
 body.rank-gold .cta-button,
 body.rank-gold button:not(.lang-switcher-btn) {
-  background-color: #3a3a3a;
-  color: var(--app-text-primary, #d4af37) !important;
-  border-color: var(--app-border, #5a5a5a);
+  background-color: #d4af37;
+  color: #000000 !important;
+  border-color: #d4af37;
 }
 body.rank-gold input,
 body.rank-gold select,

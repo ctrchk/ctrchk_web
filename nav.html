@@ -96,13 +96,17 @@
       font-weight: 700;
     }
     #nav-pushbike-warning.show { display: inline-flex; }
-    #btn-heading-up {
+    #btn-heading-up,
+    .btn-nav-icon {
       background: rgba(255,255,255,0.12); border: none; color: #e8f5e9;
       width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       font-size: 1em; flex-shrink: 0; transition: background 0.2s;
     }
-    #btn-heading-up.active { background: #04D93C; color: #121f14; }
+    #btn-heading-up.active,
+    .btn-nav-icon.active { background: #FFD700; color: #121f14; }
+    #btn-parking-toggle { color: #FFD700; }
+    #btn-parking-toggle.active { background: #FFD700; color: #121f14; }
 
     /* ── Turn instruction banner (shown during active navigation) ── */
     #turn-banner {
@@ -406,6 +410,11 @@
         <span id="nav-pushbike-warning" class="nav-chip"><i class="fas fa-person-walking"></i><span id="nav-pushbike-text">請推車</span></span>
       </div>
     </div>
+    <button id="btn-parking-toggle" title="顯示泊車位（銀卡）" aria-label="泊車位" style="display:none;"
+      onclick="toggleParkingLayer()"
+      class="btn-nav-icon">
+      <i class="fas fa-parking"></i>
+    </button>
     <button id="btn-heading-up" title="切換地圖方向" aria-label="切換地圖方向">
       <i class="fas fa-compass"></i>
     </button>
@@ -520,6 +529,7 @@
 
     // ── Landmarks (start/end points for route planning) ────────────────────
     const LANDMARKS = [
+      // 將軍澳 / TKO
       { id: 'poa',   name: '寶琳（新都城二期）', lat: 22.32424, lon: 114.25696 },
       { id: 'kl',    name: '景林邨',             lat: 22.31870, lon: 114.25650 },
       { id: 'tkv',   name: '將軍澳村',           lat: 22.32480, lon: 114.24900 },
@@ -528,6 +538,22 @@
       { id: 'tik',   name: '調景嶺（彩明苑）',   lat: 22.30046, lon: 114.25331 },
       { id: 'lhp',   name: '康城（日出康城）',   lat: 22.29070, lon: 114.26692 },
       { id: 'tkoi',  name: '將軍澳創新園',       lat: 22.28570, lon: 114.27240 },
+      // 沙田 / Sha Tin
+      { id: 'st_centre', name: '沙田市中心',     lat: 22.38200, lon: 114.18800 },
+      { id: 'st_park',   name: '沙田公園',       lat: 22.38500, lon: 114.18600 },
+      { id: 'st_racecourse', name: '沙田馬場',   lat: 22.37800, lon: 114.19200 },
+      { id: 'tai_wai',   name: '大圍站',         lat: 22.37300, lon: 114.17800 },
+      { id: 'fo_tan',    name: '火炭站',         lat: 22.39500, lon: 114.19800 },
+      { id: 'uni',       name: '大學站',         lat: 22.41300, lon: 114.20900 },
+      { id: 'tai_po',    name: '大埔墟站',       lat: 22.44800, lon: 114.17200 },
+      // 港島 / HK Island
+      { id: 'np_pier',   name: '北角碼頭',       lat: 22.29356, lon: 114.20105 },
+      { id: 'east_walk', name: '東岸板道',       lat: 22.29225, lon: 114.20991 },
+      { id: 'quarry_bay',name: '鰂魚涌',         lat: 22.28800, lon: 114.21900 },
+      // 新界 / NT
+      { id: 'tuen_mun',  name: '屯門市中心',     lat: 22.39100, lon: 113.97600 },
+      { id: 'yuen_long', name: '元朗市中心',     lat: 22.44500, lon: 114.02200 },
+      { id: 'tin_shui_wai', name: '天水圍',      lat: 22.45700, lon: 114.00100 },
     ];
 
     // ── Local routing policy (strict cycling-only) ────────────────────────
@@ -1308,32 +1334,160 @@
       return undefined;
     }
 
-    /** Load TKO GeoJSON cycling track overlay */
+    /** Merge multiple GeoJSON FeatureCollections into one */
+    function mergeGeoJsonCollections(collections) {
+      const features = [];
+      collections.forEach(col => {
+        if (col && Array.isArray(col.features)) features.push(...col.features);
+      });
+      return { type: 'FeatureCollection', features };
+    }
+
+    /** Load all government cycling datasets + local TKO tracks */
     async function loadTkoGeoJson() {
-      const url = '/data/tko_tracks.json';
+      const sources = [
+        '/data/tko_tracks.json',
+        '/data/CYCFACI.gdb_CYCTRACK_converted.geojson',
+        '/data/CYCFACI.gdb_CYCRAMP_converted.geojson',
+      ];
       try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        if (!data || !Array.isArray(data.features)) throw new Error('Invalid data format');
-        tkoGeoJsonData = data;
-        processedTrackNetwork = preprocessTrackNetwork(data);
+        // Fetch all sources in parallel
+        const responses = await Promise.all(sources.map(url => fetch(url).catch(() => null)));
+        const datasets = await Promise.all(responses.map(async (resp, i) => {
+          if (!resp || !resp.ok) { console.warn('[Nav] Failed to load', sources[i]); return null; }
+          try { return await resp.json(); } catch (e) { return null; }
+        }));
+
+        // Merge all valid datasets
+        const valid = datasets.filter(d => d && Array.isArray(d.features));
+        if (!valid.length) throw new Error('No cycling data loaded');
+
+        const merged = mergeGeoJsonCollections(valid);
+        tkoGeoJsonData = merged;
+        processedTrackNetwork = preprocessTrackNetwork(merged);
         networkLines = processedTrackNetwork.features.slice();
         networkIndex = buildLineSpatialIndex(networkLines);
         networkJunctions = buildJunctionCollection(networkLines);
         networkGraph = buildRoutingGraph(networkLines);
         addTkoLocalLayer(processedTrackNetwork);
         updateTopBarMeta(null, null);
+
+        // Load parking spaces for silver/gold card users
+        loadParkingSpaces();
       } catch (e) {
-        console.warn('[Nav] TKO local dataset load failed', e);
+        console.warn('[Nav] Cycling dataset load failed:', e);
+        // Fallback: try local TKO data only
+        try {
+          const resp = await fetch('/data/tko_tracks.json');
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && Array.isArray(data.features)) {
+              tkoGeoJsonData = data;
+              processedTrackNetwork = preprocessTrackNetwork(data);
+              networkLines = processedTrackNetwork.features.slice();
+              networkIndex = buildLineSpatialIndex(networkLines);
+              networkJunctions = buildJunctionCollection(networkLines);
+              networkGraph = buildRoutingGraph(networkLines);
+              addTkoLocalLayer(processedTrackNetwork);
+              updateTopBarMeta(null, null);
+            }
+          }
+        } catch (e2) { console.warn('[Nav] Fallback TKO load also failed', e2); }
+      }
+    }
+
+    /** Load cycling parking spaces — visible to silver/gold card users */
+    async function loadParkingSpaces() {
+      try {
+        // Check user permission
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const mileageRank = user.mileage_rank || user.mileage_card || '';
+        const hasParkingPerm = ['silver', 'gold', '銀卡', '金卡'].some(r =>
+          String(mileageRank).toLowerCase().includes(r.toLowerCase())
+        );
+        if (!hasParkingPerm) return;
+
+        const resp = await fetch('/data/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data || !Array.isArray(data.features)) return;
+
+        if (!map) return;
+
+        if (!map.getSource('cyc-parking')) {
+          map.addSource('cyc-parking', { type: 'geojson', data });
+        } else {
+          map.getSource('cyc-parking').setData(data);
+        }
+
+        // Parking circle layer
+        if (!map.getLayer('cyc-parking-circles')) {
+          map.addLayer({
+            id: 'cyc-parking-circles',
+            type: 'circle',
+            source: 'cyc-parking',
+            layout: { visibility: 'none' }, // hidden by default; toggle via button
+            paint: {
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 4, 16, 10, 19, 18],
+              'circle-color': '#FFD700',
+              'circle-stroke-color': '#ffffff',
+              'circle-stroke-width': 2,
+              'circle-opacity': 0.9,
+            },
+          });
+        }
+
+        // Parking label layer
+        if (!map.getLayer('cyc-parking-labels')) {
+          map.addLayer({
+            id: 'cyc-parking-labels',
+            type: 'symbol',
+            source: 'cyc-parking',
+            minzoom: 15,
+            layout: {
+              visibility: 'none',
+              'text-field': ['concat', ['to-string', ['get', 'PARKING_SPACE']], ' 位'],
+              'text-size': 11,
+              'text-offset': [0, 1.4],
+              'text-anchor': 'top',
+            },
+            paint: {
+              'text-color': '#FFD700',
+              'text-halo-color': '#000000',
+              'text-halo-width': 1.5,
+            },
+          });
+        }
+
+        // Show the parking toggle button
+        const btn = document.getElementById('btn-parking-toggle');
+        if (btn) btn.style.display = '';
+      } catch (e) {
+        console.warn('[Nav] Parking spaces load failed:', e);
+      }
+    }
+
+    let parkingVisible = false;
+    function toggleParkingLayer() {
+      if (!map) return;
+      parkingVisible = !parkingVisible;
+      const vis = parkingVisible ? 'visible' : 'none';
+      ['cyc-parking-circles', 'cyc-parking-labels'].forEach(id => {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+      });
+      const btn = document.getElementById('btn-parking-toggle');
+      if (btn) {
+        btn.classList.toggle('active', parkingVisible);
+        btn.title = parkingVisible ? '隱藏泊車位' : '顯示泊車位（銀卡）';
       }
     }
 
     function addTkoLocalLayer(data) {
       if (!map) return;
       if (map.getSource('tko-cycleways')) {
-        // Source already exists — just update the data if we have real data
+        // Source already exists — update data
         if (data) map.getSource('tko-cycleways').setData(data);
+        if (map.getSource('tko-junctions')) map.getSource('tko-junctions').setData(networkJunctions);
         return;
       }
 
@@ -1342,42 +1496,7 @@
         data: data || { type: 'FeatureCollection', features: [] },
       });
 
-      // Background: bright green track (official/local data takes precedence visually)
-      map.addLayer({
-        id: 'tko-cycleway-bg',
-        type: 'line',
-        source: 'tko-cycleways',
-        paint: {
-          'line-color': ['case',
-            ['==', ['get', 'linkType'], 'push-bike'], '#FFD166',
-            '#00E5FF'
-          ],
-          'line-width': ['interpolate', ['linear'], ['zoom'],
-            12, 3, 15, 6, 17, 12, 19, 20],
-          'line-opacity': 0.82,
-          'line-cap': 'round',
-          'line-join': 'round',
-        },
-      });
-
-      // Dashed centerline overlay
-      map.addLayer({
-        id: 'tko-cycleway-center',
-        type: 'line',
-        source: 'tko-cycleways',
-        minzoom: 14,
-        paint: {
-          'line-color': '#FFFFFF',
-          'line-width': 1.5,
-          'line-dasharray': ['case',
-            ['==', ['get', 'linkType'], 'push-bike'], ['literal', [1.2, 1.8]],
-            ['literal', [4, 5]]
-          ],
-          'line-opacity': 0.6,
-        },
-      });
-
-      // Edge outline for lane-level clarity
+      // ── Layer 1: Wide edge outline for lane-level clarity (zoom ≥ 16) ──
       map.addLayer({
         id: 'tko-cycleway-edge',
         type: 'line',
@@ -1389,12 +1508,71 @@
             '#0086B3'
           ],
           'line-width': ['interpolate', ['linear'], ['zoom'],
-            16, 14, 17, 22, 19, 32],
-          'line-opacity': 0.25,
+            16, 16, 17, 24, 19, 36],
+          'line-opacity': 0.22,
           'line-gap-width': 0,
+          'line-cap': 'round',
+          'line-join': 'round',
         },
-      }, 'tko-cycleway-bg');
+      });
 
+      // ── Layer 2: Main track fill ──
+      map.addLayer({
+        id: 'tko-cycleway-bg',
+        type: 'line',
+        source: 'tko-cycleways',
+        paint: {
+          'line-color': ['case',
+            ['==', ['get', 'linkType'], 'push-bike'], '#FFD166',
+            '#00E5FF'
+          ],
+          'line-width': ['interpolate', ['linear'], ['zoom'],
+            10, 1.5, 12, 3, 15, 6, 17, 12, 19, 20],
+          'line-opacity': 0.85,
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+      });
+
+      // ── Layer 3: Dashed centerline (zoom ≥ 14) ──
+      map.addLayer({
+        id: 'tko-cycleway-center',
+        type: 'line',
+        source: 'tko-cycleways',
+        minzoom: 14,
+        paint: {
+          'line-color': '#FFFFFF',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 14, 1, 17, 2],
+          'line-dasharray': ['case',
+            ['==', ['get', 'linkType'], 'push-bike'], ['literal', [1.2, 1.8]],
+            ['literal', [4, 5]]
+          ],
+          'line-opacity': 0.55,
+        },
+      });
+
+      // ── Layer 4: Direction arrows (zoom ≥ 15) ──
+      map.addLayer({
+        id: 'tko-cycleway-arrows',
+        type: 'symbol',
+        source: 'tko-cycleways',
+        minzoom: 15,
+        layout: {
+          'symbol-placement': 'line',
+          'symbol-spacing': 80,
+          'icon-image': 'triangle-11',
+          'icon-size': 0.65,
+          'icon-rotate': 90,
+          'icon-rotation-alignment': 'map',
+          'icon-allow-overlap': true,
+        },
+        paint: {
+          'icon-color': '#ffffff',
+          'icon-opacity': 0.7,
+        },
+      });
+
+      // ── Junctions source ──
       if (!map.getSource('tko-junctions')) {
         map.addSource('tko-junctions', {
           type: 'geojson',
@@ -1990,9 +2168,11 @@
       const token = localStorage.getItem('accessToken');
       if (!token) return { xpEarned: summary.xpEarned, saved: false };
       try {
+        const fromName = (plannedFrom && plannedFrom.name) ? plannedFrom.name : '起點';
+        const toName   = (plannedTo   && plannedTo.name)   ? plannedTo.name   : '終點';
         const payload = {
-          route_id: 'TKO_NAV',
-          route_name: 'TKO Custom Navigation',
+          route_id: 'HK_NAV',
+          route_name: `自訂導航：${fromName} → ${toName}`,
           ride_date: new Date(summary.startTime).toISOString().slice(0, 10),
           start_time: new Date(summary.startTime).toISOString(),
           end_time: new Date(summary.endTime).toISOString(),

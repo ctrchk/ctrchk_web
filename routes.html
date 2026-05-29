@@ -635,29 +635,36 @@ const ROUTE_XP = {
     '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
 };
 
-// TKO terminal stations — default fallback list (overridden by admin terminals)
-const DEFAULT_TERMINALS = [
-    { id: 'po_lam_1',    name: '寶琳(新都城二期)',      lat: 22.32424, lng: 114.25696, dept: 'tko' }, // POA 01
-    { id: 'po_lam_2',    name: '寶琳(景林單車駅)',      lat: 22.32058,  lng: 114.26181, dept: 'tko' },
-    { id: 'po_lam_3',    name: '寶琳(將軍澳村)',        lat: 22.3248,  lng: 114.2490, dept: 'tko'  },
-    { id: 'tseung_1',    name: '調景嶺總站',            lat: 22.30096, lng: 114.25607, dept: 'tko' }, // TIK 06
-    { id: 'tseung_exit', name: '調景嶺站-出口',         lat: 22.30465, lng: 114.25305, dept: 'tko' }, // TIK 13 (966T start)
-    { id: 'hang_hau',    name: '坑口站',                lat: 22.3170474,  lng: 114.2631152, dept: 'tko' },
-    { id: 'tko_centre',  name: '將軍澳中心',            lat: 22.30738, lng: 114.25666, dept: 'tko' }, // TIK 11
-    { id: 'lohas',       name: '康城站',                lat: 22.29626, lng: 114.26692, dept: 'tko' }, // LHP 06 (966T end)
-    { id: 'tko_inn',     name: '將軍澳創新園',          lat: 22.2857,  lng: 114.2724, dept: 'tko'  },
-    { id: 'tseung_2',    name: '調景嶺彩明',            lat: 22.30646, lng: 114.25331, dept: 'tko' }, // TIK 04
-    { id: 'po_shun',     name: '寶順路轉乘站',          lat: 22.31793, lng: 114.26225, dept: 'tko' }, // HAH 02
-    // HKI terminal stations
-    { id: 'np_pier',     name: '北角碼頭',              lat: 22.29356, lng: 114.20105, dept: 'hki' },
-    { id: 'np_bus_term', name: '北角碼頭巴士總站',      lat: 22.29343, lng: 114.20151, dept: 'hki' },
-    { id: 'east_walk_e', name: '東岸板道 (東)',         lat: 22.29225, lng: 114.20991, dept: 'hki' },
-    { id: 'east_walk_w', name: '東岸板道 (西)',         lat: 22.2914,  lng: 114.19247, dept: 'hki' },
-];
+// Terminal stations — loaded exclusively from admin DB (no hardcoded defaults)
+const DEFAULT_TERMINALS = [];
 
-let TERMINALS = DEFAULT_TERMINALS.slice();
+let TERMINALS = [];
 // Map of terminal name to terminal ID for route matching
 let TERMINAL_NAMES = {};
+function normalizeDeptId(raw) {
+    const v = String(raw || '').trim().toLowerCase();
+    if (!v) return 'tko';
+    if (['tko', 'tk', 'poa', 'hah', 'tik', 'lhp'].includes(v)) return 'tko';
+    if (['hki', 'hk', 'island', 'east'].includes(v)) return 'hki';
+    if (['st', 'shatin'].includes(v)) return 'st';
+    return v;
+}
+function mergeTerminalLists(defaultList, overrideList) {
+    const map = new Map();
+    (defaultList || []).forEach(t => {
+        map.set(String(t.id), { ...t, dept: normalizeDeptId(t.dept) });
+    });
+    (overrideList || []).forEach(t => {
+        const key = String(t.id || '').trim();
+        if (!key) return;
+        map.set(key, {
+            ...t,
+            id: key,
+            dept: normalizeDeptId(t.dept),
+        });
+    });
+    return Array.from(map.values());
+}
 function rebuildTerminalIndex() {
     TERMINAL_NAMES = {};
     TERMINALS.forEach(t => { TERMINAL_NAMES[t.name] = t.id; });
@@ -693,6 +700,12 @@ function getUnlockSpec(route) {
 }
 
 function isRouteUnlocked(route) {
+    // Accept either a route object or a route ID string
+    if (typeof route === 'string') {
+        const found = appRoutes.find(r => r.id === route);
+        if (!found) return false;
+        route = found;
+    }
     if (!isLoggedIn) return false; // not logged in, don't show unlock status
     const unlockSpec = getUnlockSpec(route);
     if (unlockSpec.unlockType === 'coins') {
@@ -837,7 +850,12 @@ function matchesFilter(route) {
     if (activeFilter === 'unlocked') {
         if (!isLoggedIn) return false;
         if (route.is_special) return isCoinRouteUnlocked(route);
-        return isRouteUnlocked(route.id);
+        // Also exclude dept-locked routes from the 'unlocked' filter
+        const FREE_DEPTS = ['tko'];
+        const deptId = route.dept_id;
+        const deptNeedsUnlock = !!(deptId && !FREE_DEPTS.includes(deptId));
+        if (deptNeedsUnlock && !getUnlockedDepartments().includes(deptId)) return false;
+        return isRouteUnlocked(route);
     }
     if (activeFilter === '里程幣') {
         const unlockSpec = getUnlockSpec(route);
@@ -885,9 +903,15 @@ function renderRoutes() {
         const coinUnlocked = isCoinRoute && isCoinRouteUnlocked(route);
         const levelLocked = isLoggedIn && !isCoinRoute && userLevel < needed;
         const coinLocked = isLoggedIn && isCoinRoute && !coinUnlocked;
-        // Dept lock: if route has dept_id, check if user has unlocked that department
+        // Dept lock: only lock if the route's dept requires purchase AND user hasn't unlocked it.
+        // 'tko' is always free. Routes without a dept_id are never dept-locked.
+        const FREE_DEPTS = ['tko'];
         const deptId = route.dept_id;
-        const deptLocked = !!(deptId && isLoggedIn && !getUnlockedDepartments().includes(deptId));
+        const deptNeedsUnlock = !!(deptId && !FREE_DEPTS.includes(deptId));
+        const deptLocked = !!(
+            deptNeedsUnlock &&
+            (!isLoggedIn || !getUnlockedDepartments().includes(deptId))
+        );
         const locked = levelLocked || coinLocked || deptLocked;
         return { route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, deptLocked, locked };
     });
@@ -1200,7 +1224,8 @@ function showDeptSheet() {
     const unlockedDepts = getUnlockedDepartments();
 
     DEPARTMENTS.forEach(dept => {
-        const isDeptUnlocked = !dept.unlock_cost || unlockedDepts.includes(dept.id);
+        const FREE_DEPTS = ['tko'];
+        const isDeptUnlocked = FREE_DEPTS.includes(dept.id) || !dept.unlock_cost || unlockedDepts.includes(dept.id);
         const card = document.createElement('div');
         card.className = 'app-dept-card' + (dept.available ? '' : ' app-dept-coming-soon') + (!isDeptUnlocked ? ' app-dept-locked-overlay' : '');
 
@@ -1406,15 +1431,42 @@ async function initAppRidePage() {
     // Init map
     initMap();
 
-    // Load routes
+    // Load routes — fetch static JSON and admin overrides in parallel for speed
+    const ROUTE_DATA_CACHE_KEY = 'routeDataCache';
+    const ROUTE_DATA_CACHE_TTL = 30000; // 30 seconds
+
+    function getCachedRouteData() {
+        try {
+            const raw = sessionStorage.getItem(ROUTE_DATA_CACHE_KEY);
+            if (!raw) return null;
+            const { ts, data } = JSON.parse(raw);
+            if (Date.now() - ts < ROUTE_DATA_CACHE_TTL) return data;
+        } catch (_) {}
+        return null;
+    }
+
+    function setCachedRouteData(data) {
+        try {
+            sessionStorage.setItem(ROUTE_DATA_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+        } catch (_) {}
+    }
+
     try {
-        const res = await fetch('/routes.json');
-        const data = await res.json();
+        // Kick off both fetches simultaneously
+        const cachedOverride = getCachedRouteData();
+        const [staticRes, overrideResp] = await Promise.all([
+            fetch('/routes.json'),
+            cachedOverride ? Promise.resolve(null) : fetch('/api/user?action=route-data'),
+        ]);
+
+        const data = await staticRes.json();
         appRoutes = (data.routes || []).map(r => Object.assign({}, r, {
             coin_cost: r.coin_cost != null ? r.coin_cost : r.unlock_cost,
             unlock_type: r.is_special ? 'coins' : 'level',
             unlock_value: r.is_special ? (r.unlock_cost || 0) : (r.unlock_level || 1),
         }));
+        // Render immediately with static data so the list appears without waiting for admin overrides
+        renderRoutes();
 
         // Merge display fields (alias, start, end, via, color, tags, nature, time, length)
         // from main.js const routes (window.CTRCHK_ROUTES) — single source of truth for UI display
@@ -1440,9 +1492,12 @@ async function initAppRidePage() {
 
         // Apply admin overrides (alias, color, unlock, tags, terminals)
         try {
-            const overrideResp = await fetch('/api/user?action=route-data');
-            if (overrideResp.ok) {
-                const overrideData = await overrideResp.json();
+            let overrideData = cachedOverride;
+            if (!overrideData && overrideResp && overrideResp.ok) {
+                overrideData = await overrideResp.json();
+                setCachedRouteData(overrideData);
+            }
+            if (overrideData) {
                 const overrideMap = new Map((overrideData.routes || []).map(r => [r.route_id, r]));
                 appRoutes = appRoutes.map(r => {
                     const o = overrideMap.get(r.id);
@@ -1450,10 +1505,13 @@ async function initAppRidePage() {
                     const unlockType = o.unlock_type || r.unlock_type;
                     const unlockValue = o.unlock_value != null ? o.unlock_value : r.unlock_value;
                     return Object.assign({}, r, {
+                        dept_id: normalizeDeptId(o.dept || r.dept_id),
                         alias: o.alias || r.alias,
                         color: o.bg_color || r.color,
                         time: o.estimated_minutes || r.time,
+                        length: o.length_text || r.length,
                         tags: Array.isArray(o.tags) && o.tags.length ? o.tags : r.tags,
+                        gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : r.gpx,
                         unlock_type: unlockType,
                         unlock_value: unlockValue,
                         coin_cost: unlockType === 'coins' ? (unlockValue || r.coin_cost) : r.coin_cost,
@@ -1462,11 +1520,37 @@ async function initAppRidePage() {
                         unlock_cost: unlockType === 'coins' ? (unlockValue || r.unlock_cost) : r.unlock_cost,
                     });
                 });
-                if (Array.isArray(overrideData.terminals) && overrideData.terminals.length) {
-                    TERMINALS = overrideData.terminals;
-                    rebuildTerminalIndex();
-                    renderTerminalMarkers();
-                }
+
+                // Include managed routes not present in routes.json
+                (overrideData.routes || []).forEach(o => {
+                    if (appRoutes.some(r => r.id === o.route_id)) return;
+                    const unlockType = o.unlock_type || 'level';
+                    const unlockValue = o.unlock_value != null ? o.unlock_value : 1;
+                    appRoutes.push({
+                        id: o.route_id,
+                        alias: o.alias || o.route_id,
+                        start: '',
+                        end: '',
+                        via: '',
+                        nature: '',
+                        time: o.estimated_minutes || null,
+                        length: o.length_text || '',
+                        tags: Array.isArray(o.tags) ? o.tags : [],
+                        color: o.bg_color || '#4caf50',
+                        dept_id: normalizeDeptId(o.dept),
+                        gpx: Array.isArray(o.gpx) ? o.gpx : [],
+                        unlock_type: unlockType,
+                        unlock_value: unlockValue,
+                        is_special: unlockType === 'coins',
+                        unlock_level: unlockType === 'level' ? unlockValue : 1,
+                        unlock_cost: unlockType === 'coins' ? unlockValue : null,
+                        coin_cost: unlockType === 'coins' ? unlockValue : null,
+                    });
+                });
+
+                TERMINALS = mergeTerminalLists(DEFAULT_TERMINALS, overrideData.terminals || []);
+                rebuildTerminalIndex();
+                renderTerminalMarkers();
             }
         } catch (e) { /* ignore overrides */ }
 

@@ -1331,6 +1331,26 @@
         const res = await fetch('/routes.json');
         const data = await res.json();
         routeData = (data.routes || []).find(r => r.id === routeId);
+        try {
+          const overrideResp = await fetch('/api/user?action=route-data');
+          if (overrideResp.ok) {
+            const overrideData = await overrideResp.json();
+            const o = (overrideData.routes || []).find(r => r.route_id === routeId);
+            if (o && routeData) {
+              routeData = Object.assign({}, routeData, {
+                alias: o.alias || routeData.alias,
+                color: o.bg_color || routeData.color,
+                time: o.estimated_minutes || routeData.time,
+                length: o.length_text || routeData.length,
+                tags: Array.isArray(o.tags) && o.tags.length ? o.tags : routeData.tags,
+                gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : routeData.gpx,
+                unlock_level: o.unlock_type === 'level' && o.unlock_value != null ? o.unlock_value : routeData.unlock_level,
+                unlock_cost: o.unlock_type === 'coins' && o.unlock_value != null ? o.unlock_value : routeData.unlock_cost,
+                is_special: o.unlock_type === 'coins',
+              });
+            }
+          }
+        } catch (_) {}
       } catch (e) {
         console.warn('[Ride] routes.json load failed', e);
       }

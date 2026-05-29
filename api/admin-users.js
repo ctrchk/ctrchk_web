@@ -4,6 +4,13 @@ import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
+import { Octokit } from "@octokit/rest";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from '@supabase/supabase-js';
+
+// 初始化 AI 工具 (放在 handler 外部)
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 根據累計 XP 計算等級（與 getHistory.js 保持一致）
 function calcLevel(xp) {
@@ -188,6 +195,8 @@ async function ensureAdminRouteSchema() {
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_type VARCHAR(20) DEFAULT 'level'`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
 }
 
 export default async function handler(req, res) {
@@ -195,6 +204,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+
+  // --- 插入這一段：AI 功能攔截器 ---
+  if (req.method === 'POST' && req.body && req.body.action === 'ai-dev') {
+      return await handleAiDev(req, res);
+  }
+  // --- 結束插入 ---
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -208,6 +223,7 @@ export default async function handler(req, res) {
 
   // GET: 獲取用戶列表 / 部門與路線配置
   if (req.method === 'GET') {
+// ... 下面繼續保留你原本的所有代碼
     if (req.query.action === 'get-stations') {
       try {
         await ensureAdminRouteSchema();
@@ -252,7 +268,7 @@ export default async function handler(req, res) {
         await ensureAdminRouteSchema();
         const { rows } = await query(
           `SELECT r.dept, r.route_number, r.start_station_id, r.end_station_id, r.type, r.stops, r.rewards,
-                  r.alias, r.bg_color, r.estimated_minutes, r.unlock_type, r.unlock_value, r.tags,
+                 r.alias, r.bg_color, r.estimated_minutes, r.unlock_type, r.unlock_value, r.tags, r.gpx, r.length_text,
                   s1.name_zh AS start_station_name_zh, s2.name_zh AS end_station_name_zh
            FROM routes r
            LEFT JOIN stations s1 ON s1.id = r.start_station_id
@@ -266,6 +282,8 @@ export default async function handler(req, res) {
             stops: parseJsonSafe(r.stops, []),
             rewards: parseJsonSafe(r.rewards, {}),
             tags: parseJsonSafe(r.tags, []),
+            gpx: parseJsonSafe(r.gpx, []),
+            length_text: r.length_text || null,
           })),
         });
       } catch (e) {
@@ -277,7 +295,7 @@ export default async function handler(req, res) {
     // GET department configs
     if (req.query.action === 'get-dept-config') {
       try {
-        const { rows } = await query('SELECT dept_id, name, unlock_cost, promo_cost, is_promo FROM department_config ORDER BY dept_id');
+        const { rows } = await query('SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, promo_cost, is_promo, available FROM department_config ORDER BY dept_id');
         return res.status(200).json({ departments: rows });
       } catch (e) {
         console.error('[admin-users] get-dept-config error:', e.message);
@@ -370,6 +388,49 @@ export default async function handler(req, res) {
     try {
       const body = req.body;
       const { action } = body;
+
+      // Upsert a department record (create or update)
+      if (action === 'upsert_dept') {
+        const { dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, available, is_promo, promo_cost } = body;
+        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
+        await query(
+          `INSERT INTO department_config (dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, available, is_promo, promo_cost)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+           ON CONFLICT (dept_id) DO UPDATE SET
+             name = EXCLUDED.name,
+             region = EXCLUDED.region,
+             description = EXCLUDED.description,
+             map_center_lat = EXCLUDED.map_center_lat,
+             map_center_lng = EXCLUDED.map_center_lng,
+             map_zoom = EXCLUDED.map_zoom,
+             unlock_cost = EXCLUDED.unlock_cost,
+             available = EXCLUDED.available,
+             is_promo = EXCLUDED.is_promo,
+             promo_cost = EXCLUDED.promo_cost`,
+          [
+            String(dept_id).trim().toLowerCase(),
+            name || null,
+            region || null,
+            description || null,
+            map_center_lat != null ? Number(map_center_lat) : null,
+            map_center_lng != null ? Number(map_center_lng) : null,
+            map_zoom != null ? parseInt(map_zoom, 10) : null,
+            unlock_cost != null ? parseInt(unlock_cost, 10) : null,
+            available !== undefined ? !!available : true,
+            !!is_promo,
+            promo_cost != null ? parseInt(promo_cost, 10) : null,
+          ]
+        );
+        return res.status(200).json({ success: true });
+      }
+
+      // Delete a department record
+      if (action === 'delete_dept') {
+        const { dept_id } = body;
+        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
+        await query(`DELETE FROM department_config WHERE dept_id = $1`, [String(dept_id).trim().toLowerCase()]);
+        return res.status(200).json({ success: true });
+      }
 
       // Update department config (standard price + promo settings)
       if (action === 'update-dept-config') {
@@ -519,9 +580,11 @@ export default async function handler(req, res) {
           unlock_type,
           unlock_value,
           tags,
+          gpx,
+          length_text,
         } = body;
-        if (!dept || !route_number || !start_station_id || !end_station_id || !type) {
-          return res.status(400).json({ message: 'dept, route_number, start_station_id, end_station_id, type 為必填' });
+        if (!dept || !route_number || !type) {
+          return res.status(400).json({ message: 'dept, route_number, type 為必填' });
         }
         const validTypes = ['One-way', 'Two-way', 'Circular'];
         if (!validTypes.includes(type)) {
@@ -543,12 +606,29 @@ export default async function handler(req, res) {
             .split(',')
             .map(t => t.trim())
             .filter(Boolean);
+        const gpxListRaw = parseJsonSafe(gpx, []);
+        const gpxList = Array.isArray(gpxListRaw)
+          ? gpxListRaw
+             .map((item) => {
+               const label = String(item?.label || '').trim();
+               const file = String(item?.file || '').trim();
+               if (!file) return null;
+               const out = { label: label || file.replace(/\.gpx$/i, ''), file };
+               if (item?.dir_filter) out.dir_filter = String(item.dir_filter).trim();
+               return out;
+             })
+             .filter(Boolean)
+          : [];
+        const lengthText = length_text == null ? null : String(length_text).trim();
+        if (lengthText && lengthText.length > 32) {
+          return res.status(400).json({ message: 'length_text 長度不可超過 32 字元' });
+        }
 
         await query(
           `INSERT INTO routes
             (dept, route_number, start_station_id, end_station_id, type, stops, rewards,
-             alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,NOW())
+             alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,NOW())
            ON CONFLICT (dept, route_number) DO UPDATE SET
              start_station_id = EXCLUDED.start_station_id,
              end_station_id = EXCLUDED.end_station_id,
@@ -561,12 +641,14 @@ export default async function handler(req, res) {
              unlock_type = EXCLUDED.unlock_type,
              unlock_value = EXCLUDED.unlock_value,
              tags = EXCLUDED.tags,
+             gpx = EXCLUDED.gpx,
+             length_text = EXCLUDED.length_text,
              updated_at = NOW()`,
           [
             String(dept).trim(),
             String(route_number).trim(),
-            String(start_station_id).trim(),
-            String(end_station_id).trim(),
+            start_station_id ? String(start_station_id).trim() : null,
+            end_station_id ? String(end_station_id).trim() : null,
             type,
             JSON.stringify(safeStops),
             JSON.stringify(safeRewards),
@@ -576,6 +658,8 @@ export default async function handler(req, res) {
             normalizedUnlockType,
             unlockValue,
             JSON.stringify(tagList),
+            JSON.stringify(gpxList),
+            lengthText || null,
           ]
         );
 
@@ -628,8 +712,10 @@ export default async function handler(req, res) {
             const unlockTypeRaw = pickCsvValue(r, ['unlock_type', 'unlock'], 'level');
             const unlockValueRaw = pickCsvValue(r, ['unlock_value', 'unlock_level', 'unlock_cost', 'unlockcoins'], null);
             const tagsRaw = pickCsvValue(r, ['tags'], '');
-            if (!dept || !routeNumber || !startStationId || !endStationId || !type) {
-              throw new Error('欄位不足（需要 dept, route_number, start_station_id, end_station_id, type）');
+            const gpxRaw = pickCsvValue(r, ['gpx', 'gpx_json'], '[]');
+            const lengthText = pickCsvValue(r, ['length_text', 'length', 'distance'], null);
+            if (!dept || !routeNumber || !type) {
+              throw new Error('欄位不足（需要 dept, route_number, type）');
             }
             const validTypes = ['One-way', 'Two-way', 'Circular'];
             if (!validTypes.includes(type)) {
@@ -662,12 +748,13 @@ export default async function handler(req, res) {
             const unlockValue = unlockValueRaw !== null && unlockValueRaw !== ''
               ? Math.max(0, parseInt(unlockValueRaw, 10))
               : null;
+            const safeGpx = parseJsonSafe(gpxRaw, []);
 
             await query(
               `INSERT INTO routes
                 (dept, route_number, start_station_id, end_station_id, type, stops, rewards,
-                 alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,NOW())
+                 alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,NOW())
                ON CONFLICT (dept, route_number) DO UPDATE SET
                  start_station_id = EXCLUDED.start_station_id,
                  end_station_id = EXCLUDED.end_station_id,
@@ -680,12 +767,14 @@ export default async function handler(req, res) {
                  unlock_type = EXCLUDED.unlock_type,
                  unlock_value = EXCLUDED.unlock_value,
                  tags = EXCLUDED.tags,
+                 gpx = EXCLUDED.gpx,
+                 length_text = EXCLUDED.length_text,
                  updated_at = NOW()`,
               [
                 String(dept).trim(),
                 String(routeNumber).trim(),
-                String(startStationId).trim(),
-                String(endStationId).trim(),
+                startStationId ? String(startStationId).trim() : null,
+                endStationId ? String(endStationId).trim() : null,
                 type,
                 JSON.stringify(safeStops),
                 JSON.stringify(safeRewards),
@@ -695,6 +784,8 @@ export default async function handler(req, res) {
                 normalizedUnlockType,
                 unlockValue,
                 JSON.stringify(tagList),
+                JSON.stringify(Array.isArray(safeGpx) ? safeGpx : []),
+                lengthText || null,
               ]
             );
 
@@ -953,4 +1044,65 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ message: 'Method Not Allowed' });
+}
+
+// ==========================================
+// AI Agent 核心引擎 (多檔案 & 全自動支援)
+// ==========================================
+async function handleAiDev(req, res) {
+    const { prompt, path, pin } = req.body;
+    
+    // 1. 安全檢查
+    if (String(pin).trim() !== "032024") {
+        return res.status(403).json({ error: "安全授權碼錯誤。" });
+    }
+
+    const owner = "ctrchk"; 
+    const repo = "ctrchk_web"; 
+
+    try {
+        // 🌟 修正：獲取檔案樹的正確函數
+        const { data: treeData } = await octokit.git.getTree({ 
+            owner, repo, tree_sha: 'main', recursive: true 
+        });
+        const fileList = treeData.tree.filter(f => f.type === 'blob').map(f => f.path).join('\n');
+
+        // 🌟 修正：模型 ID 改為 gemini-1.5-flash 或 gemini-1.5-flash-latest
+        // 如果你的 SDK 是新版，請確認名稱正確
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const systemPrompt = `你是一個專業工程特工。當前專案檔案：\n${fileList}\n\n需求：${prompt}\n目標檔案：${path === "AUTO" ? "由你判斷" : path}\n\n請按格式輸出修改：\n[FILE:路徑]\n完整程式碼內容\n[END_FILE]`;
+
+        const result = await model.generateContent(systemPrompt);
+        const aiResponse = result.response.text();
+
+        // 解析 AI 結果並執行 GitHub 更新 (與之前邏輯相同)
+        const fileMatches = [...aiResponse.matchAll(/\[FILE:(.+?)\]([\s\S]*?)\[END_FILE\]/g)];
+        if (fileMatches.length === 0) return res.status(500).json({ error: "AI 生成格式錯誤" });
+
+        let count = 0;
+        let lastUrl = "";
+        for (const match of fileMatches) {
+            const filePath = match[1].trim();
+            const newCode = match[2].trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
+            let sha;
+            try {
+                const { data: f } = await octokit.repos.getContent({ owner, repo, path: filePath });
+                sha = f.sha;
+            } catch (e) { sha = undefined; }
+
+            const commit = await octokit.repos.createOrUpdateFileContents({
+                owner, repo, path: filePath,
+                message: `🤖 AI Agent Fix: ${prompt.substring(0, 30)}`,
+                content: Buffer.from(newCode).toString('base64'),
+                sha: sha,
+                branch: 'main'
+            });
+            lastUrl = commit.data.commit.html_url;
+            count++;
+        }
+        return res.status(200).json({ success: true, count, commitUrl: lastUrl });
+    } catch (err) {
+        return res.status(500).json({ error: "Agent 執行錯誤: " + err.message });
+    }
 }
