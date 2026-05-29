@@ -679,6 +679,7 @@ export default async function handler(req, res) {
         ride_mode,
         xp_earned_override,   // per-stop + district-change XP calculated client-side
         bonus_coins,          // e.g. +5 for finishing within 45 min
+        miles_reward_override, // new mileage coin reward: km * 0.8
         anti_bus_flag,
         anti_bus_reason,
       } = req.body || {};
@@ -827,9 +828,19 @@ export default async function handler(req, res) {
         const bonusCoinsEarned = (typeof bonus_coins === 'number' && bonus_coins > 0)
           ? Math.min(bonus_coins, MAX_BONUS_COINS_PER_RIDE)  // cap to prevent abuse
           : 0;
+
+        // New mileage coin reward: round(km * 0.8)
+        let mileageReward = 0;
+        if (typeof miles_reward_override === 'number') {
+            mileageReward = Math.round(miles_reward_override);
+        } else {
+            mileageReward = Math.round(distKmVal * 0.8);
+        }
+
         if (bonusCoinsEarned > 0) {
           coinsEarned += bonusCoinsEarned;
         }
+        coinsEarned += mileageReward;
         coinsEarned += randomBonusCoins;
 
         const mileageUpdate = await updateMileageProfile(userData.userId, profile.mileage_rank);

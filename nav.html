@@ -1207,11 +1207,46 @@
       map.on('load', () => {
         clearTimeout(loadingTimer);
         addCyclewayLayers();
+        add3DBuildingsLayer();
         loadTkoGeoJson();
         map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 0 });
         document.getElementById('nav-loading').classList.add('hidden');
         startGPS();
       });
+
+      function add3DBuildingsLayer() {
+        if (!map) return;
+        // Search for a 'building' layer in the basemap style
+        const layers = map.getStyle().layers;
+        let buildingLayerId = null;
+        for (const layer of layers) {
+          if (layer.source && (layer['source-layer'] === 'building' || layer.id.includes('building'))) {
+            buildingLayerId = layer.id;
+            break;
+          }
+        }
+
+        // If the style already has a 3D extrusion layer, we're good.
+        // Otherwise, add a generic one if a building source exists.
+        if (!map.getLayer('3d-buildings')) {
+            const src = map.getSource('openfreemap') ? 'openfreemap' : (map.getSource('openmaptiles') ? 'openmaptiles' : null);
+            if (src) {
+                map.addLayer({
+                    'id': '3d-buildings',
+                    'source': src,
+                    'source-layer': 'building',
+                    'type': 'fill-extrusion',
+                    'minzoom': 15,
+                    'paint': {
+                        'fill-extrusion-color': '#aaa',
+                        'fill-extrusion-height': ['get', 'render_height'],
+                        'fill-extrusion-base': ['get', 'render_min_height'],
+                        'fill-extrusion-opacity': 0.6
+                    }
+                }, findFirstSymbolLayer());
+            }
+        }
+      }
 
       map.on('error', (e) => {
         console.warn('[Nav] Map error:', e);
@@ -1399,12 +1434,8 @@
     /** Load cycling parking spaces — visible to silver/gold card users */
     async function loadParkingSpaces() {
       try {
-        // Check user permission
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const mileageRank = user.mileage_rank || user.mileage_card || '';
-        const hasParkingPerm = ['silver', 'gold', '銀卡', '金卡'].some(r =>
-          String(mileageRank).toLowerCase().includes(r.toLowerCase())
-        );
+        // Check user permission using standard permission system
+        const hasParkingPerm = window.hasPermission && window.hasPermission('map_cycparkspace');
         if (!hasParkingPerm) return;
 
         const resp = await fetch('/data/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
@@ -1962,9 +1993,9 @@
           type: 'line',
           source: 'planned-route',
           paint: {
-            'line-color': '#00AEEF',
+            'line-color': '#00F3FF', // High-contrast neon cyan
             'line-width': 8,
-            'line-opacity': 0.55,
+            'line-opacity': 0.75,
             'line-cap': 'round',
             'line-join': 'round',
           },
@@ -1977,7 +2008,7 @@
           type: 'line',
           source: 'planned-route',
           paint: {
-            'line-color': '#7DF9FF',
+            'line-color': '#FFFFFF', // White flow for maximum visibility
             'line-width': 4.6,
             'line-opacity': 0.95,
             'line-dasharray': [0.8, 2.4],
@@ -2186,6 +2217,8 @@
           source: 'nav',
           ride_mode: 'free',
           xp_earned_override: summary.xpEarned,
+          miles_reward_override: summary.distanceKm * 0.8,
+          total_stops: 2,
           gpx_track: JSON.stringify(summary.pathCoords || []),
         };
         const res = await fetch('/api/getHistory', {
@@ -2235,6 +2268,12 @@
         return { xpEarned: data.xp_earned || summary.xpEarned, saved: true };
       } catch (error) {
         console.warn('[Nav] save ride failed:', error);
+        // Save to unsynced queue if API fails
+        try {
+            const unsynced = JSON.parse(localStorage.getItem('unsyncedRides') || '[]');
+            unsynced.push(payload);
+            localStorage.setItem('unsyncedRides', JSON.stringify(unsynced));
+        } catch(ee) {}
         return { xpEarned: summary.xpEarned, saved: false };
       }
     }
@@ -2288,12 +2327,67 @@
       });
     }
 
+    function generateTransparentTrackMap(coords) {
+        if (!coords || coords.length < 2) return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = 1000;
+        canvas.height = 1000;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const lats = coords.map(c => c[1]);
+        const lons = coords.map(c => c[0]);
+        const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+        const latRange = maxLat - minLat || 0.0001;
+        const lonRange = maxLon - minLon || 0.0001;
+        const padding = 50;
+        const drawW = canvas.width - padding * 2;
+        const drawH = canvas.height - padding * 2;
+        const scale = Math.min(drawW / lonRange, drawH / latRange);
+
+        ctx.strokeStyle = '#00E5FF';
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        coords.forEach((c, i) => {
+            const x = padding + (c[0] - minLon) * scale;
+            const y = canvas.height - (padding + (c[1] - minLat) * scale);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        return canvas.toDataURL('image/png');
+    }
+
     function showSummaryView(summary) {
       document.getElementById('summary-distance').textContent = `${summary.distanceKm.toFixed(2)} km`;
       document.getElementById('summary-time').textContent = formatMinutes(summary.durationMinutes);
       document.getElementById('summary-xp').textContent = `+${summary.xpEarned} XP`;
       renderSummaryMap(summary.pathCoords);
       document.getElementById('arrived-overlay').classList.add('show');
+
+      // Add save track button if not exists
+      let saveTrackBtn = document.getElementById('btn-nav-save-track');
+      if (!saveTrackBtn) {
+          saveTrackBtn = document.createElement('button');
+          saveTrackBtn.id = 'btn-nav-save-track';
+          saveTrackBtn.style.cssText = 'margin-bottom:1em; background:rgba(255,255,255,0.1); color:#fff; border:1px solid #555; padding:0.6em; border-radius:8px; font-size:0.85em; cursor:pointer; width:100%;';
+          saveTrackBtn.innerHTML = '<i class="fas fa-download"></i> 保存透明背景軌跡圖';
+          const card = document.getElementById('summary-card');
+          card.insertBefore(saveTrackBtn, document.getElementById('btn-arrived-done'));
+      }
+      saveTrackBtn.onclick = () => {
+          if (summary.pathCoords) {
+              const dataUrl = generateTransparentTrackMap(summary.pathCoords);
+              if (dataUrl) {
+                  const link = document.createElement('a');
+                  link.href = dataUrl;
+                  link.download = `nav-track-${new Date().toISOString().slice(0,10)}.png`;
+                  link.click();
+              }
+          }
+      };
     }
 
     async function finishNavigationSequence() {

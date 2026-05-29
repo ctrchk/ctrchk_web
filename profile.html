@@ -875,12 +875,14 @@
 
         if (goldRow && goldToggle) {
             if (appMode && rank === 'gold' && perms.theme_gold) {
-                goldRow.style.display = 'none';
-                localStorage.removeItem('goldThemeDisabled');
-                setAppTheme('dark');
-                if (themeToggle) {
-                    themeToggle.checked = false;
-                    themeToggle.disabled = true;
+                goldRow.style.display = '';
+                goldToggle.checked = localStorage.getItem('goldThemeDisabled') !== '1';
+                if (goldToggle.checked) {
+                    setAppTheme('dark');
+                    if (themeToggle) {
+                        themeToggle.checked = false;
+                        themeToggle.disabled = true;
+                    }
                 }
             } else {
                 goldRow.style.display = 'none';
@@ -899,8 +901,20 @@
     };
 
     window.onGoldThemeToggle = function(enabled) {
-        if (enabled) localStorage.removeItem('goldThemeDisabled');
-        else localStorage.setItem('goldThemeDisabled', '1');
+        const themeToggle = document.getElementById('light-theme-toggle');
+        if (enabled) {
+            localStorage.removeItem('goldThemeDisabled');
+            setAppTheme('dark');
+            if (themeToggle) {
+                themeToggle.checked = false;
+                themeToggle.disabled = true;
+            }
+        } else {
+            localStorage.setItem('goldThemeDisabled', '1');
+            if (themeToggle) {
+                themeToggle.disabled = false;
+            }
+        }
         applyMembershipThemePreferenceClass();
         if (typeof window.refreshMembershipTheme === 'function') window.refreshMembershipTheme();
     };
