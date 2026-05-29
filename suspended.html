@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv='refresh' content='0; URL=/'><!-- Redirect to home page after 0 seconds -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>-Page Suspended-</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Dark mode styles */
+        body.dark {
+            background-color: #181818;
+            color: #e5e7eb;
+        }
+
+        body.dark .scrolling-text {
+            color: #e5e7eb;
+        }
+
+        body.dark .modal-content {
+            background-color: #374151;
+            color: #e5e7eb;
+        }
+
+        body.dark .modal-header {
+            border-bottom-color: #4b5563;
+        }
+
+        body.dark .modal-title,
+        body.dark .modal-content-title {
+            color: #f9fafb;
+        }
+
+        body.dark .modal-content-text {
+            color: #d1d5db;
+        }
+
+        body.dark .info-box {
+            background-color: #1e3a8a;
+            border-color: #3b82f6;
+        }
+
+        body.dark .info-text {
+            color: #93c5fd;
+        }
+
+        body.dark .btn-secondary {
+            background-color: #4b5563;
+            border-color: #6b7280;
+            color: #e5e7eb;
+        }
+
+        body.dark .btn-secondary:hover {
+            background-color: #374151;
+            border-color: #9ca3af;
+            color: #f9fafb;
+        }
+
+        body.dark .footer {
+            color: #9ca3af;
+        }
+        
+        .scrolling-text {
+            white-space: nowrap;
+            animation: scroll 14s linear infinite;
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes scroll {
+            0% {
+                transform: translateX(100%);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 28rem;
+            width: 100%;
+            animation: modalEnter 0.3s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #5D5CDE;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .close-button {
+            color: #9ca3af;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .close-button:hover {
+            color: #4b5563;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-content-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .modal-content-text {
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .info-box {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: #1e40af;
+        }
+
+        .modal-footer {
+            padding: 0 24px 24px 24px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            background-color: #5D5CDE;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #4c46c7;
+        }
+
+        .btn-secondary {
+            background: none;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            color: #111827;
+            border-color: #9ca3af;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            color: #666;
+        }
+
+        @keyframes modalEnter {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes modalExit {
+            from {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+        }
+
+        .modal-exit {
+            animation: modalExit 0.2s ease-in;
+        }
+
+        @media (min-width: 640px) {
+            .button-group {
+                flex-direction: row;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .scrolling-text {
+                font-size: 18px;
+            }
+            
+            .modal-content {
+                margin: 16px;
+                max-width: calc(100% - 32px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scrolling-text">
+        <span>因[reason]，城市運輸單車緊急暫停運作。不便之處，敬請原諒。</span>
+        <span style="margin-left: 50px;">Due to [reason], the operation of CTRC was urgently suspended. Sorry for the inconvenience caused.</span>
+    </div>
+    <p>預 計 恢 復 時 間 Estimated Recovery Time: 2025 - 09 - 28 （年/Y）（月/M）（日/D）</p>
+    <div id="notificationModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <div class="modal-icon">
+                        <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="modal-title">📢 重要公告 Important Announcement</h3>
+                </div>
+                <button class="close-button" onclick="closeNotification()" aria-label="Close notification">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div>
+                    <h4 class="modal-content-title">網頁關閉事宜 Webpage Suspension Notice</h4>
+                    <p class="modal-content-text">
+                        網頁已修復完成。目前正在進行最後的測試和優化，預計將於 <strong>2025 - 09 - 28</strong> 恢復正常運作。感謝您的耐心等待和支持！
+                        <br><br>
+                        The webpage has been repaired. Final testing and optimization are currently underway, and it is expected to resume normal operation on <strong>2025 - 09 - 28</strong>. Thank you for your patience and support!
+                    </p>
+                </div>
+
+                <div class="info-box">
+                    <p class="info-text">
+                        💡 <strong>提示 Note:</strong> 無 NIL
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="button-group">
+                    <button class="btn-primary" onclick="closeNotification()">
+                        <span id="gotItBtn">明白了 Got it!</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.body.classList.remove('dark');
+            }
+        });
+
+        function closeNotification() {
+            const modal = document.getElementById('notificationModal');
+            if (modal) {
+                modal.classList.add('modal-exit');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 200);
+            }
+        }
+
+        document.getElementById('notificationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNotification();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeNotification();
+            }
+        });
+    </script>
+</body>
+</html>
