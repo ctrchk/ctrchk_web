@@ -1082,11 +1082,21 @@ body.rank-gold .hero {
   color: var(--app-text-primary, #d4af37) !important;
   background-color: var(--app-bg-primary, #000000);
 }
-body.rank-gold * {
+/* Use more specific selectors instead of universal * to avoid breaking button text contrast */
+body.rank-gold div,
+body.rank-gold p,
+body.rank-gold h1,
+body.rank-gold h2,
+body.rank-gold h3,
+body.rank-gold span:not(.route-card-id):not(.route-id-code):not(.db-ride-xp):not(.app-level-badge),
+body.rank-gold li,
+body.rank-gold label {
   color: var(--app-text-primary, #d4af37);
 }
 body.rank-gold .app-route-id,
-body.rank-gold #ride-route-label {
+body.rank-gold #ride-route-label,
+body.rank-gold .route-card-id,
+body.rank-gold .route-id-code {
   color: #fff !important;
 }
 body.rank-gold .db-level-badge,
@@ -1106,10 +1116,18 @@ body.rank-gold .modal-box {
   color: var(--app-text-primary, #d4af37) !important;
 }
 body.rank-gold .cta-button,
-body.rank-gold button:not(.lang-switcher-btn) {
-  background-color: #d4af37;
+body.rank-gold button:not(.lang-switcher-btn),
+body.rank-gold .checkin-btn,
+body.rank-gold .db-poster-btn,
+body.rank-gold .db-admin-btn,
+body.rank-gold .app-login-btn,
+body.rank-gold .tutorial-close-btn {
+  background-color: #d4af37 !important;
   color: #000000 !important;
-  border-color: #d4af37;
+  border-color: #d4af37 !important;
+}
+body.rank-gold button:not(.lang-switcher-btn) i {
+  color: #000000 !important;
 }
 body.rank-gold input,
 body.rank-gold select,

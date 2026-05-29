@@ -1033,14 +1033,18 @@
         ctx2d.arc(mapCX, mapCY, mapR, 0, Math.PI * 2);
         ctx2d.stroke();
 
-        // Ride count label inside circle
+        // Completion percentage inside circle
+        const totalPossibleStops = rideHistory.reduce((sum, r) => sum + (r.total_stops || (r.stops_reached ? (r.stops_count > 0 ? r.stops_count : 1) : 1)), 0);
+        const totalReachedStops = rideHistory.reduce((sum, r) => sum + (r.stops_count || 0), 0);
+        const completionRate = totalPossibleStops > 0 ? Math.round((totalReachedStops / totalPossibleStops) * 100) : 0;
+
         ctx2d.fillStyle = textColor;
-        ctx2d.font = 'bold 64px sans-serif';
+        ctx2d.font = 'bold 72px sans-serif';
         ctx2d.textAlign = 'center';
-        ctx2d.fillText(`${rideHistory.length}`, mapCX, mapCY + 22);
+        ctx2d.fillText(`${completionRate}%`, mapCX, mapCY + 15);
         ctx2d.fillStyle = subColor;
         ctx2d.font = '30px sans-serif';
-        ctx2d.fillText('次騎行', mapCX, mapCY + 68);
+        ctx2d.fillText('站點完成率', mapCX, mapCY + 65);
 
         // ── Stats section ──
         const statsY = mapCY + mapR + 80;
@@ -1100,7 +1104,7 @@
         ctx2d.font = '28px sans-serif';
         ctx2d.textAlign = 'center';
         const year = new Date().getFullYear();
-        ctx2d.fillText(`ctrchk.vercel.app  ·  ${year}`, cx, canvas.height - pad - 40);
+        ctx2d.fillText(`ctrchk.com  ·  ${year}`, cx, canvas.height - pad - 40);
 
         const dataUrl = canvas.toDataURL('image/png');
         const modal = document.getElementById('db-poster-modal');

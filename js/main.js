@@ -966,6 +966,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // 呼叫載入共用元件的函式
     loadSharedComponents(); // 這裡會觸發 updateNavUI
 
+    // Auto-sync offline ride history to server
+    (async function syncRideHistory() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        const unsynced = JSON.parse(localStorage.getItem('unsyncedRides') || '[]');
+        if (!unsynced.length) return;
+
+        console.log(`[Sync] Found ${unsynced.length} unsynced rides, attempting to upload...`);
+        const remaining = [];
+        for (const ride of unsynced) {
+            try {
+                const res = await fetch('/api/getHistory', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(ride),
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                console.log(`[Sync] Successfully synced ride: ${ride.route_id}`);
+            } catch (e) {
+                console.warn(`[Sync] Failed to sync ride ${ride.route_id}:`, e);
+                remaining.push(ride);
+            }
+        }
+        localStorage.setItem('unsyncedRides', JSON.stringify(remaining));
+    })();
+
     // =========================================================================
     // 其他全域腳本 (Dark mode, Modal 等) (你原有的程式碼)
     // =========================================================================

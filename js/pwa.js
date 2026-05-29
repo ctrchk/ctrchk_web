@@ -83,7 +83,11 @@
     document.body.classList.remove('rank-silver', 'rank-gold');
     if (rank === 'gold' && context.permissions.theme_gold && goldEnabled) {
       document.body.classList.add('rank-gold');
-      localStorage.setItem('appTheme', 'dark');
+      // When gold theme is active, force dark mode
+      const currentTheme = localStorage.getItem('appTheme');
+      if (currentTheme !== 'dark') {
+          localStorage.setItem('appTheme', 'dark');
+      }
       document.body.classList.add('app-theme-explicit');
       document.body.classList.remove('app-light-theme');
     } else if (rank === 'silver' && context.permissions.theme_silver && silverEnabled) {
