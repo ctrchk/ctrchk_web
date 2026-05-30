@@ -1412,7 +1412,9 @@
                 if (ride.avg_speed_kmh) metaParts.push('💨 ' + ride.avg_speed_kmh + ' km/h');
                 var meta = metaParts.join('  ');
 
-                var item = document.createElement('div');
+                var item = document.createElement('a');
+                item.href = '/ride_history_detail.html?id=' + ride.id;
+                item.style.textDecoration = 'none';
                 item.className = 'db-ride-item';
                 item.innerHTML =
                     '<div class="db-ride-main">' +

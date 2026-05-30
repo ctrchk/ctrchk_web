@@ -1,81 +1,18 @@
-127.0.0.1 - - [30/May/2026 05:22:24] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:24] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:24] "GET /images/bike-commute.jpg HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:24] "GET /images/icon-192.png HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:24] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:24] "GET /js/pwa.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:25] "GET /images/900.jpg HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:25] "GET /header.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:25] "GET /images/960.jpg HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:25] "GET /images/966T.jpg HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /index.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:26] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /dashboard HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:26] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /routes HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:26] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /login HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:26] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /ride HTTP/1.1" 404 -
-----------------------------------------
-Exception occurred during processing of request from ('127.0.0.1', 35048)
-Traceback (most recent call last):
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 735, in send_head
-    f = open(path, 'rb')
-        ^^^^^^^^^^^^^^^^
-FileNotFoundError: [Errno 2] No such file or directory: '/app/ride'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 697, in process_request_thread
-    self.finish_request(request, client_address)
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 1326, in finish_request
-    self.RequestHandlerClass(request, client_address, self,
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 676, in __init__
-    super().__init__(*args, **kwargs)
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 766, in __init__
-    self.handle()
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 440, in handle
-    self.handle_one_request()
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 428, in handle_one_request
-    method()
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 680, in do_GET
-    f = self.send_head()
-        ^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 737, in send_head
-    self.send_error(HTTPStatus.NOT_FOUND, "File not found")
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 495, in send_error
-    self.wfile.write(body)
-  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 845, in write
-    self._sock.sendall(b)
-BrokenPipeError: [Errno 32] Broken pipe
-----------------------------------------
-127.0.0.1 - - [30/May/2026 05:22:26] "GET /images/966T.jpg HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:28] "GET /dashboard.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:28] "GET /js/login.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:28] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:28] "GET /api/user?action=config HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:29] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:29] "GET /api/user?user_id=1 HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:29] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:29] "GET /api/oauth?action=status HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:29] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:29] "GET /api/getHistory HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:30] "GET /nav.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:30] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [30/May/2026 05:22:34] "GET /data/tko_tracks.json HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:34] "GET /data/CYCFACI.gdb_CYCTRACK_converted.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:34] "GET /data/CYCFACI.gdb_CYCRAMP_converted.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:36] "GET /data/CYCFACI.gdb_CYCPARKSPACE_converted.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:37] "GET /weather.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:37] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:37] "GET /api/_weather/rhrread?lang=tc HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:37] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:37] "GET /api/_weather/warnsum?lang=tc HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:38] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [30/May/2026 05:22:39] "GET /admin.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 05:22:39] code 404, message File not found
-127.0.0.1 - - [30/May/2026 05:22:39] "GET /login HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 05:22:41] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [30/May/2026 14:56:11] "GET /about.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:12] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:12] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:12] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:13] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:13] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:13] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:13] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:13] code 404, message File not found
+127.0.0.1 - - [30/May/2026 14:56:13] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [30/May/2026 14:56:13] code 404, message File not found
+127.0.0.1 - - [30/May/2026 14:56:13] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [30/May/2026 14:56:14] "GET /about.html HTTP/1.1" 304 -
+127.0.0.1 - - [30/May/2026 14:56:14] "GET /membership.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:16] "GET /blog.html HTTP/1.1" 200 -
+127.0.0.1 - - [30/May/2026 14:56:16] code 404, message File not found
+127.0.0.1 - - [30/May/2026 14:56:16] "GET /api/blog HTTP/1.1" 404 -
+127.0.0.1 - - [30/May/2026 14:56:16] "GET /ride_history_detail.html?id=test HTTP/1.1" 200 -
