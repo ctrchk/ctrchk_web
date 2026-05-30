@@ -695,6 +695,13 @@
         </div>
         <button class="db-show-more-btn" id="db-history-more-btn" style="display:none;">查看更多騎行</button>
 
+        <!-- Gold Support -->
+        <div id="gold-support-section" class="db-admin-card" style="display:none; border-color:#d4af37; background:rgba(212,175,55,0.1);">
+            <h3 style="color:#d4af37;"><i class="fas fa-headset"></i> 金卡客服快速協助通道</h3>
+            <p>金卡會員專屬：你的諮詢將被優先處理。</p>
+            <a href="/chat?priority=gold" class="db-admin-btn" style="background:#d4af37; color:#000;">立即聯絡專屬客服</a>
+        </div>
+
         <!-- Admin panel -->
         <div id="admin-section" class="db-admin-card" style="display:none;">
             <h3><i class="fas fa-shield-alt"></i> 管理員面板</h3>
@@ -721,7 +728,7 @@
             <a href="/leaderboard" class="db-more-item">
                 <i class="fas fa-trophy"></i><span>排行榜</span>
             </a>
-            <a href="/leaderboard" class="db-more-item" id="db-local-domination">
+            <a href="/leaderboard?view=local" class="db-more-item" id="db-local-domination">
                 <i class="fas fa-crown"></i><span>區域霸主</span>
             </a>
             <a href="/tasks" class="db-more-item">
@@ -839,17 +846,20 @@
         }
     }
 
-    function renderPosterCard(totalKm, context) {
+    function renderPosterCard(totalKm, context, streak) {
         const card = document.getElementById('db-poster-card');
         if (!card) return;
         const canUse = context.permissions && context.permissions.poster_basic;
         card.style.display = canUse ? '' : 'none';
         if (!canUse) return;
         const desc = document.getElementById('db-poster-desc');
-        desc.textContent = `近一年累積里程 ${formatKm(totalKm)} km，立即生成你的戰績海報。`;
+        let text = `近一年累積里程 ${formatKm(totalKm)} km`;
+        if (streak > 0) text += `，連續通勤 ${streak} 天`;
+        text += `，立即生成你的戰績海報。`;
+        desc.textContent = text;
     }
 
-    function exportPoster(totalKm, context, history) {
+    function exportPoster(totalKm, context, history, streak) {
         const HKD_PER_KM = 2.5;
         const CO2_PER_KM = 0.21;
         const CO2_PER_TREE = 21;
@@ -1077,6 +1087,15 @@
         drawStat(statX0 + statW,      statsY, statW, '省交通費', `$${savedCost.toFixed(0)}`, 'HKD');
         drawStat(statX0 + statW * 2,  statsY, statW, '減碳',     `${co2.toFixed(1)}`, 'kg CO₂');
 
+        // ── Streak Badge ──
+        if (streak > 0) {
+            const streakY = statsY + 190;
+            ctx2d.fillStyle = accentColor;
+            ctx2d.font = 'bold 44px sans-serif';
+            ctx2d.textAlign = 'center';
+            ctx2d.fillText(`🔥 連戰 ${streak} 天`, cx, streakY);
+        }
+
         // ── Gold motivational copy ──
         if (context.permissions && context.permissions.poster_gold_copy) {
             ctx2d.fillStyle = '#d4af37';
@@ -1241,11 +1260,12 @@
                     localStorage.setItem('user', JSON.stringify(user));
                     _applyUserUI(user);
                     _applyStatusSummary(user);
+                    _applyRoleUI(userRole, user.mileage_rank || user.mileage_card);
                     applyPermissionTheme();
                 }
             } catch (e) { /* use cached data */ }
 
-            _applyRoleUI(userRole);
+            _applyRoleUI(userRole, user.mileage_rank || user.mileage_card);
             _applyStatusSummary(user);
             applyPermissionTheme();
             await loadHistory();
@@ -1272,7 +1292,7 @@
         }
     }
 
-    function _applyRoleUI(role) {
+    function _applyRoleUI(role, mileageRank) {
         var badge = document.getElementById('db-role-badge');
         badge.className = 'db-role-badge';
         if (role === 'senior_admin') {
@@ -1296,6 +1316,12 @@
             badge.innerHTML = '<i class="fas fa-user"></i> 普通會員';
             document.getElementById('upgrade-notice').style.display = '';
             document.getElementById('admin-section').style.display = 'none';
+        }
+
+        const goldRank = String(mileageRank || '').toLowerCase();
+        const goldSection = document.getElementById('gold-support-section');
+        if (goldSection) {
+            goldSection.style.display = (goldRank === 'gold' || goldRank === '金卡') ? '' : 'none';
         }
     }
 
@@ -1355,12 +1381,13 @@
             var totalKm = history.reduce(function (sum, ride) {
                 return sum + (parseFloat(ride.distance_km) || 0);
             }, 0);
+            var streak = data.gameProfile ? Number(data.gameProfile.commute_streak || 0) : 0;
             var permCtx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
-            renderPosterCard(totalKm, permCtx);
+            renderPosterCard(totalKm, permCtx, streak);
             var posterBtn = document.getElementById('db-poster-btn');
             if (posterBtn) {
                 posterBtn.onclick = function () {
-                    exportPoster(totalKm, permCtx, history);
+                    exportPoster(totalKm, permCtx, history, streak);
                 };
             }
 

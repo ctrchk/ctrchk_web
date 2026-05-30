@@ -302,8 +302,8 @@
 
     <div class="lb-container">
         <div class="lb-hero">
-            <h1>🏆 排行榜</h1>
-            <p>查看同路線其他騎手的里程排名</p>
+            <h1 id="lb-title">🏆 排行榜</h1>
+            <p id="lb-subtitle">查看同路線其他騎手的里程排名</p>
         </div>
 
         <!-- Filter bar -->
@@ -391,6 +391,14 @@
     }
 
     window.loadLeaderboard = async function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isLocalView = urlParams.get('view') === 'local';
+
+        if (isLocalView) {
+            document.getElementById('lb-title').textContent = '👑 區域霸主';
+            document.getElementById('lb-subtitle').textContent = '查看各個地區的頂尖騎手';
+        }
+
         if (!token) {
             document.getElementById('lb-list').innerHTML = `
                 <div class="lb-login-prompt">

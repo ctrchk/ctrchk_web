@@ -1121,12 +1121,20 @@ body.rank-gold .checkin-btn,
 body.rank-gold .db-poster-btn,
 body.rank-gold .db-admin-btn,
 body.rank-gold .app-login-btn,
-body.rank-gold .tutorial-close-btn {
+body.rank-gold .tutorial-close-btn,
+body.rank-gold .app-quick-item {
   background-color: #d4af37 !important;
   color: #000000 !important;
   border-color: #d4af37 !important;
 }
-body.rank-gold button:not(.lang-switcher-btn) i {
+body.rank-gold .cta-button *,
+body.rank-gold button:not(.lang-switcher-btn) *,
+body.rank-gold .checkin-btn *,
+body.rank-gold .db-poster-btn *,
+body.rank-gold .db-admin-btn *,
+body.rank-gold .app-login-btn *,
+body.rank-gold .tutorial-close-btn *,
+body.rank-gold .app-quick-item * {
   color: #000000 !important;
 }
 body.rank-gold input,

@@ -161,24 +161,53 @@
         const humidityFromHko = Number(rhrData?.humidity?.data?.[0]?.value ?? NaN);
         const temp = Number.isFinite(Number(localCurrent?.temperature_2m)) ? Number(localCurrent.temperature_2m) : tempFromHko;
         const humidity = Number.isFinite(Number(localCurrent?.relative_humidity_2m)) ? Number(localCurrent.relative_humidity_2m) : humidityFromHko;
-        const desc = localCurrent ? '你附近的即時天氣' : (rhrData?.icon?.length ? '香港天文台最新天氣' : '資料更新中');
+
+        // Improve description
+        let desc = '資料更新中';
+        if (rhrData?.weatherDescription && rhrData.weatherDescription.length > 0) {
+            desc = Array.isArray(rhrData.weatherDescription) ? rhrData.weatherDescription[0] : rhrData.weatherDescription;
+        } else if (rhrData?.icon?.length) {
+            desc = '香港天文台最新天氣';
+        }
+
         document.getElementById('wx-temp').textContent = Number.isFinite(temp) ? `${temp}°C` : '--°C';
         document.getElementById('wx-humidity').textContent = Number.isFinite(humidity) ? `${humidity}%` : '--%';
         document.getElementById('wx-desc').textContent = desc;
         document.getElementById('wx-updated').textContent = '更新時間：' + (rhrData?.updateTime || new Date().toISOString()).replace('T', ' ').slice(0, 16);
 
-        const warningKeys = Object.keys(warnData || {});
+        const warnings = [];
+        if (warnData) {
+            Object.values(warnData).forEach(w => {
+                if (w && w.name) warnings.push(w.name);
+            });
+        }
+
         const warningTitle = document.getElementById('wx-warning-title');
         const warningList = document.getElementById('wx-warning-list');
-        if (!warningKeys.length) {
+        const adviceEl = document.getElementById('wx-advice');
+
+        if (warnings.length === 0) {
             warningTitle.textContent = '目前沒有警告';
             warningList.textContent = '';
-            document.getElementById('wx-advice').textContent = '天氣穩定，祝你騎行順利';
-            return;
+
+            // Temperature-based advice
+            if (temp > 32) adviceEl.textContent = '天氣酷熱，請補充足夠水分，避免長時間暴曬。';
+            else if (temp < 12) adviceEl.textContent = '天氣寒冷，請穿著足夠防風保暖衣物。';
+            else adviceEl.textContent = '天氣穩定，祝你騎行順利！';
+        } else {
+            warningTitle.textContent = warnings.join('、');
+            warningList.innerHTML = warnings.map(k => `• ${k}`).join('<br>');
+
+            // Warning-based advice
+            let advice = '建議檢查裝備與路面狀況後再出發。';
+            const allWarns = warnings.join(' ');
+            if (allWarns.includes('雨')) advice = '正在下雨，路面濕滑，請減速慢行並注意剎車距離。';
+            if (allWarns.includes('雷')) advice = '有雷暴警告，請儘快前往室內安全地方暫避，切勿在空曠地方停留。';
+            if (allWarns.includes('風')) advice = '風力強勁，請小心強陣風，抓緊把手並注意平衡。';
+            if (allWarns.includes('酷熱')) advice = '酷熱天氣警告生效，請多喝水並適時休息，預防中暑。';
+
+            adviceEl.textContent = advice;
         }
-        warningTitle.textContent = `現有 ${warningKeys.length} 項警告`;
-        warningList.textContent = warningKeys.map(k => `• ${k}`).join(' ');
-        document.getElementById('wx-advice').textContent = '建議檢查裝備、防水與路面狀況後再出發';
     }
     </script>
 </body>
