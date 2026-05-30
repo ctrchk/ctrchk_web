@@ -439,6 +439,36 @@
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
     <script>
+    // ── 路線詳情共用數據加載 ──────────────────────────────────────────
+    window.CTRCHK_ROUTE_OVERRIDE = null;
+    async function fetchRouteOverride(routeId) {
+      if (window.CTRCHK_ROUTE_OVERRIDE) return window.CTRCHK_ROUTE_OVERRIDE;
+      try {
+        const resp = await fetch('/api/user?action=route-data');
+        if (resp.ok) {
+          const data = await resp.json();
+          window.CTRCHK_ROUTE_OVERRIDE = (data.routes || []).find(r => r.route_id === routeId) || null;
+        }
+      } catch (e) { console.warn('[RouteDetail] Override fetch failed', e); }
+      return window.CTRCHK_ROUTE_OVERRIDE;
+    }
+
+    function mergeRouteData(base, override) {
+      if (!override) return base;
+      return Object.assign({}, base, {
+        alias: override.alias || base.alias,
+        color: override.bg_color || base.color,
+        time: override.estimated_minutes || base.time,
+        length: override.length_text || base.length,
+        tags: Array.isArray(override.tags) && override.tags.length ? override.tags : base.tags,
+        gpx: Array.isArray(override.gpx) && override.gpx.length ? override.gpx : base.gpx,
+        stops: Array.isArray(override.stops) && override.stops.length ? override.stops : base.stops,
+        unlock_level: override.unlock_type === 'level' && override.unlock_value != null ? override.unlock_value : base.unlock_level,
+        unlock_cost: override.unlock_type === 'coins' && override.unlock_value != null ? override.unlock_value : base.unlock_cost,
+        is_special: override.unlock_type === 'coins',
+      });
+    }
+
     // ── 路線地圖、站點及 GPS 追蹤 ────────────────────────────────────────
     (function () {
       let map = null;
@@ -448,13 +478,9 @@
       let routeDataCurrent = null;
       let routePolyline = null;
       let stopMarkers = [];
-      // 50 meters: tight enough to confirm arrival at a stop without false positives,
-      // while still reachable given typical GPS accuracy (~5–15m in open areas).
-      // Adjust down to ~30m if stops are very close together on a route.
       const STOP_RADIUS_M = 50;
       const notifiedKey = 'ctrc_notified_stops_' + (new URLSearchParams(location.search).get('id') || '');
 
-      // 計算兩點之間的距離（Haversine，返回米）
       function getDistanceM(lat1, lon1, lat2, lon2) {
         const R = 6371000;
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -465,7 +491,6 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       }
 
-      // 初始化 Leaflet 地圖
       function initMap(centerLat, centerLon, zoom) {
         if (map) return;
         map = L.map('route-map').setView([centerLat, centerLon], zoom || 14);
@@ -475,7 +500,6 @@
         }).addTo(map);
       }
 
-      // 在地圖上加載 GPX 路線
       async function loadGpxOnMap(gpxFile) {
         if (!map) return;
         try {
@@ -488,29 +512,22 @@
           const gpxText = await res.text();
           const parser = new DOMParser();
           const gpxDoc = parser.parseFromString(gpxText, 'application/xml');
-
-          // 解析 trkpt 節點
           const trkpts = gpxDoc.querySelectorAll('trkpt');
           if (trkpts.length === 0) return;
-
           const latlngs = [];
           trkpts.forEach(pt => {
             const lat = parseFloat(pt.getAttribute('lat'));
             const lon = parseFloat(pt.getAttribute('lon'));
             if (!isNaN(lat) && !isNaN(lon)) latlngs.push([lat, lon]);
           });
-
           if (latlngs.length > 0) {
             routePolyline = L.polyline(latlngs, { color: '#990000', weight: 4, opacity: 0.8 });
             routePolyline.addTo(map);
             map.fitBounds(routePolyline.getBounds(), { padding: [20, 20] });
           }
-        } catch (e) {
-          console.warn('[Map] GPX 加載失敗:', e);
-        }
+        } catch (e) { console.warn('[Map] GPX 加載失敗:', e); }
       }
 
-      // 在地圖上標示站點
       function renderStopsOnMap(stops) {
         if (!map || !stops.length) return;
         stopMarkers.forEach(m => map.removeLayer(m));
@@ -528,72 +545,34 @@
             iconAnchor: [12, 12],
           });
           const label = stop.code ? `<b>${stop.code}</b>` : `<b>站 ${stop.order}</b>`;
-          const road = stop.road ? `<br><span style="font-size:0.85em;opacity:0.75">📍 ${stop.road}</span>` : '';
-          const enName = stop.name_en ? `<br><span style="font-size:0.82em;opacity:0.75">${stop.name_en}</span>` : '';
           const marker = L.marker([stop.lat, stop.lon], { icon })
-            .bindPopup(`${label}<br>${stop.name}${enName}${road}`)
+            .bindPopup(`${label}<br>${stop.name}${stop.name_en ? '<br>' + stop.name_en : ''}${stop.road ? '<br>📍 ' + stop.road : ''}`)
             .addTo(map);
           stopMarkers.push(marker);
         });
       }
 
-      // 渲染站點列表 UI（含代碼、道路、方向、英文名）
       function renderStopsList(stops) {
         const list = document.getElementById('stops-list');
         if (!list || !stops.length) return;
         list.innerHTML = '';
-
-        // Track last road to show changes
         let lastRoad = null;
-
         stops.forEach(stop => {
           const li = document.createElement('li');
           li.id = 'stop-item-' + stop.order;
-
-          // Terminus class for border color
-          const isStart = stop.direction === '🔴';
-          const isEnd   = stop.direction === '🟢';
-          li.className = 'stop-item' + (isStart ? ' terminus-start' : isEnd ? ' terminus-end' : '');
-
-          // Road: show if changed from previous stop
-          const roadChanged = stop.road && stop.road !== lastRoad;
-          if (stop.road) lastRoad = stop.road;
-          const roadHtml = stop.road
-            ? `<span class="stop-road">📍 ${stop.road}</span>`
-            : '';
-
-          // XP hint (show if > 0)
-          const xpHtml = typeof stop.xp === 'number' && stop.xp > 0
-            ? `<span class="stop-xp">+${stop.xp} XP</span>`
-            : '';
-
-          // Direction
-          const dirHtml = stop.direction
-            ? `<span class="stop-dir" title="方向">${stop.direction}</span>`
-            : '';
-
-          // Code
-          const codeHtml = stop.code
-            ? `<span class="stop-code">${stop.code}</span>`
-            : '';
-
-          // English name
-          const enHtml = stop.name_en
-            ? `<div class="stop-name-en">${stop.name_en}</div>`
-            : '';
-
+          li.className = 'stop-item' + (stop.direction === '🔴' ? ' terminus-start' : stop.direction === '🟢' ? ' terminus-end' : '');
           li.innerHTML = `
             <span class="stop-badge">${stop.order}</span>
             <div class="stop-body">
               <div class="stop-header">
-                ${codeHtml}
+                ${stop.code ? `<span class="stop-code">${stop.code}</span>` : ''}
                 <span class="stop-name">${stop.name}</span>
-                ${dirHtml}
+                ${stop.direction ? `<span class="stop-dir" title="方向">${stop.direction}</span>` : ''}
               </div>
-              ${enHtml}
+              ${stop.name_en ? `<div class="stop-name-en">${stop.name_en}</div>` : ''}
               <div class="stop-meta">
-                ${roadHtml}
-                ${xpHtml}
+                ${stop.road ? `<span class="stop-road">📍 ${stop.road}</span>` : ''}
+                ${stop.xp > 0 ? `<span class="stop-xp">+${stop.xp} XP</span>` : ''}
               </div>
             </div>`;
           list.appendChild(li);
@@ -607,10 +586,7 @@
         const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];
         const dirFilter = gpxEntry && gpxEntry.dir_filter;
         if (dirFilter === 'up') {
-          stops = stops
-            .filter(s => s.direction !== '⬇️')
-            .reverse()
-            .map((s, i) => ({ ...s, order: i + 1 }));
+          stops = stops.filter(s => s.direction !== '⬇️').reverse().map((s, i) => ({ ...s, order: i + 1 }));
         } else if (dirFilter === 'down') {
           stops = stops.filter(s => s.direction !== '⬆️');
         }
@@ -627,13 +603,11 @@
         renderStopsList(routeStops);
       }
 
-      // 更新站點已到達狀態
       function markStopReached(order) {
         const el = document.getElementById('stop-item-' + order);
         if (el) el.classList.add('reached');
       }
 
-      // GPS 追蹤
       function startGpsTracking() {
         if (!('geolocation' in navigator)) {
           document.getElementById('gps-status').textContent = '此瀏覽器不支援 GPS';
@@ -642,110 +616,66 @@
         document.getElementById('btn-gps').classList.add('active');
         document.getElementById('btn-gps').textContent = '⏹ 停止 GPS 追蹤';
         document.getElementById('gps-status').textContent = '正在獲取位置...';
-
         const notified = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
-
         watchId = navigator.geolocation.watchPosition(
           (pos) => {
             const { latitude, longitude } = pos.coords;
-            document.getElementById('gps-status').textContent =
-              `📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-
-            // 更新用戶位置標記
+            document.getElementById('gps-status').textContent = `📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
             if (!userMarker) {
-              const userIcon = L.divIcon({
+              userMarker = L.marker([latitude, longitude], { icon: L.divIcon({
                 className: '',
                 html: '<div style="background:#6dba65;width:16px;height:16px;border-radius:50%;border:3px solid #121f14;box-shadow:0 0 6px rgba(0,0,0,0.6);"></div>',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8],
-              });
-              userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
-            } else {
-              userMarker.setLatLng([latitude, longitude]);
-            }
+                iconSize: [16, 16], iconAnchor: [8, 8],
+              }) }).addTo(map);
+            } else { userMarker.setLatLng([latitude, longitude]); }
             map.panTo([latitude, longitude]);
-
-            // 檢查是否接近站點
             routeStops.forEach(stop => {
               const dist = getDistanceM(latitude, longitude, stop.lat, stop.lon);
               if (dist < STOP_RADIUS_M && !notified.includes(stop.order)) {
                 notified.push(stop.order);
                 localStorage.setItem(notifiedKey, JSON.stringify(notified));
                 markStopReached(stop.order);
-                if (window.CTRCHK_PWA) {
-                  window.CTRCHK_PWA.sendLocalNotification(
-                    '🚏 即將到達',
-                    `站 ${stop.order}：${stop.name}`,
-                    'ctrc-stop-' + stop.order
-                  );
-                }
+                if (window.CTRCHK_PWA) window.CTRCHK_PWA.sendLocalNotification('🚏 即將到達', `站 ${stop.order}：${stop.name}`, 'ctrc-stop-' + stop.order);
               }
             });
           },
-          (err) => {
-            document.getElementById('gps-status').textContent = 'GPS 錯誤：' + err.message;
-          },
+          (err) => { document.getElementById('gps-status').textContent = 'GPS 錯誤：' + err.message; },
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
         );
       }
 
       function stopGpsTracking() {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-          watchId = null;
-        }
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         document.getElementById('btn-gps').classList.remove('active');
         document.getElementById('btn-gps').textContent = '📍 啟動 GPS 追蹤';
         document.getElementById('gps-status').textContent = '';
       }
 
-      // 主入口：在 main.js 渲染完路線後初始化地圖
       async function initRouteMap() {
         const params = new URLSearchParams(location.search);
         const routeId = params.get('id');
         if (!routeId) return;
 
-        // 取路線及站點數據
         let routeData = null;
         try {
-          const res = await fetch('/routes.json');
+          const [res, override] = await Promise.all([fetch('/routes.json'), fetchRouteOverride(routeId)]);
           if (res.ok) {
             const data = await res.json();
-            routeData = (data.routes || []).find(r => r.id === routeId);
+            routeData = mergeRouteData((data.routes || []).find(r => r.id === routeId), override);
           }
         } catch (e) {}
         routeDataCurrent = routeData;
         routeStops = routeData ? (routeData.stops || []) : [];
         const initialDir = parseInt(params.get('dir') || '0', 10);
+        const center = routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697];
 
-        const defaultCenter = routeStops.length > 0
-          ? [routeStops[0].lat, routeStops[0].lon]
-          : [22.3143, 114.2697]; // 將軍澳默認中心
-
-        // 顯示地圖區塊
         document.getElementById('route-map-section').style.display = 'block';
-        initMap(defaultCenter[0], defaultCenter[1], 14);
-        // invalidateSize ensures Leaflet recalculates the map container
-        // dimensions after the section transitions from display:none
+        initMap(center[0], center[1], 14);
         setTimeout(() => { if (map) map.invalidateSize(); }, 50);
-
         await renderDirection(initialDir);
 
-        // 顯示報站按鈕（若支援）
-        if ('Notification' in window) {
-          document.getElementById('btn-notify').style.display = 'inline-block';
-        }
-
-        // GPS 按鈕
-        document.getElementById('btn-gps').addEventListener('click', () => {
-          if (watchId !== null) {
-            stopGpsTracking();
-          } else {
-            startGpsTracking();
-          }
-        });
-
-        // 報站通知按鈕
+        if ('Notification' in window) document.getElementById('btn-notify').style.display = 'inline-block';
+        document.getElementById('btn-gps').addEventListener('click', () => watchId !== null ? stopGpsTracking() : startGpsTracking());
         document.getElementById('btn-notify').addEventListener('click', async () => {
           if (window.CTRCHK_PWA) {
             const granted = await window.CTRCHK_PWA.requestNotificationPermission();
@@ -755,41 +685,26 @@
         });
       }
 
-      // 等待 main.js 渲染完成後初始化
       document.addEventListener('DOMContentLoaded', () => {
-        // main.js 同步渲染路線，監聽 MutationObserver 確保地圖在內容後初始化
         const container = document.getElementById('route-detail-container');
         if (!container) return;
-
         const observer = new MutationObserver(() => {
-          if (container.children.length > 0) {
-            observer.disconnect();
-            initRouteMap();
-          }
+          if (container.children.length > 0) { observer.disconnect(); initRouteMap(); }
         });
         observer.observe(container, { childList: true, subtree: true });
-
-        // 若已有內容（無需等待）
         if (container.children.length > 0) initRouteMap();
       });
 
-      window.CTRCHK_ROUTE_DETAIL_SELECT_DIR = async function (idx) {
-        await renderDirection(idx);
-      };
+      window.CTRCHK_ROUTE_DETAIL_SELECT_DIR = async function (idx) { await renderDirection(idx); };
     })();
 
     // ── 啟動騎行按鈕 ──────────────────────────────────────────────────────
     (function () {
       const ROUTE_UNLOCK = {
-        '900':1,'900A':1,'966T':1,
-        '914':8,'966A':8,'966':8,
-        '900S':1,'914B':1,'910':5,'901P':15,
-        '914H':22,'920':22,'966B':22,
-        '920X':30,'923':30,'966C':30,
-        '928':38,'929':38,'961':38,'961P':38,
-        '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,
-        '955':50,'955A':50,'955H':50,'960':50,'962P':50,'962X':50,
-        'X935':50,'S90':50,'S91':50,
+        '900':1,'900A':1,'966T':1,'914':8,'966A':8,'966':8,'900S':1,'914B':1,'910':5,'901P':15,
+        '914H':22,'920':22,'966B':22,'920X':30,'923':30,'966C':30,'928':38,'929':38,'961':38,'961P':38,
+        '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,'955':50,'955A':50,'955H':50,'960':50,
+        '962P':50,'962X':50,'X935':50,'S90':50,'S91':50,
       };
       const ROUTE_XP = {
         '900':450,'900A':360,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
@@ -806,33 +721,31 @@
 
         let routeDataObj = null;
         try {
-          const res = await fetch('/routes.json');
-          const data = await res.json();
-          routeDataObj = (data.routes || []).find(r => r.id === routeId);
+          const [res, override] = await Promise.all([fetch('/routes.json'), fetchRouteOverride(routeId)]);
+          if (res.ok) {
+            const data = await res.json();
+            routeDataObj = mergeRouteData((data.routes || []).find(r => r.id === routeId), override);
+          }
         } catch (e) {}
 
         const section = document.getElementById('start-ride-section');
-        if (!section) return;
+        if (!section || !routeDataObj) return;
 
-        const needed = (routeDataObj && routeDataObj.unlock_level) || ROUTE_UNLOCK[routeId] || 1;
+        const needed = routeDataObj.unlock_level || ROUTE_UNLOCK[routeId] || 1;
         let userLvl = 1;
         try {
           const raw = localStorage.getItem('user');
-          if (raw) { const u = JSON.parse(raw); userLvl = Math.max(1, parseInt(u.level || 1, 10)); }
+          if (raw) { userLvl = Math.max(1, parseInt(JSON.parse(raw).level || 1, 10)); }
         } catch(e) {}
 
         const isLoggedIn = !!localStorage.getItem('accessToken');
         const isLocked = isLoggedIn && userLvl < needed;
-        // Prefer xp_reward from routes.json; fall back to local table
-        const xp = (routeDataObj && routeDataObj.xp_reward) || ROUTE_XP[routeId] || 0;
-        const completionXp = (routeDataObj && typeof routeDataObj.completion_xp === 'number')
-          ? routeDataObj.completion_xp
-          : 0;
+        const xp = routeDataObj.xp_reward || ROUTE_XP[routeId] || 0;
+        const completionXp = routeDataObj.completion_xp || 0;
         let selectedDir = 0;
 
-        // Direction buttons
         const dirContainer = document.getElementById('direction-btns');
-        if (routeDataObj && routeDataObj.gpx && routeDataObj.gpx.length > 0) {
+        if (routeDataObj.gpx && routeDataObj.gpx.length > 0) {
           routeDataObj.gpx.forEach((g, i) => {
             const btn = document.createElement('button');
             btn.className = 'dir-btn' + (i === 0 ? ' selected' : '');
@@ -841,53 +754,35 @@
               document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('selected'));
               btn.classList.add('selected');
               selectedDir = i;
-              if (window.CTRCHK_ROUTE_DETAIL_SELECT_DIR) {
-                window.CTRCHK_ROUTE_DETAIL_SELECT_DIR(selectedDir);
-              }
+              if (window.CTRCHK_ROUTE_DETAIL_SELECT_DIR) window.CTRCHK_ROUTE_DETAIL_SELECT_DIR(selectedDir);
             });
             dirContainer.appendChild(btn);
           });
         }
 
-        if (xp > 0) {
-          const hintEl = document.getElementById('start-ride-xp-hint');
-          if (completionXp > 0) {
-            hintEl.textContent = `完成此路線最高可獲得 +${xp} XP（含完成獎勵 +${completionXp} XP）`;
-          } else {
-            hintEl.textContent = '完成此路線可獲得 +' + xp + ' XP';
-          }
-        }
+        const hintEl = document.getElementById('start-ride-xp-hint');
+        if (xp > 0) hintEl.textContent = completionXp > 0 ? `完成此路線最高可獲得 +${xp} XP（含完成獎勵 +${completionXp} XP）` : `完成此路線可獲得 +${xp} XP`;
 
-        // Inject completion reward row into web route stats (visible on both web and app)
-        if (xp > 0) {
-          const statsEl = document.querySelector('#route-detail-container .route-stats');
-          if (statsEl) {
-            const rewardDiv = document.createElement('div');
-            rewardDiv.id = 'route-completion-reward-row';
-            rewardDiv.innerHTML = completionXp > 0
-              ? `<strong>🏆 完成路線獎勵:</strong> 最高 +${xp} XP（完成全程另得 +${completionXp} XP）`
-              : `<strong>🏆 完成路線獎勵:</strong> 最高 +${xp} XP`;
-            statsEl.appendChild(rewardDiv);
-          }
+        const statsEl = document.querySelector('#route-detail-container .route-stats');
+        if (statsEl && xp > 0) {
+          const rewardDiv = document.createElement('div');
+          rewardDiv.id = 'route-completion-reward-row';
+          rewardDiv.innerHTML = completionXp > 0 ? `<strong>🏆 完成路線獎勵:</strong> 最高 +${xp} XP（完成全程另得 +${completionXp} XP）` : `<strong>🏆 完成路線獎勵:</strong> 最高 +${xp} XP`;
+          statsEl.appendChild(rewardDiv);
         }
 
         const startBtn = document.getElementById('btn-start-ride');
         const lockedMsg = document.getElementById('start-ride-locked-msg');
-
         if (isLocked) {
           startBtn.classList.add('locked');
           startBtn.textContent = '🔒 需要 Lv.' + needed + ' 解鎖';
           lockedMsg.style.display = 'block';
           lockedMsg.textContent = '你目前是 Lv.' + userLvl + '，再升 ' + (needed - userLvl) + ' 級即可解鎖此路線';
         } else {
-          startBtn.addEventListener('click', () => {
-            window.location.href = '/ride?id=' + routeId + '&dir=' + selectedDir;
-          });
+          startBtn.addEventListener('click', () => { window.location.href = '/ride?id=' + routeId + '&dir=' + selectedDir; });
         }
-
         section.style.display = 'block';
       }
-
       document.addEventListener('DOMContentLoaded', initStartRide);
     })();
     </script>
