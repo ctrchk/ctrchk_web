@@ -303,6 +303,23 @@ export default async function handler(req, res) {
       }
     }
 
+    if (req.query.action === 'get_user_rides') {
+      try {
+        const { user_id } = req.query;
+        const { rows } = await query(
+          `SELECT id, ride_date, route_name, distance_km, duration_minutes, xp_earned
+           FROM cycling_history
+           WHERE user_id = $1
+           ORDER BY ride_date DESC`,
+          [user_id]
+        );
+        return res.status(200).json({ rides: rows });
+      } catch (e) {
+        console.error('[admin-users] get_user_rides error:', e.message);
+        return res.status(500).json({ message: '載入紀錄失敗' });
+      }
+    }
+
     // GET route configs (coin routes only)
     if (req.query.action === 'get-route-config') {
       try {
@@ -823,6 +840,23 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      if (action === 'update_ride') {
+        const { ride_id, route_name, distance_km, duration_minutes } = body;
+        await query(
+          `UPDATE cycling_history
+           SET route_name = $1, distance_km = $2, duration_minutes = $3, updated_at = NOW()
+           WHERE id = $4`,
+          [route_name, parseFloat(distance_km), parseInt(duration_minutes, 10), ride_id]
+        );
+        return res.status(200).json({ message: 'Ride updated' });
+      }
+
+      if (action === 'delete_ride') {
+        const { ride_id } = body;
+        await query(`DELETE FROM cycling_history WHERE id = $1`, [ride_id]);
+        return res.status(200).json({ message: 'Ride deleted' });
+      }
+
       const { user_id, new_role } = body;
 
       if (!action) {
@@ -836,6 +870,7 @@ export default async function handler(req, res) {
         'set_game_stats',
         'grant_route',
         'revoke_route',
+        'get_user_rides',
       ]);
       if (actionsRequiringUserId.has(action) && !user_id) {
         return res.status(400).json({ message: 'user_id is required' });

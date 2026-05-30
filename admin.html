@@ -781,6 +781,30 @@
     </div>
 </div>
 
+    <!-- 騎行紀錄管理 Modal -->
+    <div id="ride-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:3000; align-items:center; justify-content:center;">
+        <div style="background:white; width:min(94vw, 850px); max-height:85vh; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
+            <div style="padding:1.2em 1.5em; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#333;"><i class="fas fa-history"></i> <span id="ride-modal-title">管理騎行紀錄</span></h3>
+                <button onclick="closeRideModal()" style="background:none; border:none; font-size:1.5em; cursor:pointer;">&times;</button>
+            </div>
+            <div id="ride-list-container" style="flex:1; overflow-y:auto; padding:1.5em;">
+                <div id="ride-loading" class="loading"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>
+                <table class="users-table" id="ride-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>日期</th><th>路線</th><th>里程 (km)</th><th>時間 (min)</th><th>XP</th><th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ride-tbody"></tbody>
+                </table>
+            </div>
+            <div style="padding:1em 1.5em; border-top:1px solid #eee; text-align:right; background:#f9f9f9;">
+                <button onclick="closeRideModal()" class="cta-button" style="background:#888;">關閉</button>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
@@ -925,6 +949,7 @@
                             ${user.user_role !== 'junior'
                                 ? `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">設普通會員</button>`
                                 : ''}
+                            <button class="action-btn btn-admin" onclick="openRideManager(${user.id}, '${escapeHtml(user.email)}')">管理紀錄</button>
                             <button class="action-btn btn-delete" onclick="deleteUser(${user.id}, '${escapeHtml(user.email)}')">刪除</button>
                         </td>
                     </tr>
@@ -1071,6 +1096,130 @@
                 if (el) el.addEventListener('change', refreshStopNatureLabels);
             });
         });
+
+        let currentRideUserId = null;
+
+        async function openRideManager(userId, email) {
+            currentRideUserId = userId;
+            document.getElementById('ride-modal-title').textContent = `管理 ${email} 的騎行紀錄`;
+            document.getElementById('ride-modal').style.display = 'flex';
+            loadUserRides();
+        }
+
+        function closeRideModal() {
+            document.getElementById('ride-modal').style.display = 'none';
+        }
+
+        async function loadUserRides() {
+            const container = document.getElementById('ride-list-container');
+            const loading = document.getElementById('ride-loading');
+            const table = document.getElementById('ride-table');
+            const tbody = document.getElementById('ride-tbody');
+
+            // Clear previous results/messages
+            const oldMsgs = container.querySelectorAll('.ride-status-msg');
+            oldMsgs.forEach(m => m.remove());
+
+            loading.style.display = 'block';
+            table.style.display = 'none';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch(`/api/admin-users?action=get_user_rides&user_id=${currentRideUserId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+
+                if (!data.rides || data.rides.length === 0) {
+                    loading.style.display = 'none';
+                    tbody.innerHTML = '';
+                    table.style.display = 'none';
+                    const msg = document.createElement('p');
+                    msg.className = 'ride-status-msg';
+                    msg.style.cssText = 'text-align:center; padding:2em; color:#888;';
+                    msg.textContent = '該用戶尚無騎行紀錄';
+                    container.appendChild(msg);
+                    return;
+                }
+
+                tbody.innerHTML = data.rides.map(r => `
+                    <tr id="ride-row-${r.id}">
+                        <td>${r.id}</td>
+                        <td>${new Date(r.ride_date).toLocaleDateString('zh-HK')}</td>
+                        <td><input type="text" value="${escapeHtml(r.route_name || '')}" id="ride-name-${r.id}" style="width:100px;"></td>
+                        <td><input type="number" step="0.01" value="${r.distance_km}" id="ride-dist-${r.id}" style="width:60px;"></td>
+                        <td><input type="number" value="${r.duration_minutes}" id="ride-dur-${r.id}" style="width:50px;"></td>
+                        <td>${r.xp_earned}</td>
+                        <td>
+                            <button class="action-btn btn-promote" onclick="updateRide(${r.id})">儲存</button>
+                            <button class="action-btn btn-delete" onclick="deleteRide(${r.id})">刪除</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                loading.style.display = 'none';
+                table.style.display = 'table';
+            } catch (err) {
+                loading.style.display = 'none';
+                const msg = document.createElement('p');
+                msg.className = 'ride-status-msg';
+                msg.style.cssText = 'color:red; text-align:center;';
+                msg.textContent = `載入失敗: ${err.message}`;
+                container.appendChild(msg);
+            }
+        }
+
+        async function updateRide(rideId) {
+            const name = document.getElementById(`ride-name-${rideId}`).value;
+            const dist = document.getElementById(`ride-dist-${rideId}`).value;
+            const dur = document.getElementById(`ride-dur-${rideId}`).value;
+
+            const pin = await promptAdminPin();
+            if (pin === null) return;
+
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'update_ride', ride_id: rideId, route_name: name, distance_km: dist, duration_minutes: dur, pin })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    alert('更新成功！');
+                    loadUserRides();
+                } else {
+                    alert('更新失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
+            }
+        }
+
+        async function deleteRide(rideId) {
+            if (!confirm('確定要永久刪除此紀錄嗎？')) return;
+            const pin = await promptAdminPin();
+            if (pin === null) return;
+
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin-users', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete_ride', ride_id: rideId, pin })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    alert('已刪除！');
+                    loadUserRides();
+                } else {
+                    alert('刪除失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
+            }
+        }
 
         // 搜尋按 Enter 鍵
         document.addEventListener('keyup', function(e) {

@@ -451,11 +451,18 @@
         <span class="plan-row-icon" style="color:#04D93C;">📍</span>
         <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" data-i18n-placeholder="from_placeholder" placeholder="輸入或選擇起點（可自訂地址）">
       </div>
+      <div id="waypoints-container"></div>
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#e74c3c;">🏁</span>
         <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" data-i18n-placeholder="to_placeholder" placeholder="輸入或選擇終點（可自訂地址）">
       </div>
       <datalist id="landmark-options"></datalist>
+      <div class="plan-row" id="add-waypoint-row" style="display:none; margin-bottom:0.8em;">
+        <span class="plan-row-icon"></span>
+        <button id="btn-add-waypoint" style="background:none; border:1px dashed rgba(255,255,255,0.3); color:#a8d8a0; padding:0.4em 1em; border-radius:8px; font-size:0.85em; cursor:pointer; width:100%;">
+          <i class="fas fa-plus"></i> 新增停靠點（銀卡/金卡）
+        </button>
+      </div>
       <div class="plan-row">
         <span class="plan-row-icon">🚴</span>
         <select id="sel-profile" class="plan-input" aria-label="路線偏好">
@@ -589,8 +596,10 @@
 
     // Navigation state
     let isNavigating = false;
+    let waypointsCount = 0;
     let plannedRoute = null;       // route coords [[lon,lat],…]
     let plannedSteps = [];         // turn-by-turn steps
+    let navAnimationStep = 0;
     let currentStepIdx = 0;
     let navStartTime = null;
     let navDistTravelledM = 0;
@@ -1645,11 +1654,15 @@
     function updateCamera(lngLat, bearing) {
       if (!map) return;
       const nextBearing = headingUp ? smoothBearing(bearing) : 0;
+
+      // Dynamically adjust pitch based on speed (simulated 3D feel)
+      const targetPitch = isNavigating ? Math.min(75, DEFAULT_NAV_PITCH + (lastSpeedKmh * 0.5)) : DEFAULT_NAV_PITCH;
+
       map.easeTo({
        center: lngLat,
        bearing: nextBearing,
-       zoom: DEFAULT_NAV_ZOOM,
-       pitch: DEFAULT_NAV_PITCH,
+       zoom: isNavigating ? Math.max(DEFAULT_NAV_ZOOM, 18.5) : DEFAULT_NAV_ZOOM,
+       pitch: targetPitch,
        duration: 550,
        easing: t => 1 - Math.pow(1 - t, 2),
       });
@@ -1803,89 +1816,93 @@
       }
     }
 
+    async function resolveRawInput(val) {
+        let res = resolveLandmark(val);
+        if (!res) res = await geocodeAddress(val);
+        if (res && res.id === '__gps__') {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+            });
+            return { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
+        }
+        return res;
+    }
+
     async function planRoute() {
       const fromRaw = document.getElementById('sel-from').value;
       const toRaw   = document.getElementById('sel-to').value;
+      const waypointInputs = Array.from(document.querySelectorAll('.waypoint-input'));
+
       if (!fromRaw || !toRaw) return;
-      if (fromRaw.trim() === toRaw.trim()) return;
-
-      let fromResolved = resolveLandmark(fromRaw);
-      let toResolved = resolveLandmark(toRaw);
-      if (!fromResolved) fromResolved = await geocodeAddress(fromRaw);
-      if (!toResolved) toResolved = await geocodeAddress(toRaw);
-      if (!fromResolved || !toResolved) {
-        alert('無法解析起點或終點地址，請重新輸入。');
-        return;
-      }
-
-      const fromId = fromResolved.id;
-      const toId = toResolved.id;
-      let from = fromResolved.id === '__gps__' ? null : fromResolved;
-      let to   = toResolved.id === '__gps__' ? null : toResolved;
-
-      // Handle GPS-based locations
-      if (fromId === '__gps__' || toId === '__gps__') {
-        const btn = document.getElementById('btn-plan-route');
-        btn.disabled = true;
-        btn.textContent = '正在取得位置...';
-        try {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-          });
-          const gpsLoc = { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
-          if (fromId === '__gps__') from = gpsLoc;
-          if (toId === '__gps__') to = gpsLoc;
-        } catch(e) {
-          alert('無法取得目前位置，請確保已授予定位權限。');
-          const btn2 = document.getElementById('btn-plan-route');
-          btn2.disabled = false;
-          btn2.textContent = '🔍 規劃路線';
-          return;
-        }
-      }
-
-      if (!from || !to) return;
 
       const btn = document.getElementById('btn-plan-route');
       btn.disabled = true;
-      btn.textContent = '正在規劃...';
-      document.getElementById('route-summary').classList.remove('show');
-      document.getElementById('btn-start-nav').classList.remove('show');
-
-      // Remove any existing planned route layer
-      clearRouteLayers();
+      btn.textContent = '正在取得位置...';
 
       try {
-        const localRoute = planLocalCyclingRoute([from.lon, from.lat], [to.lon, to.lat]);
-        if (!localRoute || !localRoute.coords || localRoute.coords.length < 2) {
-          throw new Error('No local route found');
-        }
+          const from = await resolveRawInput(fromRaw);
+          const to = await resolveRawInput(toRaw);
+          const points = [from];
 
-        plannedRoute = localRoute.coords;
-        activeRouteCoords = localRoute.coords;
-        routeLineFeature = turf.lineString(localRoute.coords);
-        routeJunctions = buildRouteJunctions(localRoute.coords);
-        plannedSteps = computeNavSteps(localRoute.coords);
-        navTotalDistM = localRoute.distanceM;
+          for (const wp of waypointInputs) {
+              const val = wp.value.trim();
+              if (val) {
+                  const resolved = await resolveRawInput(val);
+                  if (resolved) points.push(resolved);
+              }
+          }
+          points.push(to);
 
-        drawPlannedRoute(localRoute.coords, from, to);
+          if (points.length < 2) throw new Error('Points resolve failed');
 
-        document.getElementById('rs-dist').textContent = `${(localRoute.distanceM / 1000).toFixed(1)} km`;
-        document.getElementById('rs-time').textContent = formatMinutes(localRoute.etaMinutes);
-        document.getElementById('rs-turns').textContent =
-          `${plannedSteps.filter(s => s.maneuver.type === 'turn').length} 個`;
-        document.getElementById('route-summary').classList.add('show');
-        document.getElementById('btn-start-nav').classList.add('show');
+          btn.textContent = '正在規劃...';
+          document.getElementById('route-summary').classList.remove('show');
+          document.getElementById('btn-start-nav').classList.remove('show');
+          clearRouteLayers();
 
-        const lngs = localRoute.coords.map(c => c[0]), lats = localRoute.coords.map(c => c[1]);
-        map.fitBounds([
-          [Math.min(...lngs), Math.min(...lats)],
-          [Math.max(...lngs), Math.max(...lats)],
-        ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
-        expandPanel();
-      } catch (routeErr) {
-        console.error('[Nav] Local routing failed:', routeErr);
-        alert('無法使用本地單車徑網絡規劃路線，請確認起點與終點在將軍澳單車徑覆蓋範圍內。');
+          let fullCoords = [];
+          let totalDist = 0;
+          let totalMinutes = 0;
+
+          for (let i = 0; i < points.length - 1; i++) {
+              const segment = planLocalCyclingRoute([points[i].lon, points[i].lat], [points[i+1].lon, points[i+1].lat]);
+              if (!segment || !segment.coords) throw new Error(`Segment ${i} not found`);
+
+              if (i === 0) {
+                  fullCoords = segment.coords;
+              } else {
+                  fullCoords = fullCoords.concat(segment.coords.slice(1));
+              }
+              totalDist += segment.distanceM;
+              totalMinutes += segment.etaMinutes;
+          }
+
+          plannedRoute = fullCoords;
+          activeRouteCoords = fullCoords;
+          routeLineFeature = turf.lineString(fullCoords);
+          routeJunctions = buildRouteJunctions(fullCoords);
+          plannedSteps = computeNavSteps(fullCoords);
+          navTotalDistM = totalDist;
+
+          drawPlannedRoute(fullCoords, from, to);
+
+          document.getElementById('rs-dist').textContent = `${(totalDist / 1000).toFixed(1)} km`;
+          document.getElementById('rs-time').textContent = formatMinutes(totalMinutes);
+          document.getElementById('rs-turns').textContent =
+            `${plannedSteps.filter(s => s.maneuver.type === 'turn').length} 個`;
+          document.getElementById('route-summary').classList.add('show');
+          document.getElementById('btn-start-nav').classList.add('show');
+
+          const lngs = fullCoords.map(c => c[0]), lats = fullCoords.map(c => c[1]);
+          map.fitBounds([
+            [Math.min(...lngs), Math.min(...lats)],
+            [Math.max(...lngs), Math.max(...lats)],
+          ], { padding: { top: 80, bottom: 320, left: 40, right: 40 } });
+          expandPanel();
+
+      } catch (err) {
+          console.error('[Nav] Routing failed:', err);
+          alert('規劃失敗：' + err.message);
       }
 
       btn.disabled = false;
@@ -1894,22 +1911,31 @@
 
     function startRouteFx() {
       stopRouteFx();
-      let phase = 0;
-      routeFxTimer = setInterval(() => {
-        if (!map) return;
+
+      const animate = (timestamp) => {
+        if (!isNavigating && !plannedRoute) return;
+        if (!map || !map.getStyle()) return;
+
         if (map.getLayer('planned-route-flow')) {
-          phase = (phase + 1) % 10;
-          map.setPaintProperty('planned-route-flow', 'line-dasharray', [0.8 + phase * 0.12, 2.4]);
+          const phase = (timestamp / 50) % 10;
+          map.setPaintProperty('planned-route-flow', 'line-dasharray', [0.8, 2.4 + (phase * 0.05)]);
         }
+
         if (map.getLayer('planned-route-junction-guide')) {
-          const opacity = 0.35 + ((Math.sin(phase / 1.5) + 1) * 0.22);
+          const opacity = 0.35 + ((Math.sin(timestamp / 500) + 1) * 0.22);
           map.setPaintProperty('planned-route-junction-guide', 'line-opacity', opacity);
         }
-      }, 180);
+
+        routeFxTimer = requestAnimationFrame(animate);
+      };
+
+      routeFxTimer = requestAnimationFrame(animate);
     }
 
     function stopRouteFx() {
-      if (routeFxTimer) clearInterval(routeFxTimer);
+      if (routeFxTimer) {
+          cancelAnimationFrame(routeFxTimer);
+      }
       routeFxTimer = null;
     }
 
@@ -1976,17 +2002,35 @@
         );
       }
 
-      // Route shadow (for depth)
+      // ── 3D Lane Rendering ──
+
+      // Layer 1: Bottom dark shadow/outline
       if (!map.getLayer('planned-route-shadow')) {
         map.addLayer({
           id: 'planned-route-shadow',
           type: 'line',
           source: 'planned-route',
-          paint: { 'line-color': '#02172d', 'line-width': 14, 'line-opacity': 0.2, 'line-blur': 4 },
+          paint: { 'line-color': '#02172d', 'line-width': 16, 'line-opacity': 0.3, 'line-blur': 6 },
         });
       }
 
-      // Main neon route highlight
+      // Layer 2: Wide gray asphalt base
+      if (!map.getLayer('planned-route-asphalt')) {
+        map.addLayer({
+          id: 'planned-route-asphalt',
+          type: 'line',
+          source: 'planned-route',
+          paint: {
+            'line-color': '#444444',
+            'line-width': 14,
+            'line-opacity': 0.85,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        });
+      }
+
+      // Layer 3: Main neon route highlight (lane body)
       if (!map.getLayer('planned-route-line')) {
         map.addLayer({
           id: 'planned-route-line',
@@ -1994,10 +2038,25 @@
           source: 'planned-route',
           paint: {
             'line-color': '#00F3FF', // High-contrast neon cyan
-            'line-width': 8,
-            'line-opacity': 0.75,
+            'line-width': 10,
+            'line-opacity': 0.9,
             'line-cap': 'round',
             'line-join': 'round',
+          },
+        });
+      }
+
+      // Layer 4: Animated lane divider markings
+      if (!map.getLayer('planned-route-lane-mark')) {
+        map.addLayer({
+          id: 'planned-route-lane-mark',
+          type: 'line',
+          source: 'planned-route',
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': 2,
+            'line-opacity': 0.8,
+            'line-dasharray': [2, 4],
           },
         });
       }
@@ -2009,8 +2068,8 @@
           source: 'planned-route',
           paint: {
             'line-color': '#FFFFFF', // White flow for maximum visibility
-            'line-width': 4.6,
-            'line-opacity': 0.95,
+            'line-width': 5,
+            'line-opacity': 0.6,
             'line-dasharray': [0.8, 2.4],
             'line-cap': 'round',
             'line-join': 'round',
@@ -2547,8 +2606,39 @@
       panel.classList.toggle('collapsed');
     });
 
+    function initWaypointUI() {
+        const userRaw = localStorage.getItem('user');
+        if (!userRaw) return;
+        const user = JSON.parse(userRaw);
+        const rank = String(user.permission_rank || user.mileage_rank || '').toLowerCase();
+        if (rank === 'silver' || rank === 'gold') {
+            document.getElementById('add-waypoint-row').style.display = 'flex';
+        }
+
+        const maxWps = rank === 'gold' ? 8 : 3;
+
+        document.getElementById('btn-add-waypoint').onclick = () => {
+            if (waypointsCount >= maxWps) {
+                alert(`你的等級最多支援 ${maxWps} 個停靠點。`);
+                return;
+            }
+            const container = document.getElementById('waypoints-container');
+            const row = document.createElement('div');
+            row.className = 'plan-row';
+            row.innerHTML = `
+                <span class="plan-row-icon" style="color:#f1c232;">📍</span>
+                <input class="plan-input waypoint-input" list="landmark-options" placeholder="輸入停靠點">
+                <button class="remove-wp" style="background:none; border:none; color:#e74c3c; padding:0 0.5em; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            waypointsCount++;
+            row.querySelector('.remove-wp').onclick = () => { row.remove(); waypointsCount--; };
+        };
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────
     populateSelects();
+    initWaypointUI();
     try {
       initMap();
     } catch (e) {

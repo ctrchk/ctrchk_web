@@ -608,7 +608,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             <div class="app-user-header">
                 <div class="app-user-avatar" id="app-user-avatar"><i class="fas fa-user"></i></div>
                 <div>
-                    <div class="app-user-greeting">歡迎回來，</div>
+                    <div class="app-user-greeting">歡迎回來，<span id="app-home-temp" style="margin-left:5px; color:#BFE340; font-weight:bold;">--°C</span></div>
                     <div class="app-user-name" id="app-home-name">騎士</div>
                 </div>
             </div>
@@ -665,6 +665,10 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                 <i class="fas fa-map-marked-alt"></i>
                 <span>騎行地圖</span>
             </a>
+            <a href="/weather" class="app-quick-item">
+                <i class="fas fa-cloud-sun"></i>
+                <span>即時天氣</span>
+            </a>
             <a href="/dashboard" class="app-quick-item">
                 <i class="fas fa-chart-bar"></i>
                 <span>我的進度</span>
@@ -692,6 +696,10 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             <a href="/chat?support=1" class="app-quick-item" id="app-support-mode-entry" style="display:none;">
                 <i class="fas fa-headset"></i>
                 <span>客服模式</span>
+            </a>
+            <a href="/chat?priority=gold" class="app-quick-item" id="app-gold-support-entry" style="display:none;">
+                <i class="fas fa-headset" style="color:#d4af37;"></i>
+                <span style="color:#d4af37; font-weight:bold;">金卡客服</span>
             </a>
             <a href="https://discord.gg/hkQNZ6UADC" target="_blank" rel="noopener noreferrer" class="app-quick-item">
                 <i class="fab fa-discord"></i>
@@ -873,9 +881,16 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
 
     function updateSupportModeEntry(userData) {
         const entry = document.getElementById('app-support-mode-entry');
-        if (!entry) return;
-        const role = String(userData?.user_role || userData?.role || '').toLowerCase();
-        entry.style.display = role === 'senior_admin' ? '' : 'none';
+        if (entry) {
+            const role = String(userData?.user_role || userData?.role || '').toLowerCase();
+            entry.style.display = role === 'senior_admin' ? '' : 'none';
+        }
+
+        const goldEntry = document.getElementById('app-gold-support-entry');
+        if (goldEntry) {
+            const rank = String(userData?.mileage_rank || userData?.mileage_card || '').toLowerCase();
+            goldEntry.style.display = (rank === 'gold' || rank === '金卡') ? '' : 'none';
+        }
     }
 
     let _appHomeInited = false;
@@ -991,8 +1006,45 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         setTimeout(() => { splashEl.style.display = 'none'; splashEl.classList.remove('splash-fade-out'); }, 420);
     }
 
-    if (document.readyState !== 'loading') initAppHome();
-    else document.addEventListener('DOMContentLoaded', initAppHome);
+    async function fetchHomeWeather() {
+        const tempEl = document.getElementById('app-home-temp');
+        if (!tempEl) return;
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+            });
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`;
+            const resp = await fetch(url);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.current?.temperature_2m != null) {
+                    tempEl.textContent = Math.round(data.current.temperature_2m) + '°C';
+                }
+            }
+        } catch (e) {
+            // Fallback to HKO general temp
+            try {
+                const resp = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const temp = data?.temperature?.data?.[0]?.value;
+                    if (temp != null) tempEl.textContent = temp + '°C';
+                }
+            } catch (ee) {}
+        }
+    }
+
+    if (document.readyState !== 'loading') {
+        initAppHome();
+        fetchHomeWeather();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            initAppHome();
+            fetchHomeWeather();
+        });
+    }
 
     // Also re-run after PWA class is set (pwa.js sets body.is-pwa on DOMContentLoaded)
     document.addEventListener('DOMContentLoaded', () => {
