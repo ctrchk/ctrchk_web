@@ -1087,57 +1087,101 @@ export default async function handler(req, res) {
 async function handleAiDev(req, res) {
     const { prompt, path, pin } = req.body;
     
-    // 1. 安全檢查
+    // 1. 安全檢查 (PIN + Admin Role)
     if (String(pin).trim() !== "032024") {
         return res.status(403).json({ error: "安全授權碼錯誤。" });
+    }
+
+    // 額外增加管理員權限檢查
+    const authResult = verifyAdmin(req);
+    if (authResult.error) {
+        return res.status(authResult.status).json({ error: "未授權：需要高級管理員權限。" });
     }
 
     const owner = "ctrchk"; 
     const repo = "ctrchk_web"; 
 
     try {
-        // 🌟 修正：獲取檔案樹的正確函數
-        const { data: treeData } = await octokit.git.getTree({ 
-            owner, repo, tree_sha: 'main', recursive: true 
-        });
-        const fileList = treeData.tree.filter(f => f.type === 'blob').map(f => f.path).join('\n');
+        if (!process.env.GITHUB_TOKEN || !process.env.GEMINI_API_KEY) {
+            throw new Error("環境變數 GITHUB_TOKEN 或 GEMINI_API_KEY 未設定。");
+        }
 
-        // 🌟 修正：模型 ID 改為 gemini-1.5-flash 或 gemini-1.5-flash-latest
-        // 如果你的 SDK 是新版，請確認名稱正確
+        // 1. 獲取 Repo 資訊以確認預設分支
+        let branch = 'main';
+        try {
+            const { data: repoData } = await octokit.repos.get({ owner, repo });
+            branch = repoData.default_branch;
+        } catch (e) {
+            console.warn(`[AI-Dev] 無法獲取 Repo 資訊，使用預設分支 main: ${e.message}`);
+        }
+
+        // 2. 獲取檔案樹
+        const { data: treeData } = await octokit.git.getTree({ 
+            owner, repo, tree_sha: branch, recursive: true
+        });
+        const fileList = treeData.tree
+            .filter(f => f.type === 'blob' && !f.path.includes('.git/') && !f.path.includes('node_modules/'))
+            .map(f => f.path)
+            .join('\n');
+
+        // 3. 呼叫 Gemini AI
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const systemPrompt = `你是一個專業工程特工。當前專案檔案：\n${fileList}\n\n需求：${prompt}\n目標檔案：${path === "AUTO" ? "由你判斷" : path}\n\n請按格式輸出修改：\n[FILE:路徑]\n完整程式碼內容\n[END_FILE]`;
+        const systemPrompt = `你是一個專業的 Full-Stack 工程特工。
+當前專案檔案列表：
+${fileList}
+
+用戶需求：${prompt}
+目標檔案：${path === "AUTO" ? "由你判斷（請在專案檔案列表中選擇最相關的檔案修改或新增）" : path}
+
+請嚴格按以下格式輸出修改（支援多檔案）：
+[FILE:檔案路徑]
+完整程式碼內容
+[END_FILE]
+
+注意：請直接輸出完整代碼，不要包含 Markdown 代碼塊標記（如 \`\`\`javascript）。`;
 
         const result = await model.generateContent(systemPrompt);
         const aiResponse = result.response.text();
 
-        // 解析 AI 結果並執行 GitHub 更新 (與之前邏輯相同)
+        // 4. 解析 AI 結果並執行 GitHub 更新
         const fileMatches = [...aiResponse.matchAll(/\[FILE:(.+?)\]([\s\S]*?)\[END_FILE\]/g)];
-        if (fileMatches.length === 0) return res.status(500).json({ error: "AI 生成格式錯誤" });
+        if (fileMatches.length === 0) {
+            console.log("[AI-Dev] AI Response:", aiResponse);
+            return res.status(500).json({ error: "AI 生成格式錯誤，未能識別 [FILE:...] 標記。詳情：" + aiResponse.substring(0, 100) });
+        }
 
         let count = 0;
         let lastUrl = "";
         for (const match of fileMatches) {
             const filePath = match[1].trim();
-            const newCode = match[2].trim().replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
+            let newCode = match[2].trim();
+
+            // 移除可能存在的 Markdown 標記
+            newCode = newCode.replace(/^```[a-z]*\n/i, "").replace(/\n```$/i, "");
+
             let sha;
             try {
-                const { data: f } = await octokit.repos.getContent({ owner, repo, path: filePath });
-                sha = f.sha;
+                const { data: f } = await octokit.repos.getContent({ owner, repo, path: filePath, ref: branch });
+                // octokit.repos.getContent returns an array if path is a directory
+                if (!Array.isArray(f)) {
+                    sha = f.sha;
+                }
             } catch (e) { sha = undefined; }
 
             const commit = await octokit.repos.createOrUpdateFileContents({
                 owner, repo, path: filePath,
-                message: `🤖 AI Agent Fix: ${prompt.substring(0, 30)}`,
+                message: `🤖 AI Agent Auto-Dev: ${prompt.substring(0, 50)}...`,
                 content: Buffer.from(newCode).toString('base64'),
                 sha: sha,
-                branch: 'main'
+                branch: branch
             });
             lastUrl = commit.data.commit.html_url;
             count++;
         }
         return res.status(200).json({ success: true, count, commitUrl: lastUrl });
     } catch (err) {
+        console.error("[AI-Dev] Error:", err);
         return res.status(500).json({ error: "Agent 執行錯誤: " + err.message });
     }
 }

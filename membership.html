@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="城市運輸單車">
     <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>會員計劃 - 香港城市運輸單車</title>
+    <title>會員體系 - 香港城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -28,292 +28,292 @@
         .membership-hero p {
             color: #aaa;
             font-size: 1.1em;
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
         }
 
-        .membership-main {
-            background: #1a1a2e;
-            color: white;
+        .track-section {
             padding: 4em 2em;
+            background: #fdfdfd;
         }
+        .track-section:nth-child(even) {
+            background: #f4f7f6;
+        }
+        .track-section h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 1.5em;
+            font-size: 2em;
+        }
+        .track-desc {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 3em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Membership Grid */
         .membership-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2em;
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
         }
         .membership-card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 2em;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            padding: 2.5em 2em;
             text-align: center;
-            transition: transform 0.2s;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
         }
-        .membership-card:hover { transform: translateY(-4px); }
-        .membership-card.highlight {
-            border-color: #04D93C;
-            background: rgba(4, 217, 60, 0.08);
-        }
-        .membership-card h3 {
-            color: #04D93C;
-            font-size: 1.4em;
-            margin-top: 0;
-            margin-bottom: 0.3em;
-        }
-        .membership-card .price {
-            font-size: 2em;
-            font-weight: bold;
-            color: white;
-            margin: 0.5em 0;
-        }
-        .membership-card .price span {
-            font-size: 0.45em;
-            color: #aaa;
-            font-weight: normal;
-        }
-        .membership-card ul {
-            list-style: none;
-            padding: 0;
-            text-align: left;
-            margin: 1em 0;
-        }
-        .membership-card ul li {
-            padding: 0.4em 0;
-            color: #ccc;
-            font-size: 0.95em;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .membership-card ul li::before {
-            content: "✓ ";
-            color: #04D93C;
-            font-weight: bold;
-        }
-        .membership-card .card-btn {
-            display: block;
-            text-align: center;
+        .membership-card:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        .membership-card.highlight { border: 2px solid #04D93C; }
+        .membership-card.vip { border: 2px solid #D4AF37; background: #fffcf0; }
+
+        .card-badge {
+            position: absolute;
+            top: 15px;
+            right: -35px;
             background: #04D93C;
             color: white;
-            padding: 0.75em;
-            border-radius: 8px;
-            text-decoration: none;
+            padding: 5px 40px;
+            transform: rotate(45deg);
+            font-size: 0.8em;
             font-weight: bold;
-            margin-top: 1.5em;
-            transition: background 0.2s;
         }
-        .membership-card .card-btn:hover { background: #03c236; }
+        .membership-card.vip .card-badge { background: #D4AF37; }
 
-        .membership-note {
-            text-align: center;
-            color: #888;
-            font-size: 0.9em;
-            margin-top: 2em;
-        }
+        .membership-card h3 { color: #2c3e50; font-size: 1.5em; margin-bottom: 0.5em; }
+        .membership-card .price { font-size: 1.8em; font-weight: bold; margin: 0.8em 0; color: #333; }
+        .membership-card .price span { font-size: 0.5em; color: #888; font-weight: normal; }
 
-        .compare-section {
-            background: #16213e;
-            padding: 4em 2em;
-            color: white;
-        }
-        .compare-section h2 {
-            text-align: center;
-            color: #04D93C;
-            font-size: 1.8em;
-            margin-bottom: 1.5em;
-        }
-        .compare-table {
-            max-width: 700px;
+        .membership-card ul { list-style: none; padding: 0; text-align: left; margin: 1.5em 0; }
+        .membership-card ul li { padding: 0.6em 0; color: #555; border-bottom: 1px solid #f9f9f9; font-size: 0.95em; }
+        .membership-card ul li::before { content: "• "; color: #04D93C; font-weight: bold; margin-right: 5px; }
+        .membership-card.vip ul li::before { color: #D4AF37; }
+
+        /* Points Table */
+        .points-compare {
+            width: 100%;
+            max-width: 900px;
             margin: 0 auto;
             border-collapse: collapse;
-            width: 100%;
-            font-size: 0.95em;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        .compare-table th {
-            background: rgba(4, 217, 60, 0.15);
-            color: #04D93C;
-            padding: 0.8em 1em;
-            text-align: center;
+        .points-compare th, .points-compare td {
+            padding: 1.2em;
+            text-align: left;
+            border-bottom: 1px solid #eee;
         }
-        .compare-table th:first-child { text-align: left; }
-        .compare-table td {
-            padding: 0.7em 1em;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            color: #ccc;
-        }
-        .compare-table td:not(:first-child) { text-align: center; }
-        .compare-table tr:last-child td { border-bottom: none; }
-        .tick { color: #04D93C; font-size: 1.1em; }
-        .cross { color: #e74c3c; font-size: 1.1em; }
+        .points-compare th { background: #2c3e50; color: white; }
+        .points-compare .type-col { font-weight: bold; color: #2c3e50; width: 20%; }
 
-        .cta-section {
-            text-align: center;
-            background: linear-gradient(135deg, #04D93C, #BFE340);
-            padding: 4em 2em;
+        /* Rank Cards (Bronze, Silver, Gold) */
+        .rank-grid {
+            display: flex;
+            justify-content: center;
+            gap: 1.5em;
+            flex-wrap: wrap;
+            max-width: 1000px;
+            margin: 0 auto;
         }
-        .cta-section h2 { color: #1a1a2e; font-size: 2em; margin-bottom: 0.5em; }
-        .cta-section p { color: #1a1a2e; opacity: 0.8; margin-bottom: 1.5em; }
-        .btn-dark {
-            background: #1a1a2e;
+        .rank-item {
+            flex: 1;
+            min-width: 250px;
+            padding: 2em;
+            border-radius: 16px;
+            text-align: center;
             color: white;
-            padding: 0.9em 2.5em;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.1em;
-            display: inline-block;
-            transition: background 0.2s;
         }
-        .btn-dark:hover { background: #0f3460; }
+        .rank-bronze { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+        .rank-silver { background: linear-gradient(135deg, #c0c0c0, #708090); }
+        .rank-gold { background: linear-gradient(135deg, #d4af37, #b8860b); }
+        .rank-item i { font-size: 3em; margin-bottom: 0.5em; opacity: 0.9; }
+        .rank-item h3 { font-size: 1.6em; margin-bottom: 0.3em; }
+        .rank-item .req { font-size: 0.9em; opacity: 0.8; margin-bottom: 1em; }
 
-        @media (max-width: 600px) {
-            .membership-hero h1 { font-size: 1.8em; }
-            .compare-table { font-size: 0.82em; }
+        @media (max-width: 768px) {
+            .membership-hero h1 { font-size: 2em; }
+            .track-section { padding: 3em 1em; }
         }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
 
-    <!-- Hero -->
     <section class="membership-hero">
-        <h1><i class="fas fa-star"></i> 會員計劃</h1>
-        <p>免費加入，完成個人資料即可升級，解鎖所有功能。</p>
+        <h1>三軌制激勵體系</h1>
+        <p>我們設計了完善的成長路徑，讓你的每一公里騎行都能獲得應有的尊重與獎勵。無論是追求等級的榮譽、累積里程的實力，還是享受專屬權益，都能在這裡找到目標。</p>
     </section>
 
-    <!-- Membership Cards -->
-    <section class="membership-main">
+    <!-- Track 1: Member Tiers -->
+    <section class="track-section">
+        <h2>軌道一：會員身份 (Membership Tiers)</h2>
+        <p class="track-desc">基於帳戶狀態與訂閱情況的基礎身份，決定了你訪問平台核心功能的權限級別。</p>
+
         <div class="membership-grid">
-            <!-- Junior -->
+            <!-- Ordinary/Junior -->
             <div class="membership-card">
-                <h3><i class="fas fa-user"></i> 初級會員</h3>
+                <h3>普通會員</h3>
                 <div class="price">免費 <span>永久</span></div>
                 <ul>
                     <li>瀏覽所有單車路線</li>
-                    <li>查看基本路線資訊</li>
-                    <li>獲取天氣預報</li>
-                    <li>建立帳戶</li>
-                    <li>瀏覽討論區及發帖回覆</li>
+                    <li>獲取即時天氣預報</li>
+                    <li>參與論壇討論</li>
+                    <li>基礎 2D 導航功能</li>
                 </ul>
-                <a href="/register" class="card-btn">
-                    <i class="fas fa-user-plus"></i> 免費註冊
-                </a>
             </div>
 
             <!-- Senior -->
             <div class="membership-card highlight">
-                <h3><i class="fas fa-star"></i> 高級會員</h3>
-                <div class="price">免費 <span>完成個人資料後</span></div>
+                <div class="card-badge">推薦</div>
+                <h3>高級會員</h3>
+                <div class="price">免費 <span>完成資料後</span></div>
                 <ul>
-                    <li>包含初級會員所有功能</li>
+                    <li>包含普通會員所有權益</li>
                     <li>下載 GPX 路線檔案</li>
-                    <li>查看完整路線詳情</li>
-                    <li>記錄單車歷程</li>
-                    <li>社群活動參與資格</li>
-                    <li>路線更新優先通知</li>
-                    <li>討論區顯示 ⭐ 高級會員標誌</li>
-                    <li>點評其他會員的討論留言</li>
+                    <li>紀錄騎行數據與歷史</li>
+                    <li>解鎖每日/每週任務</li>
+                    <li>論壇 ⭐ 專屬標誌</li>
                 </ul>
-                <a href="/register" class="card-btn">
-                    <i class="fas fa-arrow-up"></i> 升級至高級會員
-                </a>
+            </div>
+
+            <!-- VIP -->
+            <div class="membership-card vip">
+                <div class="card-badge">PREMIUM</div>
+                <h3>VIP 會員</h3>
+                <div class="price">付費 <span>即將推出</span></div>
+                <ul>
+                    <li>包含高級會員所有權益</li>
+                    <li><strong>自定義介面主題 (Creative Rights)</strong></li>
+                    <li>搶先體驗 Beta 新功能</li>
+                    <li>專屬 1 對 1 技術支援</li>
+                    <li>無廣告且更快的 API 回應</li>
+                    <li>線下活動優先參與權</li>
+                </ul>
             </div>
         </div>
-
-        <p class="membership-note">
-            <i class="fas fa-info-circle"></i>
-            高級會員完全免費 — 只需在註冊時完成你的單車個人資料即可升級。
-        </p>
     </section>
 
-    <!-- Feature Comparison Table -->
-    <section class="compare-section">
-        <h2>功能比較</h2>
-        <table class="compare-table">
+    <!-- Track 2: Cyclist Levels -->
+    <section class="track-section">
+        <h2>軌道二：車手等級 (Cyclist Levels)</h2>
+        <p class="track-desc">透過累積 XP 提升等級，展現你的騎行經驗。高等級將解鎖更多具備挑戰性的長途或跨區路線。</p>
+
+        <div style="max-width: 800px; margin: 0 auto; background: white; padding: 2em; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                <thead style="border-bottom: 2px solid #eee;">
+                    <tr>
+                        <th style="padding: 1em;">等級區間</th>
+                        <th style="padding: 1em;">稱號</th>
+                        <th style="padding: 1em;">主要獎勵</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom: 1px solid #f5f5f5;">
+                        <td style="padding: 1em;">Lv. 1 - 10</td>
+                        <td style="padding: 1em; font-weight: bold; color: #666;">新手騎士</td>
+                        <td style="padding: 1em;">解鎖基礎市區路線</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f5f5f5;">
+                        <td style="padding: 1em;">Lv. 11 - 20</td>
+                        <td style="padding: 1em; font-weight: bold; color: #04D93C;">城市騎手</td>
+                        <td style="padding: 1em;">解鎖海濱特快系列</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f5f5f5;">
+                        <td style="padding: 1em;">Lv. 21 - 30</td>
+                        <td style="padding: 1em; font-weight: bold; color: #3498db;">路線達人</td>
+                        <td style="padding: 1em;">解鎖跨灣大橋挑戰線</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f5f5f5;">
+                        <td style="padding: 1em;">Lv. 31 - 50</td>
+                        <td style="padding: 1em; font-weight: bold; color: #9b59b6;">都市傳奇</td>
+                        <td style="padding: 1em;">解鎖長途南北貫通線</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 1em;">Lv. 51+</td>
+                        <td style="padding: 1em; font-weight: bold; color: #e67e22;">殿堂騎士</td>
+                        <td style="padding: 1em;">終極路線與榮譽勳章</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Track 3: Mileage Cards -->
+    <section class="track-section">
+        <h2>軌道三：里程卡等級 (Mileage Cards)</h2>
+        <p class="track-desc">基於「過去 365 天滾動總里程」計算。這是實力的象徵，代表你在過去一年中的真實騎行強度。維持里程卡可獲得豐厚的里程幣加成。</p>
+
+        <div class="rank-grid">
+            <div class="rank-item rank-bronze">
+                <i class="fas fa-medal"></i>
+                <h3>銅卡 (Bronze)</h3>
+                <p class="req">年里程 < 500 km</p>
+                <p>基礎收益：里程幣 1.0x</p>
+            </div>
+            <div class="rank-item rank-silver">
+                <i class="fas fa-award"></i>
+                <h3>銀卡 (Silver)</h3>
+                <p class="req">年里程 ≥ 500 km</p>
+                <p>進階收益：里程幣 1.05x<br>導航支援多達 3 個停靠站</p>
+            </div>
+            <div class="rank-item rank-gold">
+                <i class="fas fa-crown"></i>
+                <h3>金卡 (Gold)</h3>
+                <p class="req">年里程 ≥ 2000 km</p>
+                <p>極致收益：里程幣 1.15x<br>導航支援多達 8 個停靠站<br>專屬「黑金」介面主題</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Points System Comparison -->
+    <section class="track-section">
+        <h2>積分三軌制對比</h2>
+        <p class="track-desc">XP、里程幣、里程這三種指標各有其用途，共同構成我們的遊戲化經濟體系。</p>
+
+        <table class="points-compare">
             <thead>
                 <tr>
-                    <th>功能</th>
-                    <th>初級會員</th>
-                    <th>高級會員</th>
+                    <th>指標</th>
+                    <th>獲取方式</th>
+                    <th>主要用途</th>
+                    <th>過期機制</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>瀏覽路線列表</td>
-                    <td><span class="tick">✓</span></td>
-                    <td><span class="tick">✓</span></td>
+                    <td class="type-col">XP (經驗值)</td>
+                    <td>騎行站點、完成路線、完成任務、每日簽到</td>
+                    <td>提升「車手等級」，解鎖更高等級的路線</td>
+                    <td>永久累積，不會減少</td>
                 </tr>
                 <tr>
-                    <td>基本路線資訊</td>
-                    <td><span class="tick">✓</span></td>
-                    <td><span class="tick">✓</span></td>
+                    <td class="type-col">里程幣 (Coins)</td>
+                    <td>騎行里程換算、等級提升獎勵、簽到連勝獎勵</td>
+                    <td>在商城「購買」特定付費/活動路線、修復連勝、未來可換取獎勵</td>
+                    <td>永久儲存，消耗性</td>
                 </tr>
                 <tr>
-                    <td>天氣預報</td>
-                    <td><span class="tick">✓</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>建立帳戶</td>
-                    <td><span class="tick">✓</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>完整路線詳情</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>下載 GPX 檔案</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>騎行歷程記錄</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>社群活動資格</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>路線更新優先通知</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>討論區瀏覽及發帖</td>
-                    <td><span class="tick">✓</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>討論區 ⭐ 高級會員標誌</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
-                </tr>
-                <tr>
-                    <td>點評討論留言</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="tick">✓</span></td>
+                    <td class="type-col">里程 (Mileage)</td>
+                    <td>實際騎行的物理距離 (km)</td>
+                    <td>計算「里程卡等級 (卡級)」，決定收益乘區</td>
+                    <td>365 天滾動計算，不進則退</td>
                 </tr>
             </tbody>
         </table>
-    </section>
 
-    <!-- CTA -->
-    <section class="cta-section">
-        <h2>準備好出發了嗎？</h2>
-        <p>立即加入，開始探索香港城市單車之旅。</p>
-        <a href="/register" class="btn-dark">
-            <i class="fas fa-user-plus"></i> 免費建立帳戶
-        </a>
-        &nbsp;&nbsp;
-        <a href="/login" style="display:inline-block; background:white; color:#1a1a2e; padding:0.9em 2.5em; border-radius:8px; text-decoration:none; font-weight:bold; font-size:1.1em; margin-top:0.5em;">
-            <i class="fas fa-sign-in-alt"></i> 登入
-        </a>
+        <div style="text-align: center; margin-top: 3em;">
+            <a href="/register" class="cta-button" style="padding: 1em 3em; font-size: 1.2em;">立即加入，開始累積紀錄</a>
+        </div>
     </section>
 
     <footer>

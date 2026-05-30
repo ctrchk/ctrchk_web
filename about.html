@@ -13,6 +13,35 @@
     <title>香港城市運輸單車 - 關於我們</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2em;
+            margin-top: 2em;
+        }
+        .feature-item {
+            background: #fff;
+            padding: 2em;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .feature-item i {
+            font-size: 2.5em;
+            color: #04D93C;
+            margin-bottom: 0.5em;
+        }
+        .feature-item h3 {
+            margin-bottom: 0.8em;
+            color: #2c3e50;
+        }
+        .feature-item p {
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
@@ -33,49 +62,80 @@
             </ul>
         </section>
 
+        <section class="content animated-element">
+            <h2>App 功能特色</h2>
+            <p>城市運輸單車 App 不僅是一個導航工具，更是一個完整的單車生態系統。</p>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <h3>3D 車道級導航</h3>
+                    <p>領先業界的 3D 建築視圖與霓虹高對比導航線，提供車道級的引導精度，確保你在複雜的城市單車徑中永不迷路。</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-biking"></i>
+                    <h3>智慧騎行追蹤</h3>
+                    <p>利用高精度 GPS 自動偵測到達站點，實時紀錄速度、距離、時長及高度變化。支援離線同步，確保每一公里的努力都被看見。</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-trophy"></i>
+                    <h3>遊戲化成就系統</h3>
+                    <p>全港首創單車遊戲化體驗。累積 XP 提升車手等級，解鎖全新路線。還有每日任務、連續通勤挑戰，讓騎行變得更有趣。</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-cloud-sun"></i>
+                    <h3>天文台即時天氣</h3>
+                    <p>整合香港天文台 API，提供精確至分區的即時天氣警告與降雨雷達。根據天氣狀況提供個性化的騎行安全建議。</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-comments"></i>
+                    <h3>社群互動與討論</h3>
+                    <p>內置即時聊天功能與主題論壇。你可以與其他騎手分享路線心得、回報路面狀況，或在排行榜上一較高下。</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-id-card"></i>
+                    <h3>三軌制會員體系</h3>
+                    <p>完善的車手等級、里程卡制度與會員計劃。從銅卡到金卡，每一階段都有專屬權益與視覺主題。</p>
+                </div>
+            </div>
+        </section>
+
         <section class="content timeline-section animated-element">
             <h2>我們的里程碑</h2>
             <div class="timeline">
                 <div class="timeline-item">
                     <div class="timeline-date">2022年</div>
                     <div class="timeline-content">
-                        <p>城市運輸單車的前身「將軍澳單車輕軌」概念誕生。這是我們首次嘗試將單車作為城市交通解決方案，為後來的正式成立奠定基礎。</p>
+                        <p>城市運輸單車的前身「將軍澳單車輕軌」概念誕生。這是我們首次嘗試將單車作為城市交通解決方案。</p>
                     </div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-date">2024年3月</div>
                     <div class="timeline-content">
-                        <p>「城市運輸單車 (CTRC)」正式成立。我們以更宏大的願景與使命，開始籌備一個全新的單車出行平台，致力於普及香港單車文化。</p>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-date">2024年5月</div>
-                    <div class="timeline-content">
-                        <p>城市運輸單車第一代官方網頁啟用。這是一個簡單的推廣網站，用來向大眾介紹我們的理念和未來計畫，並收集初步用戶回饋。</p>
+                        <p>「城市運輸單車 (CTRC)」正式成立。開始籌備全新的單車出行平台，致力於普及香港單車文化。</p>
                     </div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-date">2025年2月</div>
                     <div class="timeline-content">
-                        <p>首批通勤路線正式上線。我們將日出康城來往調景嶺站等熱門路線納入規劃，鼓勵市民將單車作為日常通勤方式。</p>
+                        <p>首批通勤路線正式上線。將日出康城來往調景嶺站等熱門路線納入規劃。</p>
                     </div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-date">2025年10月</div>
                     <div class="timeline-content">
-                        <p>將服務範圍擴展至沙田區，並新增多條沙田路線。這標誌著城市運輸單車服務網絡的進一步擴大，覆蓋更多香港區域。</p>
+                        <p>服務範圍擴展至沙田區，標誌著服務網絡進一步擴大。</p>
                     </div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-date timeline-current">預計2026年第一季</div>
+                    <div class="timeline-date timeline-current">2026年第一季</div>
                     <div class="timeline-content">
-                        <p>新一代城市運輸單車官方網頁及 App 正式啟用。這將是一個功能更完善、介面更美觀的平台，整合了遊戲化元素和會員系統。</p>
+                        <p>新一代 PWA App 正式啟用，導入 3D 導航、遊戲化系統與完整會員權益。官方網域 ctrchk.com 正式營運。</p>
                     </div>
                 </div>
                 <div class="timeline-item">
                     <div class="timeline-date">未來願景</div>
                     <div class="timeline-content">
-                        <p>視情況增設智慧共享單車服務。我們將推出自研的單車卡系統，為用戶提供更便捷、高效的單車租借體驗。</p>
+                        <p>視情況增設智慧共享單車服務。我們將推出自研的單車卡系統，提供更便捷的單車租借體驗。</p>
                     </div>
                 </div>
             </div>

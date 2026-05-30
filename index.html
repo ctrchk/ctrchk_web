@@ -863,7 +863,9 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             container.innerHTML = '';
             history.slice(0, 5).forEach(ride => {
                 const date = new Date(ride.ride_date).toLocaleDateString('zh-Hant', { month: 'short', day: 'numeric' });
-                const el = document.createElement('div');
+                const el = document.createElement('a');
+                el.href = '/ride_history_detail.html?id=' + ride.id;
+                el.style.textDecoration = 'none';
                 el.className = 'app-ride-item';
                 el.innerHTML = `
                     <div class="app-ride-icon"><i class="fas fa-biking"></i></div>

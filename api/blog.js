@@ -2,7 +2,7 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 
-function requireAdmin(req, res) {
+function requireAuth(req, res) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Unauthorized: Missing token' });
@@ -16,15 +16,21 @@ function requireAdmin(req, res) {
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== 'senior_admin') {
-      res.status(403).json({ message: 'Forbidden: Senior admin access required' });
-      return null;
-    }
     return decoded;
   } catch {
     res.status(401).json({ message: 'Unauthorized: Invalid token' });
     return null;
   }
+}
+
+function requireAdmin(req, res) {
+  const decoded = requireAuth(req, res);
+  if (!decoded) return null;
+  if (decoded.role !== 'senior_admin') {
+    res.status(403).json({ message: 'Forbidden: Senior admin access required' });
+    return null;
+  }
+  return decoded;
 }
 
 export default async function handler(req, res) {
@@ -37,7 +43,21 @@ export default async function handler(req, res) {
   // ── GET ──────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      const { id } = req.query;
+      const { id, action } = req.query;
+
+      // View own submissions history
+      if (action === 'my_history') {
+        const user = requireAuth(req, res);
+        if (!user) return;
+        const { rows: posts } = await query(
+          `SELECT id, title, summary, published, created_at
+           FROM blog_posts
+           WHERE author_id = $1
+           ORDER BY created_at DESC`,
+          [user.userId]
+        );
+        return res.status(200).json({ posts });
+      }
 
       if (id) {
         const postId = parseInt(id);
@@ -52,7 +72,8 @@ export default async function handler(req, res) {
              bp.image_url,
              COALESCE(u.full_name, '管理員') AS author_name,
              bp.created_at,
-             bp.updated_at
+             bp.updated_at,
+             bp.published
            FROM blog_posts bp
            LEFT JOIN users u ON bp.author_id = u.id
            WHERE bp.id = $1`,
@@ -60,7 +81,21 @@ export default async function handler(req, res) {
         );
 
         if (rows.length === 0) return res.status(404).json({ message: 'Post not found' });
-        return res.status(200).json({ post: rows[0] });
+
+        // Non-admins can only view published posts unless it's their own
+        const post = rows[0];
+        if (!post.published) {
+            const user = requireAuth(req, res);
+            if (!user) return;
+
+            // If not logged in or not admin and not author
+            const isAdmin = user.role === 'senior_admin';
+            const isAuthor = user.userId === post.author_id;
+            if (!isAdmin && !isAuthor) {
+                return res.status(403).json({ message: 'Post is not published yet' });
+            }
+        }
+        return res.status(200).json({ post });
       }
 
       // List all published posts
@@ -87,8 +122,8 @@ export default async function handler(req, res) {
 
   // ── POST ─────────────────────────────────────────────────────────────────
   if (req.method === 'POST') {
-    const admin = requireAdmin(req, res);
-    if (!admin) return;
+    const user = requireAuth(req, res);
+    if (!user) return;
 
     try {
       const { title, summary, content, image_url } = req.body || {};
@@ -97,13 +132,20 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'title and content are required' });
       }
 
+      // Non-admins post as unpublished
+      const is_admin = user.role === 'senior_admin';
+      const published = is_admin ? true : false;
+
       const { rows } = await query(
-        `INSERT INTO blog_posts (author_id, title, summary, content, image_url)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, title`,
-        [admin.userId, title, summary || null, content, image_url || null]
+        `INSERT INTO blog_posts (author_id, title, summary, content, image_url, published)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, title, published`,
+        [user.userId, title, summary || null, content, image_url || null, published]
       );
-      return res.status(201).json({ post: rows[0] });
+      return res.status(201).json({
+        post: rows[0],
+        message: is_admin ? '文章已發布' : '文章已提交，請等待管理員審核。'
+      });
 
     } catch (error) {
       console.error('Blog POST error:', error);
@@ -120,7 +162,7 @@ export default async function handler(req, res) {
       const postId = parseInt(req.query.id);
       if (!postId) return res.status(400).json({ message: 'id is required' });
 
-      const { title, summary, content, image_url } = req.body || {};
+      const { title, summary, content, image_url, published } = req.body || {};
 
       if (!title || !content) {
         return res.status(400).json({ message: 'title and content are required' });
@@ -128,10 +170,10 @@ export default async function handler(req, res) {
 
       const { rows, rowCount } = await query(
         `UPDATE blog_posts
-         SET title = $1, summary = $2, content = $3, image_url = $4, updated_at = NOW()
-         WHERE id = $5
+         SET title = $1, summary = $2, content = $3, image_url = $4, published = COALESCE($5, published), updated_at = NOW()
+         WHERE id = $6
          RETURNING id, title`,
-        [title, summary || null, content, image_url || null, postId]
+        [title, summary || null, content, image_url || null, published, postId]
       );
 
       if (rowCount === 0) return res.status(404).json({ message: 'Post not found' });

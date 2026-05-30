@@ -8,40 +8,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* === Blog 概覽頁專屬樣式 === */
-        .blog-list-container {
-            max-width: 900px; /* 可以比文章頁稍寬 */
+        .blog-container {
+            max-width: 900px;
             margin: 2em auto;
             padding: 0 1em;
         }
 
+        .blog-actions {
+            display: flex;
+            gap: 1em;
+            margin-bottom: 2em;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
         .blog-post-summary {
-            display: flex; /* 讓圖片和文字並排 */
-            gap: 1.5em; /* 圖片和文字間的距離 */
+            display: flex;
+            gap: 1.5em;
             background-color: #fff;
             padding: 1.5em;
             margin-bottom: 2em;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.05);
             transition: box-shadow 0.3s ease;
-            overflow: hidden; /* 確保內容不溢出 */
+            overflow: hidden;
         }
         .blog-post-summary:hover {
             box-shadow: 0 6px 12px rgba(0,0,0,0.1);
         }
 
         .post-summary-image {
-            flex: 0 0 200px; /* 固定圖片寬度為 200px */
-            height: 150px; /* 固定圖片高度 */
+            flex: 0 0 200px;
+            height: 150px;
         }
         .post-summary-image img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* 保持比例並裁剪 */
+            object-fit: cover;
             border-radius: 5px;
         }
 
         .post-summary-content {
-            flex: 1; /* 讓文字部分佔滿剩餘空間 */
+            flex: 1;
         }
 
         .post-summary-content h2 {
@@ -79,16 +87,57 @@
             text-decoration: underline;
         }
 
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 2em;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .form-group { margin-bottom: 1.2em; }
+        .form-group label { display: block; margin-bottom: 0.4em; font-weight: bold; color: #2c3e50; }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.8em;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        .form-group textarea { height: 200px; resize: vertical; }
+
+        .status-badge {
+            font-size: 0.75em;
+            padding: 0.2em 0.6em;
+            border-radius: 10px;
+            font-weight: bold;
+            margin-left: 0.5em;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-published { background: #d4edda; color: #155724; }
+
         /* 響應式：小螢幕時圖片移到上方 */
         @media (max-width: 600px) {
             .blog-post-summary {
-                flex-direction: column; /* 改為垂直排列 */
+                flex-direction: column;
                 gap: 1em;
             }
             .post-summary-image {
-                width: 100%; /* 圖片寬度變為 100% */
-                height: 200px; /* 可以調整高度 */
-                flex-basis: auto; /* 取消固定寬度 */
+                width: 100%;
+                height: 200px;
+                flex-basis: auto;
             }
         }
     </style>
@@ -102,10 +151,50 @@
             <p>分享關於城市單車、路線故事與最新動態。</p>
         </section>
 
-        <section id="blog-list-container" class="blog-list-container animated-element">
-            <p style="text-align: center;">正在載入文章列表...</p>
-        </section>
+        <div class="blog-container">
+            <div class="blog-actions" id="blog-user-actions" style="display:none;">
+                <button class="cta-button" onclick="openSubmitModal()">
+                    <i class="fas fa-pen-nib"></i> 我要投稿
+                </button>
+                <button class="cta-button" style="background:#34495e;" id="toggle-history-btn" onclick="toggleView()">
+                    <i class="fas fa-history"></i> 查看我的投稿
+                </button>
+            </div>
+
+            <section id="blog-list-container" class="animated-element">
+                <p style="text-align: center;">正在載入文章列表...</p>
+            </section>
+        </div>
     </main>
+
+    <!-- Submission Modal -->
+    <div id="submit-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0;"><i class="fas fa-paper-plane"></i> 提交投稿</h2>
+            <form id="submission-form">
+                <div class="form-group">
+                    <label>文章標題 *</label>
+                    <input type="text" id="sub-title" required placeholder="請輸入吸引人的標題">
+                </div>
+                <div class="form-group">
+                    <label>簡短摘要</label>
+                    <input type="text" id="sub-summary" placeholder="簡述文章內容（將顯示在列表頁）">
+                </div>
+                <div class="form-group">
+                    <label>封面圖片網址 (可選)</label>
+                    <input type="url" id="sub-image-url" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label>文章內容 *</label>
+                    <textarea id="sub-content" required placeholder="分享你的故事..."></textarea>
+                </div>
+                <div style="display:flex; gap:1em; margin-top:2em;">
+                    <button type="submit" class="cta-button" style="flex:1;">提交審核</button>
+                    <button type="button" class="cta-button" style="background:#888; flex:1;" onclick="closeSubmitModal()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <footer>
          <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
@@ -114,12 +203,60 @@
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
     <script>
+        let currentView = 'all'; // 'all' or 'history'
+
         document.addEventListener('DOMContentLoaded', async function() {
             if (typeof loadSharedComponents === 'function') {
-                loadSharedComponents();
+                await loadSharedComponents();
             }
 
+            checkLogin();
+            loadPosts();
+
+            // Handle form submission
+            document.getElementById('submission-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const token = localStorage.getItem('accessToken');
+                const body = {
+                    title: document.getElementById('sub-title').value.trim(),
+                    summary: document.getElementById('sub-summary').value.trim(),
+                    image_url: document.getElementById('sub-image-url').value.trim(),
+                    content: document.getElementById('sub-content').value
+                };
+
+                try {
+                    const resp = await fetch('/api/blog', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    const data = await resp.json();
+                    if (resp.ok) {
+                        alert(data.message || '投稿成功！請等待管理員審核。');
+                        closeSubmitModal();
+                        if (currentView === 'history') loadHistory();
+                    } else {
+                        alert('提交失敗: ' + data.message);
+                    }
+                } catch (err) {
+                    alert('發生錯誤: ' + err.message);
+                }
+            });
+        });
+
+        function checkLogin() {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                document.getElementById('blog-user-actions').style.display = 'flex';
+            }
+        }
+
+        async function loadPosts() {
             const container = document.getElementById('blog-list-container');
+            container.innerHTML = '<p style="text-align: center;">正在載入文章列表...</p>';
 
             try {
                 const resp = await fetch('/api/blog');
@@ -158,12 +295,81 @@
             } catch (err) {
                 container.innerHTML = `<p style="text-align:center; color:#e74c3c;">載入文章失敗：${err.message}</p>`;
             }
+        }
 
-            function escHtml(str) {
-                if (!str) return '';
-                return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        async function loadHistory() {
+            const container = document.getElementById('blog-list-container');
+            container.innerHTML = '<p style="text-align: center;">正在載入您的投稿紀錄...</p>';
+            const token = localStorage.getItem('accessToken');
+
+            try {
+                const resp = await fetch('/api/blog?action=my_history', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) throw new Error('載入失敗');
+                const data = await resp.json();
+                const posts = data.posts || [];
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p style="text-align:center;">您還沒有任何投稿紀錄。</p>';
+                    return;
+                }
+
+                container.innerHTML = '<h3 style="margin-bottom:1em;">我的投稿紀錄</h3>';
+                posts.forEach(post => {
+                    const postElement = document.createElement('div');
+                    postElement.className = 'blog-post-summary animated-element';
+                    postElement.style.padding = '1em 1.5em';
+
+                    const statusClass = post.published ? 'status-published' : 'status-pending';
+                    const statusText = post.published ? '已發佈' : '待審核';
+
+                    postElement.innerHTML = `
+                        <div class="post-summary-content">
+                            <h2 style="font-size:1.3em;">
+                                ${post.published ? `<a href="/blog_post?id=${post.id}">${escHtml(post.title)}</a>` : escHtml(post.title)}
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </h2>
+                            <div class="post-meta-summary">
+                                <span><i class="fas fa-calendar-alt"></i> 提交於 ${new Date(post.created_at).toLocaleDateString('zh-HK')}</span>
+                            </div>
+                            <p class="post-excerpt">${escHtml(post.summary || '')}</p>
+                        </div>
+                    `;
+                    container.appendChild(postElement);
+                });
+
+                if (typeof initAnimatedElements === 'function') initAnimatedElements();
+            } catch (err) {
+                container.innerHTML = `<p style="text-align:center; color:#e74c3c;">載入失敗：${err.message}</p>`;
             }
-        });
+        }
+
+        function toggleView() {
+            const btn = document.getElementById('toggle-history-btn');
+            if (currentView === 'all') {
+                currentView = 'history';
+                btn.innerHTML = '<i class="fas fa-list"></i> 查看所有文章';
+                loadHistory();
+            } else {
+                currentView = 'all';
+                btn.innerHTML = '<i class="fas fa-history"></i> 查看我的投稿';
+                loadPosts();
+            }
+        }
+
+        function openSubmitModal() {
+            document.getElementById('submit-modal').style.display = 'block';
+        }
+
+        function closeSubmitModal() {
+            document.getElementById('submit-modal').style.display = 'none';
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
     </script>
 </body>
 </html>
