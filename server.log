@@ -1,18 +1,9 @@
-127.0.0.1 - - [30/May/2026 14:56:11] "GET /about.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:12] "GET /js/pwa.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:12] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:12] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:13] "GET /header.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:13] "GET /images/icon-192.png HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:13] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:13] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:13] code 404, message File not found
-127.0.0.1 - - [30/May/2026 14:56:13] "GET /routes HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 14:56:13] code 404, message File not found
-127.0.0.1 - - [30/May/2026 14:56:13] "GET /dashboard HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 14:56:14] "GET /about.html HTTP/1.1" 304 -
-127.0.0.1 - - [30/May/2026 14:56:14] "GET /membership.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:16] "GET /blog.html HTTP/1.1" 200 -
-127.0.0.1 - - [30/May/2026 14:56:16] code 404, message File not found
-127.0.0.1 - - [30/May/2026 14:56:16] "GET /api/blog HTTP/1.1" 404 -
-127.0.0.1 - - [30/May/2026 14:56:16] "GET /ride_history_detail.html?id=test HTTP/1.1" 200 -
+npm error Missing script: "start"
+npm error
+npm error Did you mean one of these?
+npm error   npm star # Mark your favorite packages
+npm error   npm stars # View packages marked as favorites
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/jules/.npm/_logs/2026-05-30T15_46_36_349Z-debug-0.log

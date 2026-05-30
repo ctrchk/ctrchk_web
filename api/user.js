@@ -59,6 +59,17 @@ function normalizeDeptId(input) {
   return raw;
 }
 
+function parseSafeJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -75,47 +86,87 @@ export default async function handler(req, res) {
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS stops JSONB NOT NULL DEFAULT '[]'::jsonb`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
       await query(`ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE`);
-      const { rows: routes } = await query(
-        `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text
-         FROM routes
-         ORDER BY dept, route_number`
-      );
-      const { rows: terminals } = await query(
-        `SELECT id, name_zh, lat, lon, area
-         FROM stations
-         WHERE is_terminal = TRUE
-         ORDER BY area, station_number`
-      );
-      return res.status(200).json({
-        routes: routes.map(r => {
-          let tags = [];
-          if (Array.isArray(r.tags)) {
-            tags = r.tags;
-          } else if (r.tags) {
-            try { tags = JSON.parse(r.tags); } catch (_) { tags = []; }
-          }
+
+      const [{ rows: routes }, { rows: stations }] = await Promise.all([
+        query(
+          `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, stops, rewards
+           FROM routes
+           ORDER BY dept, route_number`
+        ),
+        query(
+          `SELECT id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal
+           FROM stations`
+        )
+      ]);
+
+      const stationMap = new Map();
+      stations.forEach(s => stationMap.set(s.id, s));
+
+      const terminals = stations.filter(s => s.is_terminal).map(t => ({
+        id: t.id,
+        name: t.name_zh,
+        lat: t.lat,
+        lng: t.lon,
+        dept: normalizeDeptId(t.area),
+      }));
+
+      const resolvedRoutes = routes.map(r => {
+        let tags = [];
+        if (Array.isArray(r.tags)) {
+          tags = r.tags;
+        } else if (r.tags) {
+          try { tags = JSON.parse(r.tags); } catch (_) { tags = []; }
+        }
+
+        const rawStops = Array.isArray(r.stops) ? r.stops : parseSafeJsonArray(r.stops);
+        const rewards = typeof r.rewards === 'object' ? r.rewards : parseSafeJsonArray(r.rewards) || {};
+        const perStopXp = rewards.per_stop_xp || 0;
+
+        const resolvedStops = rawStops.map((rs, idx) => {
+          const st = stationMap.get(rs.station_id);
+          if (!st) return null;
+
+          let direction = '↕️';
+          if (idx === 0) direction = '🔴';
+          else if (idx === rawStops.length - 1) direction = '🟢';
+          else if (rs.nature === 'a_direction') direction = '⬆️';
+          else if (rs.nature === 'b_direction') direction = '⬇️';
+
           return {
-            route_id: r.route_number,
-            dept: r.dept,
-            alias: r.alias,
-            bg_color: r.bg_color,
-            estimated_minutes: r.estimated_minutes,
-            unlock_type: r.unlock_type || 'level',
-            unlock_value: r.unlock_value,
-            tags,
-            gpx: Array.isArray(r.gpx) ? r.gpx : parseSafeJsonArray(r.gpx),
-            length_text: r.length_text || null,
+            order: idx + 1,
+            code: st.id,
+            name: st.name_zh,
+            name_en: st.name_en,
+            road: st.road_name,
+            direction: direction,
+            district: st.area,
+            xp: perStopXp,
+            lat: st.lat,
+            lon: st.lon,
           };
-        }),
-        terminals: terminals.map(t => ({
-          id: t.id,
-          name: t.name_zh,
-          lat: t.lat,
-          lng: t.lon,
-          dept: normalizeDeptId(t.area),
-        })),
+        }).filter(Boolean);
+
+        return {
+          route_id: r.route_number,
+          dept: r.dept,
+          alias: r.alias,
+          bg_color: r.bg_color,
+          estimated_minutes: r.estimated_minutes,
+          unlock_type: r.unlock_type || 'level',
+          unlock_value: r.unlock_value,
+          tags,
+          gpx: Array.isArray(r.gpx) ? r.gpx : parseSafeJsonArray(r.gpx),
+          stops: resolvedStops,
+          length_text: r.length_text || null,
+        };
+      });
+
+      return res.status(200).json({
+        routes: resolvedRoutes,
+        terminals: terminals,
       });
     } catch (error) {
       console.error('Get route-data error:', error);
@@ -143,17 +194,6 @@ export default async function handler(req, res) {
     if (req.query.action === 'config') {
       res.setHeader('Cache-Control', 'public, max-age=3600');
       return res.status(200).json({ googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
-    }
-
-    function parseSafeJsonArray(value) {
-      if (Array.isArray(value)) return value;
-      if (!value) return [];
-      try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (_) {
-        return [];
-      }
     }
 
     try {
