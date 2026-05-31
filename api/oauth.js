@@ -94,7 +94,11 @@ async function handleGoogleAuth(req, res) {
 
     // 2. 查詢資料庫是否已有此用戶
     const { rows } = await query(
-      'SELECT id, email, username, user_role, full_name, profile_completed, google_id, email_verified, avatar_url FROM users WHERE google_id = $1 OR email = $2',
+      `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.profile_completed,
+              u.google_id, u.email_verified, u.avatar_url, gp.mileage_rank
+       FROM users u
+       LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+       WHERE u.google_id = $1 OR u.email = $2`,
       [google_id, email]
     );
 
@@ -209,6 +213,8 @@ async function handleGoogleAuth(req, res) {
         full_name: fullNameToReturn,
         user_role: user.user_role,
         role: user.user_role,
+        mileage_rank: user.mileage_rank || 'bronze',
+        permission_rank: user.mileage_rank || 'bronze',
         profile_completed: user.profile_completed,
         email_verified: true, // Google 帳號視為已驗證
         auth_provider: 'google',

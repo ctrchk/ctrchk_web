@@ -861,6 +861,16 @@
     const GPS_OPTIONS = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
 
     function startGPS() {
+      if (typeof window.confirmLocationPermission === 'function') {
+        window.confirmLocationPermission(() => _startGPSActual(), () => {
+          document.getElementById('gps-status-text').textContent = '需要位置權限才能使用此功能';
+        });
+      } else {
+        _startGPSActual();
+      }
+    }
+
+    function _startGPSActual() {
       if (!('geolocation' in navigator)) {
         document.getElementById('gps-status-text').textContent = '此裝置不支援 GPS';
         return;

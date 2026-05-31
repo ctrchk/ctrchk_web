@@ -886,8 +886,32 @@ function matchesSearch(route) {
 
 function renderRoutes() {
     const container = document.getElementById('app-routes-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Always prepend Free Mode Card (Pinned at top)
+    const freeModeCard = document.createElement('div');
+    freeModeCard.className = 'app-route-card';
+    freeModeCard.id = 'free-mode-card';
+    freeModeCard.onclick = () => { window.location.href = '/ride?mode=free'; };
+    freeModeCard.innerHTML = `
+        <div class="app-route-header">
+            <span class="app-route-id" style="background:#BFE340; color:#1a252f;">FREE</span>
+            <span class="app-route-alias">自由模式</span>
+            <span class="app-route-xp" style="background:rgba(191,227,64,0.2); color:#BFE340;">隨意騎行</span>
+        </div>
+        <div class="app-route-meta">
+            <span><i class="fas fa-bicycle"></i> 無固定路線，隨時開始記錄軌跡</span>
+        </div>
+    `;
+    container.appendChild(freeModeCard);
+
     if (!appRoutes.length) {
-        container.innerHTML = '<div class="app-no-routes"><i class="fas fa-spinner fa-spin"></i>載入路線中...</div>';
+        const loading = document.createElement('div');
+        loading.className = 'app-no-routes';
+        loading.innerHTML = '<i class="fas fa-spinner fa-spin"></i>載入路線中...';
+        container.appendChild(loading);
         return;
     }
 
@@ -902,7 +926,10 @@ function renderRoutes() {
     const filtered = deptRoutes.filter(r => matchesTerminal(r) && matchesFilter(r) && matchesSearch(r));
 
     if (filtered.length === 0) {
-        container.innerHTML = '<div class="app-no-routes"><i class="fas fa-search"></i>找不到符合條件的路線</div>';
+        const noRoutes = document.createElement('div');
+        noRoutes.className = 'app-no-routes';
+        noRoutes.innerHTML = '<i class="fas fa-search"></i>找不到符合條件的路線';
+        container.appendChild(noRoutes);
         return;
     }
 
@@ -940,8 +967,6 @@ function renderRoutes() {
         .sort((a, b) => routeSortKey(a.route.id) - routeSortKey(b.route.id));
     const lockedRoutes = routeWithLock.filter(r => r.locked)
         .sort((a, b) => a.needed - b.needed || routeSortKey(a.route.id) - routeSortKey(b.route.id));
-
-    container.innerHTML = '';
 
     function buildCard({ route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, deptLocked, locked }) {
         const xp = route.xp_reward || ROUTE_XP[route.id] || 0;
@@ -1418,12 +1443,9 @@ async function initAppRidePage() {
                 });
                 if (userResp.ok) {
                     const freshUser = await userResp.json();
-                    // Merge fresh game data into localStorage user object
-                    const merged = Object.assign({}, storedUser, {
-                        level: freshUser.level ?? storedUser.level ?? 1,
-                        xp:    freshUser.xp    ?? storedUser.xp    ?? 0,
-                        coins: freshUser.coins ?? storedUser.coins ?? 0,
-                    });
+                    // Merge fresh game and profile data into localStorage user object
+                    // Ensure all critical fields like mileage_rank, permissions, etc. are updated
+                    const merged = Object.assign({}, storedUser, freshUser);
                     localStorage.setItem('user', JSON.stringify(merged));
                     userLevel = Math.max(1, parseInt(merged.level || 1));
                     // Sync server-side purchased coin routes

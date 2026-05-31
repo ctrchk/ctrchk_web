@@ -65,6 +65,18 @@
     <script src="/js/pwa.js"></script>
     <script>
     (async function initWeather() {
+        if (typeof window.confirmLocationPermission === 'function') {
+            window.confirmLocationPermission(() => {
+                _initWeatherActual();
+            }, () => {
+                _initWeatherActual(); // Even if custom prompt denied, try loading weather (will use default HK)
+            });
+        } else {
+            _initWeatherActual();
+        }
+    })();
+
+    async function _initWeatherActual() {
         const rank = resolveRankFromUser();
         const rankTip = document.getElementById('wx-rank-tip');
         rankTip.textContent = rank === 'gold'

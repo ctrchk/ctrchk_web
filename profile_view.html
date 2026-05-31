@@ -68,6 +68,13 @@
             <div id="view-mileage-card" style="display:inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; background: #2d4d2d; color: #a8d8a0;">---</div>
         </div>
 
+        <div id="friend-action-container" style="text-align:center; padding: 0 1.5em 1em;">
+            <button id="btn-add-friend" style="display:none; width:100%; max-width:280px; background:var(--app-accent, #6dba65); color:#121f14; border:none; padding:0.8em; border-radius:12px; font-weight:bold; cursor:pointer;">
+                <i class="fas fa-user-plus"></i> 發送好友邀請
+            </button>
+            <div id="friend-status-msg" style="display:none; font-size:0.85em; color:var(--app-text-secondary, #a8d8a0); opacity:0.8;"></div>
+        </div>
+
         <div class="stats-container">
             <div class="stat-card">
                 <span class="val" id="view-level">--</span>
@@ -114,8 +121,73 @@
                 if (data.avatar_url) {
                     document.getElementById('view-avatar').innerHTML = `<img src="${data.avatar_url}" alt="Avatar">`;
                 }
+
+                initFriendAction();
             } catch (e) {
                 document.getElementById('view-name').textContent = '用戶不存在';
+            }
+        }
+
+        async function initFriendAction() {
+            const userData = localStorage.getItem('user');
+            if (!userData) return;
+            const me = JSON.parse(userData);
+            if (String(me.id) === String(userId)) return; // Don't show for self
+
+            const token = localStorage.getItem('accessToken');
+            const btn = document.getElementById('btn-add-friend');
+            const msg = document.getElementById('friend-status-msg');
+
+            try {
+                // Check if already friends or request pending
+                const friends = await fetch(`/api/user?action=friends&user_id=${me.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.json());
+
+                const isFriend = Array.isArray(friends) && friends.some(f => String(f.id) === String(userId));
+                if (isFriend) {
+                    msg.textContent = '你們已經是好友了';
+                    msg.style.display = 'block';
+                    return;
+                }
+
+                const requests = await fetch(`/api/user?action=friend_requests&user_id=${me.id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.json());
+
+                // Also check sent requests (not directly exposed by API, but we'll try to add friend anyway and handle conflict)
+
+                btn.style.display = 'inline-block';
+                btn.onclick = async () => {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+                    try {
+                        const res = await fetch('/api/user', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ action: 'add_friend', user_id: me.id, friend_id: userId })
+                        });
+                        if (res.ok) {
+                            btn.style.display = 'none';
+                            msg.textContent = '好友邀請已發送';
+                            msg.style.display = 'block';
+                        } else {
+                            const err = await res.json();
+                            alert(err.message || '發送失敗');
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-user-plus"></i> 發送好友邀請';
+                        }
+                    } catch (e) {
+                        alert('網路錯誤');
+                        btn.disabled = false;
+                    }
+                };
+
+            } catch (e) {
+                console.error('Friend action init error:', e);
             }
         }
 

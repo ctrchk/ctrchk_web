@@ -506,6 +506,50 @@
     }
   }
 
+  // ── 階段性位置權限詢問 ────────────────────────────────────────────────────
+  /**
+   * 詢問位置權限。如果本會話（Session）已同意過，則直接執行回調。
+   * @param {Function} onAllowed 同意後執行的函數
+   * @param {Function} onDenied 拒絕或關閉後執行的函數
+   */
+  window.confirmLocationPermission = function(onAllowed, onDenied) {
+    if (sessionStorage.getItem('locationApproved') === '1') {
+      if (onAllowed) onAllowed();
+      return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'location-confirm-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:2em;backdrop-filter:blur(5px);';
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'background:var(--app-bg-card, #1e3820);border:1px solid var(--app-border, #2d4d2d);border-radius:18px;padding:1.8em;max-width:320px;text-align:center;color:var(--app-text-primary, #e8f5e9);box-shadow:0 10px 30px rgba(0,0,0,0.5);';
+
+    inner.innerHTML = `
+      <div style="font-size:3em;margin-bottom:0.3em;">📍</div>
+      <h3 style="margin-bottom:0.6em;color:var(--app-accent, #6dba65);">允許使用位置</h3>
+      <p style="font-size:0.9em;opacity:0.85;line-height:1.5;margin-bottom:1.5em;">為了提供精確的天氣資訊、導航以及記錄你的騎行軌跡，我們需要獲取你的即時位置。</p>
+      <div style="display:flex;gap:0.8em;">
+        <button id="loc-btn-no" style="flex:1;background:rgba(255,255,255,0.1);color:var(--app-text-secondary, #a8d8a0);border:none;padding:0.8em;border-radius:10px;font-weight:bold;cursor:pointer;">暫不允許</button>
+        <button id="loc-btn-yes" style="flex:1;background:var(--app-accent, #6dba65);color:#121f14;border:none;padding:0.8em;border-radius:10px;font-weight:bold;cursor:pointer;">好，沒問題</button>
+      </div>
+    `;
+
+    modal.appendChild(inner);
+    document.body.appendChild(modal);
+
+    document.getElementById('loc-btn-yes').onclick = () => {
+      sessionStorage.setItem('locationApproved', '1');
+      document.body.removeChild(modal);
+      if (onAllowed) onAllowed();
+    };
+
+    document.getElementById('loc-btn-no').onclick = () => {
+      document.body.removeChild(modal);
+      if (onDenied) onDenied();
+    };
+  };
+
   // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
     isStandalone,

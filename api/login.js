@@ -14,7 +14,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const { rows } = await query(
+      `SELECT u.*, gp.mileage_rank
+       FROM users u
+       LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+       WHERE u.email = $1`,
+      [email]
+    );
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Invalid credentials' }); // 安全起見，不提示用戶不存在
     }
@@ -57,6 +63,8 @@ export default async function handler(req, res) {
         full_name: user.full_name || '',
         user_role: user.user_role || 'junior',
         role: user.user_role || user.role,
+        mileage_rank: user.mileage_rank || 'bronze',
+        permission_rank: user.mileage_rank || 'bronze',
         profile_completed: user.profile_completed || false,
         email_verified: user.email_verified || false,
         avatar_url: user.avatar_url || null
