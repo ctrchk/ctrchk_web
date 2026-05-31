@@ -606,11 +606,17 @@
             }
             return data;
         }
+        function fetchWithTimeout(url, options, timeout = 10000) {
+            return Promise.race([
+                fetch(url, options),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('請求超時')), timeout))
+            ]);
+        }
         function apiGet(url) {
-            return fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` } }).then(parseApiResponse);
+            return fetchWithTimeout(url, { headers: { 'Authorization': `Bearer ${TOKEN}` } }).then(parseApiResponse);
         }
         function apiPost(url, body) {
-            return fetch(url, {
+            return fetchWithTimeout(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` },
                 body: JSON.stringify(body)
