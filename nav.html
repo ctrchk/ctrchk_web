@@ -1232,16 +1232,14 @@
 
         document.getElementById('nav-loading').classList.add('hidden');
 
+        // Always attempt to start GPS to trigger browser prompt immediately
+        startGPS();
+
         const isApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.body.classList.contains('is-pwa');
-        if (isApp) {
-            startGPS();
-        } else {
-            setGpsDot('searching', '點擊 GPS 以開啟定位');
+        if (!isApp) {
             document.getElementById('gps-dot').style.cursor = 'pointer';
             document.getElementById('gps-dot').onclick = () => {
                 startGPS();
-                document.getElementById('gps-dot').style.cursor = 'default';
-                document.getElementById('gps-dot').onclick = null;
             };
         }
       });
@@ -1464,10 +1462,18 @@
     }
 
     /** Load cycling parking spaces — visible to silver/gold card users */
-    async function loadParkingSpaces() {
+    async function loadParkingSpaces(retryCount = 0) {
       try {
         // Check user permission using standard permission system
-        const hasParkingPerm = window.hasPermission && window.hasPermission('map_cycparkspace');
+        if (typeof window.hasPermission !== 'function') {
+            if (retryCount < 5) {
+                console.log('[Nav] hasPermission not ready, retrying... ' + retryCount);
+                setTimeout(() => loadParkingSpaces(retryCount + 1), 1000);
+            }
+            return;
+        }
+
+        const hasParkingPerm = window.hasPermission('map_cycparkspace');
         if (!hasParkingPerm) {
             console.log('[Nav] User does not have parking space permission');
             return;

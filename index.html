@@ -638,7 +638,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                     <span class="val" id="app-home-mileage">0.0</span>
                     <span class="lbl">里程</span>
                 </div>
-                <div class="app-stat-pill">
+                <div class="app-stat-pill" id="streak-pill">
                     <span class="val" id="app-home-streak">0</span>
                     <span class="lbl">連戰</span>
                 </div>
@@ -839,7 +839,16 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         document.getElementById('app-home-rides').textContent = history.length;
         document.getElementById('app-home-coins').textContent = formatNum(coins);
         document.getElementById('app-home-mileage').textContent = mileage.toFixed(1);
-        document.getElementById('app-home-streak').textContent = profile.commute_streak || 0;
+
+        const streak = profile.commute_streak || 0;
+        const streakEl = document.getElementById('app-home-streak');
+        const streakPill = document.getElementById('streak-pill');
+        streakEl.textContent = streak;
+        if (streak === 0) {
+            streakEl.style.color = '#888';
+        } else {
+            streakEl.style.color = '#BFE340';
+        }
 
         // Avatar
         const avatarUrl = userData.avatar_url;
@@ -901,6 +910,17 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         }
     }
 
+    function renderFromCache() {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        const gameProfileCache = JSON.parse(localStorage.getItem('gameProfileCache') || '{}');
+        const rideHistory = JSON.parse(localStorage.getItem('rideHistory') || '[]');
+
+        if (userData.id || gameProfileCache.level) {
+            const profile = Object.assign({}, userData, gameProfileCache);
+            renderAppHome(profile, rideHistory);
+        }
+    }
+
     let _appHomeInited = false;
     async function initAppHome({ silent = false } = {}) {
         const appHome = document.getElementById('app-home');
@@ -943,6 +963,9 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             return;
         }
 
+        // Render from cache first to eliminate flicker
+        renderFromCache();
+
         // 未驗證電郵的帳戶重定向至驗證頁面
         try {
             const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -984,36 +1007,21 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                     mileage_rolling_km: rollingKm,
                     mileage_km_365: rollingKm,
                     mileage_rank: profile.mileage_rank || 'bronze',
+                    commute_streak: profile.commute_streak || 0,
                     total_rides: history.length
                 };
                 localStorage.setItem('gameProfileCache', JSON.stringify(gameProfileCache));
+                if (Array.isArray(data.normalized_history)) {
+                    localStorage.setItem('rideHistory', JSON.stringify(data.normalized_history));
+                }
             } catch (_) {}
             renderAppHome(profile, history);
         } catch (e) {
             console.warn('[app-home] getHistory failed:', e);
-            const card = document.getElementById('app-user-card');
-            const gameProfileCache = JSON.parse(localStorage.getItem('gameProfileCache') || '{}');
-            const fallbackProfile = Object.assign({}, userData, gameProfileCache);
-            const localLvl = Math.max(1, parseInt(fallbackProfile.level || 1));
-            const localXp = Math.max(0, parseInt(fallbackProfile.xp || 0));
-            const localCoins = Math.max(0, parseInt(fallbackProfile.coins || 0));
-            const localMileage = Number(fallbackProfile.mileage_rolling_km || fallbackProfile.mileage_km_365 || 0);
-            const localNextXp = getNextThreshold(localLvl);
-            const localPrevXp = THRESHOLDS[localLvl - 1] || 0;
-            const localPct = localNextXp > localPrevXp ? Math.min(100, Math.round((localXp - localPrevXp) / (localNextXp - localPrevXp) * 100)) : 100;
-            card.style.display = '';
-            document.getElementById('app-home-name').textContent =
-                fallbackProfile.full_name || fallbackProfile.username || '騎士';
-            document.getElementById('app-home-level').textContent = 'Lv.' + localLvl;
-            document.getElementById('app-home-title').textContent = getTitle(localLvl);
-            document.getElementById('app-home-xp-bar').style.width = Math.max(localPct, 1) + '%';
-            document.getElementById('app-home-xp-label').textContent = localXp.toLocaleString() + ' / ' + localNextXp.toLocaleString() + ' XP';
-            document.getElementById('app-home-xp-total').textContent = formatNum(localXp);
-            document.getElementById('app-home-rides').textContent = Number(fallbackProfile.total_rides || 0);
-            document.getElementById('app-home-coins').textContent = formatNum(localCoins);
-            document.getElementById('app-home-mileage').textContent = localMileage.toFixed(1);
-            document.getElementById('app-home-streak').textContent = fallbackProfile.commute_streak || 0;
-            if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法載入記錄</div>';
+            // Already rendered from cache, so no need for extensive fallback here
+            if (loadingEl && !loadingEl.querySelector('.app-ride-item')) {
+                loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法更新記錄</div>';
+            }
         }
         _hideSplash(splashEl);
     }

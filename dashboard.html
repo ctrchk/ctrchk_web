@@ -1205,8 +1205,24 @@
         localStorage.removeItem('user');
     }
 
+    function renderFromCache() {
+        try {
+            var user = JSON.parse(localStorage.getItem('user') || '{}');
+            var gameProfile = JSON.parse(localStorage.getItem('gameProfileCache') || '{}');
+            var history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
+
+            if (user.id || gameProfile.level) {
+                _applyUserUI(user);
+                _applyStatusSummary(user);
+                renderGameProfile(gameProfile.level, gameProfile.xp, gameProfile.coins, history.length);
+                renderStreakCard(gameProfile, gameProfile.coins || 0);
+            }
+        } catch(e) {}
+    }
+
     // ── Main init ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async function () {
+        renderFromCache();
         try {
             var user;
             try {
