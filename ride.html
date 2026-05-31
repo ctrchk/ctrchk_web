@@ -13,6 +13,7 @@
   <title>騎行中 - 城市運輸單車</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -274,55 +275,87 @@
     /* ── Level-up overlay ── */
     #levelup-overlay {
       display: none; position: fixed; inset: 0; z-index: 700;
-      background: rgba(0,0,0,0.88);
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
       align-items: center; justify-content: center; flex-direction: column;
       text-align: center; padding: 2em; overflow: hidden;
+      animation: fadeIn 0.4s ease forwards;
     }
-    #levelup-overlay.show { display: flex; animation: fadeIn 0.35s ease; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    #levelup-overlay.show { display: flex; }
+
     #levelup-inner {
-      animation: slideUp 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+      border: 2px solid #D4AF37;
+      border-radius: 24px;
+      padding: 2.5em 2em;
+      width: min(90vw, 400px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(212,175,55,0.2);
       position: relative; z-index: 1;
+      transform: scale(0.8);
+      opacity: 0;
     }
-    @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    #levelup-overlay.show #levelup-inner {
+      animation: springPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes springPop {
+      0% { transform: scale(0.8); opacity: 0; }
+      70% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .levelup-header { margin-bottom: 1.2em; }
+    .levelup-header h2 {
+      color: #D4AF37; font-size: 1.8em; margin: 0.2em 0;
+      text-transform: uppercase; letter-spacing: 2px; font-weight: 900;
+    }
+    .gold-glow {
+      font-size: 3em; color: #D4AF37;
+      filter: drop-shadow(0 0 10px rgba(212,175,55,0.6));
+      margin-bottom: 0.2em;
+    }
+
     #levelup-badge {
-      background: #BFE340; color: #1a252f;
-      font-size: 2.5em; font-weight: bold;
-      padding: 0.4em 1em; border-radius: 16px; margin-bottom: 0.5em;
+      background: linear-gradient(135deg, #D4AF37 0%, #F9E29C 100%);
+      color: #000;
+      font-size: 2.2em; font-weight: 900;
+      padding: 0.3em 0.8em; border-radius: 12px; margin-bottom: 0.4em;
       display: inline-block;
-      animation: badgePulse 0.7s 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+      box-shadow: 0 4px 15px rgba(212,175,55,0.4);
     }
-    @keyframes badgePulse {
-      0%   { transform: scale(0.7); }
-      60%  { transform: scale(1.15); }
-      100% { transform: scale(1); }
+    #levelup-title {
+      color: #D4AF37; font-size: 1.2em; font-weight: bold;
+      margin-bottom: 1.5em; text-transform: uppercase;
     }
-    #levelup-title { color: #fff; font-size: 1.4em; margin-bottom: 0.3em; }
-    #levelup-coins { color: #BFE340; font-size: 1.1em; margin-bottom: 1.5em; }
-    #levelup-overlay h2 { color: #BFE340; font-size: 2.2em; margin-bottom: 0.3em; }
-    #levelup-unlocked { color: #a8d8a0; font-size: 0.9em; margin-bottom: 1.2em; display: none; }
+
+    .levelup-stats-row {
+      display: flex; justify-content: space-around;
+      margin-bottom: 1.8em; gap: 1em;
+    }
+    .levelup-stat-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(212,175,55,0.3);
+      border-radius: 16px; padding: 1em; flex: 1;
+    }
+    .levelup-stat-val {
+      display: block; font-size: 1.6em; font-weight: bold; color: #fff;
+      margin-bottom: 0.2em;
+    }
+    .levelup-stat-lbl { font-size: 0.7em; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+
+    #levelup-unlocked {
+      color: #A8D8A0; font-size: 0.85em; margin-bottom: 1.5em;
+      background: rgba(168,216,160,0.1); padding: 0.6em; border-radius: 8px;
+    }
+
     #btn-levelup-close {
-      background: #BFE340; color: #1a252f; border: none;
-      padding: 0.8em 2em; border-radius: 10px; font-size: 1em; font-weight: bold;
-      cursor: pointer;
+      background: #D4AF37; color: #000; border: none;
+      padding: 1em 2.5em; border-radius: 50px; font-size: 1em; font-weight: bold;
+      cursor: pointer; transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 4px 15px rgba(212,175,55,0.3);
+      width: 100%;
     }
-    /* Confetti particles */
-    .confetti-piece {
-      position: absolute; width: 10px; height: 10px; border-radius: 2px;
-      animation: confettiFall linear forwards;
-      pointer-events: none; z-index: 0;
-    }
-    @keyframes confettiFall {
-      0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-    }
-    /* Stars burst around badge */
-    @keyframes starFloat0 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-80px,-70px) scale(1); opacity:0; } }
-    @keyframes starFloat1 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(80px,-70px) scale(1); opacity:0; } }
-    @keyframes starFloat2 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-90px,0px) scale(1); opacity:0; } }
-    @keyframes starFloat3 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(90px,0px) scale(1); opacity:0; } }
-    @keyframes starFloat4 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(-60px,70px) scale(1); opacity:0; } }
-    @keyframes starFloat5 { from { transform: translate(0,0) scale(0); opacity:1; } to { transform: translate(60px,70px) scale(1); opacity:0; } }
+    #btn-levelup-close:active { transform: scale(0.96); background: #b8972f; }
     /* XP count-up animation in summary */
     #summary-xp-badge {
       transition: transform 0.15s;
@@ -502,12 +535,24 @@
   <!-- Level-up overlay -->
   <div id="levelup-overlay">
     <div id="levelup-inner">
-      <h2>🎊 升級了！</h2>
-      <div id="levelup-badge">Lv.2</div>
-      <div id="levelup-title">街坊騎手</div>
-      <div id="levelup-coins">💰 +100 里程幣</div>
+      <div class="levelup-header">
+        <i class="fas fa-crown gold-glow"></i>
+        <h2>等級提升</h2>
+      </div>
+      <div id="levelup-badge">Lv.1</div>
+      <div id="levelup-title">新手騎士</div>
+      <div class="levelup-stats-row">
+        <div class="levelup-stat-box">
+          <span class="levelup-stat-val" id="levelup-xp-val">0</span>
+          <span class="levelup-stat-lbl">XP 獲得</span>
+        </div>
+        <div class="levelup-stat-box">
+          <span class="levelup-stat-val" id="levelup-coins-val">0</span>
+          <span class="levelup-stat-lbl">里程幣</span>
+        </div>
+      </div>
       <div id="levelup-unlocked"></div>
-      <button id="btn-levelup-close" onclick="closeLevelUp()">太棒了！</button>
+      <button id="btn-levelup-close" onclick="closeLevelUp()">確認</button>
     </div>
   </div>
 
@@ -1315,11 +1360,32 @@
       }
     }
 
+    function animateValue(id, start, end, duration) {
+      const obj = document.getElementById(id);
+      if (!obj) return;
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(eased * (end - start) + start);
+        obj.textContent = current.toLocaleString();
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
     function showLevelUp(newLevel, coins) {
+      const xpGained = sessionXp; // Use sessionXp as XP gained
       document.getElementById('levelup-badge').textContent = `Lv.${newLevel}`;
       document.getElementById('levelup-title').textContent = LEVEL_TITLES[newLevel] || '';
-      document.getElementById('levelup-coins').textContent =
-        coins > 0 ? `💰 +${coins} 里程幣` : '';
+
+      // Reset values to 0 before animation
+      document.getElementById('levelup-xp-val').textContent = '0';
+      document.getElementById('levelup-coins-val').textContent = '0';
 
       // Show newly unlocked routes (if any)
       const unlockedEl = document.getElementById('levelup-unlocked');
@@ -1333,41 +1399,59 @@
         unlockedEl.style.display = 'none';
       }
 
+      // 1. Physical Haptic Feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]);
+      }
+
+      // 2. Trigger CSS animation by adding class/display
       document.getElementById('levelup-overlay').classList.add('show');
-      launchConfetti();
-      launchStars();
-    }
 
-    function launchConfetti() {
-      const overlay = document.getElementById('levelup-overlay');
-      const colors = ['#BFE340','#04D93C','#FFD700','#FF6B6B','#4FC3F7','#CE93D8','#fff'];
-      for (let i = 0; i < 60; i++) {
-        const el = document.createElement('div');
-        el.className = 'confetti-piece';
-        el.style.left = Math.random() * 100 + 'vw';
-        el.style.top = '-12px';
-        el.style.background = colors[Math.floor(Math.random() * colors.length)];
-        el.style.width = (6 + Math.random() * 8) + 'px';
-        el.style.height = (6 + Math.random() * 8) + 'px';
-        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-        el.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
-        el.style.animationDelay = (Math.random() * 0.6) + 's';
-        overlay.appendChild(el);
-        el.addEventListener('animationend', () => el.remove());
-      }
-    }
+      // 3. Visual Explosion (Confetti)
+      if (typeof confetti === 'function') {
+        const duration = 3000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
 
-    function launchStars() {
-      const overlay = document.getElementById('levelup-overlay');
-      const emojis = ['⭐','✨','💫','🌟','⭐','✨'];
-      for (let i = 0; i < emojis.length; i++) {
-        const s = document.createElement('span');
-        s.style.cssText = `position:absolute;font-size:1.6em;pointer-events:none;z-index:2;` +
-          `top:50%;left:50%;animation:starFloat${i} 1s ${0.3 + i * 0.06}s cubic-bezier(0.34,1.56,0.64,1) both;`;
-        s.textContent = emojis[i];
-        overlay.appendChild(s);
-        s.addEventListener('animationend', () => s.remove());
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+        const interval = setInterval(function() {
+          const timeLeft = animationEnd - Date.now();
+          if (timeLeft <= 0) return clearInterval(interval);
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti(Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+            colors: ['#D4AF37', '#F9E29C', '#ffffff']
+          }));
+          confetti(Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+            colors: ['#D4AF37', '#F9E29C', '#ffffff']
+          }));
+        }, 250);
+
+        // Instant burst from corners
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { x: 0, y: 1 },
+          colors: ['#D4AF37', '#F9E29C']
+        });
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { x: 1, y: 1 },
+          colors: ['#D4AF37', '#F9E29C']
+        });
       }
+
+      // 4. Number Counter (Odometer Effect)
+      setTimeout(() => {
+        animateValue('levelup-xp-val', 0, xpGained, 1500);
+        animateValue('levelup-coins-val', 0, coins, 1500);
+      }, 500);
     }
 
     window.closeLevelUp = function () {
