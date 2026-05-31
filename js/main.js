@@ -966,6 +966,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // 呼叫載入共用元件的函式
     loadSharedComponents(); // 這裡會觸發 updateNavUI
 
+    // Global data caching (Routes, User Profile)
+    async function initGlobalData() {
+        const CACHE_TTL = 3600000; // 1 hour
+        const now = Date.now();
+
+        // 1. Routes cache
+        const cachedRoutes = localStorage.getItem('CTRCHK_ROUTES_CACHE');
+        const routesTimestamp = localStorage.getItem('CTRCHK_ROUTES_TS');
+
+        if (!cachedRoutes || !routesTimestamp || (now - routesTimestamp > CACHE_TTL)) {
+            try {
+                const res = await fetch('/routes.json');
+                const data = await res.json();
+                localStorage.setItem('CTRCHK_ROUTES_CACHE', JSON.stringify(data));
+                localStorage.setItem('CTRCHK_ROUTES_TS', now.toString());
+                console.log('[Cache] Routes updated');
+            } catch (e) {
+                console.warn('[Cache] Failed to update routes:', e);
+            }
+        }
+
+        // 2. Dynamic Route Overrides
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            const cachedOverrides = localStorage.getItem('CTRCHK_OVERRIDES_CACHE');
+            const overridesTimestamp = localStorage.getItem('CTRCHK_OVERRIDES_TS');
+
+            if (!cachedOverrides || !overridesTimestamp || (now - overridesTimestamp > CACHE_TTL)) {
+                try {
+                    const res = await fetch('/api/user?action=route-data', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        localStorage.setItem('CTRCHK_OVERRIDES_CACHE', JSON.stringify(data));
+                        localStorage.setItem('CTRCHK_OVERRIDES_TS', now.toString());
+                        console.log('[Cache] Route overrides updated');
+                    }
+                } catch (e) {
+                    console.warn('[Cache] Failed to update overrides:', e);
+                }
+            }
+        }
+    }
+
+    initGlobalData();
+
     // Auto-sync offline ride history to server
     (async function syncRideHistory() {
         const token = localStorage.getItem('accessToken');

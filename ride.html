@@ -405,6 +405,7 @@
     </a>
     <span id="ride-route-label">載入中...</span>
     <span id="ride-timer-display">00:00</span>
+    <button id="btn-free-mode" style="background: #BFE340; color: #1a252f; border: none; border-radius: 20px; padding: 4px 12px; font-size: 0.8em; font-weight: bold; cursor: pointer; margin-left: 10px;">自由模式</button>
   </div>
 
   <!-- Next stop card -->
@@ -571,6 +572,7 @@
     let ROUTE_COMPLETION_COINS = 0; // per-route completion coins (e.g. 7E/7W = 5)
 
     let routeData = null;
+    let allRoutes = [];
     let routeStops = [];
     let map = null;
     let userMarker = null;
@@ -578,8 +580,10 @@
     let watchId = null;
     let rideStarted = false;
     let goToStartPhase = true;  // true = waiting at start; false = ride in progress
+    let isFreeMode = false;
     let startTime = null;
     let timerInterval = null;
+    let wakeLock = null;
     let reachedStops = new Set();
     let totalDistM = 0;
     let lastLat = null, lastLon = null;
@@ -882,6 +886,43 @@
       );
     }
 
+    function startFreeModeSequence() {
+        const overlay = document.createElement('div');
+        overlay.id = 'countdown-overlay';
+        overlay.style.cssText = 'position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; color:#BFE340; font-size:120px; font-weight:bold;';
+        document.body.appendChild(overlay);
+
+        let count = 3;
+        overlay.textContent = count;
+
+        const timer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                overlay.textContent = count;
+            } else if (count === 0) {
+                overlay.textContent = 'GO!';
+            } else {
+                clearInterval(timer);
+                document.body.removeChild(overlay);
+                startFreeMode();
+            }
+        }, 1000);
+    }
+
+    function startFreeMode() {
+        isFreeMode = true;
+        goToStartPhase = false;
+        document.getElementById('ride-route-label').textContent = '自由騎行模式';
+        document.getElementById('btn-free-mode').style.display = 'none';
+
+        // Hide route specific UI
+        const gtsBanner = document.getElementById('go-to-start-banner');
+        if (gtsBanner) gtsBanner.style.display = 'none';
+        document.getElementById('next-stop-card').style.display = 'none';
+
+        beginRide();
+    }
+
     function onPosition(pos) {
       const { latitude: lat, longitude: lon, accuracy, speed } = pos.coords;
 
@@ -963,6 +1004,26 @@
       // Distance display
       document.getElementById('stat-dist').textContent = formatDist(totalDistM);
 
+      if (isFreeMode) {
+          // Free mode: Check proximity to ALL stops of ALL routes to award XP
+          allRoutes.forEach(r => {
+              (r.stops || []).forEach(s => {
+                  if (reachedStops.has(s.id || s.code || (s.name + s.lat))) return;
+                  const dist = haversineM(lat, lon, s.lat, s.lon);
+                  if (dist <= STOP_DETECTION_RADIUS_M) {
+                      reachedStops.add(s.id || s.code || (s.name + s.lat));
+                      sessionXp += 5; // Free mode: 5 XP per stop
+                      updateSessionXpDisplay();
+                      showXpToast(`🚏 ${s.name} +5 XP`);
+                      if (window.CTRCHK_PWA) {
+                        window.CTRCHK_PWA.sendLocalNotification('🚏 到達站點', s.name, 'ctrc-stop-free');
+                      }
+                  }
+              });
+          });
+          return;
+      }
+
       // Check stop proximity (sequential: only check the NEXT unreached stop)
       const next = routeStops.find(s => !reachedStops.has(s.order));
       if (next) {
@@ -984,6 +1045,27 @@
       }
     }
 
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('[Ride] Screen Wake Lock is active');
+                wakeLock.addEventListener('release', () => {
+                    console.log('[Ride] Screen Wake Lock was released');
+                });
+            }
+        } catch (err) {
+            console.error(`${err.name}, ${err.message}`);
+        }
+    }
+
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release();
+            wakeLock = null;
+        }
+    }
+
     // Called when user enters the start zone (or skips)
     function beginRide() {
       if (rideStarted) return;
@@ -991,19 +1073,22 @@
       rideStarted = true;
       startTime = Date.now();
       startTimer();
+      requestWakeLock();
 
       // Hide go-to-start banner; show ride HUD
       const gtsBanner = document.getElementById('go-to-start-banner');
       if (gtsBanner) gtsBanner.style.display = 'none';
       showRideHUD(true);
-      document.getElementById('next-stop-card').style.display = '';
+      if (!isFreeMode) document.getElementById('next-stop-card').style.display = '';
       document.getElementById('btn-end-ride').disabled = false;
 
       // Mark first stop reached if user is at start
-      const firstStop = routeStops[0];
-      if (firstStop && lastLat !== null) {
-        const d = haversineM(lastLat, lastLon, firstStop.lat, firstStop.lon);
-        if (d <= STOP_DETECTION_RADIUS_M) markStopReached(firstStop);
+      if (!isFreeMode) {
+          const firstStop = routeStops[0];
+          if (firstStop && lastLat !== null) {
+            const d = haversineM(lastLat, lastLon, firstStop.lat, firstStop.lon);
+            if (d <= STOP_DETECTION_RADIUS_M) markStopReached(firstStop);
+          }
       }
     }
 
@@ -1044,6 +1129,7 @@
         watchId = null;
       }
       if (timerInterval) clearInterval(timerInterval);
+      releaseWakeLock();
 
       const endTime = Date.now();
       const durationMs = rideStarted ? endTime - startTime : 0;
@@ -1051,20 +1137,63 @@
       const distKm = parseFloat((totalDistM / 1000).toFixed(2));
       const avgSpeed = durationMins > 0 ? parseFloat((distKm / (durationMins / 60)).toFixed(1)) : 0;
 
-      // Route completion bonus XP: awarded when all stops are reached
-      const allStopsReached = routeStops.length > 0 &&
-        routeStops.every(s => reachedStops.has(s.order));
-      if (allStopsReached) {
-        sessionXp += ROUTE_COMPLETION_XP;
-        updateSessionXpDisplay();
-      }
+      let allStopsReached = false;
+      let bonusCoins = 0;
+      let finalRouteId = routeId;
+      let finalRouteName = routeData ? routeData.alias : routeId;
+      let completionCoins = 0;
+      let fastFinishCoins = 0;
 
-      // Fast-finish bonus coins (per-route time limit)
-      const fastFinishCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
-        ? FAST_FINISH_BONUS_COINS : 0;
-      // Per-route completion coins (e.g. 7E/7W = 5 on finishing all stops)
-      const completionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
-      const bonusCoins = fastFinishCoins + completionCoins;
+      if (isFreeMode) {
+          // Free mode logic: check similarity to existing routes
+          let bestMatch = null;
+          let maxSimilarity = 0;
+
+          allRoutes.forEach(r => {
+              if (!r.stops || r.stops.length < 3) return;
+              let matchCount = 0;
+              r.stops.forEach(s => {
+                  if (reachedStops.has(s.id || s.code || (s.name + s.lat))) matchCount++;
+              });
+              const similarity = matchCount / r.stops.length;
+              if (similarity > maxSimilarity) {
+                  maxSimilarity = similarity;
+                  bestMatch = r;
+              }
+          });
+
+          if (maxSimilarity >= 0.5) {
+              // High similarity match
+              finalRouteId = bestMatch.id;
+              finalRouteName = `(匹配) ${bestMatch.alias}`;
+              const proportionalBonus = Math.round(200 * maxSimilarity); // Base completion 200
+              sessionXp += proportionalBonus;
+              completionCoins = Math.round(10 * maxSimilarity);
+              bonusCoins = completionCoins;
+              allStopsReached = (maxSimilarity >= 0.95);
+          } else {
+              // No good match: reward by mileage
+              finalRouteId = 'FREE_RIDE';
+              finalRouteName = '自由騎行';
+              // xp already awarded per stop
+              bonusCoins = 0;
+          }
+      } else {
+          // Route completion bonus XP: awarded when all stops are reached
+          allStopsReached = routeStops.length > 0 &&
+            routeStops.every(s => reachedStops.has(s.order));
+          if (allStopsReached) {
+            sessionXp += ROUTE_COMPLETION_XP;
+            updateSessionXpDisplay();
+          }
+
+          // Fast-finish bonus coins (per-route time limit)
+          fastFinishCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
+            ? FAST_FINISH_BONUS_COINS : 0;
+          // Per-route completion coins (e.g. 7E/7W = 5 on finishing all stops)
+          completionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
+          bonusCoins = fastFinishCoins + completionCoins;
+      }
 
       // 過短行程（少於2個車站且少於0.5公里且少於3分鐘）不計算進歷史
       // 放寬條件：GPS精度差時距離可能不準，加入時間因素避免誤判
@@ -1076,8 +1205,8 @@
       if (!rideTooShort && token) {
         try {
           const body = {
-            route_id: routeId,
-            route_name: routeData ? routeData.alias : routeId,
+            route_id: finalRouteId,
+            route_name: finalRouteName,
             ride_date: new Date().toISOString().slice(0, 10),
             start_time: new Date(startTime).toISOString(),
             end_time: new Date(endTime).toISOString(),
@@ -1087,13 +1216,13 @@
             stops_reached: [...reachedStops],
             stops_count: reachedStops.size,
             all_stops: allStopsReached,
-            districts_count: districts.size,
+            districts_count: 1, // fallback
             source: 'pwa',
-            ride_mode: getRideModeFromRoute(routeData),
+            ride_mode: isFreeMode ? 'free' : getRideModeFromRoute(routeData),
             xp_earned_override: sessionXp,
             bonus_coins: bonusCoins,
             miles_reward_override: distKm * 0.8,
-            total_stops: routeStops.length,
+            total_stops: isFreeMode ? reachedStops.size : routeStops.length,
           };
           const res = await fetch('/api/getHistory', {
             method: 'POST',
@@ -1139,10 +1268,9 @@
       if (!rideTooShort) {
       try {
         const history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
-        const reachedList = routeStops.filter(s => reachedStops.has(s.order));
-        const districts = new Set(reachedList.map(s => s.district).filter(Boolean));
+        const districtsCount = 1; // fallback
         history.push({
-          route_id: routeId,
+          route_id: finalRouteId,
           date: new Date(startTime).toISOString().slice(0, 10),
           start_time: new Date(startTime).toISOString(),
           duration_minutes: durationMins,
@@ -1150,8 +1278,8 @@
           stops_count: reachedStops.size,
           stops_reached: [...reachedStops],
           all_stops: allStopsReached,
-          districts_count: districts.size,
-          coords: routeStops.map(s => [s.lon, s.lat]), // simplified for now
+          districts_count: districtsCount,
+          coords: [], // simplified for now
         });
         // Keep at most 200 recent rides
         if (history.length > 200) history.splice(0, history.length - 200); // keep last 200
@@ -1300,7 +1428,7 @@
       document.getElementById('s-dist').textContent =
         distKm > 0 ? `${distKm} km` : '--';
       document.getElementById('s-stops').textContent =
-        `${reachedStops.size} / ${routeStops.length}`;
+        `${reachedStops.size} / ${isFreeMode ? reachedStops.size : routeStops.length}`;
       document.getElementById('s-speed').textContent =
         avgSpeed > 0 ? `${avgSpeed} km/h` : '--';
 
@@ -1390,15 +1518,35 @@
         // (they can still navigate, just no XP)
       }
 
-      // Load route data
+      // Load route data (with caching)
       try {
-        const res = await fetch('/routes.json');
-        const data = await res.json();
-        routeData = (data.routes || []).find(r => r.id === routeId);
+        let data = null;
+        const cachedRoutes = localStorage.getItem('CTRCHK_ROUTES_CACHE');
+        if (cachedRoutes) {
+            data = JSON.parse(cachedRoutes);
+        } else {
+            const res = await fetch('/routes.json');
+            data = await res.json();
+            localStorage.setItem('CTRCHK_ROUTES_CACHE', JSON.stringify(data));
+        }
+
+        allRoutes = data.routes || [];
+        routeData = allRoutes.find(r => r.id === routeId);
+
         try {
-          const overrideResp = await fetch('/api/user?action=route-data');
-          if (overrideResp.ok) {
-            const overrideData = await overrideResp.json();
+          let overrideData = null;
+          const cachedOverrides = localStorage.getItem('CTRCHK_OVERRIDES_CACHE');
+          if (cachedOverrides) {
+              overrideData = JSON.parse(cachedOverrides);
+          } else {
+              const overrideResp = await fetch('/api/user?action=route-data');
+              if (overrideResp.ok) {
+                  overrideData = await overrideResp.json();
+                  localStorage.setItem('CTRCHK_OVERRIDES_CACHE', JSON.stringify(overrideData));
+              }
+          }
+
+          if (overrideData) {
             const o = (overrideData.routes || []).find(r => r.route_id === routeId);
             if (o && routeData) {
               routeData = Object.assign({}, routeData, {
@@ -1519,13 +1667,41 @@
         await endRide();
       });
 
+      // Free Mode button
+      const freeModeBtn = document.getElementById('btn-free-mode');
+      if (freeModeBtn) {
+          freeModeBtn.addEventListener('click', () => {
+              if (rideStarted) return;
+              startFreeModeSequence();
+          });
+      }
+
       // Hide loading, start GPS
       document.getElementById('ride-loading').classList.add('hidden');
       requestNotifIfNeeded();
-      startGPS();
+
+      const isApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.body.classList.contains('is-pwa');
+      if (isApp) {
+          startGPS();
+      } else {
+          document.getElementById('gps-status-text').textContent = '點擊以開啟 GPS 定位';
+          document.getElementById('gps-status-text').style.cursor = 'pointer';
+          document.getElementById('gps-status-text').onclick = () => {
+              startGPS();
+              document.getElementById('gps-status-text').style.cursor = 'default';
+              document.getElementById('gps-status-text').onclick = null;
+          };
+      }
     }
 
     document.addEventListener('DOMContentLoaded', init);
+
+    // Handle visibility change to re-acquire wake lock
+    document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible' && rideStarted && !document.getElementById('ride-summary').classList.contains('show')) {
+            await requestWakeLock();
+        }
+    });
 
     // Prevent accidental back navigation
     window.addEventListener('popstate', (e) => {

@@ -495,6 +495,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         <img src="/images/icon-192.png" alt="城市運輸單車" class="splash-logo">
         <div class="splash-title">城市運輸單車</div>
         <div class="splash-spinner"></div>
+        <button id="btn-skip-splash" style="margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6); padding: 6px 16px; border-radius: 20px; font-size: 0.8em; cursor: pointer;">跳過載入</button>
     </div>
     <!-- ════════ WEB-ONLY header ════════ -->
     <div id="header-placeholder" class="web-only"></div>
@@ -636,6 +637,10 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                 <div class="app-stat-pill">
                     <span class="val" id="app-home-mileage">0.0</span>
                     <span class="lbl">里程</span>
+                </div>
+                <div class="app-stat-pill">
+                    <span class="val" id="app-home-streak">0</span>
+                    <span class="lbl">連戰</span>
                 </div>
             </div>
         </div>
@@ -834,6 +839,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         document.getElementById('app-home-rides').textContent = history.length;
         document.getElementById('app-home-coins').textContent = formatNum(coins);
         document.getElementById('app-home-mileage').textContent = mileage.toFixed(1);
+        document.getElementById('app-home-streak').textContent = profile.commute_streak || 0;
 
         // Avatar
         const avatarUrl = userData.avatar_url;
@@ -909,6 +915,15 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         // sessionStorage is cleared when the app is closed/killed and reopened.
         const splashEl = document.getElementById('app-splash');
         const isColdStart = !sessionStorage.getItem('appSplashShown');
+
+        // Skip splash logic
+        const skipBtn = document.getElementById('btn-skip-splash');
+        if (skipBtn) {
+            skipBtn.onclick = () => {
+                _hideSplash(splashEl);
+            };
+        }
+
         if (!silent && isColdStart && splashEl) {
             splashEl.style.display = 'flex';
             sessionStorage.setItem('appSplashShown', '1');
@@ -997,6 +1012,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             document.getElementById('app-home-rides').textContent = Number(fallbackProfile.total_rides || 0);
             document.getElementById('app-home-coins').textContent = formatNum(localCoins);
             document.getElementById('app-home-mileage').textContent = localMileage.toFixed(1);
+            document.getElementById('app-home-streak').textContent = fallbackProfile.commute_streak || 0;
             if (loadingEl) loadingEl.innerHTML = '<div class="app-no-rides"><i class="fas fa-exclamation-circle"></i>無法載入記錄</div>';
         }
         _hideSplash(splashEl);

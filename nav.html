@@ -588,6 +588,7 @@
     let userMarker = null;
     let watchId = null;
     let headingUp = false;         // true = rotate map to face travel direction
+    let isFollowing = true;        // true = auto-pan to user location
     let lastLat = null, lastLon = null;
     let lastBearing = 0;
     let lastSpeedKmh = 0;
@@ -622,6 +623,7 @@
     let navTrailCoords = [];
     let navSummaryMap = null;
     let finishInProgress = false;
+    let wakeLock = null;
 
     // ── Helpers ──────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -1219,8 +1221,29 @@
         add3DBuildingsLayer();
         loadTkoGeoJson();
         map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 0 });
+
+        map.on('dragstart', () => {
+            if (isFollowing) {
+                isFollowing = false;
+                document.getElementById('btn-heading-up').classList.remove('active');
+                console.log('[Nav] Auto-follow disabled due to user interaction');
+            }
+        });
+
         document.getElementById('nav-loading').classList.add('hidden');
-        startGPS();
+
+        const isApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.body.classList.contains('is-pwa');
+        if (isApp) {
+            startGPS();
+        } else {
+            setGpsDot('searching', '點擊 GPS 以開啟定位');
+            document.getElementById('gps-dot').style.cursor = 'pointer';
+            document.getElementById('gps-dot').onclick = () => {
+                startGPS();
+                document.getElementById('gps-dot').style.cursor = 'default';
+                document.getElementById('gps-dot').onclick = null;
+            };
+        }
       });
 
       function add3DBuildingsLayer() {
@@ -1391,8 +1414,8 @@
     async function loadTkoGeoJson() {
       const sources = [
         '/data/tko_tracks.json',
-        '/data/CYCFACI.gdb_CYCTRACK_converted.geojson',
-        '/data/CYCFACI.gdb_CYCRAMP_converted.geojson',
+        '/CYCFACI.gdb_CYCTRACK_converted.geojson',
+        '/CYCFACI.gdb_CYCRAMP_converted.geojson',
       ];
       try {
         // Fetch all sources in parallel
@@ -1445,9 +1468,12 @@
       try {
         // Check user permission using standard permission system
         const hasParkingPerm = window.hasPermission && window.hasPermission('map_cycparkspace');
-        if (!hasParkingPerm) return;
+        if (!hasParkingPerm) {
+            console.log('[Nav] User does not have parking space permission');
+            return;
+        }
 
-        const resp = await fetch('/data/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
+        const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
         if (!resp.ok) return;
         const data = await resp.json();
         if (!data || !Array.isArray(data.features)) return;
@@ -1652,7 +1678,7 @@
     }
 
     function updateCamera(lngLat, bearing) {
-      if (!map) return;
+      if (!map || !isFollowing) return;
       const nextBearing = headingUp ? smoothBearing(bearing) : 0;
 
       // Dynamically adjust pitch based on speed (simulated 3D feel)
@@ -2159,11 +2185,33 @@
       activeRouteCoords = null;
     }
 
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('[Nav] Screen Wake Lock is active');
+                wakeLock.addEventListener('release', () => {
+                    console.log('[Nav] Screen Wake Lock was released');
+                });
+            }
+        } catch (err) {
+            console.error(`${err.name}, ${err.message}`);
+        }
+    }
+
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release();
+            wakeLock = null;
+        }
+    }
+
     // ── Active navigation ─────────────────────────────────────────────────
     function startNavigation() {
       if (!plannedRoute || !plannedSteps.length) return;
       isNavigating = true;
       finishInProgress = false;
+      requestWakeLock();
       navStartTime = Date.now();
       navDistTravelledM = 0;
       currentStepIdx = 0;
@@ -2453,6 +2501,7 @@
       if (finishInProgress) return;
       finishInProgress = true;
       isNavigating = false;
+      releaseWakeLock();
       clearGpsWatch();
       stopRouteFx();
       document.getElementById('turn-banner').classList.remove('show');
@@ -2487,6 +2536,7 @@
     function endNavigation() {
       isNavigating = false;
       finishInProgress = false;
+      releaseWakeLock();
       document.getElementById('turn-banner').classList.remove('show');
       document.getElementById('nav-stats-bar').classList.remove('show');
       document.getElementById('btn-end-nav').style.display = 'none';
@@ -2523,11 +2573,25 @@
       document.getElementById('planner-panel').classList.remove('collapsed');
     }
 
-    // ── Heading-up toggle ─────────────────────────────────────────────────
+    // ── Heading-up / Follow toggle ─────────────────────────────────────────────────
     document.getElementById('btn-heading-up').addEventListener('click', () => {
-      headingUp = !headingUp;
-      document.getElementById('btn-heading-up').classList.toggle('active', headingUp);
-      if (!headingUp) map.easeTo({ bearing: 0, pitch: DEFAULT_NAV_PITCH, zoom: DEFAULT_NAV_ZOOM, duration: 500 });
+      if (!isFollowing) {
+          // Re-enable follow mode first
+          isFollowing = true;
+          headingUp = true; // start with heading up by default when re-enabling
+      } else {
+          headingUp = !headingUp;
+      }
+
+      document.getElementById('btn-heading-up').classList.toggle('active', headingUp && isFollowing);
+
+      if (isFollowing && lastSnappedLngLat) {
+          updateCamera(lastSnappedLngLat, lastBearing);
+      }
+
+      if (!headingUp && isFollowing) {
+          map.easeTo({ bearing: 0, pitch: DEFAULT_NAV_PITCH, zoom: DEFAULT_NAV_ZOOM, duration: 500 });
+      }
     });
 
     function cleanupNavRuntime() {
@@ -2600,6 +2664,13 @@
     window.addEventListener('pagehide', cleanupNavRuntime);
     window.addEventListener('beforeunload', cleanupNavRuntime);
 
+    // Handle visibility change to re-acquire wake lock
+    document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible' && isNavigating) {
+            await requestWakeLock();
+        }
+    });
+
     // Panel handle toggle
     document.getElementById('panel-handle').addEventListener('click', () => {
       const panel = document.getElementById('planner-panel');
@@ -2611,13 +2682,24 @@
         if (!userRaw) return;
         const user = JSON.parse(userRaw);
         const rank = String(user.permission_rank || user.mileage_rank || '').toLowerCase();
+
+        const wpBtn = document.getElementById('btn-add-waypoint');
+        document.getElementById('add-waypoint-row').style.display = 'flex';
+
         if (rank === 'silver' || rank === 'gold') {
-            document.getElementById('add-waypoint-row').style.display = 'flex';
+            wpBtn.innerHTML = '<i class="fas fa-plus"></i> 新增停靠點';
+        } else {
+            wpBtn.innerHTML = '<i class="fas fa-lock"></i> 新增停靠點（銀卡/金卡解鎖）';
+            wpBtn.style.opacity = '0.6';
         }
 
-        const maxWps = rank === 'gold' ? 8 : 3;
+        const maxWps = rank === 'gold' ? 8 : (rank === 'silver' ? 3 : 0);
 
-        document.getElementById('btn-add-waypoint').onclick = () => {
+        wpBtn.onclick = () => {
+            if (rank !== 'silver' && rank !== 'gold') {
+                alert('新增停靠點為銀卡及金卡會員專屬功能。請完善個人資料以升級！');
+                return;
+            }
             if (waypointsCount >= maxWps) {
                 alert(`你的等級最多支援 ${maxWps} 個停靠點。`);
                 return;
