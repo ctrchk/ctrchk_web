@@ -472,7 +472,10 @@
                     <div class="conv-header">
                         <button class="btn-panel-toggle" id="btn-panel-toggle" onclick="toggleConvPanel()" title="對話列表"><i class="fas fa-bars"></i></button>
                         <h3><i class="fas fa-comments"></i> 聊天</h3>
-                        <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i> 新對話</button>
+                        <div style="display:flex; gap:4px;">
+                            <button class="btn-new-chat" onclick="openFriendModal()" title="好友列表"><i class="fas fa-user-friends"></i></button>
+                            <button class="btn-new-chat" onclick="openNewChatModal()"><i class="fas fa-plus"></i></button>
+                        </div>
                         <button class="btn-new-chat" id="support-entry-btn" style="background:#6dba65;" onclick="startSupportThread()">
                             <i class="fas fa-headset"></i> 客服
                         </button>
@@ -523,6 +526,22 @@
                 <div style="color:#5a8a5a;font-size:0.85em;text-align:center;">輸入名稱搜尋用戶</div>
             </div>
             <button class="modal-close" onclick="closeNewChatModal()"><i class="fas fa-times"></i> 關閉</button>
+        </div>
+    </div>
+
+    <!-- 好友 Modal -->
+    <div class="modal-overlay" id="friend-modal">
+        <div class="modal-box">
+            <h4><i class="fas fa-user-friends"></i> 好友與請求</h4>
+            <div id="friend-requests-section" style="margin-bottom: 1em; border-bottom: 1px solid #2d4d2d; padding-bottom: 0.5em;">
+                <div style="font-size: 0.8em; color: #a8d8a0; margin-bottom: 0.4em;">待處理請求</div>
+                <div id="friend-requests-list"></div>
+            </div>
+            <div id="friends-section" style="flex: 1; overflow-y: auto;">
+                <div style="font-size: 0.8em; color: #a8d8a0; margin-bottom: 0.4em;">我的好友</div>
+                <div id="friends-list"></div>
+            </div>
+            <button class="modal-close" onclick="closeFriendModal()"><i class="fas fa-times"></i> 關閉</button>
         </div>
     </div>
 
@@ -1256,8 +1275,107 @@
 
         window.startChatWith = function(peerId, peerName, peerAvatar) {
             closeNewChatModal();
+            closeFriendModal();
             openConversation(peerId, peerName, peerAvatar);
         };
+
+        // ── Friend System ──
+        window.openFriendModal = function() {
+            document.getElementById('friend-modal').classList.add('active');
+            loadFriendsData();
+        };
+        window.closeFriendModal = function() {
+            document.getElementById('friend-modal').classList.remove('active');
+        };
+
+        async function loadFriendsData() {
+            const reqsList = document.getElementById('friend-requests-list');
+            const friendsList = document.getElementById('friends-list');
+            reqsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.6;">載入中...</div>';
+            friendsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.6;">載入中...</div>';
+
+            try {
+                const [friends, requests] = await Promise.all([
+                    apiGet(`/api/user?action=friends&user_id=${ME.id}`),
+                    apiGet(`/api/user?action=friend_requests&user_id=${ME.id}`)
+                ]);
+
+                // Render requests
+                if (requests && requests.length) {
+                    reqsList.innerHTML = requests.map(r => `
+                        <div class="modal-user-item" style="justify-content: space-between;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div class="modal-user-avatar">${avatarHtml(r.avatar_url, 32)}</div>
+                                <span class="modal-user-name">${escHtml(r.username || r.full_name)}</span>
+                            </div>
+                            <button class="btn-new-chat" style="padding: 2px 8px;" onclick="acceptFriend(${r.id})">接受</button>
+                        </div>
+                    `).join('');
+                } else {
+                    reqsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.5;padding:0.5em;">暫無請求</div>';
+                }
+
+                // Render friends
+                if (friends && friends.length) {
+                    friendsList.innerHTML = friends.map(f => `
+                        <div class="modal-user-item" style="flex-direction:column; align-items:flex-start; padding: 10px; border-bottom: 1px solid #1a2d1a;">
+                            <div style="display:flex; align-items:center; gap:8px; width:100%;" onclick="startChatWith(${f.id}, ${JSON.stringify(f.username || f.full_name).replace(/"/g, '&quot;')}, ${JSON.stringify(f.avatar_url || '').replace(/"/g, '&quot;')})">
+                                <div class="modal-user-avatar">${avatarHtml(f.avatar_url, 36)}</div>
+                                <div style="flex:1;">
+                                    <div class="modal-user-name">${escHtml(f.username || f.full_name)}</div>
+                                    <div style="font-size:0.7em; color:#a8d8a0;">Lv.${f.level} ${f.mileage_rank}｜${(f.mileage_km_365 || 0).toFixed(1)} km</div>
+                                </div>
+                                <i class="fas fa-comment-alt" style="opacity:0.6;"></i>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    friendsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.5;padding:1em;">暫無好友</div>';
+                }
+
+            } catch (e) {
+                console.error('Load friends error:', e);
+            }
+        }
+
+        window.acceptFriend = async function(friendId) {
+            try {
+                await apiPost('/api/user', { action: 'accept_friend', user_id: ME.id, friend_id: friendId });
+                loadFriendsData();
+                loadConversations();
+            } catch (e) {
+                alert('接受好友失敗');
+            }
+        };
+
+        window.addFriend = async function(friendId) {
+            try {
+                await apiPost('/api/user', { action: 'add_friend', user_id: ME.id, friend_id: friendId });
+                alert('好友請求已發送');
+            } catch (e) {
+                alert('發送請求失敗: ' + e.message);
+            }
+        };
+
+        // Update search results to include "Add Friend" button
+        function renderUserResults(users) {
+            const el = document.getElementById('user-search-results');
+            if (!users || !users.length) {
+                el.innerHTML = '<div style="color:#5a8a5a;font-size:0.85em;text-align:center;">未找到用戶</div>';
+                return;
+            }
+            el.innerHTML = users.map(u => `
+                <div class="modal-user-item" style="justify-content: space-between;">
+                    <div style="display:flex; align-items:center; gap:8px;" onclick="startChatWith(${u.id}, ${JSON.stringify(u.username || u.full_name || '用戶').replace(/"/g, '&quot;')}, ${JSON.stringify(u.avatar_url || '').replace(/"/g, '&quot;')})">
+                        <div class="modal-user-avatar">${avatarHtml(u.avatar_url, 36)}</div>
+                        <span class="modal-user-name">${escHtml(u.username || u.full_name || '用戶')}</span>
+                    </div>
+                    <button class="btn-new-chat" style="padding: 2px 8px; background: transparent; border: 1px solid #6dba65; color: #6dba65;" onclick="addFriend(${u.id})">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
         window.startChatByUsername = function() {
             const input = document.getElementById('user-search-input');
             const target = (input?.value || '').trim();

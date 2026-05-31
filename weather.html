@@ -74,13 +74,49 @@
                 : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
         let userPos = null;
         let localCurrent = null;
-        try {
-            userPos = await getUserPosition();
-            document.getElementById('wx-location').textContent = `${userPos.coords.latitude.toFixed(5)}, ${userPos.coords.longitude.toFixed(5)}`;
-            localCurrent = await fetchOpenMeteoCurrent(userPos.coords.latitude, userPos.coords.longitude);
-        } catch (_) {
-            document.getElementById('wx-location').textContent = '未能取得定位（已改用香港整體天氣）';
+
+        const isApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.body.classList.contains('is-pwa');
+
+        if (isApp) {
+            try {
+                userPos = await getUserPosition();
+                document.getElementById('wx-location').textContent = `${userPos.coords.latitude.toFixed(5)}, ${userPos.coords.longitude.toFixed(5)}`;
+                localCurrent = await fetchOpenMeteoCurrent(userPos.coords.latitude, userPos.coords.longitude);
+            } catch (_) {
+                document.getElementById('wx-location').textContent = '未能取得定位（已改用香港整體天氣）';
+            }
+        } else {
+            document.getElementById('wx-location').textContent = '香港（預設）';
+            // Provide a way for web users to manually get location if they want
+            const locEl = document.getElementById('wx-location');
+            locEl.style.cursor = 'pointer';
+            locEl.title = '點擊以獲取精確位置天氣';
+            locEl.innerHTML = '香港 (點擊獲取定位) <i class="fas fa-location-arrow" style="font-size:0.8em; margin-left:4px; opacity:0.6;"></i>';
+            locEl.onclick = async () => {
+                locEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
+                try {
+                    userPos = await getUserPosition();
+                    locEl.textContent = `${userPos.coords.latitude.toFixed(5)}, ${userPos.coords.longitude.toFixed(5)}`;
+                    localCurrent = await fetchOpenMeteoCurrent(userPos.coords.latitude, userPos.coords.longitude);
+                    // Re-render with new data
+                    const [rhrResult, warnResult] = await Promise.allSettled([
+                        fetchWeatherApi('rhrread'),
+                        fetchWeatherApi('warnsum')
+                    ]);
+                    if (rhrResult.status === 'fulfilled' && rhrResult.value.ok) {
+                        const rhrData = await rhrResult.value.json();
+                        let warnData = {};
+                        if (warnResult.status === 'fulfilled' && warnResult.value.ok) {
+                            warnData = await warnResult.value.json();
+                        }
+                        renderWeather(rhrData, warnData, localCurrent);
+                    }
+                } catch (e) {
+                    locEl.textContent = '定位失敗';
+                }
+            };
         }
+
         try {
             const [rhrResult, warnResult] = await Promise.allSettled([
                 fetchWeatherApi('rhrread'),

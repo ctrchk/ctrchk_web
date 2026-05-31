@@ -791,7 +791,9 @@
         if (!isStandaloneAppMode()) return;
         const ctx = getRankThemeContext();
         const rank = String(ctx.rank || '').toLowerCase();
-        if (rank === 'gold') {
+        const goldEnabled = localStorage.getItem('goldThemeDisabled') !== '1';
+
+        if (rank === 'gold' && goldEnabled) {
             setAppTheme('dark');
             const themeToggle = document.getElementById('light-theme-toggle');
             if (themeToggle) {
@@ -869,7 +871,7 @@
                 silverToggle.checked = localStorage.getItem('silverThemeDisabled') !== '1';
             } else {
                 silverRow.style.display = 'none';
-                localStorage.removeItem('silverThemeDisabled');
+                // localStorage.removeItem('silverThemeDisabled');
             }
         }
 
@@ -883,13 +885,19 @@
                         themeToggle.checked = false;
                         themeToggle.disabled = true;
                     }
+                } else {
+                    if (themeToggle) {
+                        themeToggle.disabled = false;
+                    }
                 }
             } else {
                 goldRow.style.display = 'none';
-                localStorage.removeItem('goldThemeDisabled');
+                // localStorage.removeItem('goldThemeDisabled');
             }
         }
-        if (themeToggle && appMode && rank !== 'gold') themeToggle.disabled = false;
+        if (themeToggle && appMode && (rank !== 'gold' || localStorage.getItem('goldThemeDisabled') === '1')) {
+            themeToggle.disabled = false;
+        }
         applyMembershipThemePreferenceClass();
     }
 

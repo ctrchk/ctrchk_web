@@ -602,3 +602,21 @@ CREATE INDEX IF NOT EXISTS idx_support_threads_claimed_admin ON support_threads(
 -- 客服訊息：使用既有 chat_messages 表，但額外加 thread_id 來把客服記錄串起
 ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS thread_id INTEGER REFERENCES support_threads(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_id ON chat_messages(thread_id);
+
+-- =========================================================
+-- 好友系統
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS user_friends (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    friend_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending | accepted | declined | blocked
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, friend_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_friends_user_id ON user_friends(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_friends_friend_id ON user_friends(friend_id);
+CREATE INDEX IF NOT EXISTS idx_user_friends_status ON user_friends(status);

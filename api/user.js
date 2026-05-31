@@ -176,6 +176,46 @@ export default async function handler(req, res) {
 
   // ── GET → fetch user info ───────────────────────────────────────────────
   if (req.method === 'GET') {
+    if (req.query.action === 'friends') {
+      try {
+        const { user_id } = req.query;
+        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+
+        const { rows } = await query(
+          `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.status,
+                  gp.level, gp.xp, gp.coins, gp.mileage_rank, gp.mileage_km_365
+           FROM user_friends uf
+           JOIN users u ON u.id = CASE WHEN uf.user_id = $1 THEN uf.friend_id ELSE uf.user_id END
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+           WHERE (uf.user_id = $1 OR uf.friend_id = $1) AND uf.status = 'accepted'`,
+          [user_id]
+        );
+        return res.status(200).json(rows);
+      } catch (error) {
+        console.error('Get friends error:', error);
+        return res.status(500).json({ message: 'Failed to fetch friends' });
+      }
+    }
+
+    if (req.query.action === 'friend_requests') {
+      try {
+        const { user_id } = req.query;
+        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+
+        const { rows } = await query(
+          `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.id as request_id
+           FROM user_friends uf
+           JOIN users u ON u.id = uf.user_id
+           WHERE uf.friend_id = $1 AND uf.status = 'pending'`,
+          [user_id]
+        );
+        return res.status(200).json(rows);
+      } catch (error) {
+        console.error('Get friend requests error:', error);
+        return res.status(500).json({ message: 'Failed to fetch friend requests' });
+      }
+    }
+
     if (req.query.action === 'gpx-list') {
       try {
         const gpxDir = path.join(process.cwd(), 'gpx');
@@ -285,6 +325,38 @@ export default async function handler(req, res) {
 
   // ── POST → update profile ───────────────────────────────────────────────
   if (req.method === 'POST') {
+    if (req.body.action === 'add_friend') {
+      try {
+        const { user_id, friend_id } = req.body;
+        if (!user_id || !friend_id) return res.status(400).json({ message: 'IDs required' });
+        if (user_id == friend_id) return res.status(400).json({ message: 'Cannot add yourself' });
+
+        await query(
+          `INSERT INTO user_friends (user_id, friend_id, status)
+           VALUES ($1, $2, 'pending')
+           ON CONFLICT (user_id, friend_id) DO NOTHING`,
+          [user_id, friend_id]
+        );
+        return res.status(200).json({ message: 'Friend request sent' });
+      } catch (error) {
+        return res.status(500).json({ message: error.message });
+      }
+    }
+
+    if (req.body.action === 'accept_friend') {
+      try {
+        const { user_id, friend_id } = req.body;
+        await query(
+          `UPDATE user_friends SET status = 'accepted', updated_at = NOW()
+           WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)`,
+          [user_id, friend_id]
+        );
+        return res.status(200).json({ message: 'Friend request accepted' });
+      } catch (error) {
+        return res.status(500).json({ message: error.message });
+      }
+    }
+
     try {
       const {
         user_id,

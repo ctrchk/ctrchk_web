@@ -90,7 +90,18 @@
       }
       document.body.classList.add('app-theme-explicit');
       document.body.classList.remove('app-light-theme');
-    } else if (rank === 'silver' && context.permissions.theme_silver && silverEnabled) {
+    } else {
+        // Restore theme if gold theme is NOT active
+        const storedTheme = localStorage.getItem('appTheme');
+        if (storedTheme === 'light') {
+            document.body.classList.add('app-theme-explicit', 'app-light-theme');
+        } else if (storedTheme === 'dark') {
+            document.body.classList.add('app-theme-explicit');
+            document.body.classList.remove('app-light-theme');
+        }
+    }
+
+    if (rank === 'silver' && context.permissions.theme_silver && silverEnabled) {
       document.body.classList.add('rank-silver');
     }
   }
