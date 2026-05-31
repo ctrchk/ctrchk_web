@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>用戶資料 - 城市運輸單車</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+        background: var(--app-bg-primary, #121f14);
+        color: var(--app-text-primary, #e8f5e9);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+    }
+    .profile-header {
+        padding: calc(env(safe-area-inset-top) + 2em) 1.5em 2em;
+        text-align: center;
+        background: linear-gradient(135deg, var(--app-bg-card, #1e3820) 0%, var(--app-bg-card2, #243824) 100%);
+        border-bottom: 1px solid var(--app-border, #2d4d2d);
+    }
+    .avatar-large {
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: #2d4d2d;
+        border: 3px solid var(--app-accent, #6dba65);
+        margin: 0 auto 1em;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 3em; color: var(--app-accent, #6dba65);
+        overflow: hidden;
+    }
+    .avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+    .user-name { font-size: 1.8em; font-weight: bold; margin-bottom: 0.2em; }
+    .user-tier { font-size: 0.9em; color: var(--app-text-secondary, #a8d8a0); margin-bottom: 1em; }
+
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding: 1.5em;
+    }
+    .stat-card {
+        background: var(--app-bg-card, #1e3820);
+        padding: 1em 0.5em;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid var(--app-border, #2d4d2d);
+    }
+    .stat-card .val { font-size: 1.2em; font-weight: bold; color: var(--app-accent, #6dba65); display: block; }
+    .stat-card .lbl { font-size: 0.7em; opacity: 0.7; }
+
+    .btn-back {
+        position: fixed; top: calc(env(safe-area-inset-top) + 1em); left: 1em;
+        background: rgba(255,255,255,0.1); border: none; color: #fff;
+        width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 100;
+    }
+  </style>
+</head>
+<body>
+    <a href="javascript:history.back()" class="btn-back"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="profile-view">
+        <div class="profile-header">
+            <div class="avatar-large" id="view-avatar"><i class="fas fa-user"></i></div>
+            <div class="user-name" id="view-name">載入中...</div>
+            <div class="user-tier" id="view-tier">---</div>
+            <div id="view-mileage-card" style="display:inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; background: #2d4d2d; color: #a8d8a0;">---</div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <span class="val" id="view-level">--</span>
+                <span class="lbl">等級</span>
+            </div>
+            <div class="stat-card">
+                <span class="val" id="view-xp">--</span>
+                <span class="lbl">總 XP</span>
+            </div>
+            <div class="stat-card">
+                <span class="val" id="view-dist">--</span>
+                <span class="lbl">總里程 (km)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const userId = params.get('id');
+
+        async function loadProfile() {
+            if (!userId) return;
+            try {
+                const res = await fetch(`/api/user?action=public-profile&user_id=${userId}`);
+                if (!res.ok) throw new Error('Failed to load');
+                const data = await res.json();
+
+                document.getElementById('view-name').textContent = data.full_name || data.username || '神秘騎士';
+                document.getElementById('view-tier').textContent = data.cyclist_tier || '入門車手';
+                document.getElementById('view-level').textContent = data.level || 1;
+                document.getElementById('view-xp').textContent = (data.xp || 0).toLocaleString();
+                document.getElementById('view-dist').textContent = (data.total_distance_km || 0).toFixed(1);
+
+                const cardEl = document.getElementById('view-mileage-card');
+                cardEl.textContent = data.mileage_card || '銅卡';
+                if (data.mileage_rank === 'gold') {
+                    cardEl.style.background = '#d4af37';
+                    cardEl.style.color = '#000';
+                } else if (data.mileage_rank === 'silver') {
+                    cardEl.style.background = '#c0c0c0';
+                    cardEl.style.color = '#000';
+                }
+
+                if (data.avatar_url) {
+                    document.getElementById('view-avatar').innerHTML = `<img src="${data.avatar_url}" alt="Avatar">`;
+                }
+            } catch (e) {
+                document.getElementById('view-name').textContent = '用戶不存在';
+            }
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>

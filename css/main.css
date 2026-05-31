@@ -780,13 +780,13 @@ body.app-light-theme .filter-button.active {
 }
 /* Light mode: buttons must contrast against light background */
 body.app-light-theme .cta-button,
-body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn) {
+body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item) {
     background-color: var(--app-accent, #2e7d32);
     color: #ffffff !important;
     border-color: var(--app-accent, #2e7d32);
 }
 body.app-light-theme .cta-button:hover,
-body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):hover {
+body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
     background-color: #1b5e20;
     border-color: #1b5e20;
 }
@@ -803,13 +803,13 @@ body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.a
         border-color: var(--app-accent, #2e7d32);
     }
     body:not(.app-theme-explicit) .cta-button,
-    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn) {
+    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item) {
         background-color: var(--app-accent, #2e7d32);
         color: #ffffff !important;
         border-color: var(--app-accent, #2e7d32);
     }
     body:not(.app-theme-explicit) .cta-button:hover,
-    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):hover {
+    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
         background-color: #1b5e20;
         border-color: #1b5e20;
     }

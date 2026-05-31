@@ -1510,6 +1510,17 @@
 
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
+      const mode = params.get('mode');
+      if (mode === 'free') {
+          isFreeMode = true;
+          // Bypass route specific loading
+          document.getElementById('ride-loading').classList.add('hidden');
+          initMap(22.3143, 114.2697); // TKO fallback
+          startFreeModeSequence();
+          startGPS();
+          return;
+      }
+
       if (!routeId) { location.href = '/routes'; return; }
 
       // Check auth

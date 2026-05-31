@@ -216,6 +216,35 @@ export default async function handler(req, res) {
       }
     }
 
+    if (req.query.action === 'public-profile') {
+      try {
+        const { user_id } = req.query;
+        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+
+        const { rows } = await query(
+          `SELECT u.username, u.full_name, u.avatar_url,
+                  gp.level, gp.xp, gp.mileage_rank,
+                  (SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id) as total_distance_km
+           FROM users u
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+           WHERE u.id = $1`,
+          [user_id]
+        );
+
+        if (rows.length === 0) return res.status(404).json({ message: 'User not found' });
+
+        const user = rows[0];
+        user.total_distance_km = Number(user.total_distance_km || 0);
+        user.mileage_card = getMileageCardByRank(user.mileage_rank || 'bronze');
+        user.cyclist_tier = getCyclistTierByLevel(user.level || 1);
+
+        return res.status(200).json(user);
+      } catch (error) {
+        console.error('Get public-profile error:', error);
+        return res.status(500).json({ message: 'Failed to fetch public profile' });
+      }
+    }
+
     if (req.query.action === 'gpx-list') {
       try {
         const gpxDir = path.join(process.cwd(), 'gpx');
