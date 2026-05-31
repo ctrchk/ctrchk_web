@@ -1666,6 +1666,16 @@
     }
 
     function startGPS() {
+      if (typeof window.confirmLocationPermission === 'function') {
+        window.confirmLocationPermission(() => _startGPSActual(), () => {
+          setGpsDot('error', '需要位置權限');
+        });
+      } else {
+        _startGPSActual();
+      }
+    }
+
+    function _startGPSActual() {
       if (!('geolocation' in navigator)) {
         setGpsDot('error', '不支援 GPS');
         return;

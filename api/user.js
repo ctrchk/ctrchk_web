@@ -178,8 +178,8 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     if (req.query.action === 'friends') {
       try {
-        const { user_id } = req.query;
-        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+        const user_id = parseInt(req.query.user_id, 10);
+        if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
           `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.status,
@@ -199,8 +199,8 @@ export default async function handler(req, res) {
 
     if (req.query.action === 'friend_requests') {
       try {
-        const { user_id } = req.query;
-        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+        const user_id = parseInt(req.query.user_id, 10);
+        if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
           `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.id as request_id
@@ -218,8 +218,8 @@ export default async function handler(req, res) {
 
     if (req.query.action === 'public-profile') {
       try {
-        const { user_id } = req.query;
-        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+        const user_id = parseInt(req.query.user_id, 10);
+        if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
           `SELECT u.username, u.full_name, u.avatar_url,

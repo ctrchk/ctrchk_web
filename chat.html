@@ -753,8 +753,16 @@
             document.getElementById('msg-header').style.display = 'flex';
             document.getElementById('msg-list').style.display = 'flex';
             document.getElementById('msg-input-bar').style.display = 'flex';
-            document.getElementById('msg-header-avatar').innerHTML = avatarHtml(peerAvatar, 36);
-            document.getElementById('msg-header-name').textContent = peerName || '用戶';
+            document.getElementById('msg-header-avatar').innerHTML = `
+                <a href="/profile_view.html?id=${peerId}" style="text-decoration:none; color:inherit; display:flex;">
+                    ${avatarHtml(peerAvatar, 36)}
+                </a>
+            `;
+            document.getElementById('msg-header-name').innerHTML = `
+                <a href="/profile_view.html?id=${peerId}" style="text-decoration:none; color:inherit;">
+                    ${escHtml(peerName || '用戶')}
+                </a>
+            `;
 
             // On mobile, close the side panel so the message area is fully visible
             if (isMobile()) closeConvPanel();
@@ -818,8 +826,11 @@
                 wrap.className = 'msg-bubble-wrap' + (mine ? ' mine' : '');
                 wrap.dataset.msgId = m.id;
                 const avatarUrl = mine ? (ME.avatar_url || '') : (currentPeerAvatar || '');
+                const profileUrl = `/profile_view.html?id=${m.sender_id}`;
                 wrap.innerHTML = `
-                    <div class="bubble-avatar">${avatarHtml(avatarUrl, 28)}</div>
+                    <a href="${profileUrl}" class="bubble-avatar" style="text-decoration:none; color:inherit;">
+                        ${avatarHtml(avatarUrl, 28)}
+                    </a>
                     <div class="msg-inner">
                         <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(m.content)}</div>
                         <div class="msg-time">${timeStr(m.created_at)}</div>
@@ -1297,14 +1308,18 @@
         async function loadFriendsData() {
             const reqsList = document.getElementById('friend-requests-list');
             const friendsList = document.getElementById('friends-list');
+            if (!reqsList || !friendsList) return;
             reqsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.6;">載入中...</div>';
             friendsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.6;">載入中...</div>';
 
             try {
+                console.log('[Chat] Loading friends for user:', ME.id);
                 const [friends, requests] = await Promise.all([
                     apiGet(`/api/user?action=friends&user_id=${ME.id}`),
                     apiGet(`/api/user?action=friend_requests&user_id=${ME.id}`)
                 ]);
+                console.log('[Chat] Friends loaded:', friends);
+                console.log('[Chat] Requests loaded:', requests);
 
                 // Render requests
                 if (requests && requests.length) {
