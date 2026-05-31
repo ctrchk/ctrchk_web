@@ -62,9 +62,10 @@
       flex-shrink: 0; text-decoration: none;
     }
     #ride-route-label {
-      flex: 1; font-weight: bold; font-size: 1em; white-space: nowrap;
+      flex: 1; min-width: 0; font-weight: bold; font-size: 1em; white-space: nowrap;
       overflow: hidden; text-overflow: ellipsis;
     }
+    #btn-free-mode { flex-shrink: 0; }
     #ride-timer-display {
       font-size: 1.1em; font-weight: bold; font-variant-numeric: tabular-nums;
       background: rgba(0,0,0,0.4); padding: 0.3em 0.6em; border-radius: 6px;
@@ -912,6 +913,7 @@
     function startFreeMode() {
         isFreeMode = true;
         goToStartPhase = false;
+        rideStarted = true; // Mark ride as started in free mode too
         document.getElementById('ride-route-label').textContent = '自由騎行模式';
         document.getElementById('btn-free-mode').style.display = 'none';
 
@@ -1048,6 +1050,9 @@
     async function requestWakeLock() {
         try {
             if ('wakeLock' in navigator) {
+                // If there's an existing wake lock, don't request a new one
+                if (wakeLock && !wakeLock.released) return;
+
                 wakeLock = await navigator.wakeLock.request('screen');
                 console.log('[Ride] Screen Wake Lock is active');
                 wakeLock.addEventListener('release', () => {
@@ -1074,6 +1079,8 @@
       startTime = Date.now();
       startTimer();
       requestWakeLock();
+
+      document.getElementById('btn-free-mode').style.display = 'none';
 
       // Hide go-to-start banner; show ride HUD
       const gtsBanner = document.getElementById('go-to-start-banner');
@@ -1491,13 +1498,17 @@
       // Allow back if ride hasn't started yet (go-to-start phase) or ride summary is showing
       if (!rideStarted || document.getElementById('ride-summary').classList.contains('show')) {
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-        history.back();
+        if (timerInterval) clearInterval(timerInterval);
+        releaseWakeLock();
+        // If we are in free mode but didn't actually "start" (countdown), we might still be here
+        window.location.href = '/dashboard';
         return;
       }
       if (confirm('確定要放棄此次騎行嗎？騎行資料將不會儲存。')) {
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
         if (timerInterval) clearInterval(timerInterval);
-        history.back();
+        releaseWakeLock();
+        window.location.href = '/dashboard';
       }
     };
 
@@ -1691,25 +1702,18 @@
       document.getElementById('ride-loading').classList.add('hidden');
       requestNotifIfNeeded();
 
-      const isApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.body.classList.contains('is-pwa');
-      if (isApp) {
-          startGPS();
-      } else {
-          document.getElementById('gps-status-text').textContent = '點擊以開啟 GPS 定位';
-          document.getElementById('gps-status-text').style.cursor = 'pointer';
-          document.getElementById('gps-status-text').onclick = () => {
-              startGPS();
-              document.getElementById('gps-status-text').style.cursor = 'default';
-              document.getElementById('gps-status-text').onclick = null;
-          };
-      }
+      // Start GPS immediately
+      startGPS();
+
+      // Also request wake lock early to prevent screen off during "go to start"
+      requestWakeLock();
     }
 
     document.addEventListener('DOMContentLoaded', init);
 
     // Handle visibility change to re-acquire wake lock
     document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible' && rideStarted && !document.getElementById('ride-summary').classList.contains('show')) {
+        if (document.visibilityState === 'visible' && !document.getElementById('ride-summary').classList.contains('show')) {
             await requestWakeLock();
         }
     });

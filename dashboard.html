@@ -812,9 +812,10 @@
         const hasRepair = pending > 0 && pendingDate === today && userCoins >= 100;
 
         card.style.display = '';
-        document.getElementById('db-streak-value').textContent = `🔥 ${streakVal} 天`;
+        const streakIcon = (streakVal > 0 && pending === 0) ? '🔥' : '<span style="filter: grayscale(100%)">🔥</span>';
+        document.getElementById('db-streak-value').innerHTML = `${streakIcon} ${streakVal} 天`;
         document.getElementById('db-streak-sub').textContent = pending > 0
-            ? '連勝已中斷，可使用里程幣修復'
+            ? '連續通勤已中斷，可使用里程幣修復'
             : '持續通勤可累積更高里程卡';
         const repairBtn = document.getElementById('db-streak-repair-btn');
         repairBtn.style.display = hasRepair ? '' : 'none';
@@ -1093,7 +1094,7 @@
             ctx2d.fillStyle = accentColor;
             ctx2d.font = 'bold 44px sans-serif';
             ctx2d.textAlign = 'center';
-            ctx2d.fillText(`🔥 連戰 ${streak} 天`, cx, streakY);
+            ctx2d.fillText(`🔥 連續通勤 ${streak} 天`, cx, streakY);
         }
 
         // ── Gold motivational copy ──
