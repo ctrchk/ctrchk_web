@@ -272,6 +272,28 @@
       cursor: pointer; margin-top: 0.5em; letter-spacing: 0.03em;
     }
 
+    /* ── Global Animations ── */
+    .animate-spring-pop { animation: springPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    .animate-shimmer {
+      position: relative; overflow: hidden;
+    }
+    .animate-shimmer::after {
+      content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(to bottom right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+      transform: rotate(45deg); animation: shimmer 3s infinite;
+    }
+    .btn-click-effect:active { transform: scale(0.95); transition: transform 0.1s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-150%) rotate(45deg); }
+      100% { transform: translateX(150%) rotate(45deg); }
+    }
+
     /* ── Level-up overlay ── */
     #levelup-overlay {
       display: none; position: fixed; inset: 0; z-index: 700;
@@ -424,8 +446,8 @@
   <!-- Locked screen -->
   <div id="ride-locked">
     <div class="lock-icon">🔒</div>
-    <h2>路線尚未解鎖</h2>
-    <p id="ride-locked-msg">升級後即可解鎖此路線</p>
+    <h2>路線尚未購買</h2>
+    <p id="ride-locked-msg">此為特別篇路線，需使用里程幣解鎖</p>
     <a href="/routes">返回路線列表</a>
   </div>
 
@@ -434,12 +456,12 @@
 
   <!-- Top HUD -->
   <div id="ride-top">
-    <a href="javascript:confirmLeave()" id="btn-back-ride" aria-label="返回">
+    <a href="javascript:confirmLeave()" id="btn-back-ride" class="btn-click-effect" aria-label="返回">
       <i class="fas fa-chevron-left"></i>
     </a>
     <span id="ride-route-label">載入中...</span>
     <span id="ride-timer-display">00:00</span>
-    <button id="btn-free-mode" style="background: #BFE340; color: #1a252f; border: none; border-radius: 20px; padding: 4px 12px; font-size: 0.8em; font-weight: bold; cursor: pointer; margin-left: 10px;">自由模式</button>
+    <button id="btn-free-mode" class="btn-click-effect" style="background: #BFE340; color: #1a252f; border: none; border-radius: 20px; padding: 4px 12px; font-size: 0.8em; font-weight: bold; cursor: pointer; margin-left: 10px;">自由模式</button>
   </div>
 
   <!-- Next stop card -->
@@ -457,7 +479,7 @@
     </div>
     <div style="display:flex; gap:0.45em; margin-bottom:0.45em;">
       <input id="free-destination-input" list="free-terminal-options" placeholder="輸入終點（例如：調景嶺站）" style="flex:1; border-radius:8px; border:1px solid #2f4f35; background:#142117; color:#e6f2e8; padding:0.55em 0.65em; font-size:0.85em;">
-      <button id="btn-free-start-nav" style="border:none; border-radius:8px; padding:0.55em 0.7em; background:#BFE340; color:#1a252f; font-weight:bold; font-size:0.82em; cursor:pointer;">開始導航</button>
+      <button id="btn-free-start-nav" class="btn-click-effect" style="border:none; border-radius:8px; padding:0.55em 0.7em; background:#BFE340; color:#1a252f; font-weight:bold; font-size:0.82em; cursor:pointer;">開始導航</button>
     </div>
     <datalist id="free-terminal-options"></datalist>
     <div id="free-nearby-routes" style="display:flex; gap:0.4em; flex-wrap:wrap;"></div>
@@ -472,11 +494,11 @@
       <span id="gts-dist-label">距起點</span>
       <span id="gts-dist-val">-- m</span>
     </div>
-    <button class="btn-skip-gts" id="btn-skip-gts" onclick="skipGoToStart()">從當前位置出發 →</button>
+    <button class="btn-skip-gts btn-click-effect" id="btn-skip-gts" onclick="skipGoToStart()">從當前位置出發 →</button>
     <div id="gts-custom-start">
       <label>或選擇出發站點：</label>
       <select id="gts-stop-select"></select>
-      <button id="btn-start-from-stop" onclick="startFromSelectedStop()">從選定站點出發</button>
+      <button id="btn-start-from-stop" class="btn-click-effect" onclick="startFromSelectedStop()">從選定站點出發</button>
     </div>
   </div>
 
@@ -499,14 +521,14 @@
           <span class="val" id="stat-stops">0/0</span>
           <span class="lbl">🚏 站點</span>
         </div>
-        <button id="rbs-toggle-btn">更多 ▲</button>
+        <button id="rbs-toggle-btn" class="btn-click-effect">更多 ▲</button>
       </div>
       <div id="gps-status-text">正在連接 GPS...</div>
     </div>
     <div id="rbs-expanded">
       <div class="rbs-expanded-inner">
         <div id="ride-stats-grid">
-          <div class="ride-stat-card">
+          <div class="ride-stat-card animate-spring-pop">
             <div class="val" id="stat-xp">0</div>
             <div class="lbl">⭐ XP</div>
           </div>
@@ -517,16 +539,16 @@
         </div>
         <div class="stats-page-stops-label">站點進度</div>
         <div id="stops-progress"></div>
-        <button id="btn-end-ride">🔴 結束騎行</button>
+        <button id="btn-end-ride" class="btn-click-effect">🔴 結束騎行</button>
       </div>
     </div>
   </div>
 
   <!-- End ride summary -->
   <div id="ride-summary">
-    <div id="summary-emoji">🎉</div>
-    <div id="summary-title">騎行完成！</div>
-    <div id="summary-xp-badge">+0 XP</div>
+    <div id="summary-emoji" class="animate-float">🎉</div>
+    <div id="summary-title" class="animate-spring-pop">騎行完成！</div>
+    <div id="summary-xp-badge" class="animate-spring-pop">+0 XP</div>
     <div id="summary-bonus-coins" style="display:none;font-size:0.9em;color:#BFE340;margin-top:0.3em;font-weight:bold;"></div>
     <div id="summary-stats">
       <div class="summary-stat"><div class="val" id="s-time">--</div><div class="lbl">⏱ 時間</div></div>
@@ -534,7 +556,7 @@
       <div class="summary-stat"><div class="val" id="s-stops">--</div><div class="lbl">🚏 站點</div></div>
       <div class="summary-stat"><div class="val" id="s-speed">--</div><div class="lbl">💨 均速</div></div>
     </div>
-    <button id="btn-save-track" style="margin-bottom:1em; background:rgba(255,255,255,0.1); color:#fff; border:1px solid #555; padding:0.5em 1em; border-radius:8px; font-size:0.85em; cursor:pointer;">
+    <button id="btn-save-track" class="btn-click-effect" style="margin-bottom:1em; background:rgba(255,255,255,0.1); color:#fff; border:1px solid #555; padding:0.5em 1em; border-radius:8px; font-size:0.85em; cursor:pointer;">
       <i class="fas fa-download"></i> 保存透明背景軌跡圖
     </button>
     <div id="summary-xp-bar-wrap">
@@ -543,7 +565,7 @@
       </div>
       <div id="summary-xp-bar-bg"><div id="summary-xp-bar-fill"></div></div>
     </div>
-    <button id="btn-summary-done" onclick="window.location.href='/dashboard'">確認並返回儀表板</button>
+    <button id="btn-summary-done" class="btn-click-effect" onclick="window.location.href='/dashboard'">確認並返回儀表板</button>
   </div>
 
   <!-- Level-up overlay -->
@@ -598,19 +620,6 @@
       41:'殿堂騎士',42:'殿堂騎士',43:'殿堂騎士',44:'殿堂騎士',45:'殿堂騎士',
       46:'殿堂騎士',47:'殿堂騎士',48:'殿堂騎士',49:'殿堂騎士',50:'殿堂騎士',
     };
-    // Unlock levels per route
-    const ROUTE_UNLOCK = {
-      '900':1,'900A':1,'966T':1,
-      '914':8,'966A':8,'966':8,
-      '900S':1,'914B':1,'910':5,'901P':15,
-      '914H':22,'920':22,'966B':22,
-      '920X':30,'923':30,'966C':30,
-      '928':38,'929':38,'961':38,'961P':38,
-      '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,
-      '955':50,'955A':50,'955H':50,'960':50,'962P':50,'962X':50,
-      'X935':50,'S90':50,'S91':50,
-    };
-
     // ── State ─────────────────────────────────────────────────────────────
     const params = new URLSearchParams(location.search);
     const routeId = params.get('id') || '';
@@ -834,9 +843,9 @@
     }
 
     // ── Locked screen ─────────────────────────────────────────────────────
-    function showLocked(needed) {
+    function showLocked(cost) {
       document.getElementById('ride-locked-msg').textContent =
-        `需要 Lv.${needed} 才能騎行此路線（你目前是 Lv.${getUserLevel()}）`;
+        `此為特別篇路線，需使用 ${cost} 里程幣解鎖`;
       document.getElementById('ride-locked').classList.add('show');
       document.getElementById('ride-loading').classList.add('hidden');
     }
@@ -1812,11 +1821,13 @@
         }
       }
 
-      // Check unlock level
-      const needed = (routeData && routeData.unlock_level) || ROUTE_UNLOCK[routeId] || 1;
-      const userLvl = getUserLevel();
-      if (userLvl < needed && localStorage.getItem('accessToken')) {
-        showLocked(needed);
+      // Check unlock cost (Mileage Coins)
+      const cost = routeData ? routeData.unlock_cost : 0;
+      const isSpecial = routeData ? routeData.is_special : false;
+      const unlockedRoutes = JSON.parse(localStorage.getItem('unlockedRoutes') || '[]');
+
+      if (isSpecial && cost > 0 && !unlockedRoutes.includes(routeId)) {
+        showLocked(cost);
         return;
       }
 

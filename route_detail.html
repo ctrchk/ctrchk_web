@@ -731,15 +731,13 @@
         const section = document.getElementById('start-ride-section');
         if (!section || !routeDataObj) return;
 
-        const needed = routeDataObj.unlock_level || ROUTE_UNLOCK[routeId] || 1;
-        let userLvl = 1;
-        try {
-          const raw = localStorage.getItem('user');
-          if (raw) { userLvl = Math.max(1, parseInt(JSON.parse(raw).level || 1, 10)); }
-        } catch(e) {}
+        const cost = routeDataObj.unlock_cost || 0;
+        const isSpecial = routeDataObj.is_special || false;
+        const unlockedRoutes = JSON.parse(localStorage.getItem('unlockedRoutes') || '[]');
+        const conqueredRoutes = JSON.parse(localStorage.getItem('conqueredRoutes') || '[]');
 
-        const isLoggedIn = !!localStorage.getItem('accessToken');
-        const isLocked = isLoggedIn && userLvl < needed;
+        const isLocked = isSpecial && cost > 0 && !unlockedRoutes.includes(routeId);
+        const isConquered = conqueredRoutes.includes(routeId);
         const xp = routeDataObj.xp_reward || ROUTE_XP[routeId] || 0;
         const completionXp = routeDataObj.completion_xp || 0;
         let selectedDir = 0;
@@ -773,13 +771,20 @@
 
         const startBtn = document.getElementById('btn-start-ride');
         const lockedMsg = document.getElementById('start-ride-locked-msg');
+
+        if (isConquered) {
+          startBtn.innerHTML = '✨ 再次挑戰 →';
+          startBtn.classList.add('animate-shimmer');
+        }
+
         if (isLocked) {
           startBtn.classList.add('locked');
-          startBtn.textContent = '🔒 需要 Lv.' + needed + ' 解鎖';
+          startBtn.textContent = '🔒 需要使用里程幣解鎖';
           lockedMsg.style.display = 'block';
-          lockedMsg.textContent = '你目前是 Lv.' + userLvl + '，再升 ' + (needed - userLvl) + ' 級即可解鎖此路線';
+          lockedMsg.textContent = `此為特別篇路線，需使用 ${cost} 里程幣解鎖後方可騎行。`;
         } else {
           startBtn.addEventListener('click', () => { window.location.href = '/ride?id=' + routeId + '&dir=' + selectedDir; });
+          startBtn.classList.add('btn-click-effect');
         }
         section.style.display = 'block';
       }
