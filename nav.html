@@ -2658,6 +2658,27 @@
       document.getElementById('btn-plan-route').disabled = !from || !to || from === to;
     }
 
+    async function applyQueryPrefill() {
+      const params = new URLSearchParams(location.search);
+      const fromQ = (params.get('from') || '').trim();
+      const toQ = (params.get('to') || '').trim();
+      const autoStart = params.get('autostart') === '1';
+      if (!fromQ && !toQ) return;
+
+      const fromInput = document.getElementById('sel-from');
+      const toInput = document.getElementById('sel-to');
+      if (fromQ) fromInput.value = fromQ;
+      if (toQ) toInput.value = toQ;
+      if (!fromInput.value && toInput.value) fromInput.value = '📍 使用目前位置';
+      checkPlanBtn();
+
+      if (!autoStart || !toInput.value) return;
+      try {
+        await planRoute();
+        startNavigation();
+      } catch (_) {}
+    }
+
     // ── Event listeners ───────────────────────────────────────────────────
     let suggestionTimer = null;
     function handleAddressInput(e) {
@@ -2757,6 +2778,7 @@
         el.appendChild(msg);
       }
     }
+    setTimeout(() => { applyQueryPrefill(); }, 150);
 
   })();
 

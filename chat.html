@@ -719,8 +719,8 @@
             }
             el.innerHTML = list.map(c => `
                 <div class="conv-item${currentPeerId === c.peer_id ? ' active' : ''}"
-                     onclick="openConversation(${c.peer_id}, ${JSON.stringify(c.peer_name || '用戶').replace(/"/g, '&quot;')}, ${JSON.stringify(c.peer_avatar || '').replace(/"/g, '&quot;')})">
-                    <div class="conv-avatar">${avatarHtml(c.peer_avatar, 40)}</div>
+                     onclick="${c.is_support ? `openSupportConversationItem(${Number(c.support_thread_id || 0)})` : `openConversation(${c.peer_id}, ${JSON.stringify(c.peer_name || '用戶').replace(/"/g, '&quot;')}, ${JSON.stringify(c.peer_avatar || '').replace(/"/g, '&quot;')})`}">
+                    <div class="conv-avatar">${c.is_support ? '<i class="fas fa-headset"></i>' : avatarHtml(c.peer_avatar, 40)}</div>
                     <div class="conv-info">
                         <div class="conv-name">${escHtml(c.peer_name || '用戶')}</div>
                         <div class="conv-last">${escHtml((c.last_message || '').slice(0, 30))}</div>
@@ -729,6 +729,17 @@
                 </div>
             `).join('');
         }
+        window.openSupportConversationItem = function(threadId) {
+            if (IS_SENIOR_ADMIN) {
+                window.location.href = threadId ? `/chat?support=1&thread_id=${threadId}` : '/chat?support=1';
+                return;
+            }
+            if (threadId) {
+                openSupportThread(threadId);
+                return;
+            }
+            startSupportThread();
+        };
         function filterConvList(q) {
             const filtered = conversations.filter(c => (c.peer_name || '').includes(q));
             renderConvList(filtered);
@@ -1344,7 +1355,7 @@
                                 <div class="modal-user-avatar" style="cursor:pointer;" onclick="window.location.href='/profile_view.html?id=${f.id}'">${avatarHtml(f.avatar_url, 36)}</div>
                                 <div style="flex:1; cursor:pointer;" onclick="window.location.href='/profile_view.html?id=${f.id}'">
                                     <div class="modal-user-name">${escHtml(f.username || f.full_name)}</div>
-                                    <div style="font-size:0.7em; color:#a8d8a0;">Lv.${f.level} ${f.mileage_rank}｜${(f.mileage_km_365 || 0).toFixed(1)} km</div>
+                                    <div style="font-size:0.7em; color:#a8d8a0;">Lv.${Number(f.level || 1)} ${escHtml(f.mileage_rank || 'bronze')}｜${Number(f.mileage_km_365 || 0).toFixed(1)} km</div>
                                 </div>
                                 <i class="fas fa-comment-alt" style="opacity:0.6; cursor:pointer;" onclick="startChatWith(${f.id}, ${JSON.stringify(f.username || f.full_name).replace(/"/g, '&quot;')}, ${JSON.stringify(f.avatar_url || '').replace(/"/g, '&quot;')})"></i>
                             </div>

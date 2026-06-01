@@ -449,6 +449,20 @@
     <div id="next-stop-dist">-- m</div>
   </div>
 
+  <!-- Free mode control panel -->
+  <div id="free-mode-panel" style="display:none; position:fixed; top:calc(env(safe-area-inset-top) + 4.2em); left:10px; right:10px; z-index:201; background:rgba(18,31,20,0.94); border:1px solid rgba(191,227,64,0.35); border-radius:12px; padding:0.8em;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5em; margin-bottom:0.45em;">
+      <strong style="color:#BFE340; font-size:0.95em;">自由模式導航</strong>
+      <span id="free-nearby-hint" style="font-size:0.72em; opacity:0.8;">可輸入終點直接導航</span>
+    </div>
+    <div style="display:flex; gap:0.45em; margin-bottom:0.45em;">
+      <input id="free-destination-input" list="free-terminal-options" placeholder="輸入終點（例如：調景嶺站）" style="flex:1; border-radius:8px; border:1px solid #2f4f35; background:#142117; color:#e6f2e8; padding:0.55em 0.65em; font-size:0.85em;">
+      <button id="btn-free-start-nav" style="border:none; border-radius:8px; padding:0.55em 0.7em; background:#BFE340; color:#1a252f; font-weight:bold; font-size:0.82em; cursor:pointer;">開始導航</button>
+    </div>
+    <datalist id="free-terminal-options"></datalist>
+    <div id="free-nearby-routes" style="display:flex; gap:0.4em; flex-wrap:wrap;"></div>
+  </div>
+
   <!-- Go-to-start banner (shown before ride begins) -->
   <div id="go-to-start-banner" style="display:none;">
     <div class="gts-icon">📍</div>
@@ -619,6 +633,7 @@
 
     let routeData = null;
     let allRoutes = [];
+    let allTerminals = [];
     let routeStops = [];
     let map = null;
     let userMarker = null;
@@ -638,6 +653,7 @@
     let sessionXp = 0;          // running XP total for this ride session
     let lastReachedDistrict = null; // for district-change bonus tracking
     let gtsTargetStopIdx = 0;       // index in routeStops that we're navigating to in go-to-start phase
+    let lastFreeNearbyUpdateAt = 0;
 
     // ── Helpers ───────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -660,6 +676,73 @@
 
     function formatDist(m) {
       return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+    }
+
+    function normalizeLabel(v) {
+      return String(v || '').replace(/\s+/g, '').toLowerCase();
+    }
+
+    function isNearTerminalName(text, terminalName) {
+      const a = normalizeLabel(text);
+      const b = normalizeLabel(terminalName);
+      return !!a && !!b && (a.includes(b) || b.includes(a));
+    }
+
+    function renderFreeModeTerminalOptions() {
+      const listEl = document.getElementById('free-terminal-options');
+      if (!listEl) return;
+      const names = new Set();
+      allTerminals.forEach(t => { if (t?.name) names.add(String(t.name).trim()); });
+      allRoutes.forEach(r => {
+        if (r?.start) names.add(String(r.start).trim());
+        if (r?.end) names.add(String(r.end).trim());
+      });
+      listEl.innerHTML = [...names].sort((a, b) => a.localeCompare(b, 'zh-Hant')).map(name => `<option value="${name.replace(/"/g, '&quot;')}"></option>`).join('');
+    }
+
+    function routeStartsNearTerminal(route, terminalName) {
+      if (!route || !terminalName) return false;
+      const firstStop = Array.isArray(route.stops) && route.stops.length ? route.stops[0] : null;
+      if (firstStop?.name && isNearTerminalName(firstStop.name, terminalName)) return true;
+      if (route.start && isNearTerminalName(route.start, terminalName)) return true;
+      return false;
+    }
+
+    function updateFreeNearbyRoutes(lat, lon) {
+      const panel = document.getElementById('free-nearby-routes');
+      const hint = document.getElementById('free-nearby-hint');
+      if (!panel || !hint || !allRoutes.length) return;
+
+      const now = Date.now();
+      if (now - lastFreeNearbyUpdateAt < 1500) return;
+      lastFreeNearbyUpdateAt = now;
+
+      const nearbyTerminals = allTerminals
+        .map(t => ({ ...t, dist: haversineM(lat, lon, Number(t.lat), Number(t.lng)) }))
+        .filter(t => Number.isFinite(t.dist) && t.dist <= 450)
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, 2);
+
+      if (!nearbyTerminals.length) {
+        hint.textContent = '靠近總站時可快速開始該總站路線';
+        panel.innerHTML = '<span style="font-size:0.72em; opacity:0.75;">尚未偵測到附近總站</span>';
+        return;
+      }
+
+      const nearest = nearbyTerminals[0];
+      hint.textContent = `附近總站：${nearest.name}（${Math.round(nearest.dist)}m）`;
+      const candidates = allRoutes
+        .filter(r => routeStartsNearTerminal(r, nearest.name))
+        .slice(0, 4);
+      if (!candidates.length) {
+        panel.innerHTML = '<span style="font-size:0.72em; opacity:0.75;">附近總站暫無可用路線</span>';
+        return;
+      }
+      panel.innerHTML = candidates.map(r => {
+        const id = String(r.id || '').replace(/"/g, '&quot;');
+        const alias = String(r.alias || '').replace(/"/g, '&quot;');
+        return `<button style="border:1px solid #35553b; background:#1a2b1e; color:#d7ead8; border-radius:999px; padding:0.35em 0.65em; font-size:0.75em; cursor:pointer;" onclick="location.href='/ride?id=${id}'">開始 ${id} ${alias}</button>`;
+      }).join('');
     }
 
     function getRideModeFromRoute(route) {
@@ -971,6 +1054,7 @@
         rideStarted = true; // Mark ride as started in free mode too
         document.getElementById('ride-route-label').textContent = '自由騎行模式';
         document.getElementById('btn-free-mode').style.display = 'none';
+        initFreeModeControls();
 
         // Hide route specific UI
         const gtsBanner = document.getElementById('go-to-start-banner');
@@ -1062,6 +1146,7 @@
       document.getElementById('stat-dist').textContent = formatDist(totalDistM);
 
       if (isFreeMode) {
+          updateFreeNearbyRoutes(lat, lon);
           // Free mode: Check proximity to ALL stops of ALL routes to award XP
           allRoutes.forEach(r => {
               (r.stops || []).forEach(s => {
@@ -1613,11 +1698,89 @@
       try { await Notification.requestPermission(); } catch (e) {}
     }
 
+    async function loadRouteCatalog() {
+      let base = null;
+      try {
+        const cachedRoutes = localStorage.getItem('CTRCHK_ROUTES_CACHE');
+        if (cachedRoutes) {
+          base = JSON.parse(cachedRoutes);
+        } else {
+          const res = await fetch('/routes.json');
+          if (res.ok) {
+            base = await res.json();
+            localStorage.setItem('CTRCHK_ROUTES_CACHE', JSON.stringify(base));
+          }
+        }
+      } catch (_) {}
+      allRoutes = Array.isArray(base?.routes) ? base.routes : [];
+
+      try {
+        let overrideData = null;
+        const cachedOverrides = localStorage.getItem('CTRCHK_OVERRIDES_CACHE');
+        if (cachedOverrides) {
+          overrideData = JSON.parse(cachedOverrides);
+        } else {
+          const overrideResp = await fetch('/api/user?action=route-data');
+          if (overrideResp.ok) {
+            overrideData = await overrideResp.json();
+            localStorage.setItem('CTRCHK_OVERRIDES_CACHE', JSON.stringify(overrideData));
+          }
+        }
+        const overrideRoutes = Array.isArray(overrideData?.routes) ? overrideData.routes : [];
+        if (overrideRoutes.length && allRoutes.length) {
+          const overrideMap = new Map(overrideRoutes.map(r => [String(r.route_id), r]));
+          allRoutes = allRoutes.map((r) => {
+            const o = overrideMap.get(String(r.id || ''));
+            if (!o) return r;
+            return Object.assign({}, r, {
+              alias: o.alias || r.alias,
+              color: o.bg_color || r.color,
+              time: o.estimated_minutes || r.time,
+              length: o.length_text || r.length,
+              tags: Array.isArray(o.tags) && o.tags.length ? o.tags : r.tags,
+              gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : r.gpx,
+              stops: Array.isArray(o.stops) && o.stops.length ? o.stops : r.stops,
+              unlock_level: o.unlock_type === 'level' && o.unlock_value != null ? o.unlock_value : r.unlock_level,
+              unlock_cost: o.unlock_type === 'coins' && o.unlock_value != null ? o.unlock_value : r.unlock_cost,
+              is_special: o.unlock_type === 'coins',
+              completion_xp: typeof o.completion_xp === 'number' ? o.completion_xp : r.completion_xp,
+              fast_finish_minutes: typeof o.fast_finish_minutes === 'number' ? o.fast_finish_minutes : r.fast_finish_minutes,
+              completion_coins: typeof o.completion_coins === 'number' ? o.completion_coins : r.completion_coins,
+            });
+          });
+        }
+        allTerminals = Array.isArray(overrideData?.terminals) ? overrideData.terminals : [];
+      } catch (_) {
+        allTerminals = [];
+      }
+    }
+
+    function initFreeModeControls() {
+      const panel = document.getElementById('free-mode-panel');
+      const btn = document.getElementById('btn-free-start-nav');
+      const input = document.getElementById('free-destination-input');
+      if (!panel || !btn || !input) return;
+
+      panel.style.display = '';
+      renderFreeModeTerminalOptions();
+
+      btn.onclick = () => {
+        const to = String(input.value || '').trim();
+        if (!to) {
+          alert('請先輸入終點');
+          return;
+        }
+        location.href = `/nav?from=${encodeURIComponent('📍 使用目前位置')}&to=${encodeURIComponent(to)}&autostart=1`;
+      };
+    }
+
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
       const mode = params.get('mode');
+      await loadRouteCatalog();
       if (mode === 'free') {
           isFreeMode = true;
+          initFreeModeControls();
           // Bypass route specific loading
           document.getElementById('ride-loading').classList.add('hidden');
           initMap(22.3143, 114.2697); // TKO fallback
@@ -1634,55 +1797,7 @@
         // (they can still navigate, just no XP)
       }
 
-      // Load route data (with caching)
-      try {
-        let data = null;
-        const cachedRoutes = localStorage.getItem('CTRCHK_ROUTES_CACHE');
-        if (cachedRoutes) {
-            data = JSON.parse(cachedRoutes);
-        } else {
-            const res = await fetch('/routes.json');
-            data = await res.json();
-            localStorage.setItem('CTRCHK_ROUTES_CACHE', JSON.stringify(data));
-        }
-
-        allRoutes = data.routes || [];
-        routeData = allRoutes.find(r => r.id === routeId);
-
-        try {
-          let overrideData = null;
-          const cachedOverrides = localStorage.getItem('CTRCHK_OVERRIDES_CACHE');
-          if (cachedOverrides) {
-              overrideData = JSON.parse(cachedOverrides);
-          } else {
-              const overrideResp = await fetch('/api/user?action=route-data');
-              if (overrideResp.ok) {
-                  overrideData = await overrideResp.json();
-                  localStorage.setItem('CTRCHK_OVERRIDES_CACHE', JSON.stringify(overrideData));
-              }
-          }
-
-          if (overrideData) {
-            const o = (overrideData.routes || []).find(r => r.route_id === routeId);
-            if (o && routeData) {
-              routeData = Object.assign({}, routeData, {
-                alias: o.alias || routeData.alias,
-                color: o.bg_color || routeData.color,
-                time: o.estimated_minutes || routeData.time,
-                length: o.length_text || routeData.length,
-                tags: Array.isArray(o.tags) && o.tags.length ? o.tags : routeData.tags,
-                gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : routeData.gpx,
-                stops: Array.isArray(o.stops) && o.stops.length ? o.stops : routeData.stops,
-                unlock_level: o.unlock_type === 'level' && o.unlock_value != null ? o.unlock_value : routeData.unlock_level,
-                unlock_cost: o.unlock_type === 'coins' && o.unlock_value != null ? o.unlock_value : routeData.unlock_cost,
-                is_special: o.unlock_type === 'coins',
-              });
-            }
-          }
-        } catch (_) {}
-      } catch (e) {
-        console.warn('[Ride] routes.json load failed', e);
-      }
+      routeData = allRoutes.find(r => r.id === routeId);
 
       // Apply per-route XP/timing overrides when available
       if (routeData) {

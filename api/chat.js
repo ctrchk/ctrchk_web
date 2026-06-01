@@ -154,6 +154,9 @@ export default async function handler(req, res) {
 
       // ── 對話列表（最近聯絡人 + 最後一條訊息 + 未讀數）
       if (!action || action === 'conversations') {
+        const role = await resolveUserRole(req, uid);
+        const isSeniorAdmin = role === 'senior_admin';
+
         const { rows } = await query(
           `SELECT
              peers.peer_id,
@@ -166,27 +169,96 @@ export default async function handler(req, res) {
              SELECT DISTINCT
                CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END AS peer_id
              FROM chat_messages
-             WHERE sender_id = $1 OR receiver_id = $1
+             WHERE (sender_id = $1 OR receiver_id = $1)
+               AND thread_id IS NULL
            ) peers
            JOIN LATERAL (
              SELECT content, created_at
              FROM chat_messages
-             WHERE (sender_id = $1 AND receiver_id = peers.peer_id)
-                OR (sender_id = peers.peer_id AND receiver_id = $1)
+             WHERE ((sender_id = $1 AND receiver_id = peers.peer_id)
+                OR (sender_id = peers.peer_id AND receiver_id = $1))
+               AND thread_id IS NULL
              ORDER BY created_at DESC
              LIMIT 1
            ) last_msg ON TRUE
            LEFT JOIN LATERAL (
              SELECT COUNT(*) AS cnt
              FROM chat_messages
-             WHERE receiver_id = $1 AND sender_id = peers.peer_id AND is_read = FALSE
+             WHERE receiver_id = $1 AND sender_id = peers.peer_id AND is_read = FALSE AND thread_id IS NULL
            ) unread ON TRUE
            JOIN users u ON u.id = peers.peer_id
            ORDER BY last_msg.created_at DESC
            LIMIT 50`,
           [uid]
         );
-        return res.status(200).json(rows);
+
+        let supportRow = null;
+        await ensureSupportSchema();
+        if (isSeniorAdmin) {
+          const [{ rows: latest }, { rows: openCountRows }] = await Promise.all([
+            query(
+              `SELECT id, updated_at
+               FROM support_threads
+               ORDER BY status ASC, updated_at DESC
+               LIMIT 1`
+            ),
+            query(`SELECT COUNT(*) AS cnt FROM support_threads WHERE status = 'open'`)
+          ]);
+          const latestThread = latest[0];
+          if (latestThread) {
+            supportRow = {
+              peer_id: 'support',
+              peer_name: '客服',
+              peer_avatar: '',
+              last_message: `${parseInt(openCountRows[0]?.cnt || 0, 10)} 個待處理對話`,
+              last_at: latestThread.updated_at,
+              unread_count: parseInt(openCountRows[0]?.cnt || 0, 10),
+              is_support: true,
+              support_thread_id: latestThread.id,
+            };
+          }
+        } else {
+          const { rows: supportRows } = await query(
+            `SELECT st.id,
+                    COALESCE(last_msg.content, '客服人數有限，請耐心等候回覆。') AS last_message,
+                    COALESCE(last_msg.created_at, st.updated_at) AS last_at,
+                    COALESCE(unread.cnt, 0) AS unread_count
+             FROM support_threads st
+             LEFT JOIN LATERAL (
+               SELECT content, created_at
+               FROM chat_messages
+               WHERE thread_id = st.id
+               ORDER BY created_at DESC
+               LIMIT 1
+             ) last_msg ON TRUE
+             LEFT JOIN LATERAL (
+               SELECT COUNT(*) AS cnt
+               FROM chat_messages
+               WHERE thread_id = st.id AND receiver_id = $1 AND is_read = FALSE
+             ) unread ON TRUE
+             WHERE st.user_id = $1
+             ORDER BY st.updated_at DESC
+             LIMIT 1`,
+            [uid]
+          );
+          if (supportRows.length) {
+            const t = supportRows[0];
+            supportRow = {
+              peer_id: 'support',
+              peer_name: '客服',
+              peer_avatar: '',
+              last_message: t.last_message,
+              last_at: t.last_at,
+              unread_count: parseInt(t.unread_count || 0, 10),
+              is_support: true,
+              support_thread_id: t.id,
+            };
+          }
+        }
+
+        const merged = supportRow ? [supportRow, ...rows] : rows;
+        merged.sort((a, b) => new Date(b.last_at || 0) - new Date(a.last_at || 0));
+        return res.status(200).json(merged);
       }
 
 
