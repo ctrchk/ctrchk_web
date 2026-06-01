@@ -53,6 +53,7 @@
         transition: background 0.2s;
     }
     .db-settings-btn:hover { background: var(--app-bg-card2, #243824); }
+    .db-settings-btn:active { transform: scale(0.92); }
 
     /* ── Profile card ── */
     .db-profile-card {
@@ -583,7 +584,7 @@
         <!-- App top bar (PWA/standalone only) -->
         <div class="db-top-bar app-only">
             <span class="db-top-title">我的</span>
-            <a href="/profile" class="db-settings-btn" aria-label="設置">
+            <a href="/profile" class="db-settings-btn btn-click-effect" aria-label="設置">
                 <i class="fas fa-cog"></i>
             </a>
         </div>
@@ -628,8 +629,8 @@
                 <span class="db-pill-lbl">次騎行</span>
             </div>
             <div class="db-pill">
-                <span class="db-pill-val" id="db-total-xp">0</span>
-                <span class="db-pill-lbl">總 XP</span>
+                <span class="db-pill-val" id="db-conquered-count">0</span>
+                <span class="db-pill-lbl">已征服路線</span>
             </div>
             <div class="db-pill">
                 <span class="db-pill-val" id="db-coins-pill">0</span>
@@ -749,7 +750,7 @@
             <a href="/en" class="db-more-item">
                 <i class="fas fa-language"></i><span>English</span>
             </a>
-            <button id="db-logout-btn" class="db-more-item danger">
+            <button id="db-logout-btn" class="db-more-item danger btn-click-effect">
                 <i class="fas fa-sign-out-alt"></i><span>登出</span>
             </button>
         </div>
@@ -839,7 +840,8 @@
                     gameProfile.commute_streak = data.commute_streak;
                     gameProfile.commute_streak_pending = 0;
                     renderStreakCard(gameProfile, storedUser.coins || 0);
-                    renderGameProfile(storedUser.level || 1, storedUser.xp || 0, storedUser.coins || 0);
+                    var cq = (storedUser.conquered_route_ids || []).length;
+                    renderGameProfile(storedUser.level || 1, storedUser.xp || 0, storedUser.coins || 0, undefined, cq);
                 } catch (e) {
                     alert('修復失敗：' + e.message);
                 }
@@ -1174,7 +1176,7 @@
         modal.setAttribute('aria-hidden', 'false');
     }
 
-    function renderGameProfile(level, xp, coins, ridesCount) {
+    function renderGameProfile(level, xp, coins, ridesCount, conqueredCount) {
         var lvl = Math.max(1, Math.min(level || 1, 20));
         var currentXp = xp || 0;
         var currentCoins = coins || 0;
@@ -1185,17 +1187,20 @@
 
         document.getElementById('db-level-badge').textContent = 'Lv.' + lvl;
         document.getElementById('db-level-title').textContent = LEVEL_TITLES[lvl] || '殿堂騎士';
-        document.getElementById('db-coins-display').textContent = '💰 ' + currentCoins.toLocaleString() + ' 里程幣';
+        document.getElementById('db-coins-display').innerHTML = '<span class="animate-float" style="display:inline-block;">💰</span> ' + currentCoins.toLocaleString() + ' 里程幣';
         document.getElementById('db-xp-bar').style.width = xpBar + '%';
         document.getElementById('db-xp-label').textContent = lvl >= 20
             ? 'XP: ' + currentXp.toLocaleString() + '（已達最高等級）'
             : 'XP: ' + currentXp.toLocaleString() + ' / ' + xpNext.toLocaleString() + '（還需 ' + (xpNext - currentXp).toLocaleString() + ' XP）';
         document.getElementById('db-level-card').style.display = '';
+        document.getElementById('db-level-card').classList.add('animate-spring-pop');
 
         if (typeof ridesCount !== 'undefined') {
             document.getElementById('db-rides-count').textContent = ridesCount;
         }
-        document.getElementById('db-total-xp').textContent = formatNum(currentXp);
+        if (typeof conqueredCount !== 'undefined') {
+            document.getElementById('db-conquered-count').textContent = conqueredCount;
+        }
         document.getElementById('db-coins-pill').textContent = formatNum(currentCoins);
         document.getElementById('db-pills-row').style.display = '';
     }
@@ -1215,7 +1220,8 @@
             if (user.id || gameProfile.level) {
                 _applyUserUI(user);
                 _applyStatusSummary(user);
-                renderGameProfile(gameProfile.level, gameProfile.xp, gameProfile.coins, history.length);
+                var cq = (user.conquered_route_ids || []).length;
+                renderGameProfile(gameProfile.level, gameProfile.xp, gameProfile.coins, history.length, cq);
                 renderStreakCard(gameProfile, gameProfile.coins || 0);
             }
         } catch(e) {}
@@ -1242,10 +1248,11 @@
             _applyUserUI(user);
             if (user.level !== undefined) {
                 var cachedRidesCount = 0;
+                var cq = (user.conquered_route_ids || []).length;
                 try {
                     cachedRidesCount = JSON.parse(localStorage.getItem('rideHistory') || '[]').length;
                 } catch (_) {}
-                renderGameProfile(user.level, user.xp, user.coins, cachedRidesCount);
+                renderGameProfile(user.level, user.xp, user.coins, cachedRidesCount, cq);
             }
             applyPermissionTheme();
 
@@ -1373,7 +1380,8 @@
             var data = await res.json();
             if (data.gameProfile) {
                 var histArr = Array.isArray(data) ? data : (data.history || []);
-                renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length);
+                var cq = (data.conquered_route_ids || []).length;
+                renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length, cq);
                 renderStreakCard(data.gameProfile, data.gameProfile.coins || 0);
                 try {
                     var rollingKm = Number(data.gameProfile.mileage_km_365 || data.gameProfile.mileage_rolling_km || 0);

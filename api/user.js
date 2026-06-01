@@ -334,6 +334,17 @@ export default async function handler(req, res) {
         user.unlocked_coin_routes = [];
       }
 
+      // Fetch conquered (completed) route IDs for the collection system
+      try {
+        const { rows: conqueredRows } = await query(
+          `SELECT DISTINCT route_id FROM cycling_history WHERE user_id = $1 AND route_id IS NOT NULL`,
+          [user.id]
+        );
+        user.conquered_route_ids = conqueredRows.map(r => r.route_id);
+      } catch (e) {
+        user.conquered_route_ids = [];
+      }
+
       // Fetch unlocked department IDs
       try {
         const { rows: unlockedDeptRows } = await query(

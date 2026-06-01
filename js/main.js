@@ -540,18 +540,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const heroSearchInput = document.getElementById('hero-search-input');
         if (!allRoutesContainer || !heroSearchInput) return;
 
-        // ── 解鎖等級對照表（50 級系統，批次間距更長）────────────────────────
-        const ROUTE_UNLOCK = {
-            '900':1,'900A':1,'966T':1,
-            '914':4,'914H':4,'966A':8,'966':8,
-            '900S':1,'910':5,'914B':1,'901P':15,
-            '920':22,'966B':22,
-            '920X':30,'923':30,'966C':30,
-            '928':38,'929':38,'961':38,'961P':38,
-            '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,
-            '955':50,'955A':50,'955H':50,'960':50,'962P':50,'962X':50,
-            'X935':50,'S90':50,'S91':50,
-        };
         const ROUTE_XP = {
             '900':150,'900A':120,'966':110,'914':80,'966A':90,'900S':595,'901P':140,
             '910':260,'914B':290,'914H':170,'920':130,'966B':90,'920X':100,'923':160,
@@ -679,9 +667,16 @@ document.addEventListener('DOMContentLoaded', function() {
         function renderRoutes(routesToRender) {
             allRoutesContainer.innerHTML = '';
 
+            // Get user's conquered routes
+            let conqueredRouteIds = [];
+            try {
+                const u = JSON.parse(localStorage.getItem('user') || '{}');
+                conqueredRouteIds = u.conquered_route_ids || [];
+            } catch(e) {}
+
             // Always prepend Free Mode Card for web view too
             const freeCard = document.createElement('div');
-            freeCard.className = 'route-card-full animated-element is-visible';
+            freeCard.className = 'route-card-full animate-spring-pop btn-click-effect';
             freeCard.innerHTML = `
                 <a href="/ride?mode=free">
                     <div class="route-card-header">
@@ -697,25 +692,36 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             allRoutesContainer.appendChild(freeCard);
 
-            const userLvl = getUserLevel();
             const isLoggedIn = !!localStorage.getItem('accessToken');
             if (routesToRender.length > 0) {
                 routesToRender.forEach(route => {
                     const card = document.createElement('div');
-                    card.className = 'route-card-full animated-element';
                     const link = route.link || `/route_detail?id=${route.id}`;
-                    const needed = route.unlock_level || ROUTE_UNLOCK[route.id] || 1;
-                    const isLocked = isLoggedIn && userLvl > 0 && userLvl < needed;
+                    const isConquered = conqueredRouteIds.includes(route.id);
+                    const isSpecial = route.is_special;
+
+                    card.className = 'route-card-full animate-spring-pop btn-click-effect';
+                    if (!isConquered && !isSpecial) {
+                        card.classList.add('route-unvisited');
+                    } else if (isConquered) {
+                        card.classList.add('route-conquered');
+                    }
+                    if (isSpecial) card.classList.add('animate-shimmer');
+
                     const xp = ROUTE_XP[route.id] || 0;
-                    const lockBadge = isLocked
-                        ? `<span style="background:#e74c3c;color:#fff;font-size:0.72em;padding:0.2em 0.6em;border-radius:10px;font-weight:bold;">🔒 Lv.${needed}</span>`
-                        : (xp > 0 && isLoggedIn ? `<span style="background:#BFE340;color:#2c3e50;font-size:0.72em;padding:0.2em 0.6em;border-radius:10px;font-weight:bold;">+${xp} XP</span>` : '');
+                    let statusBadge = '';
+                    if (isConquered) {
+                        statusBadge = `<span style="background:rgba(212,175,55,0.2); color:#D4AF37; font-size:0.72em; padding:0.2em 0.6em; border-radius:10px; font-weight:bold;">✨ 已征服</span>`;
+                    } else if (xp > 0 && isLoggedIn) {
+                        statusBadge = `<span style="background:#BFE340;color:#2c3e50;font-size:0.72em;padding:0.2em 0.6em;border-radius:10px;font-weight:bold;">+${xp} XP</span>`;
+                    }
+
                     card.innerHTML = `
                         <a href="${link}" class="${route.id.startsWith('ST') ? 'disabled-link' : ''}">
                             <div class="route-card-header">
                                 <span class="route-id-code" style="background-color: ${route.color}; color: ${route.textColor || 'white'};">${route.id}</span>
                                 <h3 class="route-alias">${route.alias || '(無別稱)'}</h3>
-                                ${lockBadge}
+                                ${statusBadge}
                             </div>
                             <div class="route-card-content">
                                 <p><strong>起點:</strong> ${route.start}</p>

@@ -624,19 +624,6 @@ body.app-light-theme .app-filter-chip.random-btn {
 (function() {
 'use strict';
 
-// XP thresholds and unlock table (mirrored from main.js)
-const ROUTE_UNLOCK = {
-    '7E':1,'7W':1,
-    '900':1,'900A':1,'966T':1,
-    '914':8,'966A':8,'966':8,
-    '900S':1,'914B':1,'910':5,'901P':15,
-    '914H':22,'920':22,'966B':22,
-    '920X':30,'923':30,'966C':30,
-    '928':38,'929':38,'961':38,'961P':38,
-    '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,
-    '955':50,'955A':50,'955H':50,'960':50,'962P':50,'962X':50,
-    'X935':50,'S90':50,'S91':50,
-};
 const ROUTE_XP = {
     '7E':80,'7W':80,
     '900':450,'900A':360,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
@@ -692,6 +679,7 @@ let selectedTerminalId = null;
 let activeFilter = 'all';
 let searchTerm = '';
 let userLevel = 1;
+let conqueredRouteIds = [];
 let isLoggedIn = false;
 const terminalMarkers = new Map(); // terminal id → Leaflet marker
 
@@ -706,7 +694,7 @@ function getUnlockSpec(route) {
     const unlockType = route.unlock_type || (route.is_special ? 'coins' : 'level');
     const unlockValue = unlockType === 'coins'
         ? (route.coin_cost ?? route.unlock_value ?? route.unlock_cost ?? 0)
-        : (route.unlock_level ?? route.unlock_value ?? ROUTE_UNLOCK[route.id] ?? 1);
+        : (route.unlock_level ?? route.unlock_value ?? 1);
     return { unlockType, unlockValue };
 }
 
@@ -722,7 +710,8 @@ function isRouteUnlocked(route) {
     if (unlockSpec.unlockType === 'coins') {
         return isCoinRouteUnlocked(route);
     }
-    return userLevel >= unlockSpec.unlockValue;
+    // Standard routes are always unlocked in the collection system
+    return true;
 }
 
 function getUserCoins() {
@@ -859,14 +848,10 @@ function matchesTerminal(route) {
 function matchesFilter(route) {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'unlocked') {
+        // In the collection system, 'unlocked' means conquered or special-purchased
         if (!isLoggedIn) return false;
         if (route.is_special) return isCoinRouteUnlocked(route);
-        // Also exclude dept-locked routes from the 'unlocked' filter
-        const FREE_DEPTS = ['tko'];
-        const deptId = route.dept_id;
-        const deptNeedsUnlock = !!(deptId && !FREE_DEPTS.includes(deptId));
-        if (deptNeedsUnlock && !getUnlockedDepartments().includes(deptId)) return false;
-        return isRouteUnlocked(route);
+        return conqueredRouteIds.includes(route.id);
     }
     if (activeFilter === '里程幣') {
         const unlockSpec = getUnlockSpec(route);
@@ -933,16 +918,14 @@ function renderRoutes() {
         return;
     }
 
-    // Separate unlocked and locked routes, then sort each group
-    const routeWithLock = filtered.map(route => {
+    // Separate conquered, available, and locked (special) routes
+    const routeStatuses = filtered.map(route => {
         const unlockSpec = getUnlockSpec(route);
-        const needed = unlockSpec.unlockValue;
-        const isCoinRoute = unlockSpec.unlockType === 'coins' && needed > 0;
+        const cost = unlockSpec.unlockValue;
+        const isCoinRoute = unlockSpec.unlockType === 'coins' && cost > 0;
         const coinUnlocked = isCoinRoute && isCoinRouteUnlocked(route);
-        const levelLocked = isLoggedIn && !isCoinRoute && userLevel < needed;
         const coinLocked = isLoggedIn && isCoinRoute && !coinUnlocked;
-        // Dept lock: only lock if the route's dept requires purchase AND user hasn't unlocked it.
-        // 'tko' is always free. Routes without a dept_id are never dept-locked.
+
         const FREE_DEPTS = ['tko'];
         const deptId = route.dept_id;
         const deptNeedsUnlock = !!(deptId && !FREE_DEPTS.includes(deptId));
@@ -950,51 +933,74 @@ function renderRoutes() {
             deptNeedsUnlock &&
             (!isLoggedIn || !getUnlockedDepartments().includes(deptId))
         );
-        const locked = levelLocked || coinLocked || deptLocked;
-        return { route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, deptLocked, locked };
+        const isConquered = conqueredRouteIds.includes(route.id);
+        const isLocked = coinLocked || deptLocked;
+
+        return { route, cost, isCoinRoute, coinUnlocked, coinLocked, deptLocked, isConquered, isLocked };
     });
 
-    // Helper: numeric sort key for route ID (e.g. "900A" → 900.1, "914B" → 914.2)
+    // Helper: numeric sort key for route ID
     function routeSortKey(id) {
         const m = id.match(/^(\d+)([A-Z]?)(.*)$/i);
-        if (!m) return [9999, 0];
+        if (!m) return 999900;
         const num = parseInt(m[1], 10);
-        const suffix = m[2] ? m[2].charCodeAt(0) - 64 : 0; // A=1, B=2, ...
+        const suffix = m[2] ? m[2].toUpperCase().charCodeAt(0) - 64 : 0;
         return num * 100 + suffix;
     }
 
-    const unlockedRoutes = routeWithLock.filter(r => !r.locked)
-        .sort((a, b) => routeSortKey(a.route.id) - routeSortKey(b.route.id));
-    const lockedRoutes = routeWithLock.filter(r => r.locked)
-        .sort((a, b) => a.needed - b.needed || routeSortKey(a.route.id) - routeSortKey(b.route.id));
+    const sortedRoutes = routeStatuses.sort((a, b) => {
+        // Group 1: Unlocked special/coin routes
+        // Group 2: Conquered routes
+        // Group 3: Available standard routes
+        // Group 4: Locked special/coin routes
+        function getGroup(r) {
+            if (r.isCoinRoute && !r.coinLocked && !r.deptLocked) return 1;
+            if (r.isConquered) return 2;
+            if (!r.isLocked) return 3;
+            return 4;
+        }
+        const gA = getGroup(a), gB = getGroup(b);
+        if (gA !== gB) return gA - gB;
+        return routeSortKey(a.route.id) - routeSortKey(b.route.id);
+    });
 
-    function buildCard({ route, needed, isCoinRoute, coinUnlocked, levelLocked, coinLocked, deptLocked, locked }) {
+    function buildCard({ route, cost, isCoinRoute, coinUnlocked, coinLocked, deptLocked, isConquered, isLocked }) {
         const xp = route.xp_reward || ROUTE_XP[route.id] || 0;
         const isSelected = route.id === selectedRouteId;
 
         const card = document.createElement('div');
-        card.className = 'app-route-card' + (locked ? ' locked' : '') + (isSelected ? ' selected' : '');
-        if (isCoinRoute) card.classList.add('coin-route');
+        card.className = 'app-route-card animate-spring-pop';
+        if (isLocked) card.classList.add('locked');
+        if (isSelected) card.classList.add('selected');
+        if (isCoinRoute) card.classList.add('coin-route', 'animate-shimmer');
+
+        // Collection status
+        if (!isConquered && !isCoinRoute) {
+            card.classList.add('route-unvisited');
+        } else if (isConquered) {
+            card.classList.add('route-conquered');
+        }
+
         card.dataset.routeId = route.id;
 
-        let lockBadge = '';
+        let statusBadge = '';
         if (deptLocked) {
-            lockBadge = `<span class="app-route-lock-badge">🔒 需解鎖部門</span>`;
-        } else if (levelLocked) {
-            lockBadge = `<span class="app-route-lock-badge">🔒 Lv.${needed}</span>`;
+            statusBadge = `<span class="app-route-lock-badge">🔒 需解鎖部門</span>`;
         } else if (coinLocked) {
-            lockBadge = `<span class="app-route-coin-badge">🪙 ${route.coin_cost}</span>`;
+            statusBadge = `<span class="app-route-coin-badge">🪙 ${route.coin_cost}</span>`;
         } else if (isCoinRoute) {
-            lockBadge = `<span class="app-route-coin-badge unlocked">🪙 特別</span>`;
+            statusBadge = `<span class="app-route-coin-badge unlocked">🪙 特別</span>`;
+        } else if (isConquered) {
+            statusBadge = `<span class="app-route-xp" style="background:rgba(212,175,55,0.2); color:#D4AF37;">✨ 已征服</span>`;
         } else if (xp > 0 && isLoggedIn) {
-            lockBadge = `<span class="app-route-xp">+${xp} XP</span>`;
+            statusBadge = `<span class="app-route-xp">+${xp} XP</span>`;
         }
 
         card.innerHTML = `
             <div class="app-route-header">
                 <span class="app-route-id" style="background:${route.color||'#4caf50'}">${route.id}</span>
                 <span class="app-route-alias">${route.alias && route.alias.trim() ? route.alias : route.id}</span>
-                ${lockBadge}
+                ${statusBadge}
             </div>
             <div class="app-route-meta">
                 <span><i class="fas fa-map-marker-alt" style="font-size:0.9em;"></i> ${route.start || '—'}</span>
@@ -1005,7 +1011,7 @@ function renderRoutes() {
         `;
 
         // Direction selector when selected
-        if (isSelected && !locked && route.gpx && route.gpx.length > 0) {
+        if (isSelected && !isLocked && route.gpx && route.gpx.length > 0) {
             const dirRow = document.createElement('div');
             dirRow.className = 'app-dir-row';
             route.gpx.forEach((gpxItem, idx) => {
@@ -1024,7 +1030,7 @@ function renderRoutes() {
             card.appendChild(dirRow);
         }
 
-        if (!locked) {
+        if (!isLocked) {
             card.addEventListener('click', () => selectRoute(route));
         } else if (coinLocked) {
             card.addEventListener('click', () => purchaseCoinRoute(route));
@@ -1033,16 +1039,7 @@ function renderRoutes() {
         return card;
     }
 
-    unlockedRoutes.forEach(r => container.appendChild(buildCard(r)));
-
-    if (unlockedRoutes.length > 0 && lockedRoutes.length > 0) {
-        const divider = document.createElement('div');
-        divider.className = 'app-routes-divider';
-        divider.innerHTML = '<span>🔒 未解鎖路線</span>';
-        container.appendChild(divider);
-    }
-
-    lockedRoutes.forEach(r => container.appendChild(buildCard(r)));
+    sortedRoutes.forEach(r => container.appendChild(buildCard(r)));
 }
 
 async function purchaseCoinRoute(route) {
@@ -1135,6 +1132,7 @@ function selectRoute(route) {
 document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('app-start-ride-btn');
     if (startBtn) {
+        startBtn.classList.add('btn-click-effect');
         startBtn.addEventListener('click', () => {
             if (!selectedRouteId) return;
             if (!isLoggedIn) {
@@ -1188,11 +1186,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const randomBtn = document.getElementById('app-random-btn');
     if (randomBtn) {
         randomBtn.addEventListener('click', () => {
-            // For non-logged-in users, only pick from freely available routes (no unlock req)
-            // For logged-in users, only pick from unlocked routes
+            // Pick from all standard routes + purchased special routes
             const available = appRoutes.filter(r => {
-                if (isLoggedIn) return isRouteUnlocked(r);
-                return (ROUTE_UNLOCK[r.id] || 1) === 1; // only starter routes if not logged in
+                const spec = getUnlockSpec(r);
+                if (spec.unlockType === 'coins') return isCoinRouteUnlocked(r);
+                return true;
             });
             if (available.length === 0) return;
             const pick = available[Math.floor(Math.random() * available.length)];
@@ -1444,10 +1442,15 @@ async function initAppRidePage() {
                 if (userResp.ok) {
                     const freshUser = await userResp.json();
                     // Merge fresh game and profile data into localStorage user object
-                    // Ensure all critical fields like mileage_rank, permissions, etc. are updated
                     const merged = Object.assign({}, storedUser, freshUser);
                     localStorage.setItem('user', JSON.stringify(merged));
                     userLevel = Math.max(1, parseInt(merged.level || 1));
+
+                    // Update conquered route list
+                    if (Array.isArray(freshUser.conquered_route_ids)) {
+                        conqueredRouteIds = freshUser.conquered_route_ids;
+                    }
+
                     // Sync server-side purchased coin routes
                     if (Array.isArray(freshUser.unlocked_coin_routes)) {
                         localStorage.setItem('unlockedCoinRoutes', JSON.stringify(freshUser.unlocked_coin_routes));

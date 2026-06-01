@@ -694,10 +694,10 @@
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
                         <select id="rm-unlock-type">
-                            <option value="level">解鎖條件：Level</option>
-                            <option value="coins">解鎖條件：里程幣購買</option>
+                            <option value="level">標準路線 (免費導航)</option>
+                            <option value="coins">特別版路線 (里程幣解鎖)</option>
                         </select>
-                        <input id="rm-unlock-value" type="number" min="0" placeholder="解鎖數值（Level 或 里程幣）">
+                        <input id="rm-unlock-value" type="number" min="0" placeholder="里程幣費用 (僅限特別版)">
                         <input id="rm-tags" type="text" placeholder="標籤（逗號分隔，可留空）">
                     </div>
                     <div style="margin-top:0.8em; display:flex; gap:1em; flex-wrap:wrap; align-items:center;">
@@ -2454,12 +2454,9 @@
             }
             function formatUnlock(route) {
                 if (route.unlock_type === 'coins') {
-                    return `🪙 ${route.unlock_value || 0}`;
+                    return `🪙 ${route.unlock_value || 0} (特別版)`;
                 }
-                if (route.unlock_value != null) {
-                    return `Lv.${route.unlock_value}`;
-                }
-                return '-';
+                return '🔓 全員開放';
             }
             tbody.innerHTML = managedRoutesData.map(r => `
                 <tr>

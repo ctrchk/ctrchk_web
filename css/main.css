@@ -359,6 +359,71 @@ footer {
     transform: translateY(0);
 }
 
+/* Global Animation System */
+@keyframes spring-pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    70% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-spring-pop {
+    animation: spring-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes unlock-glow {
+    0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); border-color: inherit; }
+    50% { box-shadow: 0 0 20px 5px rgba(212, 175, 55, 0.6); border-color: #D4AF37; }
+    100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); border-color: inherit; }
+}
+
+.animate-unlock-glow {
+    animation: unlock-glow 1.5s ease-out;
+}
+
+.btn-click-effect {
+    transition: transform 0.1s ease;
+}
+
+.btn-click-effect:active {
+    transform: scale(0.95) !important;
+}
+
+/* Route Collection System */
+.route-unvisited {
+    filter: grayscale(100%) contrast(75%);
+    opacity: 0.85;
+    transition: filter 0.5s ease, opacity 0.5s ease;
+}
+
+.route-unvisited:hover {
+    opacity: 1;
+}
+
+.route-conquered {
+    filter: none;
+    opacity: 1;
+}
+
 /* (可選) 增加逐個出現的延遲效果，讓動畫更好看 */
 .timeline-section.is-visible .timeline-item:nth-child(1) { transition-delay: 0.1s; }
 .timeline-section.is-visible .timeline-item:nth-child(2) { transition-delay: 0.2s; }
