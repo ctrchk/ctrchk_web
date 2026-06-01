@@ -146,8 +146,6 @@
         } catch (_) {
             document.getElementById('wx-updated').textContent = '天氣資料載入失敗，請稍後再試';
         }
-    })();
-
     async function fetchWeatherApi(dataType) {
         const langs = ['tc', 'zh', 'en'];
         let lastResp = null;
