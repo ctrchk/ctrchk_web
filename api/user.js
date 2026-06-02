@@ -397,6 +397,40 @@ export default async function handler(req, res) {
       }
     }
 
+    if (req.body.action === 'claim-catalog-reward') {
+      try {
+        const { user_id } = req.body;
+        if (!user_id) return res.status(400).json({ message: 'user_id required' });
+
+        // Ensure column exists to track claim status
+        await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS catalog_reward_claimed BOOLEAN DEFAULT FALSE`);
+
+        const { rows } = await query(`SELECT catalog_reward_claimed FROM user_game_profile WHERE user_id = $1`, [user_id]);
+        if (rows.length > 0 && rows[0].catalog_reward_claimed) {
+          return res.status(400).json({ message: 'Reward already claimed' });
+        }
+
+        // Award 10,000 XP and 1,000 Coins
+        await query(
+          `UPDATE user_game_profile
+           SET xp = xp + 10000,
+               coins = coins + 1000,
+               catalog_reward_claimed = TRUE
+           WHERE user_id = $1`,
+          [user_id]
+        );
+
+        return res.status(200).json({
+          message: 'Reward claimed successfully!',
+          added_xp: 10000,
+          added_coins: 1000
+        });
+      } catch (error) {
+        console.error('Claim catalog reward error:', error);
+        return res.status(500).json({ message: error.message });
+      }
+    }
+
     try {
       const {
         user_id,

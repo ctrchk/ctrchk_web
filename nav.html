@@ -1252,35 +1252,44 @@
 
       function add3DBuildingsLayer() {
         if (!map) return;
-        // Search for a 'building' layer in the basemap style
-        const layers = map.getStyle().layers;
-        let buildingLayerId = null;
-        for (const layer of layers) {
-          if (layer.source && (layer['source-layer'] === 'building' || layer.id.includes('building'))) {
-            buildingLayerId = layer.id;
-            break;
-          }
+
+        // 3D Buildings are a Gold Card feature
+        if (typeof window.hasPermission === 'function' && !window.hasPermission('map_3d_gold')) {
+            console.log('[Nav] User does not have 3D buildings permission');
+            return;
         }
 
-        // If the style already has a 3D extrusion layer, we're good.
-        // Otherwise, add a generic one if a building source exists.
+        const style = map.getStyle();
+        // Check if any building layer exists
+        const src = style.sources.openfreemap ? 'openfreemap' : (style.sources.openmaptiles ? 'openmaptiles' : 'vectorTiles');
+
         if (!map.getLayer('3d-buildings')) {
-            const src = map.getSource('openfreemap') ? 'openfreemap' : (map.getSource('openmaptiles') ? 'openmaptiles' : null);
-            if (src) {
-                map.addLayer({
-                    'id': '3d-buildings',
-                    'source': src,
-                    'source-layer': 'building',
-                    'type': 'fill-extrusion',
-                    'minzoom': 15,
-                    'paint': {
-                        'fill-extrusion-color': '#aaa',
-                        'fill-extrusion-height': ['get', 'render_height'],
-                        'fill-extrusion-base': ['get', 'render_min_height'],
-                        'fill-extrusion-opacity': 0.6
-                    }
-                }, findFirstSymbolLayer());
-            }
+            map.addLayer({
+                'id': '3d-buildings',
+                'source': src,
+                'source-layer': 'building',
+                'type': 'fill-extrusion',
+                'minzoom': 15,
+                'paint': {
+                    'fill-extrusion-color': [
+                        'interpolate', ['linear'], ['get', 'render_height'],
+                        0, '#2c3e50',
+                        50, '#34495e',
+                        100, '#4b6584'
+                    ],
+                    'fill-extrusion-height': [
+                        'interpolate', ['linear'], ['zoom'],
+                        15, 0,
+                        15.05, ['get', 'render_height']
+                    ],
+                    'fill-extrusion-base': [
+                        'interpolate', ['linear'], ['zoom'],
+                        15, 0,
+                        15.05, ['get', 'render_min_height']
+                    ],
+                    'fill-extrusion-opacity': 0.8
+                }
+            }, findFirstSymbolLayer());
         }
       }
 
@@ -1472,9 +1481,9 @@
       try {
         // Check user permission using standard permission system
         if (typeof window.hasPermission !== 'function') {
-            if (retryCount < 5) {
+            if (retryCount < 8) {
                 console.log('[Nav] hasPermission not ready, retrying... ' + retryCount);
-                setTimeout(() => loadParkingSpaces(retryCount + 1), 1000);
+                setTimeout(() => loadParkingSpaces(retryCount + 1), 800);
             }
             return;
         }

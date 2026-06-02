@@ -561,8 +561,23 @@ body.app-light-theme .app-filter-chip.random-btn {
     <!-- ════════ APP-ONLY ride / cycling page ════════ -->
     <div id="app-ride-page" class="app-only" style="display:none;">
 
+        <!-- Route Catalog / Progress Header -->
+        <div id="app-catalog-header" style="background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%); padding: calc(env(safe-area-inset-top) + 0.8em) 1em 1em; border-bottom: 1px solid #2d4d2d; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6em;">
+                <h2 style="font-size:1.15em; font-weight:900; color:#BFE340; margin:0; letter-spacing:1px;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
+                <button id="btn-claim-reward" class="btn-click-effect" style="display:none; background:#D4AF37; color:#000; border:none; padding:0.4em 0.8em; border-radius:12px; font-size:0.75em; font-weight:bold; box-shadow: 0 0 15px rgba(212,175,55,0.4);">領取全集獎勵</button>
+            </div>
+            <div style="background:rgba(0,0,0,0.2); height:12px; border-radius:6px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,0.1);">
+                <div id="catalog-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #6dba65, #BFE340); transition:width 1s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:0.4em; font-size:0.72em; font-weight:bold; color:#a8d8a0;">
+                <span id="catalog-progress-text">已征服 0 / 0 條路線</span>
+                <span id="catalog-pct-text">0%</span>
+            </div>
+        </div>
+
         <!-- Search + filter bar -->
-        <div class="app-ride-topbar">
+        <div class="app-ride-topbar" style="padding-top:0.6em;">
             <div class="app-ride-search-row">
                 <i class="fas fa-search" style="margin-left:0.3em;"></i>
                 <input type="text" id="app-search-input" class="app-ride-search-input"
@@ -918,6 +933,31 @@ function renderRoutes() {
         return;
     }
 
+    // Update Catalog Progress
+    const totalCatalogRoutes = appRoutes.filter(r => !r.is_special).length;
+    const conqueredCatalogRoutes = appRoutes.filter(r => !r.is_special && conqueredRouteIds.includes(r.id)).length;
+    const catalogPct = totalCatalogRoutes > 0 ? Math.round((conqueredCatalogRoutes / totalCatalogRoutes) * 100) : 0;
+
+    const progressFill = document.getElementById('catalog-progress-fill');
+    const progressText = document.getElementById('catalog-progress-text');
+    const pctText = document.getElementById('catalog-pct-text');
+    const claimBtn = document.getElementById('btn-claim-reward');
+
+    if (progressFill) progressFill.style.width = catalogPct + '%';
+    if (progressText) progressText.textContent = `已征服 ${conqueredCatalogRoutes} / ${totalCatalogRoutes} 條路線`;
+    if (pctText) pctText.textContent = catalogPct + '%';
+
+    if (claimBtn) {
+        // Show claim button if 100% and not already claimed
+        const isClaimed = localStorage.getItem('catalog_reward_claimed') === '1';
+        if (catalogPct === 100 && !isClaimed) {
+            claimBtn.style.display = 'block';
+            claimBtn.onclick = claimCatalogReward;
+        } else {
+            claimBtn.style.display = 'none';
+        }
+    }
+
     // Separate conquered, available, and locked (special) routes
     const routeStatuses = filtered.map(route => {
         const unlockSpec = getUnlockSpec(route);
@@ -1040,6 +1080,50 @@ function renderRoutes() {
     }
 
     sortedRoutes.forEach(r => container.appendChild(buildCard(r)));
+}
+
+async function claimCatalogReward() {
+    if (!confirm('恭喜你集齊所有路線！確定領取 10,000 XP 及 1,000 里程幣獎勵嗎？')) return;
+
+    try {
+        const token = localStorage.getItem('accessToken');
+        // Use getHistory with a special action or custom body to grant rewards
+        const resp = await fetch('/api/getHistory', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                route_id: 'CATALOG_REWARD',
+                route_name: '圖籍全集獎勵',
+                ride_date: new Date().toISOString().slice(0, 10),
+                distance_km: 0,
+                duration_minutes: 0,
+                xp_earned_override: 10000,
+                bonus_coins: 1000,
+                source: 'system'
+            }),
+        });
+
+        if (resp.ok) {
+            localStorage.setItem('catalog_reward_claimed', '1');
+
+            // Also unlock all special routes locally
+            const specialRouteIds = appRoutes.filter(r => r.is_special).map(r => r.id);
+            const unlocked = JSON.parse(localStorage.getItem('unlockedCoinRoutes') || '[]');
+            const newUnlocked = Array.from(new Set([...unlocked, ...specialRouteIds]));
+            localStorage.setItem('unlockedCoinRoutes', JSON.stringify(newUnlocked));
+
+            alert('🎉 獎勵已發放！獲得 10,000 XP 及 1,000 里程幣，並已解鎖所有特別路線！');
+            location.reload();
+        } else {
+            alert('領取失敗，請稍後再試。');
+        }
+    } catch (e) {
+        console.error('[claimCatalogReward]', e);
+        alert('領取失敗，網絡錯誤。');
+    }
 }
 
 async function purchaseCoinRoute(route) {

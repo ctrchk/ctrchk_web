@@ -1060,7 +1060,7 @@
     function startFreeMode() {
         isFreeMode = true;
         goToStartPhase = false;
-        rideStarted = true; // Mark ride as started in free mode too
+        // Let beginRide set rideStarted = true to ensure timer and HUD init
         document.getElementById('ride-route-label').textContent = '自由騎行模式';
         document.getElementById('btn-free-mode').style.display = 'none';
         initFreeModeControls();
@@ -1165,6 +1165,7 @@
                       reachedStops.add(s.id || s.code || (s.name + s.lat));
                       sessionXp += 5; // Free mode: 5 XP per stop
                       updateSessionXpDisplay();
+                      document.getElementById('stat-stops').textContent = reachedStops.size;
                       showXpToast(`🚏 ${s.name} +5 XP`);
                       if (window.CTRCHK_PWA) {
                         window.CTRCHK_PWA.sendLocalNotification('🚏 到達站點', s.name, 'ctrc-stop-free');
@@ -1235,7 +1236,18 @@
       const gtsBanner = document.getElementById('go-to-start-banner');
       if (gtsBanner) gtsBanner.style.display = 'none';
       showRideHUD(true);
-      if (!isFreeMode) document.getElementById('next-stop-card').style.display = '';
+      // Ensure HUD elements are visible/correct
+      document.getElementById('stat-time').textContent = '00:00';
+      document.getElementById('stat-dist').textContent = '0 m';
+
+      if (!isFreeMode) {
+        document.getElementById('next-stop-card').style.display = '';
+      } else {
+        document.getElementById('next-stop-card').style.display = 'none';
+        document.getElementById('stat-stops').textContent = '0';
+        const stopsLbl = document.querySelector('.rbs-stat:nth-child(5) .lbl');
+        if (stopsLbl) stopsLbl.textContent = '🚩 站點';
+      }
       document.getElementById('btn-end-ride').disabled = false;
 
       // Mark first stop reached if user is at start

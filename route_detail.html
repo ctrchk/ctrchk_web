@@ -715,6 +715,11 @@
       };
 
       async function initStartRide() {
+        const isPwa = window.matchMedia('(display-mode: standalone)').matches ||
+                      navigator.standalone === true ||
+                      document.body.classList.contains('is-pwa');
+        if (!isPwa) return;
+
         const params = new URLSearchParams(location.search);
         const routeId = params.get('id');
         if (!routeId) return;
