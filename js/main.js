@@ -683,7 +683,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     const isSpecial = route.is_special;
 
                     card.className = 'route-card-full animate-spring-pop btn-click-effect';
-                    if (!isConquered && !isSpecial) {
+
+                    // WEB VERSION FIX: Always colorful in web environment
+                    const isPwaEnv = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true || document.body.classList.contains('is-pwa');
+
+                    if (!isConquered && !isSpecial && isPwaEnv) {
                         card.classList.add('route-unvisited');
                     } else if (isConquered) {
                         card.classList.add('route-conquered');

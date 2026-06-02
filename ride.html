@@ -73,6 +73,13 @@
       flex-shrink: 0;
     }
 
+    #btn-open-catalog-ride {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 1em;
+      cursor: pointer; margin-left: auto;
+    }
+
     /* ── Next stop card (overlaid on map) ── */
     #next-stop-card {
       position: fixed; top: calc(env(safe-area-inset-top) + 3.6em); left: 50%;
@@ -272,6 +279,38 @@
       cursor: pointer; margin-top: 0.5em; letter-spacing: 0.03em;
     }
 
+    /* ── Route Catalog Styles (Shared with routes.html) ── */
+    #catalog-overlay {
+      display: none; position: fixed; inset: 0; z-index: 800;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      flex-direction: column; padding: calc(env(safe-area-inset-top) + 1em) 1.2em;
+      overflow-y: auto; color: #e8f5e9;
+    }
+    #catalog-overlay.show { display: flex; }
+    .catalog-header {
+      background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+      padding: 1.2em; border-radius: 20px 20px 0 0; border: 1px solid #BFE340; border-bottom: none;
+    }
+    .catalog-content {
+      background: #1e3820; padding: 1.2em; border-radius: 0 0 20px 20px;
+      border: 1px solid #BFE340; border-top: none; margin-bottom: 2em;
+    }
+    .catalog-progress-wrap {
+      background: rgba(0,0,0,0.2); height: 12px; border-radius: 6px;
+      overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin: 0.8em 0;
+    }
+    #catalog-bar-fill {
+      width: 0%; height: 100%; background: linear-gradient(90deg, #6dba65, #BFE340);
+      transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .catalog-reward-box {
+      background: rgba(191,227,64,0.1); border-left: 4px solid #BFE340;
+      padding: 1em; border-radius: 4px; margin: 1em 0;
+    }
+    .catalog-region-card {
+      background: rgba(255,255,255,0.03); padding: 1em; border-radius: 14px; margin-bottom: 0.8em;
+    }
+
     /* ── Global Animations ── */
     .animate-spring-pop { animation: springPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
     .animate-float { animation: float 3s ease-in-out infinite; }
@@ -462,6 +501,9 @@
     <span id="ride-route-label">載入中...</span>
     <span id="ride-timer-display">00:00</span>
     <button id="btn-free-mode" class="btn-click-effect" style="background: #BFE340; color: #1a252f; border: none; border-radius: 20px; padding: 4px 12px; font-size: 0.8em; font-weight: bold; cursor: pointer; margin-left: 10px;">自由模式</button>
+    <button id="btn-open-catalog-ride" class="btn-click-effect" onclick="openCatalog()" title="單車路線圖籍">
+      <i class="fas fa-book"></i>
+    </button>
   </div>
 
   <!-- Next stop card -->
@@ -568,6 +610,35 @@
     <button id="btn-summary-done" class="btn-click-effect" onclick="window.location.href='/dashboard'">確認並返回儀表板</button>
   </div>
 
+  <!-- Route Catalog Overlay -->
+  <div id="catalog-overlay">
+    <div class="catalog-header">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="color:#BFE340; font-size:1.4em; margin:0;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
+        <button onclick="closeCatalog()" style="background:none; border:none; color:#a8d8a0; font-size:1.6em;"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="catalog-progress-wrap">
+        <div id="catalog-bar-fill"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#a8d8a0; font-weight:bold;">
+        <span id="catalog-text-progress">已征服 0 / 0 條路線</span>
+        <span id="catalog-text-pct">0%</span>
+      </div>
+    </div>
+    <div class="catalog-content">
+      <div class="catalog-reward-box">
+        <strong style="color:#BFE340; display:block; margin-bottom:0.4em;">🎁 集齊全集獎勵：</strong>
+        <div style="font-size:0.9em; line-height:1.6;">
+          • <span style="color:#D4AF37; font-weight:bold;">10,000 XP</span> (提升至高等級)<br>
+          • <span style="color:#D4AF37; font-weight:bold;">1,000 里程幣</span> (解鎖功能)<br>
+          • 解鎖 <span style="color:#BFE340; font-weight:bold;">「特別限定路線」</span> 騎行權限
+        </div>
+      </div>
+      <div id="catalog-regions-list"></div>
+      <button onclick="closeCatalog()" style="width:100%; padding:1em; border:none; border-radius:12px; background:#BFE340; color:#121f14; font-weight:bold; cursor:pointer; margin-top:1em;">關閉圖籍</button>
+    </div>
+  </div>
+
   <!-- Level-up overlay -->
   <div id="levelup-overlay">
     <div id="levelup-inner">
@@ -620,6 +691,19 @@
       41:'殿堂騎士',42:'殿堂騎士',43:'殿堂騎士',44:'殿堂騎士',45:'殿堂騎士',
       46:'殿堂騎士',47:'殿堂騎士',48:'殿堂騎士',49:'殿堂騎士',50:'殿堂騎士',
     };
+    const ROUTE_UNLOCK = {
+      '900':1,'900A':1,'966T':1,'914':8,'966A':8,'966':8,'900S':1,'914B':1,'910':5,'901P':15,
+      '914H':22,'920':22,'966B':22,'920X':30,'923':30,'966C':30,'928':38,'929':38,'961':38,'961P':38,
+      '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,'955':50,'955A':50,'955H':50,'960':50,
+      '962P':50,'962X':50,'X935':50,'S90':50,'S91':50,
+    };
+    const ROUTE_XP = {
+      '900':450,'900A':360,'966':110,'914':80,'966A':90,'900S':130,'901P':140,
+      '910':100,'914B':80,'914H':80,'920':130,'966B':90,'920X':100,'923':160,
+      '966C':90,'928':170,'929':160,'966T':320,'961':130,'961P':100,'932':220,
+      '935':250,'939':120,'939M':120,'955':110,'955A':60,'955H':80,'960':400,
+      '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
+    };
     // ── State ─────────────────────────────────────────────────────────────
     const params = new URLSearchParams(location.search);
     const routeId = params.get('id') || '';
@@ -663,6 +747,8 @@
     let lastReachedDistrict = null; // for district-change bonus tracking
     let gtsTargetStopIdx = 0;       // index in routeStops that we're navigating to in go-to-start phase
     let lastFreeNearbyUpdateAt = 0;
+    let sessionCompletionCoins = 0;
+    let sessionFastFinishCoins = 0;
 
     // ── Helpers ───────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -1291,6 +1377,7 @@
 
     // ── End Ride ──────────────────────────────────────────────────────────
     async function endRide() {
+      console.log('[Ride] endRide called. isFreeMode:', isFreeMode);
       // Stop GPS and timer
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -1309,10 +1396,11 @@
       let bonusCoins = 0;
       let finalRouteId = routeId;
       let finalRouteName = routeData ? routeData.alias : routeId;
-      let completionCoins = 0;
-      let fastFinishCoins = 0;
+      sessionCompletionCoins = 0;
+      sessionFastFinishCoins = 0;
 
       if (isFreeMode) {
+        console.log('[Ride] Processing Free Mode end. Reached stops:', reachedStops.size);
           // Free mode logic: check similarity to existing routes
           let bestMatch = null;
           let maxSimilarity = 0;
@@ -1336,9 +1424,10 @@
               finalRouteName = `(匹配) ${bestMatch.alias}`;
               const proportionalBonus = Math.round(200 * maxSimilarity); // Base completion 200
               sessionXp += proportionalBonus;
-              completionCoins = Math.round(10 * maxSimilarity);
-              bonusCoins = completionCoins;
+              sessionCompletionCoins = Math.round(10 * maxSimilarity);
+              bonusCoins = sessionCompletionCoins;
               allStopsReached = (maxSimilarity >= 0.95);
+              console.log('[Ride] Free mode similarity match found:', finalRouteId, 'Similarity:', maxSimilarity);
           } else {
               // No good match: reward by mileage
               finalRouteId = 'FREE_RIDE';
@@ -1356,16 +1445,18 @@
           }
 
           // Fast-finish bonus coins (per-route time limit)
-          fastFinishCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
+          sessionFastFinishCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
             ? FAST_FINISH_BONUS_COINS : 0;
           // Per-route completion coins (e.g. 7E/7W = 5 on finishing all stops)
-          completionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
-          bonusCoins = fastFinishCoins + completionCoins;
+          sessionCompletionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
+          bonusCoins = sessionFastFinishCoins + sessionCompletionCoins;
+          console.log('[Ride] Standard mode end. allStopsReached:', allStopsReached);
       }
 
       // 過短行程（少於2個車站且少於0.5公里且少於3分鐘）不計算進歷史
       // 放寬條件：GPS精度差時距離可能不準，加入時間因素避免誤判
       const rideTooShort = reachedStops.size < 2 && distKm < 0.5 && durationMins < 3;
+      console.log('[Ride] rideTooShort:', rideTooShort, 'Dist:', distKm, 'Mins:', durationMins);
 
       // Submit to API
       let apiResult = { xp_earned: 0, level: 1, xp: 0, coins: 0, level_up: false, coins_earned: 0, bonus_coins_earned: 0 };
@@ -1397,8 +1488,10 @@
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(body),
           });
+          console.log('[Ride] API Response status:', res.status);
           if (res.ok) {
             apiResult = await res.json();
+            console.log('[Ride] API Success. level_up:', apiResult.level_up);
             // Update localStorage user level
             try {
               const raw = localStorage.getItem('user');
@@ -1457,6 +1550,7 @@
 
       // Build summary
       pendingSummary = { durationMins, distKm, avgSpeed, apiResult, rideTooShort };
+      console.log('[Ride] End processing complete. Transitioning to summary/levelup.');
 
       // Show level-up first if applicable
       if (apiResult.level_up) {
@@ -1568,6 +1662,61 @@
       if (pendingSummary) showSummary(pendingSummary);
     };
 
+    window.openCatalog = function() {
+        updateCatalogUI();
+        document.getElementById('catalog-overlay').classList.add('show');
+    };
+
+    window.closeCatalog = function() {
+        document.getElementById('catalog-overlay').classList.remove('show');
+    };
+
+    function updateCatalogUI() {
+        const total = allRoutes.filter(r => !r.is_special).length;
+        const conquered = allRoutes.filter(r => !r.is_special && reachedStops.has(r.id)).length; // Simplified for ride page
+
+        // Use server-side conquered ids if available
+        let serverConquered = [];
+        try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            serverConquered = u.conquered_route_ids || [];
+        } catch(e) {}
+
+        const finalConqueredCount = allRoutes.filter(r => !r.is_special && (serverConquered.includes(r.id) || (r.id === routeId && reachedStops.size >= routeStops.length))).length;
+        const pct = total > 0 ? Math.round((finalConqueredCount / total) * 100) : 0;
+
+        document.getElementById('catalog-bar-fill').style.width = pct + '%';
+        document.getElementById('catalog-text-progress').textContent = `已征服 ${finalConqueredCount} / ${total} 條路線`;
+        document.getElementById('catalog-text-pct').textContent = pct + '%';
+
+        const regions = [
+            { id: 'tko', name: '將軍澳部', tag: '將軍澳' },
+            { id: 'hki', name: '港島海濱部', tag: '港島' }
+        ];
+
+        const list = document.getElementById('catalog-regions-list');
+        list.innerHTML = '';
+        regions.forEach(reg => {
+            const rTotal = allRoutes.filter(r => !r.is_special && (r.dept_id === reg.id || (r.tags && r.tags.includes(reg.tag)))).length;
+            if (rTotal === 0) return;
+            const rConq = allRoutes.filter(r => !r.is_special && (r.dept_id === reg.id || (r.tags && r.tags.includes(reg.tag))) && serverConquered.includes(r.id)).length;
+            const rPct = Math.round((rConq / rTotal) * 100);
+
+            const div = document.createElement('div');
+            div.className = 'catalog-region-card';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5em; font-size:0.9em;">
+                    <strong>${reg.name}</strong>
+                    <span style="color:#BFE340;">${rConq}/${rTotal}</span>
+                </div>
+                <div style="height:6px; background:rgba(0,0,0,0.3); border-radius:3px; overflow:hidden;">
+                    <div style="width:${rPct}%; height:100%; background:#BFE340;"></div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
     function generateTransparentTrackMap(coords) {
         if (!coords || coords.length < 2) return null;
         const canvas = document.createElement('canvas');
@@ -1621,8 +1770,8 @@
         if (bc > 0) {
           // Distinguish completion coins vs fast-finish bonus
           const parts = [];
-          if (completionCoins > 0) parts.push(`🏆 完成路線 +${completionCoins} 里程幣`);
-          if (fastFinishCoins > 0) parts.push(`⚡ ${FAST_FINISH_MINUTES}分鐘內完成 +${fastFinishCoins} 里程幣`);
+          if (sessionCompletionCoins > 0) parts.push(`🏆 完成路線 +${sessionCompletionCoins} 里程幣`);
+          if (sessionFastFinishCoins > 0) parts.push(`⚡ ${FAST_FINISH_MINUTES}分鐘內完成 +${sessionFastFinishCoins} 里程幣`);
           bonusCoinsEl.textContent = parts.length ? parts.join('　') : `+${bc} 里程幣獎勵`;
           bonusCoinsEl.style.display = '';
         } else {
@@ -1799,6 +1948,24 @@
     async function init() {
       const mode = params.get('mode');
       await loadRouteCatalog();
+
+      // End ride button listener (must be before early return)
+      const endRideBtn = document.getElementById('btn-end-ride');
+      if (endRideBtn) {
+          endRideBtn.addEventListener('click', async () => {
+              try {
+                  endRideBtn.disabled = true;
+                  endRideBtn.textContent = '正在儲存...';
+                  await endRide();
+              } catch (err) {
+                  console.error('[Ride] Error in end-ride button handler:', err);
+                  alert('結束行程時發生錯誤：' + err.message);
+                  endRideBtn.disabled = false;
+                  endRideBtn.textContent = '🔴 結束騎行';
+              }
+          });
+      }
+
       if (mode === 'free') {
           isFreeMode = true;
           initFreeModeControls();
@@ -1914,12 +2081,6 @@
         document.getElementById('next-stop-card').style.display = 'none';
       }
 
-      // End ride button
-      document.getElementById('btn-end-ride').addEventListener('click', async () => {
-        document.getElementById('btn-end-ride').disabled = true;
-        document.getElementById('btn-end-ride').textContent = '正在儲存...';
-        await endRide();
-      });
 
       // Free Mode button
       const freeModeBtn = document.getElementById('btn-free-mode');
