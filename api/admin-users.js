@@ -296,7 +296,7 @@ export default async function handler(req, res) {
     // GET department configs
     if (req.query.action === 'get-dept-config') {
       try {
-        const { rows } = await query('SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, promo_cost, is_promo, available FROM department_config ORDER BY dept_id');
+        const { rows } = await query('SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available FROM department_config ORDER BY dept_id');
         return res.status(200).json({ departments: rows });
       } catch (e) {
         console.error('[admin-users] get-dept-config error:', e.message);
@@ -321,17 +321,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // GET route configs (coin routes only)
-    if (req.query.action === 'get-route-config') {
-      try {
-        await ensureAdminRouteSchema();
-        const { rows } = await query(`SELECT route_id, unlock_cost, promo_cost, is_special FROM routes_config WHERE is_special = TRUE ORDER BY route_id`);
-        return res.status(200).json({ routes: rows });
-      } catch (e) {
-        console.error('[admin-users] get-route-config error:', e.message);
-        return res.status(500).json({ message: '載入路線設定失敗', routes: [] });
-      }
-    }
 
     try {
       const page = parseInt(req.query.page) || 1;
@@ -409,11 +398,11 @@ export default async function handler(req, res) {
 
       // Upsert a department record (create or update)
       if (action === 'upsert_dept') {
-        const { dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, available, is_promo, promo_cost } = body;
+        const { dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available } = body;
         if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
         await query(
-          `INSERT INTO department_config (dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, unlock_cost, available, is_promo, promo_cost)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          `INSERT INTO department_config (dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
            ON CONFLICT (dept_id) DO UPDATE SET
              name = EXCLUDED.name,
              region = EXCLUDED.region,
@@ -421,10 +410,7 @@ export default async function handler(req, res) {
              map_center_lat = EXCLUDED.map_center_lat,
              map_center_lng = EXCLUDED.map_center_lng,
              map_zoom = EXCLUDED.map_zoom,
-             unlock_cost = EXCLUDED.unlock_cost,
-             available = EXCLUDED.available,
-             is_promo = EXCLUDED.is_promo,
-             promo_cost = EXCLUDED.promo_cost`,
+             available = EXCLUDED.available`,
           [
             String(dept_id).trim().toLowerCase(),
             name || null,
@@ -433,10 +419,7 @@ export default async function handler(req, res) {
             map_center_lat != null ? Number(map_center_lat) : null,
             map_center_lng != null ? Number(map_center_lng) : null,
             map_zoom != null ? parseInt(map_zoom, 10) : null,
-            unlock_cost != null ? parseInt(unlock_cost, 10) : null,
             available !== undefined ? !!available : true,
-            !!is_promo,
-            promo_cost != null ? parseInt(promo_cost, 10) : null,
           ]
         );
         return res.status(200).json({ success: true });
@@ -450,34 +433,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
-      // Update department config (standard price + promo settings)
-      if (action === 'update-dept-config') {
-        const { dept_id, is_promo, promo_cost, unlock_cost } = body;
-        if (!dept_id) return res.status(400).json({ message: 'dept_id is required' });
-        await query(
-          `UPDATE department_config SET unlock_cost = COALESCE($1, unlock_cost), is_promo = $2, promo_cost = $3 WHERE dept_id = $4`,
-          [
-            unlock_cost != null ? parseInt(unlock_cost, 10) : null,
-            is_promo,
-            promo_cost != null ? parseInt(promo_cost, 10) : null,
-            dept_id,
-          ]
-        );
-        return res.status(200).json({ success: true });
-      }
-
-
-      // Update route promo price
-      if (action === 'update-route-promo') {
-        await ensureAdminRouteSchema();
-        const { route_id, promo_cost } = body;
-        if (!route_id) return res.status(400).json({ message: 'route_id is required' });
-        await query(
-          `UPDATE routes_config SET promo_cost = $1 WHERE route_id = $2`,
-          [promo_cost != null ? parseInt(promo_cost, 10) : null, route_id]
-        );
-        return res.status(200).json({ success: true });
-      }
 
       if (action === 'upsert_station') {
         await ensureAdminRouteSchema();
