@@ -115,6 +115,56 @@
     .search-container { flex-basis: 100%; max-width: none; }
 }
 
+/* ════════ Route Catalog Styles ════════ */
+#app-catalog-header {
+    background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+    padding: calc(env(safe-area-inset-top) + 0.8em) 1em 1.2em;
+    border-bottom: 1px solid #2d4d2d;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.catalog-info-btn {
+    background: rgba(255,255,255,0.1);
+    color: #a8d8a0;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 0.8em;
+    cursor: pointer;
+    margin-left: 0.5em;
+}
+#catalog-gameplay-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(5px);
+    padding: 2em 1.5em;
+    overflow-y: auto;
+}
+.catalog-modal-content {
+    background: #1e3820;
+    border: 2px solid #BFE340;
+    border-radius: 20px;
+    padding: 1.5em;
+    color: #e8f5e9;
+    max-width: 500px;
+    margin: 0 auto;
+}
+.catalog-modal-content h3 { color: #BFE340; margin-bottom: 1em; }
+.catalog-reward-list { list-style: none; padding: 0; margin: 1em 0; }
+.catalog-reward-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    background: rgba(255,255,255,0.05);
+    padding: 0.8em;
+    border-radius: 12px;
+    margin-bottom: 0.6em;
+}
+.catalog-reward-list i { font-size: 1.4em; color: #D4AF37; }
+
 /* ════════ APP-ONLY ride page styles ════════ */
 /* Department selection screen */
 #app-dept-select {
@@ -562,9 +612,12 @@ body.app-light-theme .app-filter-chip.random-btn {
     <div id="app-ride-page" class="app-only" style="display:none;">
 
         <!-- Route Catalog / Progress Header -->
-        <div id="app-catalog-header" style="background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%); padding: calc(env(safe-area-inset-top) + 0.8em) 1em 1em; border-bottom: 1px solid #2d4d2d; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+        <div id="app-catalog-header">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6em;">
-                <h2 style="font-size:1.15em; font-weight:900; color:#BFE340; margin:0; letter-spacing:1px;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
+                <div style="display:flex; align-items:center;">
+                    <h2 style="font-size:1.15em; font-weight:900; color:#BFE340; margin:0; letter-spacing:1px;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
+                    <button class="catalog-info-btn" onclick="showCatalogGameplay()"><i class="fas fa-info"></i></button>
+                </div>
                 <button id="btn-claim-reward" class="btn-click-effect" style="display:none; background:#D4AF37; color:#000; border:none; padding:0.4em 0.8em; border-radius:12px; font-size:0.75em; font-weight:bold; box-shadow: 0 0 15px rgba(212,175,55,0.4);">領取全集獎勵</button>
             </div>
             <div style="background:rgba(0,0,0,0.2); height:12px; border-radius:6px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,0.1);">
@@ -573,6 +626,40 @@ body.app-light-theme .app-filter-chip.random-btn {
             <div style="display:flex; justify-content:space-between; margin-top:0.4em; font-size:0.72em; font-weight:bold; color:#a8d8a0;">
                 <span id="catalog-progress-text">已征服 0 / 0 條路線</span>
                 <span id="catalog-pct-text">0%</span>
+            </div>
+        </div>
+
+        <!-- Catalog Gameplay Modal -->
+        <div id="catalog-gameplay-modal" onclick="hideCatalogGameplay()">
+            <div class="catalog-modal-content" onclick="event.stopPropagation()">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1em;">
+                    <h3>📖 圖籍具體玩法</h3>
+                    <button onclick="hideCatalogGameplay()" style="background:none; border:none; color:#a8d8a0; font-size:1.5em;"><i class="fas fa-times"></i></button>
+                </div>
+                <p style="font-size:0.9em; line-height:1.6; opacity:0.9;">
+                    「單車路線圖籍」是記錄你征服城市每一個角落的勳章。你需要親自騎行並完成指定路線的所有站點，才能將圖籍中的灰色路線點亮。
+                </p>
+                <div style="margin:1.2em 0; padding:1em; background:rgba(191,227,64,0.1); border-left:4px solid #BFE340; border-radius:4px;">
+                    <strong style="color:#BFE340; display:block; margin-bottom:0.5em;">如何收集？</strong>
+                    <ul style="padding-left:1.2em; font-size:0.85em; opacity:0.9;">
+                        <li>選擇一條標準路線並點擊「開始騎行」</li>
+                        <li>按照順序到達路線上的每一個車站</li>
+                        <li>完成後，該路線將標記為「已征服」</li>
+                    </ul>
+                </div>
+                <strong style="color:#BFE340;">🎁 集齊獎勵：</strong>
+                <ul class="catalog-reward-list">
+                    <li><i class="fas fa-star"></i> <div><strong>10,000 XP</strong><br><span style="font-size:0.75em; opacity:0.7;">大幅提升你的車手等級</span></div></li>
+                    <li><i class="fas fa-coins"></i> <div><strong>1,000 里程幣</strong><br><span style="font-size:0.75em; opacity:0.7;">用於解鎖進階功能或特殊路線</span></div></li>
+                    <li><i class="fas fa-unlock-alt"></i> <div><strong>解鎖「特別限定路線」</strong><br><span style="font-size:0.75em; opacity:0.7;">獲得圖籍專屬隱藏路線的騎行權限</span></div></li>
+                </ul>
+                <div style="margin-top:1.5em; border-top:1px solid rgba(255,255,255,0.1); padding-top:1em;">
+                    <strong style="color:#BFE340; display:block; margin-bottom:0.8em;">🗺️ 各區完成進度：</strong>
+                    <div id="catalog-region-progress" style="display:flex; flex-direction:column; gap:0.8em;">
+                        <!-- Region stats injected here -->
+                    </div>
+                </div>
+                <button onclick="hideCatalogGameplay()" style="width:100%; padding:0.8em; border:none; border-radius:12px; background:#BFE340; color:#121f14; font-weight:bold; cursor:pointer; margin-top:1.5em;">我明白了</button>
             </div>
         </div>
 
@@ -1015,7 +1102,10 @@ function renderRoutes() {
         if (isCoinRoute) card.classList.add('coin-route', 'animate-shimmer');
 
         // Collection status
-        if (!isConquered && !isCoinRoute) {
+        // WEB VERSION FIX: Always colorful in web environment
+        const isPwaEnv = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true || document.body.classList.contains('is-pwa');
+
+        if (!isConquered && !isCoinRoute && isPwaEnv) {
             card.classList.add('route-unvisited');
         } else if (isConquered) {
             card.classList.add('route-conquered');
@@ -1087,22 +1177,17 @@ async function claimCatalogReward() {
 
     try {
         const token = localStorage.getItem('accessToken');
-        // Use getHistory with a special action or custom body to grant rewards
-        const resp = await fetch('/api/getHistory', {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+        const resp = await fetch('/api/user', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
-                route_id: 'CATALOG_REWARD',
-                route_name: '圖籍全集獎勵',
-                ride_date: new Date().toISOString().slice(0, 10),
-                distance_km: 0,
-                duration_minutes: 0,
-                xp_earned_override: 10000,
-                bonus_coins: 1000,
-                source: 'system'
+                action: 'claim-catalog-reward',
+                user_id: user.id
             }),
         });
 
@@ -1695,6 +1780,55 @@ async function initAppRidePage() {
 
     // Show ride page directly (single-page design)
     ridePage.style.display = '';
+
+    function updateCatalogRegionProgress() {
+        const regions = [
+            { id: 'tko', name: '將軍澳部', tag: '將軍澳' },
+            { id: 'hki', name: '港島海濱部', tag: '港島' },
+            { id: 'st', name: '沙田部', tag: '沙田' }
+        ];
+
+        const container = document.getElementById('catalog-region-progress');
+        if (!container) return;
+        container.innerHTML = '';
+
+        regions.forEach(region => {
+            const total = appRoutes.filter(r => !r.is_special && (r.dept_id === region.id || (r.tags && r.tags.includes(region.tag)))).length;
+            if (total === 0) return;
+            const conquered = appRoutes.filter(r => !r.is_special && (r.dept_id === region.id || (r.tags && r.tags.includes(region.tag))) && conqueredRouteIds.includes(r.id)).length;
+            const pct = Math.round((conquered / total) * 100);
+
+            const missingRoutes = appRoutes.filter(r => !r.is_special && (r.dept_id === region.id || (r.tags && r.tags.includes(region.tag))) && !conqueredRouteIds.includes(r.id));
+
+            const row = document.createElement('div');
+            row.style.background = 'rgba(255,255,255,0.03)';
+            row.style.padding = '1em';
+            row.style.borderRadius = '14px';
+            row.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.6em; font-size:0.9em;">
+                    <span style="font-weight:bold;">${region.name}</span>
+                    <span style="color:#BFE340; font-weight:bold;">${conquered} / ${total} (${pct}%)</span>
+                </div>
+                <div style="height:8px; background:rgba(0,0,0,0.3); border-radius:4px; overflow:hidden; margin-bottom:0.8em;">
+                    <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #6dba65, #BFE340);"></div>
+                </div>
+                ${missingRoutes.length > 0 ? `
+                    <div style="font-size:0.75em; opacity:0.6; display:flex; flex-wrap:wrap; gap:0.4em;">
+                        <span>待征服：</span>
+                        ${missingRoutes.slice(0, 8).map(r => `<span style="background:rgba(255,255,255,0.1); padding:1px 4px; border-radius:4px;">${r.id}</span>`).join('')}
+                        ${missingRoutes.length > 8 ? '<span>...</span>' : ''}
+                    </div>
+                ` : '<div style="font-size:0.75em; color:#BFE340;"><i class="fas fa-check-circle"></i> 該區域已全數征服！</div>'}
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    window.showCatalogGameplay = () => {
+        updateCatalogRegionProgress();
+        document.getElementById('catalog-gameplay-modal').style.display = 'block';
+    };
+    window.hideCatalogGameplay = () => { document.getElementById('catalog-gameplay-modal').style.display = 'none'; };
 
     // Check URL for dept param — restore previous page state
     const urlParams = new URLSearchParams(window.location.search);
