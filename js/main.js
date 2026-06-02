@@ -674,24 +674,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 conqueredRouteIds = u.conquered_route_ids || [];
             } catch(e) {}
 
-            // Always prepend Free Mode Card for web view too
-            const freeCard = document.createElement('div');
-            freeCard.className = 'route-card-full animate-spring-pop btn-click-effect';
-            freeCard.innerHTML = `
-                <a href="/ride?mode=free">
-                    <div class="route-card-header">
-                        <span class="route-id-code" style="background-color: #BFE340; color: #1a252f;">FREE</span>
-                        <h3 class="route-alias">自由模式</h3>
-                        <span style="background:#BFE340;color:#2c3e50;font-size:0.72em;padding:0.2em 0.6em;border-radius:10px;font-weight:bold;">隨意騎行</span>
-                    </div>
-                    <div class="route-card-content">
-                        <p><strong>起點:</strong> 隨時隨地</p>
-                        <p><strong>終點:</strong> 自由結束</p>
-                    </div>
-                </a>
-            `;
-            allRoutesContainer.appendChild(freeCard);
-
             const isLoggedIn = !!localStorage.getItem('accessToken');
             if (routesToRender.length > 0) {
                 routesToRender.forEach(route => {
