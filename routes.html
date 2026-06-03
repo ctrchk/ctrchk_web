@@ -1537,6 +1537,7 @@ function showDeptSelect(pushState) {
 // pushState=true adds a history entry so the back button returns to dept selection
 function enterDepartment(dept, pushState) {
     selectedDeptId = dept.id;
+    localStorage.setItem('lastDeptId', dept.id);
 
     if (pushState) {
         history.pushState({ page: 'routes', dept: dept.id }, '', '/routes?dept=' + dept.id);
@@ -1625,34 +1626,52 @@ async function initAppRidePage() {
     initMap();
 
     // Load routes — fetch static JSON and admin overrides in parallel for speed
-    const ROUTE_DATA_CACHE_KEY = 'routeDataCache';
-    const ROUTE_DATA_CACHE_TTL = 30000; // 30 seconds
+    const ROUTE_DATA_CACHE_KEY = 'routeDataCache_v2';
+    const STATIC_ROUTES_CACHE_KEY = 'staticRoutesCache';
+    const CACHE_TTL = 3600000; // 1 hour
 
-    function getCachedRouteData() {
+    function getCachedData(key) {
         try {
-            const raw = sessionStorage.getItem(ROUTE_DATA_CACHE_KEY);
+            const raw = localStorage.getItem(key);
             if (!raw) return null;
             const { ts, data } = JSON.parse(raw);
-            if (Date.now() - ts < ROUTE_DATA_CACHE_TTL) return data;
+            if (Date.now() - ts < CACHE_TTL) return data;
         } catch (_) {}
         return null;
     }
 
-    function setCachedRouteData(data) {
+    function setCachedData(key, data) {
         try {
-            sessionStorage.setItem(ROUTE_DATA_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+            localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
         } catch (_) {}
     }
 
     try {
-        // Kick off both fetches simultaneously
-        const cachedOverride = getCachedRouteData();
-        const [staticRes, overrideResp] = await Promise.all([
-            fetch('/routes.json'),
-            cachedOverride ? Promise.resolve(null) : fetch('/api/user?action=route-data'),
-        ]);
+        const cachedOverride = getCachedData(ROUTE_DATA_CACHE_KEY);
+        const cachedStatic = getCachedData(STATIC_ROUTES_CACHE_KEY);
 
-        const data = await staticRes.json();
+        let staticData = cachedStatic;
+        let overrideData = cachedOverride;
+
+        const fetchPromises = [];
+        if (!staticData) {
+            fetchPromises.push(fetch('/routes.json').then(r => r.json()).then(d => {
+                staticData = d;
+                setCachedData(STATIC_ROUTES_CACHE_KEY, d);
+            }));
+        }
+        if (!overrideData) {
+            fetchPromises.push(fetch('/api/user?action=route-data').then(r => r.json()).then(d => {
+                overrideData = d;
+                setCachedData(ROUTE_DATA_CACHE_KEY, d);
+            }));
+        }
+
+        if (fetchPromises.length > 0) {
+            await Promise.all(fetchPromises);
+        }
+
+        const data = staticData;
         appRoutes = (data.routes || []).map(r => Object.assign({}, r, {
             coin_cost: r.coin_cost != null ? r.coin_cost : r.unlock_cost,
             unlock_type: r.is_special ? 'coins' : 'level',
@@ -1685,11 +1704,6 @@ async function initAppRidePage() {
 
         // Apply admin overrides (alias, color, unlock, tags, terminals)
         try {
-            let overrideData = cachedOverride;
-            if (!overrideData && overrideResp && overrideResp.ok) {
-                overrideData = await overrideResp.json();
-                setCachedRouteData(overrideData);
-            }
             if (overrideData) {
                 const overrideMap = new Map((overrideData.routes || []).map(r => [r.route_id, r]));
                 appRoutes = appRoutes.map(r => {
@@ -1824,10 +1838,12 @@ async function initAppRidePage() {
     // Check URL for dept param — restore previous page state
     const urlParams = new URLSearchParams(window.location.search);
     const deptParam = urlParams.get('dept');
-    const restoredDept = deptParam && DEPARTMENTS.find(d => d.id === deptParam && d.available);
+    const lastDeptId = localStorage.getItem('lastDeptId');
+    const restoredDept = (deptParam && DEPARTMENTS.find(d => d.id === deptParam && d.available)) ||
+                         (!deptParam && lastDeptId && DEPARTMENTS.find(d => d.id === lastDeptId && d.available));
     const activeDept = restoredDept || DEPARTMENTS.find(d => d.available);
     if (activeDept) {
-        enterDepartment(activeDept, !restoredDept);
+        enterDepartment(activeDept, !deptParam);
     }
 }
 

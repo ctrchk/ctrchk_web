@@ -2339,31 +2339,44 @@
         function refreshStopNatureLabels() {
             const { startName, endName } = getCurrentRouteEndpointNames();
             document.querySelectorAll('.rm-stop-nature').forEach(sel => {
-                if (sel.options[1]) sel.options[1].textContent = `往 ${startName}`;
-                if (sel.options[2]) sel.options[2].textContent = `往 ${endName}`;
+                if (sel.options[3]) sel.options[3].textContent = `往 ${startName}`;
+                if (sel.options[4]) sel.options[4].textContent = `往 ${endName}`;
             });
         }
 
         function createRouteStopRow(stop = {}) {
             const row = document.createElement('div');
-            row.style.cssText = 'display:grid; grid-template-columns:2fr 1.5fr auto; gap:0.5em; margin-bottom:0.45em;';
+            row.style.cssText = 'border:1px solid #eee; padding:0.8em; border-radius:8px; margin-bottom:0.8em; background:#fdfdfd; position:relative;';
             const { startName, endName } = getCurrentRouteEndpointNames();
             const stationOptions = ['<option value="">選擇站點</option>']
                 .concat(stationAdminData.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.id)} - ${escapeHtml(s.name_zh || '')}</option>`))
                 .join('');
             row.innerHTML = `
-                <select class="rm-stop-station">${stationOptions}</select>
-                <select class="rm-stop-nature">
-                    <option value="both">雙向</option>
-                    <option value="a_direction">往 ${escapeHtml(startName)}</option>
-                    <option value="b_direction">往 ${escapeHtml(endName)}</option>
-                    <option value="temporary_cancel">臨時停用</option>
-                    <option value="temporary_stop">臨時站</option>
-                </select>
-                <button type="button" onclick="this.parentElement.remove()" style="border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;">移除</button>
+                <button type="button" onclick="this.parentElement.remove()" style="position:absolute; top:0.5em; right:0.5em; border:none; background:none; color:#e74c3c; cursor:pointer; font-size:1.2em; line-height:1;">&times;</button>
+                <div style="margin-bottom:0.5em; padding-right:1.5em;">
+                    <select class="rm-stop-station" style="width:100%; padding:0.4em; border-radius:4px; border:1px solid #ddd;">${stationOptions}</select>
+                </div>
+                <div style="margin-bottom:0.5em;">
+                    <select class="rm-stop-nature" style="width:100%; padding:0.4em; border-radius:4px; border:1px solid #ddd; font-size:0.9em;">
+                        <option value="both">雙向</option>
+                        <option value="start">起點</option>
+                        <option value="end">終點</option>
+                        <option value="a_direction">往 ${escapeHtml(startName)}</option>
+                        <option value="b_direction">往 ${escapeHtml(endName)}</option>
+                    </select>
+                </div>
+                <div>
+                    <select class="rm-stop-type" style="width:100%; padding:0.4em; border-radius:4px; border:1px solid #ddd; font-size:0.9em;">
+                        <option value="standard">標準站</option>
+                        <option value="temporary">臨時站</option>
+                        <option value="temporary_cancel">臨時取消</option>
+                        <option value="end_only">僅供結束</option>
+                    </select>
+                </div>
             `;
             if (stop.station_id) row.querySelector('.rm-stop-station').value = stop.station_id;
             if (stop.nature) row.querySelector('.rm-stop-nature').value = stop.nature;
+            if (stop.type) row.querySelector('.rm-stop-type').value = stop.type;
             return row;
         }
 
@@ -2530,6 +2543,7 @@
                 order: idx + 1,
                 station_id: row.querySelector('.rm-stop-station')?.value || '',
                 nature: row.querySelector('.rm-stop-nature')?.value || 'both',
+                type: row.querySelector('.rm-stop-type')?.value || 'standard',
             })).filter(s => s.station_id);
             const gpx = Array.from(document.querySelectorAll('#rm-gpx-list > div')).map((row) => ({
                 label: row.querySelector('.rm-gpx-label')?.value?.trim() || '',
