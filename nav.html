@@ -321,6 +321,67 @@
     #planner-panel.collapsed #nav-stats-bar { display: none !important; }
     #planner-panel.collapsed #btn-end-nav { display: none; }
 
+    /* ── Custom Landmark Picker ── */
+    #landmark-picker-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(18, 31, 20, 0.95);
+      backdrop-filter: blur(12px);
+      display: none; flex-direction: column;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+      animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #landmark-picker-overlay.show { display: flex; }
+    body.app-light-theme #landmark-picker-overlay {
+      background: rgba(245, 250, 245, 0.97);
+    }
+
+    .picker-header {
+      padding: 1.2em 1em 0.8em;
+      display: flex; align-items: center; gap: 0.8em;
+    }
+    #picker-search {
+      flex: 1; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px; padding: 0.8em 1em; color: #fff; font-size: 1em; outline: none;
+    }
+    body.app-light-theme #picker-search {
+      background: rgba(0, 0, 0, 0.05); border-color: rgba(0, 0, 0, 0.1); color: #1b3a1f;
+    }
+    #btn-picker-close {
+      background: none; border: none; color: #fff; font-size: 1.2em; cursor: pointer; padding: 0.5em;
+    }
+    body.app-light-theme #btn-picker-close { color: #1b3a1f; }
+
+    #landmark-list {
+      flex: 1; overflow-y: auto; padding: 0 1em 2em;
+    }
+    .picker-section-title {
+      font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em;
+      color: #a8d8a0; margin: 1.5em 0 0.6em 0.5em; font-weight: bold;
+    }
+    body.app-light-theme .picker-section-title { color: #2e7d32; }
+
+    .picker-item {
+      padding: 1em; border-radius: 12px; background: rgba(255, 255, 255, 0.05);
+      margin-bottom: 0.5em; cursor: pointer; display: flex; align-items: center; gap: 0.8em;
+      transition: background 0.2s;
+    }
+    .picker-item:active { background: rgba(255, 255, 255, 0.12); transform: scale(0.98); }
+    body.app-light-theme .picker-item { background: rgba(0, 0, 0, 0.03); }
+    body.app-light-theme .picker-item:active { background: rgba(0, 0, 0, 0.06); }
+
+    .picker-item i { color: #04D93C; width: 1.2em; text-align: center; }
+    .picker-item-name { font-weight: 600; font-size: 0.95em; color: #e8f5e9; }
+    body.app-light-theme .picker-item-name { color: #1b3a1f; }
+
+    /* Gold Theme accents in picker */
+    body.rank-gold #picker-search:focus { border-color: #D4AF37; }
+    body.rank-gold .picker-item i { color: #D4AF37; }
+
+    @keyframes slideInUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
     /* ── maplibre custom user dot ── */
     .user-dot {
       width: 18px; height: 18px; border-radius: 50%;
@@ -416,7 +477,7 @@
         <span id="nav-pushbike-warning" class="nav-chip"><i class="fas fa-person-walking"></i><span id="nav-pushbike-text">請推車</span></span>
       </div>
     </div>
-    <button id="btn-parking-toggle" title="顯示泊車位（銀卡）" aria-label="泊車位" style="display:none;"
+    <button id="btn-parking-toggle" title="顯示泊車位（銀卡會員專屬）" aria-label="泊車位" style="display:none;"
       onclick="toggleParkingLayer()"
       class="btn-nav-icon">
       <i class="fas fa-parking"></i>
@@ -455,14 +516,13 @@
     <div id="planner-form">
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#04D93C;">📍</span>
-        <input class="plan-input" id="sel-from" list="landmark-options" aria-label="選擇起點" data-i18n-placeholder="from_placeholder" placeholder="輸入或選擇起點（可自訂地址）">
+        <input class="plan-input" id="sel-from" readonly aria-label="選擇起點" data-i18n-placeholder="from_placeholder" placeholder="選擇起點">
       </div>
       <div id="waypoints-container"></div>
       <div class="plan-row">
         <span class="plan-row-icon" style="color:#e74c3c;">🏁</span>
-        <input class="plan-input" id="sel-to" list="landmark-options" aria-label="選擇終點" data-i18n-placeholder="to_placeholder" placeholder="輸入或選擇終點（可自訂地址）">
+        <input class="plan-input" id="sel-to" readonly aria-label="選擇終點" data-i18n-placeholder="to_placeholder" placeholder="選擇終點">
       </div>
-      <datalist id="landmark-options"></datalist>
       <div class="plan-row" id="add-waypoint-row" style="display:none; margin-bottom:0.8em;">
         <span class="plan-row-icon"></span>
         <button id="btn-add-waypoint" style="background:none; border:1px dashed rgba(255,255,255,0.3); color:#a8d8a0; padding:0.4em 1em; border-radius:8px; font-size:0.85em; cursor:pointer; width:100%;">
@@ -517,6 +577,15 @@
     </div>
   </div>
 
+  <!-- Landmark Picker Overlay -->
+  <div id="landmark-picker-overlay">
+    <div class="picker-header">
+      <button id="btn-picker-close"><i class="fas fa-arrow-left"></i></button>
+      <input type="text" id="picker-search" placeholder="搜尋地點..." autocomplete="off">
+    </div>
+    <div id="landmark-list"></div>
+  </div>
+
   <!-- Arrived overlay -->
   <div id="arrived-overlay">
     <div id="summary-card">
@@ -543,30 +612,41 @@
     // ── Landmarks (start/end points for route planning) ────────────────────
     const LANDMARKS = [
       // 將軍澳 / TKO
-      { id: 'poa',   name: '寶琳（新都城二期）', lat: 22.32424, lon: 114.25696 },
-      { id: 'kl',    name: '景林邨',             lat: 22.31870, lon: 114.25650 },
-      { id: 'tkv',   name: '將軍澳村',           lat: 22.32480, lon: 114.24900 },
-      { id: 'hah',   name: '坑口站',             lat: 22.31240, lon: 114.26550 },
-      { id: 'tko',   name: '將軍澳中心',         lat: 22.30738, lon: 114.25666 },
-      { id: 'tik',   name: '調景嶺（彩明苑）',   lat: 22.30046, lon: 114.25331 },
-      { id: 'lhp',   name: '康城（日出康城）',   lat: 22.29070, lon: 114.26692 },
-      { id: 'tkoi',  name: '將軍澳創新園',       lat: 22.28570, lon: 114.27240 },
+      { id: 'poa',   name: '寶琳（新都城二期）', lat: 22.32424, lon: 114.25696, district: '將軍澳' },
+      { id: 'kl',    name: '景林邨',             lat: 22.31870, lon: 114.25650, district: '將軍澳' },
+      { id: 'tkv',   name: '將軍澳村',           lat: 22.32480, lon: 114.24900, district: '將軍澳' },
+      { id: 'hah',   name: '坑口站',             lat: 22.31705, lon: 114.26312, district: '將軍澳' },
+      { id: 'tko',   name: '將軍澳中心',         lat: 22.30738, lon: 114.25666, district: '將軍澳' },
+      { id: 'tik',   name: '調景嶺站',           lat: 22.30415, lon: 114.25344, district: '將軍澳' },
+      { id: 'lhp',   name: '康城站',             lat: 22.29626, lon: 114.26692, district: '將軍澳' },
+      { id: 'tkoi',  name: '將軍澳創新園',       lat: 22.28570, lon: 114.27240, district: '將軍澳' },
+      { id: 'tko_sports', name: '將軍澳運動場',   lat: 22.31017, lon: 114.26323, district: '將軍澳' },
+      { id: 'velodrome',  name: '香港單車館',     lat: 22.31325, lon: 114.26072, district: '將軍澳' },
       // 沙田 / Sha Tin
-      { id: 'st_centre', name: '沙田市中心',     lat: 22.38200, lon: 114.18800 },
-      { id: 'st_park',   name: '沙田公園',       lat: 22.38500, lon: 114.18600 },
-      { id: 'st_racecourse', name: '沙田馬場',   lat: 22.37800, lon: 114.19200 },
-      { id: 'tai_wai',   name: '大圍站',         lat: 22.37300, lon: 114.17800 },
-      { id: 'fo_tan',    name: '火炭站',         lat: 22.39500, lon: 114.19800 },
-      { id: 'uni',       name: '大學站',         lat: 22.41300, lon: 114.20900 },
-      { id: 'tai_po',    name: '大埔墟站',       lat: 22.44800, lon: 114.17200 },
+      { id: 'st_centre', name: '沙田市中心',     lat: 22.38200, lon: 114.18800, district: '沙田' },
+      { id: 'st_park',   name: '沙田公園',       lat: 22.38500, lon: 114.18600, district: '沙田' },
+      { id: 'st_racecourse', name: '沙田馬場',   lat: 22.37800, lon: 114.19200, district: '沙田' },
+      { id: 'tai_wai',   name: '大圍站',         lat: 22.37300, lon: 114.17800, district: '沙田' },
+      { id: 'fo_tan',    name: '火炭站',         lat: 22.39500, lon: 114.19800, district: '沙田' },
+      { id: 'uni',       name: '大學站',         lat: 22.41300, lon: 114.20900, district: '沙田' },
+      { id: 'mos',       name: '馬鞍山公園',     lat: 22.42700, lon: 114.23100, district: '沙田' },
+      // 大埔及北區 / Tai Po & North
+      { id: 'tai_po',    name: '大埔墟站',       lat: 22.44800, lon: 114.17200, district: '大埔及北區' },
+      { id: 'tp_park',   name: '大埔海濱公園',   lat: 22.45000, lon: 114.18400, district: '大埔及北區' },
+      { id: 'science',   name: '香港科學園',     lat: 22.42800, lon: 114.21100, district: '大埔及北區' },
+      { id: 'tmt',       name: '大美督',         lat: 22.47300, lon: 114.23700, district: '大埔及北區' },
+      { id: 'fanling',   name: '粉嶺站',         lat: 22.49200, lon: 114.13900, district: '大埔及北區' },
+      { id: 'sheung_shui', name: '上水站',       lat: 22.50100, lon: 114.12700, district: '大埔及北區' },
+      // 屯門及元朗 / TM & YL
+      { id: 'tuen_mun',  name: '屯門市中心',     lat: 22.39100, lon: 113.97600, district: '屯門及元朗' },
+      { id: 'butterfly', name: '蝴蝶灣公園',     lat: 22.37500, lon: 113.95700, district: '屯門及元朗' },
+      { id: 'yuen_long', name: '元朗市中心',     lat: 22.44500, lon: 114.02200, district: '屯門及元朗' },
+      { id: 'tin_shui_wai', name: '天水圍公園',  lat: 22.45700, lon: 114.00100, district: '屯門及元朗' },
+      { id: 'nsw',       name: '南生圍',         lat: 22.45400, lon: 114.04000, district: '屯門及元朗' },
       // 港島 / HK Island
-      { id: 'np_pier',   name: '北角碼頭',       lat: 22.29356, lon: 114.20105 },
-      { id: 'east_walk', name: '東岸板道',       lat: 22.29225, lon: 114.20991 },
-      { id: 'quarry_bay',name: '鰂魚涌',         lat: 22.28800, lon: 114.21900 },
-      // 新界 / NT
-      { id: 'tuen_mun',  name: '屯門市中心',     lat: 22.39100, lon: 113.97600 },
-      { id: 'yuen_long', name: '元朗市中心',     lat: 22.44500, lon: 114.02200 },
-      { id: 'tin_shui_wai', name: '天水圍',      lat: 22.45700, lon: 114.00100 },
+      { id: 'np_pier',   name: '北角碼頭',       lat: 22.29356, lon: 114.20105, district: '港島' },
+      { id: 'east_walk', name: '中環及灣仔海濱', lat: 22.28300, lon: 114.17300, district: '港島' },
+      { id: 'quarry_bay',name: '鰂魚涌公園',     lat: 22.28800, lon: 114.21900, district: '港島' },
     ];
 
     // ── Local routing policy (strict cycling-only) ────────────────────────
@@ -1427,8 +1507,8 @@
     async function loadTkoGeoJson() {
       const sources = [
         '/data/tko_tracks.json',
-        '/CYCFACI.gdb_CYCTRACK_converted.geojson',
-        '/CYCFACI.gdb_CYCRAMP_converted.geojson',
+        '/data/CYCFACI.gdb_CYCTRACK_converted.geojson',
+        '/data/CYCFACI.gdb_CYCRAMP_converted.geojson',
       ];
       try {
         // Fetch all sources in parallel
@@ -1494,7 +1574,7 @@
             return;
         }
 
-        const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
+        const resp = await fetch('/data/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
         if (!resp.ok) return;
         const data = await resp.json();
         if (!data || !Array.isArray(data.features)) return;
@@ -1517,7 +1597,7 @@
             paint: {
               'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 4, 16, 10, 19, 18],
               'circle-color': '#FFD700',
-              'circle-stroke-color': '#ffffff',
+              'circle-stroke-color': '#C0C0C0', // Silver stroke
               'circle-stroke-width': 2,
               'circle-opacity': 0.9,
             },
@@ -1565,7 +1645,7 @@
       const btn = document.getElementById('btn-parking-toggle');
       if (btn) {
         btn.classList.toggle('active', parkingVisible);
-        btn.title = parkingVisible ? '隱藏泊車位' : '顯示泊車位（銀卡）';
+        btn.title = parkingVisible ? '隱藏泊車位' : '顯示泊車位（銀卡會員專屬）';
       }
     }
 
@@ -1809,73 +1889,8 @@
       return LANDMARKS.find(l => l.id === v || l.name === v) || null;
     }
 
-    async function geocodeAddress(rawValue) {
-      const q = String(rawValue || '').trim();
-      if (!q) return null;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q + ', Hong Kong')}`;
-      const resp = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!resp.ok) return null;
-      const rows = await resp.json();
-      if (!Array.isArray(rows) || !rows.length) return null;
-      const hit = rows[0];
-      return {
-        id: '__custom__',
-        name: q,
-        lat: parseFloat(hit.lat),
-        lon: parseFloat(hit.lon),
-      };
-    }
-
-    function getLandmarkSuggestions(keyword) {
-      const q = String(keyword || '').trim();
-      if (!q) return [];
-      const lower = q.toLowerCase();
-      return LANDMARKS
-        .map(l => l.name)
-        .filter(name => name.toLowerCase().includes(lower))
-        .slice(0, 8);
-    }
-
-    let suggestionAbortController = null;
-    let suggestionSeq = 0;
-    async function fetchAddressSuggestions(rawValue) {
-      const q = String(rawValue || '').trim();
-      if (q.length < ADDRESS_SUGGEST_MIN_CHARS) {
-        populateSelects();
-        return;
-      }
-      const localMatches = getLandmarkSuggestions(q);
-      populateSelects(localMatches);
-      const seq = ++suggestionSeq;
-      if (suggestionAbortController) suggestionAbortController.abort();
-      suggestionAbortController = new AbortController();
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=${NOMINATIM_LIMIT}&q=${encodeURIComponent(q + ', Hong Kong')}`;
-      try {
-        const resp = await fetch(url, {
-          headers: { 'Accept': 'application/json' },
-          signal: suggestionAbortController.signal
-        });
-        if (!resp.ok) {
-          populateSelects();
-          return;
-        }
-        const rows = await resp.json();
-        if (seq !== suggestionSeq) return;
-        const options = Array.isArray(rows)
-          ? rows.map(r => String(r.display_name || '').trim()).filter(Boolean)
-          : [];
-        populateSelects([...localMatches, ...options]);
-      } catch (e) {
-        if (e && e.name === 'AbortError') return;
-        populateSelects(localMatches);
-      }
-    }
-
     async function resolveRawInput(val) {
         let res = resolveLandmark(val);
-        if (!res) res = await geocodeAddress(val);
         if (res && res.id === '__gps__') {
             const pos = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
@@ -2640,32 +2655,73 @@
       history.back();
     };
 
-      // ── Populate landmark options ─────────────────────────────────────────
-      function populateSelects(extraOptions = []) {
-      const list = document.getElementById('landmark-options');
-      if (!list) return;
-      list.innerHTML = '';
+    // ── Landmark Picker Logic ───────────────────────────────────────────
+    let currentPickerTarget = null;
 
-      const gpsOpt = document.createElement('option');
-      gpsOpt.value = '📍 使用目前位置';
-      list.appendChild(gpsOpt);
-
-      LANDMARKS.forEach(l => {
-        const opt = document.createElement('option');
-        opt.value = l.name;
-        list.appendChild(opt);
-      });
-
-      const seen = new Set(['📍 使用目前位置', ...LANDMARKS.map(l => l.name)]);
-      extraOptions.forEach(name => {
-        const value = String(name || '').trim();
-        if (!value || seen.has(value)) return;
-        const opt = document.createElement('option');
-        opt.value = value;
-        list.appendChild(opt);
-        seen.add(value);
-      });
+    function openLandmarkPicker(inputEl) {
+      currentPickerTarget = inputEl;
+      document.getElementById('landmark-picker-overlay').classList.add('show');
+      document.getElementById('picker-search').value = '';
+      renderLandmarkList();
+      document.getElementById('picker-search').focus();
     }
+
+    function closeLandmarkPicker() {
+      document.getElementById('landmark-picker-overlay').classList.remove('show');
+      currentPickerTarget = null;
+    }
+
+    function renderLandmarkList(filter = '') {
+      const listEl = document.getElementById('landmark-list');
+      listEl.innerHTML = '';
+      const q = filter.toLowerCase().trim();
+
+      // "Current Location" option
+      if (!q || '目前位置'.includes(q)) {
+        const item = document.createElement('div');
+        item.className = 'picker-item';
+        item.innerHTML = '<i class="fas fa-location-arrow"></i> <span class="picker-item-name">📍 使用目前位置</span>';
+        item.onclick = () => selectPickerValue('📍 使用目前位置');
+        listEl.appendChild(item);
+      }
+
+      const groups = {};
+      LANDMARKS.forEach(l => {
+        if (q && !l.name.toLowerCase().includes(q)) return;
+        const d = l.district || '其他';
+        if (!groups[d]) groups[d] = [];
+        groups[d].push(l);
+      });
+
+      Object.keys(groups).forEach(district => {
+        const title = document.createElement('div');
+        title.className = 'picker-section-title';
+        title.textContent = district;
+        listEl.appendChild(title);
+
+        groups[district].forEach(l => {
+          const item = document.createElement('div');
+          item.className = 'picker-item';
+          item.innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="picker-item-name">${l.name}</span>`;
+          item.onclick = () => selectPickerValue(l.name);
+          listEl.appendChild(item);
+        });
+      });
+
+    }
+
+    function selectPickerValue(val) {
+      if (currentPickerTarget) {
+        currentPickerTarget.value = val;
+        checkPlanBtn();
+        closeLandmarkPicker();
+      }
+    }
+
+    document.getElementById('btn-picker-close').onclick = closeLandmarkPicker;
+    document.getElementById('picker-search').oninput = (e) => {
+      renderLandmarkList(e.target.value);
+    };
 
     function checkPlanBtn() {
       const from = (document.getElementById('sel-from').value || '').trim();
@@ -2695,15 +2751,8 @@
     }
 
     // ── Event listeners ───────────────────────────────────────────────────
-    let suggestionTimer = null;
-    function handleAddressInput(e) {
-      checkPlanBtn();
-      if (suggestionTimer) clearTimeout(suggestionTimer);
-      const value = e && e.target ? e.target.value : '';
-      suggestionTimer = setTimeout(() => { fetchAddressSuggestions(value); }, ADDRESS_SUGGEST_DEBOUNCE_MS);
-    }
-    document.getElementById('sel-from').addEventListener('input', handleAddressInput);
-    document.getElementById('sel-to').addEventListener('input', handleAddressInput);
+    document.getElementById('sel-from').addEventListener('click', (e) => openLandmarkPicker(e.target));
+    document.getElementById('sel-to').addEventListener('click', (e) => openLandmarkPicker(e.target));
     document.getElementById('btn-plan-route').addEventListener('click', planRoute);
     document.getElementById('btn-start-nav').addEventListener('click', startNavigation);
     document.getElementById('btn-end-nav').addEventListener('click', () => {
@@ -2761,17 +2810,18 @@
             row.className = 'plan-row';
             row.innerHTML = `
                 <span class="plan-row-icon" style="color:#f1c232;">📍</span>
-                <input class="plan-input waypoint-input" list="landmark-options" placeholder="輸入停靠點">
+                <input class="plan-input waypoint-input" readonly placeholder="選擇停靠點">
                 <button class="remove-wp" style="background:none; border:none; color:#e74c3c; padding:0 0.5em; cursor:pointer;"><i class="fas fa-times"></i></button>
             `;
             container.appendChild(row);
             waypointsCount++;
+            const wpInput = row.querySelector('.waypoint-input');
+            wpInput.onclick = (e) => openLandmarkPicker(e.target);
             row.querySelector('.remove-wp').onclick = () => { row.remove(); waypointsCount--; };
         };
     }
 
     // ── Init ──────────────────────────────────────────────────────────────
-    populateSelects();
     initWaypointUI();
     try {
       initMap();
@@ -2804,8 +2854,8 @@
       nav_title: '🗺️ 單車徑導航',
       nav_continue: '沿單車徑繼續前行',
       nav_plan: '規劃單車路線',
-      from_placeholder: '輸入或選擇起點（可自訂地址）',
-      to_placeholder: '輸入或選擇終點（可自訂地址）',
+      from_placeholder: '選擇起點',
+      to_placeholder: '選擇終點',
       profile_safety: '安全路線（優先單車徑）',
       profile_trekking: '遠足路線（混合路面）',
       profile_fastbike: '快速路線（最快到達）',
@@ -2830,8 +2880,8 @@
       nav_title: '🗺️ Cycling Navigation',
       nav_continue: 'Continue along the cycle path',
       nav_plan: 'Plan a Cycle Route',
-      from_placeholder: 'Enter or select start point',
-      to_placeholder: 'Enter or select destination',
+      from_placeholder: 'Select start point',
+      to_placeholder: 'Select destination',
       profile_safety: 'Safe Route (cycle paths preferred)',
       profile_trekking: 'Trekking Route (mixed surfaces)',
       profile_fastbike: 'Fast Route (fastest arrival)',
