@@ -12,8 +12,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>單車徑導航 - 城市運輸單車</title>
   <link rel="stylesheet" href="/css/main.css">
-  <!-- MapLibre GL JS (free, open-source Mapbox GL fork) -->
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" crossorigin="">
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,8 +26,8 @@
     }
 
     /* ── Full-screen map ── */
-    #nav-map {
-      position: fixed; inset: 0; z-index: 0;
+    #map {
+      position: absolute; top: 0; bottom: 0; width: 100%; z-index: -1;
       background: var(--app-bg-primary, #121f14);
     }
 
@@ -239,7 +240,7 @@
     }
 
     /* ── Zoom control (reposition above panel) ── */
-    .maplibregl-ctrl-bottom-right { bottom: 45vh !important; }
+    .mapboxgl-ctrl-bottom-right { bottom: 45vh !important; }
 
     /* ── Loading overlay ── */
     #nav-loading {
@@ -461,8 +462,6 @@
     <p data-i18n="nav_loading">正在載入地圖...</p>
   </div>
 
-  <!-- Full-screen map -->
-  <div id="nav-map"></div>
 
   <!-- Top bar -->
   <div id="nav-topbar">
@@ -601,11 +600,16 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
+  <!-- Full-screen map -->
+  <div id="map"></div>
+
   <script src="https://unpkg.com/@turf/turf@7.2.0/turf.min.js" crossorigin=""></script>
   <script src="/js/main.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
+  // TODO: Paste your Mapbox Access Token here
+  mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+
   (function () {
     'use strict';
 
@@ -1253,8 +1257,8 @@
 
     // ── Map initialisation ────────────────────────────────────────────────
     function initMap() {
-      // Guard: maplibregl may not be available if the CDN script failed to load
-      if (typeof maplibregl === 'undefined') {
+      // Guard: mapboxgl may not be available if the CDN script failed to load
+      if (typeof mapboxgl === 'undefined') {
         const el = document.getElementById('nav-loading');
         if (el) {
           el.innerHTML = '<p style="color:#BFE340; text-align:center; padding:1em; line-height:1.7;">' +
@@ -1264,7 +1268,7 @@
         return;
       }
       // Check for WebGL support before attempting to create the map
-      if (typeof maplibregl.supported === 'function' && !maplibregl.supported()) {
+      if (typeof mapboxgl.supported === 'function' && !mapboxgl.supported()) {
         const el = document.getElementById('nav-loading');
         el.innerHTML = '<p style="color:#BFE340; text-align:center; padding:1em; line-height:1.7;">' +
           '⚠️ 你的裝置不支援 WebGL，無法顯示地圖。<br>' +
@@ -1278,35 +1282,55 @@
         document.getElementById('nav-loading').classList.add('hidden');
       }, MAP_LOADING_TIMEOUT_MS);
 
-      // Choose map style based on current theme
-      const isLightTheme = document.body.classList.contains('app-light-theme') ||
-        (!document.body.classList.contains('app-theme-explicit') &&
-          window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
-      const mapStyle = isLightTheme
-        ? 'https://tiles.openfreemap.org/styles/liberty'
-        : 'https://tiles.openfreemap.org/styles/dark';
-
-      map = new maplibregl.Map({
-        container: 'nav-map',
-        // OpenFreeMap free vector tiles (no API key, no usage limits)
-        style: mapStyle,
-        center: TKO_DEFAULT_CENTER,
-        zoom: DEFAULT_NAV_ZOOM,
-        pitch: DEFAULT_NAV_PITCH,
-        bearing: 0,
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [114.2672, 22.2985],
+        zoom: 16.5,
+        pitch: 65,
+        bearing: -20,
         antialias: true,
         attributionControl: false,
       });
 
-      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+      map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left');
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
       map.on('load', () => {
         clearTimeout(loadingTimer);
-        addCyclewayLayers();
+        // Load the 3D Lane data
+        map.addSource('tko-full', {
+          type: 'geojson',
+          data: './data/TKO_full.geojson'
+        });
+
+        // 底色路面層
+        map.addLayer({
+          id: 'tko-pavement-base',
+          type: 'line',
+          source: 'tko-full',
+          paint: {
+            'line-color': '#1e293b',
+            'line-width': 12,
+            'line-opacity': 0.9
+          }
+        });
+
+        // 虛線劃線層
+        map.addLayer({
+          id: 'tko-lane-dashed',
+          type: 'line',
+          source: 'tko-full',
+          filter: ['==', ['get', 'lane_type'], 'dashed'],
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 2,
+            'line-dasharray': [3, 4]
+          }
+        });
+
         add3DBuildingsLayer();
         loadTkoGeoJson();
-        map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 0 });
 
         map.on('dragstart', () => {
             if (isFollowing) {
@@ -1865,7 +1889,7 @@
       if (cone) cone.style.transform = `translateX(-50%) rotate(${bearing - 180}deg)`;
 
       if (!userMarker) {
-        userMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        userMarker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat([lon, lat])
           .addTo(map);
       } else {
@@ -2212,7 +2236,7 @@
         display:flex;align-items:center;justify-content:center;font-size:1em;
         border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);`;
       el.textContent = emoji;
-      new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(map);
+      new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(map);
     }
 
     function clearRouteLayers() {
@@ -2433,7 +2457,7 @@
 
     function renderSummaryMap(pathCoords) {
       const mapWrap = document.getElementById('summary-map');
-      if (!mapWrap || typeof maplibregl === 'undefined') return;
+      if (!mapWrap || typeof mapboxgl === 'undefined') return;
       if (navSummaryMap) {
         navSummaryMap.remove();
         navSummaryMap = null;
@@ -2446,7 +2470,7 @@
       const isLightTheme = document.body.classList.contains('app-light-theme') ||
         (!document.body.classList.contains('app-theme-explicit') &&
           window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
-      navSummaryMap = new maplibregl.Map({
+      navSummaryMap = new mapboxgl.Map({
         container: 'summary-map',
         style: isLightTheme ? 'https://tiles.openfreemap.org/styles/liberty' : 'https://tiles.openfreemap.org/styles/dark',
         center: pathCoords[0],
