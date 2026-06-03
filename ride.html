@@ -1001,10 +1001,15 @@
       // Populate go-to-start stop selector
       const sel = document.getElementById('gts-stop-select');
       if (sel) {
+        // Filter out stops that cannot be a starting point:
+        // 1. The very last stop (destination)
+        // 2. Stops marked as 'end_only'
         sel.innerHTML = stops.map((s, i) => {
+          if (i === stops.length - 1) return null;
+          if (s.type === 'end_only') return null;
           const label = s.code ? `${s.code}：${s.name}` : `站 ${s.order}：${s.name}`;
           return `<option value="${i}">${label}</option>`;
-        }).join('');
+        }).filter(Boolean).join('');
         sel.onchange = function () {
           const idx = parseInt(this.value, 10);
           if (!isNaN(idx) && idx >= 0 && idx < stops.length) {
@@ -2015,6 +2020,8 @@
 
       // Get stops and filter by direction for bidirectional routes
       routeStops = routeData ? (routeData.stops || []) : [];
+      // Filter out cancelled stops
+      routeStops = routeStops.filter(s => s.type !== 'temporary_cancel');
 
       if (routeStops.length > 0 && routeData && routeData.gpx && routeData.gpx.length > 1) {
         const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];

@@ -135,10 +135,12 @@ export default async function handler(req, res) {
           if (!st) return null;
 
           let direction = '↕️';
-          if (idx === 0) direction = '🔴';
-          else if (idx === rawStops.length - 1) direction = '🟢';
+          if (rs.nature === 'start') direction = '🔴';
+          else if (rs.nature === 'end') direction = '🟢';
           else if (rs.nature === 'a_direction') direction = '⬆️';
           else if (rs.nature === 'b_direction') direction = '⬇️';
+          else if (idx === 0) direction = '🔴';
+          else if (idx === rawStops.length - 1) direction = '🟢';
 
           return {
             order: idx + 1,
@@ -147,6 +149,8 @@ export default async function handler(req, res) {
             name_en: st.name_en,
             road: st.road_name,
             direction: direction,
+            nature: rs.nature || 'both',
+            type: rs.type || 'standard',
             district: st.area,
             xp: perStopXp,
             lat: st.lat,
