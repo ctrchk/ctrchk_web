@@ -932,9 +932,10 @@ function routeBelongsToDept(route, deptId) {
     // Primary: use dept_id field if present
     if (route.dept_id) return route.dept_id === deptId;
     // Fallback: tag-based classification for legacy routes without dept_id
-    if (deptId === 'tko') return route.tags && route.tags.some(t => t.includes('將軍澳'));
-    if (deptId === 'hki') return route.tags && route.tags.some(t => t.includes('港島'));
-    return false;
+    const dept = DEPARTMENTS.find(d => d.id === deptId);
+    if (!dept) return false;
+    const deptNameBase = dept.name.replace('部', '');
+    return route.tags && route.tags.some(t => deptNameBase.includes(t) || t.includes(deptNameBase));
 }
 
 function matchesTerminal(route) {
@@ -1004,10 +1005,8 @@ function renderRoutes() {
 
     // Filter routes by selected department
     let deptRoutes = appRoutes;
-    if (selectedDeptId === 'tko') {
-        deptRoutes = appRoutes.filter(r => routeBelongsToDept(r, 'tko'));
-    } else if (selectedDeptId === 'hki') {
-        deptRoutes = appRoutes.filter(r => routeBelongsToDept(r, 'hki'));
+    if (selectedDeptId) {
+        deptRoutes = appRoutes.filter(r => routeBelongsToDept(r, selectedDeptId));
     }
 
     const filtered = deptRoutes.filter(r => matchesTerminal(r) && matchesFilter(r) && matchesSearch(r));
@@ -1094,7 +1093,7 @@ function renderRoutes() {
         // WEB VERSION FIX: Always colorful in web environment
         const isPwaEnv = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true || document.body.classList.contains('is-pwa');
 
-        if (!isConquered && !isCoinRoute && isPwaEnv) {
+        if (!isConquered && isPwaEnv) {
             card.classList.add('route-unvisited');
         } else if (isConquered) {
             card.classList.add('route-conquered');
@@ -1371,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let _appRideInited = false;
 
 // Department definitions
-const DEPARTMENTS = [
+let DEPARTMENTS = [
     {
         id: 'tko',
         name: '將軍澳部',
@@ -1747,18 +1746,21 @@ async function initAppRidePage() {
                 TERMINALS = mergeTerminalLists(DEFAULT_TERMINALS, overrideData.terminals || []);
                 rebuildTerminalIndex();
                 renderTerminalMarkers();
+
+                // Dynamically update DEPARTMENTS from API
+                if (Array.isArray(overrideData.departments) && overrideData.departments.length > 0) {
+                    DEPARTMENTS = overrideData.departments.map(d => ({
+                        ...d,
+                        routeCount: null
+                    }));
+                }
             }
         } catch (e) { /* ignore overrides */ }
 
-        // Count routes per department by tag
-        const tkoDept = DEPARTMENTS.find(d => d.id === 'tko');
-        if (tkoDept) {
-            tkoDept.routeCount = appRoutes.filter(r => routeBelongsToDept(r, 'tko')).length;
-        }
-        const hkiDept = DEPARTMENTS.find(d => d.id === 'hki');
-        if (hkiDept) {
-            hkiDept.routeCount = appRoutes.filter(r => routeBelongsToDept(r, 'hki')).length;
-        }
+        // Count routes per department
+        DEPARTMENTS.forEach(dept => {
+            dept.routeCount = appRoutes.filter(r => routeBelongsToDept(r, dept.id)).length;
+        });
     } catch(e) {
         console.warn('[AppRide] Failed to load routes:', e);
     }

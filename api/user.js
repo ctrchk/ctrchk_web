@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
       await query(`ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE`);
 
-      const [{ rows: routes }, { rows: stations }] = await Promise.all([
+      const [{ rows: routes }, { rows: stations }, { rows: departments }] = await Promise.all([
         query(
           `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, stops, rewards
            FROM routes
@@ -99,6 +99,11 @@ export default async function handler(req, res) {
         query(
           `SELECT id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal
            FROM stations`
+        ),
+        query(
+          `SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available, unlock_cost, promo_cost, is_promo
+           FROM department_config
+           ORDER BY dept_id`
         )
       ]);
 
@@ -167,6 +172,18 @@ export default async function handler(req, res) {
       return res.status(200).json({
         routes: resolvedRoutes,
         terminals: terminals,
+        departments: departments.map(d => ({
+            id: d.dept_id,
+            name: d.name,
+            region: d.region,
+            description: d.description,
+            mapCenter: [d.map_center_lat, d.map_center_lng],
+            mapZoom: d.map_zoom,
+            available: d.available,
+            unlock_cost: d.unlock_cost,
+            promo_cost: d.promo_cost,
+            is_promo: d.is_promo
+        })),
       });
     } catch (error) {
       console.error('Get route-data error:', error);
