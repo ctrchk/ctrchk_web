@@ -826,7 +826,7 @@
         {
             id: 'daily_3_routes',
             icon: '🏆',
-            name: '路線達人',
+            name: '進階車手',
             desc: '今日完成三條完整路線',
             reward_xp: 0,
             reward_coins: 10,
@@ -1638,22 +1638,20 @@
     })();
 
     // ── Level-up & confetti animations ───────────────────────────────────
-    const TASKS_LEVEL_TITLES = {
-        1:'新手騎士',2:'新手騎士',3:'新手騎士',4:'新手騎士',5:'新手騎士',
-        6:'新手騎士',7:'新手騎士',8:'新手騎士',9:'新手騎士',10:'新手騎士',
-        11:'城市騎手',12:'城市騎手',13:'城市騎手',14:'城市騎手',15:'城市騎手',
-        16:'城市騎手',17:'城市騎手',18:'城市騎手',19:'城市騎手',20:'城市騎手',
-        21:'路線達人',22:'路線達人',23:'路線達人',24:'路線達人',25:'路線達人',
-        26:'路線達人',27:'路線達人',28:'路線達人',29:'路線達人',30:'路線達人',
-        31:'都市傳奇',32:'都市傳奇',33:'都市傳奇',34:'都市傳奇',35:'都市傳奇',
-        36:'都市傳奇',37:'都市傳奇',38:'都市傳奇',39:'都市傳奇',40:'都市傳奇',
-        41:'殿堂騎士',42:'殿堂騎士',43:'殿堂騎士',44:'殿堂騎士',45:'殿堂騎士',
-        46:'殿堂騎士',47:'殿堂騎士',48:'殿堂騎士',49:'殿堂騎士',50:'殿堂騎士',
-    };
+    function getTasksLevelTitle(lv) {
+        if (window.getCyclistTier) return window.getCyclistTier(lv);
+        const l = parseInt(lv || 1, 10);
+        if (l >= 76) return '頂尖車手';
+        if (l >= 51) return '精英車手';
+        if (l >= 31) return '資深車手';
+        if (l >= 16) return '進階車手';
+        if (l >= 6) return '初階車手';
+        return '入門車手';
+    }
 
     function showTasksLevelUp(newLevel, coins) {
         document.getElementById('tasks-levelup-badge').textContent = `Lv.${newLevel}`;
-        document.getElementById('tasks-levelup-title').textContent = TASKS_LEVEL_TITLES[newLevel] || '';
+        document.getElementById('tasks-levelup-title').textContent = getTasksLevelTitle(newLevel);
         document.getElementById('tasks-levelup-coins').textContent =
             coins > 0 ? (localStorage.getItem('appLang') === 'en' ? `💰 +${coins} Miles` : `💰 +${coins} 里程幣`) : '';
         document.getElementById('tasks-levelup-overlay').classList.add('show');
