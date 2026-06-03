@@ -198,6 +198,14 @@ async function ensureAdminRouteSchema() {
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS stops JSONB NOT NULL DEFAULT '[]'::jsonb`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
+
+  // Ensure department_config has all columns
+  await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS region VARCHAR(100)`);
+  await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS description TEXT`);
+  await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_center_lat DOUBLE PRECISION`);
+  await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_center_lng DOUBLE PRECISION`);
+  await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_zoom INTEGER`);
+  await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS available BOOLEAN DEFAULT TRUE`);
 }
 
 export default async function handler(req, res) {
@@ -296,6 +304,7 @@ export default async function handler(req, res) {
     // GET department configs
     if (req.query.action === 'get-dept-config') {
       try {
+        await ensureAdminRouteSchema();
         const { rows } = await query('SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available FROM department_config ORDER BY dept_id');
         return res.status(200).json({ departments: rows });
       } catch (e) {

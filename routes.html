@@ -1020,9 +1020,9 @@ function renderRoutes() {
         return;
     }
 
-    // Update Catalog Progress
-    const totalCatalogRoutes = appRoutes.filter(r => !r.is_special).length;
-    const conqueredCatalogRoutes = appRoutes.filter(r => !r.is_special && conqueredRouteIds.includes(r.id)).length;
+    // Update Catalog Progress (Filtered by current department)
+    const totalCatalogRoutes = appRoutes.filter(r => !r.is_special && routeBelongsToDept(r, selectedDeptId)).length;
+    const conqueredCatalogRoutes = appRoutes.filter(r => !r.is_special && routeBelongsToDept(r, selectedDeptId) && conqueredRouteIds.includes(r.id)).length;
     const catalogPct = totalCatalogRoutes > 0 ? Math.round((conqueredCatalogRoutes / totalCatalogRoutes) * 100) : 0;
 
     const progressFill = document.getElementById('catalog-progress-fill');
@@ -1076,18 +1076,6 @@ function renderRoutes() {
     }
 
     const sortedRoutes = routeStatuses.sort((a, b) => {
-        // Group 1: Unlocked special/coin routes
-        // Group 2: Conquered routes
-        // Group 3: Available standard routes
-        // Group 4: Locked special/coin routes
-        function getGroup(r) {
-            if (r.isCoinRoute && !r.coinLocked && !r.deptLocked) return 1;
-            if (r.isConquered) return 2;
-            if (!r.isLocked) return 3;
-            return 4;
-        }
-        const gA = getGroup(a), gB = getGroup(b);
-        if (gA !== gB) return gA - gB;
         return routeSortKey(a.route.id) - routeSortKey(b.route.id);
     });
 
@@ -1099,7 +1087,8 @@ function renderRoutes() {
         card.className = 'app-route-card animate-spring-pop';
         if (isLocked) card.classList.add('locked');
         if (isSelected) card.classList.add('selected');
-        if (isCoinRoute) card.classList.add('coin-route', 'animate-shimmer');
+        if (isCoinRoute) card.classList.add('coin-route');
+        if (isCoinRoute && !coinLocked && !deptLocked) card.classList.add('animate-shimmer');
 
         // Collection status
         // WEB VERSION FIX: Always colorful in web environment

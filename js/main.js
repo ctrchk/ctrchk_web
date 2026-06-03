@@ -167,6 +167,74 @@ function updateNavUI() {
 }
 
 
+// ── Google One-Tap & Sign-In ───────────────────────────────────────────
+async function initGoogleSignIn() {
+    const container = document.getElementById('nav-google-login-container');
+    if (!container || localStorage.getItem('accessToken')) return;
+
+    try {
+        const resp = await fetch('/api/user?action=google-client-id');
+        if (!resp.ok) return;
+        const { googleClientId } = await resp.json();
+        if (!googleClientId) return;
+
+        // Load GIS script if not present
+        if (!window.google) {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.async = true;
+                script.defer = true;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+        });
+
+        window.google.accounts.id.renderButton(container, {
+            theme: 'outline',
+            size: 'medium',
+            shape: 'pill',
+            text: 'signin_with',
+            logo_alignment: 'left'
+        });
+
+        container.style.display = 'block';
+        window.google.accounts.id.prompt(); // One-tap
+    } catch (e) {
+        console.warn('[GoogleSignIn] Initialization failed:', e);
+    }
+}
+
+async function handleGoogleCredentialResponse(response) {
+    try {
+        const res = await fetch('/api/oauth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential }),
+        });
+        const data = await res.json();
+        const token = data.token || data.accessToken;
+        if (res.ok && token) {
+            localStorage.setItem('accessToken', token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            window.location.reload();
+        } else {
+            alert(data.message || 'Google 登入失敗');
+        }
+    } catch (e) {
+        console.error('[GoogleSignIn] Auth failed:', e);
+        alert('登入過程中發生錯誤，請稍後再試。');
+    }
+}
+
 // =========================================================================
 // DOMContentLoaded 主程式
 // =========================================================================
@@ -285,6 +353,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // ***** 這是唯一的修改點 *****
         // Header 載入完成後，立即呼叫 updateNavUI 來更新登入狀態
         updateNavUI();
+        // 初始化 Google 登入
+        initGoogleSignIn();
         // 更新語言切換連結，確保指向當前頁面的對應語言版本
         updateLangLink();
         // 初始化語言切換下拉選單
