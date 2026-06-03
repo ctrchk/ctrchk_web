@@ -647,7 +647,7 @@
         <h2>等級提升</h2>
       </div>
       <div id="levelup-badge">Lv.1</div>
-      <div id="levelup-title">新手騎士</div>
+      <div id="levelup-title">入門車手</div>
       <div class="levelup-stats-row">
         <div class="levelup-stat-box">
           <span class="levelup-stat-val" id="levelup-xp-val">0</span>
@@ -679,18 +679,16 @@
       267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
       Infinity
     ];
-    const LEVEL_TITLES = {
-      1:'新手騎士',2:'新手騎士',3:'新手騎士',4:'新手騎士',5:'新手騎士',
-      6:'新手騎士',7:'新手騎士',8:'新手騎士',9:'新手騎士',10:'新手騎士',
-      11:'城市騎手',12:'城市騎手',13:'城市騎手',14:'城市騎手',15:'城市騎手',
-      16:'城市騎手',17:'城市騎手',18:'城市騎手',19:'城市騎手',20:'城市騎手',
-      21:'路線達人',22:'路線達人',23:'路線達人',24:'路線達人',25:'路線達人',
-      26:'路線達人',27:'路線達人',28:'路線達人',29:'路線達人',30:'路線達人',
-      31:'都市傳奇',32:'都市傳奇',33:'都市傳奇',34:'都市傳奇',35:'都市傳奇',
-      36:'都市傳奇',37:'都市傳奇',38:'都市傳奇',39:'都市傳奇',40:'都市傳奇',
-      41:'殿堂騎士',42:'殿堂騎士',43:'殿堂騎士',44:'殿堂騎士',45:'殿堂騎士',
-      46:'殿堂騎士',47:'殿堂騎士',48:'殿堂騎士',49:'殿堂騎士',50:'殿堂騎士',
-    };
+    function getLevelTitle(lv) {
+      if (window.getCyclistTier) return window.getCyclistTier(lv);
+      const l = parseInt(lv || 1, 10);
+      if (l >= 76) return '頂尖車手';
+      if (l >= 51) return '精英車手';
+      if (l >= 31) return '資深車手';
+      if (l >= 16) return '進階車手';
+      if (l >= 6) return '初階車手';
+      return '入門車手';
+    }
     const ROUTE_UNLOCK = {
       '900':1,'900A':1,'966T':1,'914':8,'966A':8,'966':8,'900S':1,'914B':1,'910':5,'901P':15,
       '914H':22,'920':22,'966B':22,'920X':30,'923':30,'966C':30,'928':38,'929':38,'961':38,'961P':38,
@@ -1581,7 +1579,7 @@
     function showLevelUp(newLevel, coins) {
       const xpGained = sessionXp; // Use sessionXp as XP gained
       document.getElementById('levelup-badge').textContent = `Lv.${newLevel}`;
-      document.getElementById('levelup-title').textContent = LEVEL_TITLES[newLevel] || '';
+      document.getElementById('levelup-title').textContent = getLevelTitle(newLevel);
 
       // Reset values to 0 before animation
       document.getElementById('levelup-xp-val').textContent = '0';

@@ -613,7 +613,7 @@
         <div class="db-level-card" id="db-level-card" style="display:none;">
             <div class="db-level-header">
                 <span class="db-level-badge" id="db-level-badge">Lv.1</span>
-                <span class="db-level-title" id="db-level-title">新手騎士</span>
+                <span class="db-level-title" id="db-level-title">入門車手</span>
                 <span class="db-coins-display" id="db-coins-display">💰 0 里程幣</span>
             </div>
             <div class="db-xp-bar-wrap">
@@ -764,12 +764,16 @@
     <script src="/js/login.js"></script>
     <script>
     // ── Level config ──────────────────────────────────────────────────────────
-    var LEVEL_TITLES = {
-        1:'新手騎士',2:'新手騎士',3:'新手騎士',4:'新手騎士',5:'新手騎士',
-        6:'城市騎手',7:'城市騎手',8:'城市騎手',9:'城市騎手',10:'城市騎手',
-        11:'路線達人',12:'路線達人',13:'路線達人',14:'路線達人',15:'路線達人',
-        16:'都市傳奇',17:'都市傳奇',18:'都市傳奇',19:'都市傳奇',20:'都市傳奇'
-    };
+    function getLevelTitle(lv) {
+        if (window.getCyclistTier) return window.getCyclistTier(lv);
+        const l = parseInt(lv || 1, 10);
+        if (l >= 76) return '頂尖車手';
+        if (l >= 51) return '精英車手';
+        if (l >= 31) return '資深車手';
+        if (l >= 16) return '進階車手';
+        if (l >= 6) return '初階車手';
+        return '入門車手';
+    }
     var LEVEL_XP = [
         0,80,200,380,620,950,1400,1980,2700,3600,
         4000,5100,6500,8100,10000,12200,14800,17800,21200,25200,
@@ -1186,7 +1190,7 @@
             (currentXp - xpCurrent) / Math.max(1, xpNext - xpCurrent) * 100)));
 
         document.getElementById('db-level-badge').textContent = 'Lv.' + lvl;
-        document.getElementById('db-level-title').textContent = LEVEL_TITLES[lvl] || '殿堂騎士';
+        document.getElementById('db-level-title').textContent = getLevelTitle(lvl);
         document.getElementById('db-coins-display').innerHTML = '<span class="animate-float" style="display:inline-block;">💰</span> ' + currentCoins.toLocaleString() + ' 里程幣';
         document.getElementById('db-xp-bar').style.width = xpBar + '%';
         document.getElementById('db-xp-label').textContent = lvl >= 20

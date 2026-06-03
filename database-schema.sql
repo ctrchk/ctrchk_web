@@ -304,30 +304,35 @@ CREATE TABLE IF NOT EXISTS level_config (
 
 INSERT INTO level_config (level, xp_required, coins_reward, title_zh, title_en)
 VALUES
-  -- Lv 1-5：新手騎士 / Rookie Rider
-  (1,      0,    0,    '新手騎士', 'Rookie Rider'),
-  (2,     80,   50,    '新手騎士', 'Rookie Rider'),
-  (3,    200,   80,    '新手騎士', 'Rookie Rider'),
-  (4,    380,  120,    '新手騎士', 'Rookie Rider'),
-  (5,    620,  150,    '新手騎士', 'Rookie Rider'),
-  -- Lv 6-10：城市騎手 / City Rider
-  (6,    950,  200,    '城市騎手', 'City Rider'),
-  (7,   1400,  250,    '城市騎手', 'City Rider'),
-  (8,   1980,  300,    '城市騎手', 'City Rider'),
-  (9,   2700,  350,    '城市騎手', 'City Rider'),
-  (10,  3600,  400,    '城市騎手', 'City Rider'),
-  -- Lv 11-15：路線達人 / Route Master（XP 要求已降低約 15%）
-  (11,  4000,  500,    '路線達人', 'Route Master'),
-  (12,  5100,  600,    '路線達人', 'Route Master'),
-  (13,  6500,  700,    '路線達人', 'Route Master'),
-  (14,  8100,  800,    '路線達人', 'Route Master'),
-  (15, 10000,  900,    '路線達人', 'Route Master'),
-  -- Lv 16-20：都市傳奇 / Urban Legend（XP 要求已降低約 15%）
-  (16, 12200, 1000,    '都市傳奇', 'Urban Legend'),
-  (17, 14800, 1200,    '都市傳奇', 'Urban Legend'),
-  (18, 17800, 1400,    '都市傳奇', 'Urban Legend'),
-  (19, 21200, 1600,    '都市傳奇', 'Urban Legend'),
-  (20, 25200, 2000,    '都市傳奇', 'Urban Legend')
+  -- Lv 1-5：入門車手 / Rookie Rider
+  (1,      0,    0,    '入門車手', 'Rookie Rider'),
+  (2,     80,   50,    '入門車手', 'Rookie Rider'),
+  (3,    200,   80,    '入門車手', 'Rookie Rider'),
+  (4,    380,  120,    '入門車手', 'Rookie Rider'),
+  (5,    620,  150,    '入門車手', 'Rookie Rider'),
+  -- Lv 6-10：初階車手 / City Rider
+  (6,    950,  200,    '初階車手', 'City Rider'),
+  (7,   1400,  250,    '初階車手', 'City Rider'),
+  (8,   1980,  300,    '初階車手', 'City Rider'),
+  (9,   2700,  350,    '初階車手', 'City Rider'),
+  (10,  3600,  400,    '初階車手', 'City Rider'),
+  -- Lv 6-15：初階車手 / Novice Rider
+  (6,    950,  200,    '初階車手', 'Novice Rider'),
+  (7,   1400,  250,    '初階車手', 'Novice Rider'),
+  (8,   1980,  300,    '初階車手', 'Novice Rider'),
+  (9,   2700,  350,    '初階車手', 'Novice Rider'),
+  (10,  3600,  400,    '初階車手', 'Novice Rider'),
+  (11,  4000,  500,    '初階車手', 'Novice Rider'),
+  (12,  5100,  600,    '初階車手', 'Novice Rider'),
+  (13,  6500,  700,    '初階車手', 'Novice Rider'),
+  (14,  8100,  800,    '初階車手', 'Novice Rider'),
+  (15, 10000,  900,    '初階車手', 'Novice Rider'),
+  -- Lv 16-20：進階車手 / Intermediate Rider
+  (16, 12200, 1000,    '進階車手', 'Intermediate Rider'),
+  (17, 14800, 1200,    '進階車手', 'Intermediate Rider'),
+  (18, 17800, 1400,    '進階車手', 'Intermediate Rider'),
+  (19, 21200, 1600,    '進階車手', 'Intermediate Rider'),
+  (20, 25200, 2000,    '進階車手', 'Intermediate Rider')
 ON CONFLICT (level) DO UPDATE SET
   xp_required  = EXCLUDED.xp_required,
   coins_reward = EXCLUDED.coins_reward,
@@ -529,8 +534,8 @@ VALUES
   ('dist_200km',      '城市探索者',     'City Explorer',       '累計騎行距離達200公里',              'Accumulate 200 km of riding',                '🗺️', 150, 60, 'distance_km', 200),
   ('dist_500km',      '將軍澳傳奇',     'TKO Legend',          '累計騎行距離達500公里',              'Accumulate 500 km of riding',                '🏆', 400, 150, 'distance_km', 500),
   -- 等級
-  ('level_5',         '城市騎手',       'City Rider',          '達到第5級',                          'Reach Level 5',                              '⭐', 0,   30, 'level', 5),
-  ('level_10',        '路線達人',       'Route Master',        '達到第10級',                         'Reach Level 10',                             '🌟', 0,   80, 'level', 10),
+  ('level_5',         '初階車手',       'City Rider',          '達到第5級',                          'Reach Level 5',                              '⭐', 0,   30, 'level', 5),
+  ('level_10',        '進階車手',       'Route Master',        '達到第10級',                         'Reach Level 10',                             '🌟', 0,   80, 'level', 10),
   ('level_20',        '殿堂傳說',       'Hall of Legend',      '達到第20級',                         'Reach Level 20',                             '💫', 0,  200, 'level', 20),
   -- 路線完成
   ('route_900',       '海濱漫遊者',     'Coastal Wanderer',    '完成路線900（市區海濱線）',           'Complete Route 900 (Coastal Commuter)',       '🌊', 50,  20, 'route_complete', NULL),

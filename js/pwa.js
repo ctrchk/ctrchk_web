@@ -119,6 +119,21 @@
     return !!(ctx.permissions && ctx.permissions[key]);
   };
 
+  /**
+   * 根據等級獲取車手稱號
+   * @param {number} level
+   * @returns {string}
+   */
+  window.getCyclistTier = function (level) {
+    const lv = parseInt(level || 1, 10);
+    if (lv >= 76) return '頂尖車手';
+    if (lv >= 51) return '精英車手';
+    if (lv >= 31) return '資深車手';
+    if (lv >= 16) return '進階車手';
+    if (lv >= 6) return '初階車手';
+    return '入門車手';
+  };
+
   // ── Detect standalone (installed PWA) mode ──────────────────────────────
   // Chrome/Android: matchMedia('(display-mode: standalone)')
   // iOS Safari: navigator.standalone === true

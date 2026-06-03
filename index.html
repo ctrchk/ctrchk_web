@@ -615,7 +615,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
             </div>
             <div class="app-level-row">
                 <span class="app-level-badge" id="app-home-level">Lv.1</span>
-                <span class="app-title-text" id="app-home-title">新手騎士</span>
+                <span class="app-title-text" id="app-home-title">入門車手</span>
             </div>
             <div class="app-xp-bar-wrap">
                 <div class="app-xp-bar-fill" id="app-home-xp-bar" style="width:0%"></div>
@@ -777,19 +777,6 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         131700, 147400, 164700, 183700, 204600, 227600, 252900, 280700, 311300, 344900,
         381900, 422600, 467300, 516500, 570600, 630200, 695700, 767800, 847100, 934300,
     ];
-    const TITLES = [
-        '', '新手騎士','新手騎士','新手騎士','新手騎士','新手騎士',
-        '新手騎士','新手騎士','新手騎士','新手騎士','新手騎士',
-        '城市騎手','城市騎手','城市騎手','城市騎手','城市騎手',
-        '城市騎手','城市騎手','城市騎手','城市騎手','城市騎手',
-        '路線達人','路線達人','路線達人','路線達人','路線達人',
-        '路線達人','路線達人','路線達人','路線達人','路線達人',
-        '都市傳奇','都市傳奇','都市傳奇','都市傳奇','都市傳奇',
-        '都市傳奇','都市傳奇','都市傳奇','都市傳奇','都市傳奇',
-        '殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士',
-        '殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士','殿堂騎士',
-    ];
-
     function calcLevel(xp) {
         for (let i = THRESHOLDS.length - 1; i >= 0; i--) {
             if (xp >= THRESHOLDS[i]) return i + 1;
@@ -797,7 +784,14 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         return 1;
     }
     function getTitle(lvl) {
-        return TITLES[Math.min(lvl, TITLES.length - 1)] || '殿堂騎士';
+        if (window.getCyclistTier) return window.getCyclistTier(lvl);
+        const l = parseInt(lvl || 1, 10);
+        if (l >= 76) return '頂尖車手';
+        if (l >= 51) return '精英車手';
+        if (l >= 31) return '資深車手';
+        if (l >= 16) return '進階車手';
+        if (l >= 6) return '初階車手';
+        return '入門車手';
     }
     function getNextThreshold(lvl) {
         if (lvl < THRESHOLDS.length) return THRESHOLDS[lvl];
