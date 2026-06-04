@@ -2,6 +2,14 @@
   "cleanUrls": true,
   "rewrites": [
     {
+      "source": "/api/admin-relay",
+      "destination": "/api/admin"
+    },
+    {
+      "source": "/api/admin-users",
+      "destination": "/api/admin"
+    },
+    {
       "source": "/api/verify-email",
       "destination": "/api/password-reset?action=verify-email"
     },
