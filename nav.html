@@ -1099,10 +1099,22 @@
       const lang = localStorage.getItem('appLang') === 'en' ? 'en' : 'zh';
       const junctionLabel = lang === 'en' ? 'Next junction' : '下一路口';
       const locatingLabel = lang === 'en' ? 'Locating…' : '定位中…';
+      const offTrackLabel = lang === 'en' ? 'Off-track' : '不在單車徑上';
+
       const roadEl = document.getElementById('nav-road-name');
       const junctionEl = document.getElementById('nav-junction-distance');
       const pushBikeEl = document.getElementById('nav-pushbike-warning');
-      if (roadEl) roadEl.textContent = match ? extractRoadName(match.feature.properties) : locatingLabel;
+
+      if (roadEl) {
+        if (match) {
+          roadEl.textContent = extractRoadName(match.feature.properties);
+        } else if (lastLat !== null && lastLon !== null) {
+          roadEl.textContent = offTrackLabel;
+        } else {
+          roadEl.textContent = locatingLabel;
+        }
+      }
+
       if (junctionEl) junctionEl.innerHTML = `${junctionLabel} <strong>${formatJunctionDist(distanceToJunctionMeters)}</strong>`;
       if (pushBikeEl) pushBikeEl.classList.toggle('show', !!(match && match.feature && match.feature.properties && match.feature.properties.linkType === 'push-bike'));
     }
@@ -1323,6 +1335,15 @@
         });
         map.addControl(geolocateControl, 'bottom-right');
 
+        // Bind geolocate event to our handling logic
+        geolocateControl.on('geolocate', (pos) => {
+          handlePosition(pos);
+        });
+
+        geolocateControl.on('error', (err) => {
+          onGpsError(err);
+        });
+
         map.on('dragstart', () => {
             if (isFollowing) {
                 isFollowing = false;
@@ -1336,12 +1357,15 @@
         // Always attempt to start GPS to trigger browser prompt immediately
         startGPS();
 
-        const isApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || document.body.classList.contains('is-pwa');
-        if (!isApp) {
-            document.getElementById('gps-dot').style.cursor = 'pointer';
-            document.getElementById('gps-dot').onclick = () => {
-                startGPS();
-            };
+        // Enable GPS dot click to retry/request location in all environments
+        const gpsDot = document.getElementById('gps-dot');
+        if (gpsDot) {
+          gpsDot.style.cursor = 'pointer';
+          gpsDot.onclick = () => {
+            // Clear session storage flag to force re-prompt if needed
+            sessionStorage.removeItem('locationApproved');
+            startGPS();
+          };
         }
       });
 
@@ -1761,11 +1785,21 @@
         return;
       }
       setGpsDot('searching', '搜尋中...');
-      navigator.geolocation.getCurrentPosition(
-        pos => { handlePosition(pos); startWatch(); },
-        err => { setGpsDot('error', 'GPS 錯誤'); startWatch(); },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
+
+      if (geolocateControl) {
+        // Ensure map is ready before triggering
+        if (map.loaded()) {
+          geolocateControl.trigger();
+        } else {
+          map.once('load', () => geolocateControl.trigger());
+        }
+      } else {
+        navigator.geolocation.getCurrentPosition(
+          pos => { handlePosition(pos); startWatch(); },
+          err => { setGpsDot('error', 'GPS 錯誤'); startWatch(); },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      }
     }
 
     function startWatch() {
@@ -1890,10 +1924,24 @@
         const val = inputEl.value.trim();
 
         if (val === '📍 使用目前位置') {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-          });
-          return { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
+          // If we already have a recent GPS position, use it
+          if (lastLat !== null && lastLon !== null) {
+            return { id: '__gps__', name: '目前位置', lat: lastLat, lon: lastLon };
+          }
+          try {
+            const pos = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 5000
+              });
+            });
+            return { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
+          } catch (e) {
+            console.error('[Nav] getCurrentPosition failed during route planning:', e);
+            alert('無法獲取目前位置，請檢查 GPS 設定或重試。');
+            throw new Error('Geolocation failed');
+          }
         }
 
         // Check for dataset coords first (from Mapbox Search or Landmark Picker)
@@ -2740,6 +2788,9 @@
     function selectPickerValue(name, coords) {
       if (currentPickerTarget) {
         currentPickerTarget.value = name;
+        if (name === '📍 使用目前位置' && geolocateControl) {
+            geolocateControl.trigger();
+        }
         if (coords) {
           currentPickerTarget.dataset.lat = coords[1];
           currentPickerTarget.dataset.lon = coords[0];

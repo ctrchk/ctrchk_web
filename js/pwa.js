@@ -553,14 +553,20 @@
     modal.appendChild(inner);
     document.body.appendChild(modal);
 
+    const cleanup = () => {
+      if (document.body.contains(modal)) {
+        document.body.removeChild(modal);
+      }
+    };
+
     document.getElementById('loc-btn-yes').onclick = () => {
       sessionStorage.setItem('locationApproved', '1');
-      document.body.removeChild(modal);
+      cleanup();
       if (onAllowed) onAllowed();
     };
 
     document.getElementById('loc-btn-no').onclick = () => {
-      document.body.removeChild(modal);
+      cleanup();
       if (onDenied) onDenied();
     };
   };
