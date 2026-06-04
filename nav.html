@@ -27,7 +27,7 @@
 
     /* ── Full-screen map ── */
     #map {
-      position: absolute; top: 0; bottom: 0; width: 100%; z-index: -1;
+      position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0;
       background: var(--app-bg-primary, #121f14);
     }
 
@@ -43,15 +43,6 @@
       background: linear-gradient(to bottom, rgba(240,248,240,0.97) 75%, transparent);
       color: #1b3a1f;
     }
-    #btn-nav-back {
-      background: rgba(255,255,255,0.12); border: none; color: inherit;
-      width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1em; flex-shrink: 0; text-decoration: none;
-      transition: transform 0.1s;
-    }
-    #btn-nav-back:active { transform: scale(0.9); }
-    body.app-light-theme #btn-nav-back { background: rgba(0,0,0,0.08); }
     #nav-title-wrap {
       flex: 1;
       min-width: 0;
@@ -437,7 +428,6 @@
     body.app-light-theme #panel-collapsed-title { color: #2e7d32; }
     @media (prefers-color-scheme: light) {
         body:not(.app-theme-explicit) #nav-topbar { background: linear-gradient(to bottom, rgba(240,248,240,0.97) 75%, transparent); color: #1b3a1f; }
-        body:not(.app-theme-explicit) #btn-nav-back { background: rgba(0,0,0,0.08); }
         body:not(.app-theme-explicit) .plan-input { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.18); color: var(--app-text-primary, #1b3a1f); }
         body:not(.app-theme-explicit) .plan-input option { background: var(--app-bg-secondary, #eaf4ea); }
         body:not(.app-theme-explicit) #turn-banner { background: rgba(240,248,240,0.97); border-bottom-color: #2e7d32; color: #1b3a1f; }
@@ -465,9 +455,6 @@
 
   <!-- Top bar -->
   <div id="nav-topbar">
-    <a href="javascript:navBack()" id="btn-nav-back" aria-label="返回">
-      <i class="fas fa-chevron-left"></i>
-    </a>
     <div id="nav-title-wrap">
       <span id="nav-title" data-i18n="nav_title">🗺️ 單車徑導航</span>
       <div id="nav-topbar-meta">
@@ -2669,15 +2656,6 @@
       stopRouteFx();
     }
 
-    // ── Back navigation ───────────────────────────────────────────────────
-    window.navBack = function () {
-      if (isNavigating) {
-        if (!confirm('確定結束導航嗎？')) return;
-        endNavigation();
-      }
-      cleanupNavRuntime();
-      history.back();
-    };
 
     // ── Landmark Picker Logic ───────────────────────────────────────────
     let currentPickerTarget = null;
