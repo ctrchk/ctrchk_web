@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#1f2f25">
+    <meta name="theme-color" content="#121f14">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>里程計劃 - 城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .ml-wrap { max-width: 980px; margin: 0 auto; padding: 1.2em 1em 2.2em; color: #e8f3e9; }
+        html, body { background: var(--app-bg-primary, #121f14); }
+        .ml-wrap { max-width: 980px; margin: 0 auto; padding: 1.2em 1em 2.2em; color: var(--app-text-primary, #e8f3e9); }
         .ml-hero {
-            background: linear-gradient(145deg,#1b2f22,#16241b);
-            border:1px solid #2e4a35;
+            background: linear-gradient(145deg, var(--app-bg-secondary, #1b2f22), var(--app-bg-primary, #16241b));
+            border: 1px solid var(--app-border, #2e4a35);
             border-radius: 16px;
             padding: 1.15em;
             margin-bottom: 1em;
         }
-        .ml-hero h1 { margin: 0 0 0.45em; font-size: 1.45em; color: #BFE340; }
+        .ml-hero h1 { margin: 0 0 0.45em; font-size: 1.45em; color: var(--app-accent, #BFE340); }
         .ml-stats { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
-        .ml-stat { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.7em; }
-        .ml-stat .k { font-size: 0.76em; color:#a7c1aa; }
-        .ml-stat .v { font-size: 1.15em; font-weight: 800; margin-top: 0.2em; }
+        .ml-stat { background: var(--app-bg-card, rgba(255,255,255,0.04)); border:1px solid var(--app-border, rgba(255,255,255,0.08)); border-radius: 12px; padding: 0.7em; }
+        .ml-stat .k { font-size: 0.76em; color: var(--app-text-secondary, #a7c1aa); }
+        .ml-stat .v { font-size: 1.15em; font-weight: 800; margin-top: 0.2em; color: var(--app-text-primary, #e8f3e9); }
         .ml-progress { margin-top: 0.8em; }
-        .ml-progress-bar { height: 12px; border-radius: 999px; background: #132018; overflow: hidden; border:1px solid #2f4b36; }
-        .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#6dba65,#BFE340); }
-        .ml-progress-label { font-size: 0.78em; margin-top: 0.35em; color: #a7c1aa; }
-        .ml-section-title { margin:1.15em 0 0.35em; font-size:1em; color:#BFE340; }
-        .ml-section-desc { margin: 0 0 0.8em; color:#9cb29e; font-size:0.82em; line-height:1.55; }
+        .ml-progress-bar { height: 12px; border-radius: 999px; background: var(--app-bg-primary, #132018); overflow: hidden; border:1px solid var(--app-border, #2f4b36); }
+        .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6dba65, var(--app-accent, #BFE340)); }
+        .ml-progress-label { font-size: 0.78em; margin-top: 0.35em; color: var(--app-text-secondary, #a7c1aa); }
+        .ml-section-title { margin:1.15em 0 0.35em; font-size:1em; color: var(--app-accent, #BFE340); }
+        .ml-section-desc { margin: 0 0 0.8em; color: var(--app-text-secondary, #9cb29e); font-size:0.82em; line-height:1.55; }
         .ml-benefits-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.7em; margin-top:0.3em; }
         .ml-card {
             border-radius: 14px;
             padding: 0.95em;
-            border:1px solid #324f38;
-            background: #1a2b1f;
+            border: 1px solid var(--app-border, #324f38);
+            background: var(--app-bg-card, #1a2b1f);
             box-shadow: 0 4px 14px rgba(0,0,0,0.16);
         }
         .ml-card-head { margin-bottom: 0.65em; }
@@ -60,7 +61,7 @@
         .ml-tag.silver { color:#d1d9df; background: rgba(209,217,223,0.12); }
         .ml-tag.gold { color:#f0d372; background: rgba(240,211,114,0.14); }
         .ml-action-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
-        .ml-action { text-decoration:none; text-align:center; border-radius: 10px; border:1px solid #325239; background:#1c3122; color:#d9efdb; padding:0.7em 0.65em; font-weight: 700; font-size:0.85em; }
+        .ml-action { text-decoration:none; text-align:center; border-radius: 10px; border:1px solid var(--app-border, #325239); background: var(--app-bg-secondary, #1c3122); color: var(--app-text-primary, #d9efdb); padding:0.7em 0.65em; font-weight: 700; font-size:0.85em; }
         .ml-note { margin-top:0.8em; color:#9cb29e; font-size:0.8em; line-height:1.55; }
         body.app-light-theme .ml-wrap { color: var(--app-text-primary, #1b3a1f); }
         body.app-light-theme .ml-hero {
