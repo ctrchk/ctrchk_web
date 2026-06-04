@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收件匣 - CTRCHK MAIL</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --sidebar-bg: #1e1e1e;
+            --list-bg: #252525;
+            --content-bg: #1a1a1a;
+            --primary: #bb86fc;
+            --secondary: #03dac6;
+            --text: #e0e0e0;
+            --text-dim: #999;
+            --border: #333;
+            --hover: #3a3a3a;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 0;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            padding: 0 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .sidebar-btn {
+            margin: 0 1rem 0.5rem;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            transition: background 0.2s;
+            color: var(--text);
+            text-decoration: none;
+            border: none;
+            background: none;
+            width: calc(100% - 2rem);
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-btn:hover {
+            background-color: var(--hover);
+        }
+
+        .sidebar-btn.active {
+            background-color: rgba(187, 134, 252, 0.15);
+            color: var(--primary);
+        }
+
+        .compose-btn {
+            background-color: var(--primary) !important;
+            color: #121212 !important;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        /* Middle Column - Email List */
+        .email-list {
+            width: 380px;
+            background-color: var(--list-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .list-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-scroll {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .email-item {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .email-item:hover {
+            background-color: var(--hover);
+        }
+
+        .email-item.selected {
+            background-color: rgba(3, 218, 198, 0.1);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .email-item .sender {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-item .subject {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 0.4rem;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-item .timestamp {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            position: absolute;
+            top: 1.2rem;
+            right: 1.5rem;
+        }
+
+        /* Right Column - Viewer */
+        .email-viewer {
+            flex: 1;
+            background-color: var(--content-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .viewer-placeholder {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: var(--text-dim);
+        }
+
+        .viewer-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .viewer-header h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.5rem;
+        }
+
+        .viewer-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .viewer-body {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            line-height: 1.6;
+            color: #ddd;
+            font-size: 1.05rem;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background-color: var(--card-bg);
+            background: #252525;
+            width: 90%;
+            max-width: 650px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: white;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: white;
+            padding: 0.8rem;
+            height: 250px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            border: none;
+        }
+
+        .btn-primary { background-color: var(--primary); color: #121212; }
+        .btn-ghost { background: transparent; color: var(--text); }
+
+        /* Utilities */
+        .badge-sent { color: #888; font-size: 0.7rem; border: 1px solid #444; padding: 1px 4px; border-radius: 4px; margin-right: 5px; }
+        .badge-inbox { color: var(--secondary); font-size: 0.7rem; border: 1px solid var(--secondary); padding: 1px 4px; border-radius: 4px; margin-right: 5px; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="brand">
+                <i class="fas fa-paper-plane"></i> CTRCHK MAIL
+            </div>
+
+            <button class="sidebar-btn compose-btn" onclick="openCompose()">
+                <i class="fas fa-edit"></i> 撰寫郵件
+            </button>
+
+            <button class="sidebar-btn active" onclick="loadEmails()">
+                <i class="fas fa-inbox"></i> 所有郵件
+            </button>
+
+            <button class="sidebar-btn" onclick="loadEmails()">
+                <i class="fas fa-sync-alt"></i> 重新整理
+            </button>
+
+            <div class="sidebar-footer">
+                <div id="current-email" style="font-weight: bold; margin-bottom: 0.8rem;">---</div>
+                <button class="sidebar-btn" onclick="logout()" style="margin: 0; padding: 0.5rem 0; color: var(--error-color);">
+                    <i class="fas fa-sign-out-alt"></i> 登出
+                </button>
+            </div>
+        </div>
+
+        <!-- Email List -->
+        <div class="email-list">
+            <div class="list-header">
+                <h3 style="margin:0">收件匣</h3>
+                <span id="mail-count" style="font-size: 0.85rem; color: var(--text-dim);">0 封郵件</span>
+            </div>
+            <div id="mail-list-container" class="list-scroll">
+                <!-- Items populated by JS -->
+                <div style="text-align:center; padding: 2rem; color: #666;">載入中...</div>
+            </div>
+        </div>
+
+        <!-- Email Viewer -->
+        <div id="viewer-container" class="email-viewer">
+            <div class="viewer-placeholder">
+                <i class="fas fa-envelope-open" style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.2;"></i>
+                <p>請選擇一封郵件以閱讀內容</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Modal -->
+    <div id="compose-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin:0">撰寫新郵件</h3>
+                <button class="btn-ghost" onclick="closeCompose()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="email" id="compose-to" class="modal-input" placeholder="收件者">
+                <input type="text" id="compose-subject" class="modal-input" placeholder="主旨">
+                <textarea id="compose-body" class="modal-textarea" placeholder="在這裡輸入您的訊息..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeCompose()">取消</button>
+                <button id="btn-send" class="btn btn-primary" onclick="sendEmail()">發送郵件</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('mail_token');
+        const userEmail = localStorage.getItem('mail_address');
+        let allEmails = [];
+
+        // Auth Check
+        if (!token || !userEmail) {
+            window.location.href = 'email-login.html';
+        }
+
+        document.getElementById('current-email').textContent = userEmail;
+
+        function formatRelativeTime(dateStr) {
+            const now = new Date();
+            const date = new Date(dateStr);
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) return '剛才';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} 分鐘前`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} 小時前`;
+            if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} 天前`;
+
+            return date.toLocaleDateString('zh-HK');
+        }
+
+        async function loadEmails() {
+            const container = document.getElementById('mail-list-container');
+            container.innerHTML = '<div style="text-align:center; padding: 2rem; color: #666;"><i class="fas fa-spinner fa-spin"></i> 正在載入郵件...</div>';
+
+            try {
+                const response = await fetch('/api/email?action=get-emails', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.status === 401) {
+                    logout();
+                    return;
+                }
+
+                allEmails = await response.json();
+                renderEmailList();
+                document.getElementById('mail-count').textContent = `${allEmails.length} 封郵件`;
+            } catch (error) {
+                container.innerHTML = `<div style="text-align:center; padding: 2rem; color: #cf6679;">載入失敗: ${error.message}</div>`;
+            }
+        }
+
+        function renderEmailList() {
+            const container = document.getElementById('mail-list-container');
+            if (allEmails.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 2rem; color: #666;">尚無郵件</div>';
+                return;
+            }
+
+            container.innerHTML = allEmails.map(mail => {
+                const isSent = mail.direction === 'SENT';
+                const label = isSent ? `<span class="badge-sent">寄出</span>` : `<span class="badge-inbox">收件</span>`;
+                const displayContact = isSent ? `至: ${mail.recipient}` : `從: ${mail.sender}`;
+
+                return `
+                    <div class="email-item" onclick="viewEmail(${mail.id}, this)">
+                        <div class="timestamp">${formatRelativeTime(mail.created_at)}</div>
+                        <span class="sender">${label} ${displayContact}</span>
+                        <span class="subject">${mail.subject || '(無主旨)'}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewEmail(id, element) {
+            // UI Feedback
+            document.querySelectorAll('.email-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+
+            const mail = allEmails.find(m => m.id === id);
+            if (!mail) return;
+
+            const viewer = document.getElementById('viewer-container');
+            const isSent = mail.direction === 'SENT';
+
+            viewer.innerHTML = `
+                <div class="viewer-header">
+                    <h2>${mail.subject || '(無主旨)'}</h2>
+                    <div class="viewer-meta">
+                        <span><strong>寄件者:</strong> ${mail.sender}</span>
+                        <span><strong>收件者:</strong> ${mail.recipient}</span>
+                        <span><strong>時間:</strong> ${new Date(mail.created_at).toLocaleString('zh-HK')}</span>
+                    </div>
+                </div>
+                <div class="viewer-body">
+                    ${mail.body_html || (mail.body_text ? mail.body_text.replace(/\n/g, '<br>') : '<em>(無內容)</em>')}
+                </div>
+            `;
+        }
+
+        // Compose Logic
+        function openCompose() {
+            document.getElementById('compose-modal').style.display = 'flex';
+        }
+
+        function closeCompose() {
+            document.getElementById('compose-modal').style.display = 'none';
+        }
+
+        async function sendEmail() {
+            const to = document.getElementById('compose-to').value.trim();
+            const subject = document.getElementById('compose-subject').value.trim();
+            const body = document.getElementById('compose-body').value;
+            const btn = document.getElementById('btn-send');
+
+            if (!to || !subject || !body) {
+                alert('請填寫所有欄位');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '發送中...';
+
+            try {
+                const response = await fetch('/api/email?action=send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ to, subject, body })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('郵件已成功發送！');
+                    closeCompose();
+                    // Clear fields
+                    document.getElementById('compose-to').value = '';
+                    document.getElementById('compose-subject').value = '';
+                    document.getElementById('compose-body').value = '';
+                    loadEmails(); // Refresh list
+                } else {
+                    alert(`錯誤: ${data.message}`);
+                }
+            } catch (error) {
+                alert(`發送失敗: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '發送郵件';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('mail_token');
+            localStorage.removeItem('mail_address');
+            window.location.href = 'email-login.html';
+        }
+
+        // Initial Load
+        loadEmails();
+    </script>
+</body>
+</html>

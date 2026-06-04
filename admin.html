@@ -336,6 +336,9 @@
                 <button class="tab-btn" onclick="showTab('ai-dev');">
                     <i class="fas fa-robot"></i> AI 開發
                 </button>
+                <button class="tab-btn" onclick="showTab('email-admin');">
+                    <i class="fas fa-envelope"></i> 郵件管理
+                </button>
             </div>
 
             <!-- 用戶管理標籤 -->
@@ -784,6 +787,41 @@
                     </div>
                 </div>
             </div>
+            <div id="tab-email-admin" style="display:none;">
+                <div style="background:white; padding:2em; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); max-width:600px;">
+                    <h3 style="margin-top:0; color:#2c3e50;"><i class="fas fa-envelope-open-text"></i> 建立企業郵件帳戶 (@ctrchk.com)</h3>
+                    <p style="color:#666; font-size:0.9em; margin-bottom:1.5em;">此功能用於手動為團隊成員建立自定義的 @ctrchk.com 郵件地址。</p>
+
+                    <div style="margin-bottom:1.2em;">
+                        <label style="display:block; margin-bottom:0.4em; font-weight:bold;">郵件地址前綴</label>
+                        <div style="display:flex; align-items:center; gap:0.5em;">
+                            <input type="text" id="email-admin-prefix" placeholder="例如: support"
+                                style="flex:1; padding:0.8em; border:1px solid #ddd; border-radius:8px; font-size:1em;">
+                            <span style="font-weight:bold; color:#2c3e50;">@ctrchk.com</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:1.2em;">
+                        <label style="display:block; margin-bottom:0.4em; font-weight:bold;">初始密碼</label>
+                        <input type="password" id="email-admin-password" placeholder="請輸入至少 8 位密碼"
+                            style="width:100%; padding:0.8em; border:1px solid #ddd; border-radius:8px; font-size:1em; box-sizing:border-box;">
+                    </div>
+
+                    <div style="margin-bottom:1.5em;">
+                        <label style="display:block; margin-bottom:0.4em; font-weight:bold;">Admin Secret 驗證碼</label>
+                        <input type="password" id="email-admin-secret" placeholder="請輸入系統 Admin Secret"
+                            style="width:100%; padding:0.8em; border:1px solid #ddd; border-radius:8px; font-size:1em; box-sizing:border-box;">
+                    </div>
+
+                    <button id="btn-email-admin-create" onclick="createEmailAccount()"
+                        style="width:100%; background:#2c3e50; color:white; padding:1em; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:1em; transition: background 0.3s;">
+                        <i class="fas fa-plus-circle"></i> 立即建立帳戶
+                    </button>
+
+                    <div id="email-admin-status" style="margin-top:1.2em; font-size:0.95em; text-align:center; min-height:1.2em;"></div>
+                </div>
+            </div>
+
 <div id="tab-ai-dev" style="display:none;">
     <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
         <h3>🤖 AI 自動開發特工</h3>
@@ -2861,6 +2899,53 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = "啟動任務";
+            }
+        }
+
+        async function createEmailAccount() {
+            const prefix = document.getElementById('email-admin-prefix').value.trim();
+            const password = document.getElementById('email-admin-password').value.trim();
+            const adminSecret = document.getElementById('email-admin-secret').value.trim();
+            const statusEl = document.getElementById('email-admin-status');
+            const btn = document.getElementById('btn-email-admin-create');
+
+            if (!prefix || !password || !adminSecret) {
+                statusEl.style.color = 'red';
+                statusEl.textContent = '❌ 請填寫所有必填欄位。';
+                return;
+            }
+
+            statusEl.style.color = '#2c3e50';
+            statusEl.textContent = '⏳ 正在建立帳戶...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/email?action=create-account', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email_address: `${prefix}@ctrchk.com`,
+                        password: password,
+                        admin_secret: adminSecret
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusEl.style.color = 'green';
+                    statusEl.innerHTML = `✅ 帳戶 <b>${prefix}@ctrchk.com</b> 建立成功！`;
+                    document.getElementById('email-admin-prefix').value = '';
+                    document.getElementById('email-admin-password').value = '';
+                } else {
+                    statusEl.style.color = 'red';
+                    statusEl.textContent = `❌ 錯誤: ${result.message || '無法建立帳戶'}`;
+                }
+            } catch (error) {
+                statusEl.style.color = 'red';
+                statusEl.textContent = `❌ 連線失敗: ${error.message}`;
+            } finally {
+                btn.disabled = false;
             }
         }
     </script>
