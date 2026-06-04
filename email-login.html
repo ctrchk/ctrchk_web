@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登入 - CTRCHK MAIL</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --text-color: #e0e0e0;
+            --error-color: #cf6679;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-card {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-card h1 {
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+        }
+
+        .login-card p {
+            color: #aaa;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #bbb;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: #121212;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.3s, transform 0.2s;
+            margin-top: 1rem;
+        }
+
+        .btn-login:hover {
+            opacity: 0.9;
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .btn-login:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        #status-msg {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            min-height: 1.2rem;
+        }
+
+        .error { color: var(--error-color); }
+        .success { color: var(--secondary-color); }
+
+        .logo {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="logo">
+            <i class="fas fa-paper-plane"></i>
+        </div>
+        <h1>CTRCHK MAIL</h1>
+        <p>請使用您的 @ctrchk.com 帳戶登入</p>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">電子郵件地址</label>
+                <input type="email" id="email" placeholder="name@ctrchk.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" id="btn-submit" class="btn-login">登入系統</button>
+        </form>
+
+        <div id="status-msg"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('login-form');
+        const statusEl = document.getElementById('status-msg');
+        const btnSubmit = document.getElementById('btn-submit');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!email.toLowerCase().endsWith('@ctrchk.com')) {
+                statusEl.className = 'error';
+                statusEl.textContent = '❌ 僅支援 @ctrchk.com 郵件地址登入';
+                return;
+            }
+
+            statusEl.textContent = '⏳ 正在驗證...';
+            statusEl.className = '';
+            btnSubmit.disabled = true;
+
+            try {
+                const response = await fetch('/api/email?action=login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email_address: email, password: password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusEl.className = 'success';
+                    statusEl.textContent = '✅ 登入成功，正在導向...';
+
+                    // Save credentials
+                    localStorage.setItem('mail_token', data.token);
+                    localStorage.setItem('mail_address', data.email);
+
+                    setTimeout(() => {
+                        window.location.href = 'email-inbox.html';
+                    }, 1000);
+                } else {
+                    statusEl.className = 'error';
+                    statusEl.textContent = `❌ ${data.message || '登入失敗，請檢查憑證'}`;
+                    btnSubmit.disabled = false;
+                }
+            } catch (error) {
+                statusEl.className = 'error';
+                statusEl.textContent = `❌ 連線錯誤: ${error.message}`;
+                btnSubmit.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
