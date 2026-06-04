@@ -73,6 +73,7 @@ export default {
 
     // 2. Prepare the payload
     const payload = {
+      action: "webhook-incoming",
       sender: message.from,
       recipient: message.to,
       subject: email.subject,
@@ -82,7 +83,7 @@ export default {
     };
 
     // 3. POST to Vercel Webhook
-    const response = await fetch("https://ctrchk.com/api/email/webhook-incoming", {
+    const response = await fetch("https://ctrchk.com/api/email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -117,7 +118,9 @@ Ensure the following variables are set in your Vercel Project Settings:
 ---
 
 ## 5. API Endpoints Created
-- `POST /api/email/admin/create-account`: Create a new `@ctrchk.com` account. Requires `admin_secret` in body.
-- `POST /api/email/auth/login`: Login and receive a JWT token.
-- `POST /api/email/send`: Send an email (requires Bearer token).
-- `POST /api/email/webhook-incoming`: The secure endpoint for Cloudflare Workers.
+All email functions are consolidated into a single serverless function to comply with Vercel Hobby plan limits.
+
+- `POST /api/email?action=create-account`: Create a new `@ctrchk.com` account. Requires `admin_secret` in body.
+- `POST /api/email?action=login`: Login and receive a JWT token.
+- `POST /api/email?action=send`: Send an email (requires Bearer token).
+- `POST /api/email?action=webhook-incoming`: The secure endpoint for Cloudflare Workers.
