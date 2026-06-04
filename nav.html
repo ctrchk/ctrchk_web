@@ -662,6 +662,7 @@
 
     // ── State ─────────────────────────────────────────────────────────────
     let map = null;
+    let geolocateControl = null;
     let userMarker = null;
     let watchId = null;
     let headingUp = false;         // true = rotate map to face travel direction
@@ -752,30 +753,25 @@
 
     function normalizeTrackData(data) {
       const features = [];
-      (data && Array.isArray(data.features) ? data.features : []).forEach((feature) => {
+      if (!data || !Array.isArray(data.features)) return features;
+
+      data.features.forEach((feature) => {
         if (!feature || !feature.geometry) return;
         const props = { ...(feature.properties || {}) };
-        if (feature.geometry.type === 'LineString') {
-          const coords = (feature.geometry.coordinates || [])
-            .map(c => [Number(c[0]), Number(c[1])])
-            .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+
+        const type = feature.geometry.type;
+        const coordinates = feature.geometry.coordinates;
+
+        if (type === 'LineString') {
+          const coords = coordinates.filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
           if (coords.length >= 2) {
             features.push(turf.lineString(coords, { ...props, linkType: 'cycle-track', isVirtual: false }));
           }
-          return;
-        }
-        if (feature.geometry.type === 'MultiLineString') {
-          (feature.geometry.coordinates || []).forEach((part, partIdx) => {
-            const coords = (part || [])
-              .map(c => [Number(c[0]), Number(c[1])])
-              .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+        } else if (type === 'MultiLineString') {
+          coordinates.forEach((part, idx) => {
+            const coords = part.filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
             if (coords.length >= 2) {
-              features.push(turf.lineString(coords, {
-                ...props,
-                _multiPart: partIdx,
-                linkType: 'cycle-track',
-                isVirtual: false,
-              }));
+              features.push(turf.lineString(coords, { ...props, _multiPart: idx, linkType: 'cycle-track', isVirtual: false }));
             }
           });
         }
@@ -1319,6 +1315,14 @@
         add3DBuildingsLayer();
         loadTkoGeoJson();
 
+        // Add GeolocateControl for standard "locate me"
+        geolocateControl = new mapboxgl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true,
+          showUserHeading: true
+        });
+        map.addControl(geolocateControl, 'bottom-right');
+
         map.on('dragstart', () => {
             if (isFollowing) {
                 isFollowing = false;
@@ -1514,28 +1518,15 @@
       return { type: 'FeatureCollection', features };
     }
 
-    /** Load all government cycling datasets + local TKO tracks */
+    /** Load the verified TKO_full.geojson for local routing */
     async function loadTkoGeoJson() {
-      const sources = [
-        '/data/tko_tracks.json',
-        '/data/CYCFACI.gdb_CYCTRACK_converted.geojson',
-        '/data/CYCFACI.gdb_CYCRAMP_converted.geojson',
-      ];
       try {
-        // Fetch all sources in parallel
-        const responses = await Promise.all(sources.map(url => fetch(url).catch(() => null)));
-        const datasets = await Promise.all(responses.map(async (resp, i) => {
-          if (!resp || !resp.ok) { console.warn('[Nav] Failed to load', sources[i]); return null; }
-          try { return await resp.json(); } catch (e) { return null; }
-        }));
+        const resp = await fetch('./data/TKO_full.geojson');
+        if (!resp.ok) throw new Error('Failed to load TKO_full.geojson');
+        const data = await resp.json();
 
-        // Merge all valid datasets
-        const valid = datasets.filter(d => d && Array.isArray(d.features));
-        if (!valid.length) throw new Error('No cycling data loaded');
-
-        const merged = mergeGeoJsonCollections(valid);
-        tkoGeoJsonData = merged;
-        processedTrackNetwork = preprocessTrackNetwork(merged);
+        tkoGeoJsonData = data;
+        processedTrackNetwork = preprocessTrackNetwork(data);
         networkLines = processedTrackNetwork.features.slice();
         networkIndex = buildLineSpatialIndex(networkLines);
         networkJunctions = buildJunctionCollection(networkLines);
@@ -1546,24 +1537,7 @@
         // Load parking spaces for silver/gold card users
         loadParkingSpaces();
       } catch (e) {
-        console.warn('[Nav] Cycling dataset load failed:', e);
-        // Fallback: try local TKO data only
-        try {
-          const resp = await fetch('/data/tko_tracks.json');
-          if (resp.ok) {
-            const data = await resp.json();
-            if (data && Array.isArray(data.features)) {
-              tkoGeoJsonData = data;
-              processedTrackNetwork = preprocessTrackNetwork(data);
-              networkLines = processedTrackNetwork.features.slice();
-              networkIndex = buildLineSpatialIndex(networkLines);
-              networkJunctions = buildJunctionCollection(networkLines);
-              networkGraph = buildRoutingGraph(networkLines);
-              addTkoLocalLayer(processedTrackNetwork);
-              updateTopBarMeta(null, null);
-            }
-          }
-        } catch (e2) { console.warn('[Nav] Fallback TKO load also failed', e2); }
+        console.error('[Nav] Verified GeoJSON load failed:', e);
       }
     }
 
@@ -1801,16 +1775,27 @@
 
     function updateCamera(lngLat, bearing) {
       if (!map || !isFollowing) return;
+
+      // During active navigation, strictly enforce requested HUD parameters
+      if (isNavigating) {
+        map.easeTo({
+          center: lngLat,
+          bearing: smoothBearing(bearing),
+          zoom: 18,
+          pitch: 75,
+          duration: 550,
+          easing: t => 1 - Math.pow(1 - t, 2),
+        });
+        return;
+      }
+
+      // Default follow mode behavior
       const nextBearing = headingUp ? smoothBearing(bearing) : 0;
-
-      // Dynamically adjust pitch based on speed (simulated 3D feel)
-      const targetPitch = isNavigating ? Math.min(75, DEFAULT_NAV_PITCH + (lastSpeedKmh * 0.5)) : DEFAULT_NAV_PITCH;
-
       map.easeTo({
        center: lngLat,
        bearing: nextBearing,
-       zoom: isNavigating ? Math.max(DEFAULT_NAV_ZOOM, 18.5) : DEFAULT_NAV_ZOOM,
-       pitch: targetPitch,
+       zoom: DEFAULT_NAV_ZOOM,
+       pitch: DEFAULT_NAV_PITCH,
        duration: 550,
        easing: t => 1 - Math.pow(1 - t, 2),
       });
@@ -1900,39 +1885,51 @@
       return LANDMARKS.find(l => l.id === v || l.name === v) || null;
     }
 
-    async function resolveRawInput(val) {
-        let res = resolveLandmark(val);
-        if (res && res.id === '__gps__') {
-            const pos = await new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-            });
-            return { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
+    async function resolveRawInput(inputEl) {
+        if (!inputEl || !inputEl.value) return null;
+        const val = inputEl.value.trim();
+
+        if (val === '📍 使用目前位置') {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+          });
+          return { id: '__gps__', name: '目前位置', lat: pos.coords.latitude, lon: pos.coords.longitude };
         }
+
+        // Check for dataset coords first (from Mapbox Search or Landmark Picker)
+        if (inputEl.dataset.lat && inputEl.dataset.lon) {
+          return {
+            id: 'custom',
+            name: val,
+            lat: parseFloat(inputEl.dataset.lat),
+            lon: parseFloat(inputEl.dataset.lon)
+          };
+        }
+
+        // Fallback: search in static landmarks
+        let res = resolveLandmark(val);
         return res;
     }
 
     async function planRoute() {
-      const fromRaw = document.getElementById('sel-from').value;
-      const toRaw   = document.getElementById('sel-to').value;
+      const fromInput = document.getElementById('sel-from');
+      const toInput = document.getElementById('sel-to');
       const waypointInputs = Array.from(document.querySelectorAll('.waypoint-input'));
 
-      if (!fromRaw || !toRaw) return;
+      if (!fromInput.value || !toInput.value) return;
 
       const btn = document.getElementById('btn-plan-route');
       btn.disabled = true;
       btn.textContent = '正在取得位置...';
 
       try {
-          const from = await resolveRawInput(fromRaw);
-          const to = await resolveRawInput(toRaw);
+          const from = await resolveRawInput(fromInput);
+          const to = await resolveRawInput(toInput);
           const points = [from];
 
           for (const wp of waypointInputs) {
-              const val = wp.value.trim();
-              if (val) {
-                  const resolved = await resolveRawInput(val);
-                  if (resolved) points.push(resolved);
-              }
+              const resolved = await resolveRawInput(wp);
+              if (resolved) points.push(resolved);
           }
           points.push(to);
 
@@ -2284,6 +2281,7 @@
 
       // Enable heading-up mode
       headingUp = true;
+      isFollowing = true;
       document.getElementById('btn-heading-up').classList.add('active');
 
       collapsePanel();
@@ -2325,13 +2323,6 @@
       }
 
       updateNavStats();
-
-      // Auto-zoom near intersections
-      if (distToEnd < 80) {
-        map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 500 });
-      } else if (distToEnd > 200 && map.getZoom() > DEFAULT_NAV_ZOOM) {
-        map.easeTo({ zoom: DEFAULT_NAV_ZOOM, pitch: DEFAULT_NAV_PITCH, duration: 500 });
-      }
     }
 
     function updateTurnBanner() {
@@ -2673,48 +2664,89 @@
       currentPickerTarget = null;
     }
 
+    let searchDebounceTimer = null;
+
+    async function fetchSearchSuggestions(query) {
+      if (!query || query.length < 2) return [];
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&country=hk&language=zh-Hant&limit=5`;
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        return data.features || [];
+      } catch (e) {
+        console.error('Search fetch failed:', e);
+        return [];
+      }
+    }
+
     function renderLandmarkList(filter = '') {
       const listEl = document.getElementById('landmark-list');
-      listEl.innerHTML = '';
-      const q = filter.toLowerCase().trim();
+      const q = filter.trim();
 
-      // "Current Location" option
-      if (!q || '目前位置'.includes(q)) {
+      // Clear current results
+      if (!q) {
+        listEl.innerHTML = '';
+        // Default "Current Location" option
         const item = document.createElement('div');
         item.className = 'picker-item';
         item.innerHTML = '<i class="fas fa-location-arrow"></i> <span class="picker-item-name">📍 使用目前位置</span>';
         item.onclick = () => selectPickerValue('📍 使用目前位置');
         listEl.appendChild(item);
-      }
 
-      const groups = {};
-      LANDMARKS.forEach(l => {
-        if (q && !l.name.toLowerCase().includes(q)) return;
-        const d = l.district || '其他';
-        if (!groups[d]) groups[d] = [];
-        groups[d].push(l);
-      });
-
-      Object.keys(groups).forEach(district => {
-        const title = document.createElement('div');
-        title.className = 'picker-section-title';
-        title.textContent = district;
-        listEl.appendChild(title);
-
-        groups[district].forEach(l => {
-          const item = document.createElement('div');
-          item.className = 'picker-item';
-          item.innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="picker-item-name">${l.name}</span>`;
-          item.onclick = () => selectPickerValue(l.name);
-          listEl.appendChild(item);
+        // Show curated landmarks as groups when no search query
+        const groups = {};
+        LANDMARKS.forEach(l => {
+          const d = l.district || '其他';
+          if (!groups[d]) groups[d] = [];
+          groups[d].push(l);
         });
-      });
 
+        Object.keys(groups).forEach(district => {
+          const title = document.createElement('div');
+          title.className = 'picker-section-title';
+          title.textContent = district;
+          listEl.appendChild(title);
+
+          groups[district].forEach(l => {
+            const item = document.createElement('div');
+            item.className = 'picker-item';
+            item.innerHTML = `<i class="fas fa-map-marker-alt"></i> <span class="picker-item-name">${l.name}</span>`;
+            item.onclick = () => selectPickerValue(l.name, [l.lon, l.lat]);
+            listEl.appendChild(item);
+          });
+        });
+      }
     }
 
-    function selectPickerValue(val) {
+    async function renderSearchResults(query) {
+      const listEl = document.getElementById('landmark-list');
+      const results = await fetchSearchSuggestions(query);
+
+      listEl.innerHTML = '';
+      if (results.length === 0) {
+        listEl.innerHTML = '<div style="padding:1em; opacity:0.6; text-align:center;">找不到相關地點</div>';
+        return;
+      }
+
+      results.forEach(feat => {
+        const item = document.createElement('div');
+        item.className = 'picker-item';
+        item.innerHTML = `<i class="fas fa-search-location"></i> <span class="picker-item-name">${feat.place_name}</span>`;
+        item.onclick = () => selectPickerValue(feat.place_name, feat.center);
+        listEl.appendChild(item);
+      });
+    }
+
+    function selectPickerValue(name, coords) {
       if (currentPickerTarget) {
-        currentPickerTarget.value = val;
+        currentPickerTarget.value = name;
+        if (coords) {
+          currentPickerTarget.dataset.lat = coords[1];
+          currentPickerTarget.dataset.lon = coords[0];
+        } else {
+          delete currentPickerTarget.dataset.lat;
+          delete currentPickerTarget.dataset.lon;
+        }
         checkPlanBtn();
         closeLandmarkPicker();
       }
@@ -2722,7 +2754,15 @@
 
     document.getElementById('btn-picker-close').onclick = closeLandmarkPicker;
     document.getElementById('picker-search').oninput = (e) => {
-      renderLandmarkList(e.target.value);
+      const val = e.target.value;
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+      if (!val) {
+        renderLandmarkList();
+      } else {
+        searchDebounceTimer = setTimeout(() => {
+          renderSearchResults(val);
+        }, 300);
+      }
     };
 
     function checkPlanBtn() {
