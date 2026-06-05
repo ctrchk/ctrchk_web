@@ -29,6 +29,13 @@ async function ensureEmailTables() {
             created_at TIMESTAMP DEFAULT NOW()
         );
       `);
+
+      // Migrations for length constraints and case consistency
+      await query(`ALTER TABLE email_messages ALTER COLUMN sender TYPE TEXT;`);
+      await query(`ALTER TABLE email_messages ALTER COLUMN recipient TYPE TEXT;`);
+      await query(`ALTER TABLE email_messages ALTER COLUMN subject TYPE TEXT;`);
+      await query(`UPDATE email_accounts SET email_address = LOWER(email_address);`);
+
       await query(`CREATE INDEX IF NOT EXISTS idx_email_messages_account_id ON email_messages(account_id);`);
       await query(`CREATE INDEX IF NOT EXISTS idx_email_accounts_email_address ON email_accounts(email_address);`);
     })().catch((err) => {
@@ -89,7 +96,9 @@ export default async function handler(req, res) {
       if (!email_address || !password) {
         return res.status(400).json({ message: 'Missing email or password' });
       }
-      if (!email_address.toLowerCase().endsWith('@ctrchk.com')) {
+
+      const cleanEmail = email_address.trim().toLowerCase();
+      if (!cleanEmail.endsWith('@ctrchk.com')) {
         return res.status(400).json({ message: 'Email must end with @ctrchk.com' });
       }
 
@@ -100,7 +109,7 @@ export default async function handler(req, res) {
 
       const result = await query(
         `INSERT INTO email_accounts (email_address, password_hash) VALUES ($1, $2) RETURNING id, email_address`,
-        [email_address.toLowerCase(), password_hash]
+        [cleanEmail, password_hash]
       );
       return res.status(201).json({ message: 'Account created', account: result.rows[0] });
     }
@@ -110,7 +119,8 @@ export default async function handler(req, res) {
       if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
       const { email_address, password } = body;
 
-      const { rows } = await query('SELECT * FROM email_accounts WHERE email_address = $1', [email_address?.toLowerCase()]);
+      const cleanEmail = email_address?.trim().toLowerCase();
+      const { rows } = await query('SELECT * FROM email_accounts WHERE email_address = $1', [cleanEmail]);
       if (rows.length === 0) return res.status(401).json({ message: 'Invalid credentials' });
 
       const storedHash = rows[0].password_hash;
@@ -165,6 +175,8 @@ export default async function handler(req, res) {
           return res.status(400).json({ message: 'Missing fields (to, subject, or body)' });
         }
 
+        const htmlContent = emailBody.replace(/\n/g, '<br>');
+
         // Call Resend API
         const resendResp = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -177,7 +189,7 @@ export default async function handler(req, res) {
             to: [to],
             subject: subject,
             text: emailBody,
-            html: emailBody.replace(/\n/g, '<br>')
+            html: htmlContent
           })
         });
 
@@ -188,8 +200,8 @@ export default async function handler(req, res) {
 
         // Database: Log SENT email
         await query(
-          `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text) VALUES ($1, 'SENT', $2, $3, $4, $5)`,
-          [decoded.accountId, decoded.email, to, subject, emailBody]
+          `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text, body_html) VALUES ($1, 'SENT', $2, $3, $4, $5, $6)`,
+          [decoded.accountId, decoded.email, to, subject, emailBody, htmlContent]
         );
 
         return res.status(200).json({ message: 'Email sent successfully', id: resendData.id });
@@ -209,21 +221,35 @@ export default async function handler(req, res) {
       }
 
       // Robustness: Extract clean email from recipient (handles "Name <email@domain.com>" format)
-      const emailRegex = /(?:<|^)([^>\s]+@ctrchk\.com)(?:>|$)/i;
+      const emailRegex = /([a-zA-Z0-9._%+-]+@ctrchk\.com)/i;
       const match = recipient?.match(emailRegex);
-      const cleanRecipient = match ? match[1].toLowerCase() : recipient?.toLowerCase();
+      const cleanRecipient = match ? match[1].toLowerCase().trim() : recipient?.toLowerCase().trim();
+
+      if (!cleanRecipient) {
+        return res.status(400).json({ message: 'Recipient missing or invalid' });
+      }
 
       // Logic: Match recipient to account_id
-      const { rows } = await query('SELECT id FROM email_accounts WHERE email_address = $1', [cleanRecipient]);
+      let { rows } = await query('SELECT id FROM email_accounts WHERE email_address = $1', [cleanRecipient]);
+
+      // Fallback: Strip subaddressing (e.g. user+suffix@ctrchk.com -> user@ctrchk.com)
+      if (rows.length === 0 && cleanRecipient.includes('+')) {
+        const baseEmail = cleanRecipient.replace(/\+[^@]*@/, '@');
+        const retry = await query('SELECT id FROM email_accounts WHERE email_address = $1', [baseEmail]);
+        if (retry.rows.length > 0) {
+          rows = retry.rows;
+        }
+      }
+
       if (rows.length === 0) {
-        console.warn(`Incoming email skipped: Recipient ${cleanRecipient} not found in email_accounts.`);
+        console.warn(`Incoming email skipped: Recipient ${cleanRecipient} not found. Original header: ${recipient}`);
         return res.status(200).json({ message: 'Recipient account not found, skipping' });
       }
 
       // Insert incoming email
       await query(
         `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text, body_html) VALUES ($1, 'INBOX', $2, $3, $4, $5, $6)`,
-        [rows[0].id, sender, cleanRecipient, subject || '(No Subject)', body_text, body_html]
+        [rows[0].id, sender || 'Unknown Sender', cleanRecipient, subject || '(No Subject)', body_text, body_html]
       );
 
       return res.status(200).json({ message: 'Incoming email processed' });
