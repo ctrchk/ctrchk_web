@@ -67,6 +67,14 @@ export default async function handler(req, res) {
   try {
     await ensureEmailTables();
 
+    // If no action provided, return a status message (Manual Trigger/Ping)
+    if (!action) {
+      return res.status(200).json({
+        message: 'Email API is active and database tables are initialized.',
+        status: 'ready'
+      });
+    }
+
     // 1. action=create-account (POST)
     if (action === 'create-account') {
       if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
