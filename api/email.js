@@ -53,13 +53,27 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  // Robust Body Parsing (Handle stringified JSON if Vercel doesn't parse it)
+  // Robust Body Parsing (Handle stringified JSON or Raw Stream)
   let body = req.body || {};
-  if (typeof body === 'string') {
+
+  if (req.method === 'POST' && (!req.body || Object.keys(req.body).length === 0)) {
+    try {
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      const rawBody = Buffer.concat(chunks).toString();
+      if (rawBody) {
+        body = JSON.parse(rawBody);
+      }
+    } catch (e) {
+      console.warn('Failed to parse raw body as JSON:', e.message);
+    }
+  } else if (typeof body === 'string') {
     try {
       body = JSON.parse(body);
     } catch (e) {
-      console.warn('Failed to parse body as JSON:', e.message);
+      console.warn('Failed to parse string body as JSON:', e.message);
     }
   }
 
