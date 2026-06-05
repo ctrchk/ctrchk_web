@@ -3,6 +3,42 @@ import { query } from '../lib/db.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
+let _ensureEmailTablesPromise = null;
+async function ensureEmailTables() {
+  if (!_ensureEmailTablesPromise) {
+    _ensureEmailTablesPromise = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS email_accounts (
+            id SERIAL PRIMARY KEY,
+            email_address VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(20) DEFAULT 'USER' CHECK (role IN ('ADMIN', 'USER')),
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS email_messages (
+            id SERIAL PRIMARY KEY,
+            account_id INTEGER REFERENCES email_accounts(id) ON DELETE CASCADE,
+            direction VARCHAR(10) NOT NULL CHECK (direction IN ('INBOX', 'SENT')),
+            sender VARCHAR(255) NOT NULL,
+            recipient VARCHAR(255) NOT NULL,
+            subject VARCHAR(255),
+            body_text TEXT,
+            body_html TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_email_messages_account_id ON email_messages(account_id);`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_email_accounts_email_address ON email_accounts(email_address);`);
+    })().catch((err) => {
+      _ensureEmailTablesPromise = null;
+      throw err;
+    });
+  }
+  await _ensureEmailTablesPromise;
+}
+
 export default async function handler(req, res) {
   // CORS Support
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,6 +49,7 @@ export default async function handler(req, res) {
   const action = req.query.action || req.body?.action;
 
   try {
+    await ensureEmailTables();
     // 1. action=create-account (POST)
     if (action === 'create-account') {
       if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
