@@ -124,3 +124,15 @@ All email functions are consolidated into a single serverless function to comply
 - `POST /api/email?action=login`: Login and receive a JWT token.
 - `POST /api/email?action=send`: Send an email (requires Bearer token).
 - `POST /api/email?action=webhook-incoming`: The secure endpoint for Cloudflare Workers.
+
+---
+
+## 6. User Actions Required
+If you are seeing "relation does not exist" errors, the system is designed to automatically attempt table creation on the first API call. However, if problems persist, ensure your `DATABASE_URL` has sufficient permissions to `CREATE TABLE`.
+
+### Maintenance
+To manually trigger table creation/verification, simply visit or call any `/api/email` endpoint.
+
+### Accessing CTRCHK Mail
+- **Admin**: Go to the "郵件管理" (Email Admin) tab in the Admin Panel.
+- **User**: Go to the "更多" (More) section in your Dashboard.
