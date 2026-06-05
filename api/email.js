@@ -66,6 +66,16 @@ export default async function handler(req, res) {
   // Robust Action Detection
   let action = req.query.action || body.action;
 
+  // Extra Robustness: Manually parse URL if action is missing (handles cases where req.query is empty)
+  if (!action && req.url) {
+    try {
+      const url = new URL(req.url, 'http://localhost');
+      action = url.searchParams.get('action');
+    } catch (e) {
+      // Ignore URL parsing errors
+    }
+  }
+
   // Fallback: If WEBHOOK_SECRET matches, default to webhook-incoming
   if (!action && body.secret && process.env.WEBHOOK_SECRET && body.secret === process.env.WEBHOOK_SECRET) {
     action = 'webhook-incoming';
@@ -253,6 +263,48 @@ export default async function handler(req, res) {
       );
 
       return res.status(200).json({ message: 'Incoming email processed' });
+    }
+
+    // 6. action=change-password (POST)
+    if (action === 'change-password') {
+      if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
+      const auth = req.headers.authorization;
+      if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
+
+      try {
+        const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+        const { old_password, new_password } = body;
+
+        if (!old_password || !new_password) {
+          return res.status(400).json({ message: 'Missing old or new password' });
+        }
+
+        // Check account
+        const { rows } = await query('SELECT * FROM email_accounts WHERE id = $1', [decoded.accountId]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Account not found' });
+
+        // Verify old password
+        const storedHash = rows[0].password_hash;
+        const [salt, originalHash] = storedHash.split(':');
+        if (!salt || !originalHash) return res.status(500).json({ message: 'Invalid password storage format' });
+
+        const verifyHash = crypto.pbkdf2Sync(old_password, salt, 1000, 64, 'sha512').toString('hex');
+        if (verifyHash !== originalHash) {
+          return res.status(401).json({ message: '舊密碼不正確' });
+        }
+
+        // Hash new password
+        const newSalt = crypto.randomBytes(16).toString('hex');
+        const newHash = crypto.pbkdf2Sync(new_password, newSalt, 1000, 64, 'sha512').toString('hex');
+        const newPasswordHash = `${newSalt}:${newHash}`;
+
+        // Update database
+        await query('UPDATE email_accounts SET password_hash = $1 WHERE id = $2', [newPasswordHash, decoded.accountId]);
+
+        return res.status(200).json({ message: '密碼已成功變更' });
+      } catch (err) {
+        return res.status(401).json({ message: 'Invalid or expired token' });
+      }
     }
 
     return res.status(400).json({ message: `Unknown action: ${action}` });

@@ -427,6 +427,9 @@
 
             <div class="sidebar-footer">
                 <div id="current-email" style="font-weight: bold; margin-bottom: 0.8rem;">---</div>
+                <button class="sidebar-btn" onclick="openChangePassword()" style="margin: 0; padding: 0.5rem 0;">
+                    <i class="fas fa-key"></i> 修改密碼
+                </button>
                 <button class="sidebar-btn" onclick="logout()" style="margin: 0; padding: 0.5rem 0; color: #cf6679;">
                     <i class="fas fa-sign-out-alt"></i> 登出
                 </button>
@@ -450,6 +453,35 @@
             <div class="viewer-placeholder">
                 <i class="fas fa-envelope-open" style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.2;"></i>
                 <p>請選擇一封郵件以閱讀內容</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 style="margin:0">修改帳戶密碼</h3>
+                <button class="btn-ghost" onclick="closeChangePassword()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:#bbb;">目前密碼</label>
+                    <input type="password" id="old-password" class="modal-input" placeholder="請輸入目前密碼">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:#bbb;">新密碼</label>
+                    <input type="password" id="new-password" class="modal-input" placeholder="請輸入新密碼 (至少 8 位)">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:#bbb;">確認新密碼</label>
+                    <input type="password" id="confirm-password" class="modal-input" placeholder="請再次輸入新密碼">
+                </div>
+                <div id="password-msg" style="font-size:0.85rem; min-height:1.2rem; text-align:center;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeChangePassword()">取消</button>
+                <button id="btn-update-password" class="btn btn-primary" onclick="updatePassword()">儲存變更</button>
             </div>
         </div>
     </div>
@@ -654,6 +686,83 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = '發送郵件';
+            }
+        }
+
+        // Change Password Logic
+        function openChangePassword() {
+            if (window.innerWidth <= 768) toggleSidebar(true);
+            document.getElementById('password-modal').style.display = 'flex';
+            document.getElementById('password-msg').textContent = '';
+            document.getElementById('password-msg').className = '';
+        }
+
+        function closeChangePassword() {
+            document.getElementById('password-modal').style.display = 'none';
+            // Clear fields
+            document.getElementById('old-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+        }
+
+        async function updatePassword() {
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const msgEl = document.getElementById('password-msg');
+            const btn = document.getElementById('btn-update-password');
+
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                msgEl.textContent = '❌ 請填寫所有欄位';
+                msgEl.className = 'error';
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                msgEl.textContent = '❌ 新密碼長度需至少 8 位';
+                msgEl.className = 'error';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                msgEl.textContent = '❌ 兩次輸入的新密碼不一致';
+                msgEl.className = 'error';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '儲存中...';
+            msgEl.textContent = '⏳ 正在處理...';
+            msgEl.className = '';
+
+            try {
+                const response = await fetch('/api/email?action=change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    msgEl.textContent = '✅ 密碼已成功變更！';
+                    msgEl.className = 'success';
+                    setTimeout(() => {
+                        closeChangePassword();
+                    }, 1500);
+                } else {
+                    msgEl.textContent = `❌ ${data.message || '變更失敗'}`;
+                    msgEl.className = 'error';
+                }
+            } catch (error) {
+                msgEl.textContent = `❌ 連線錯誤: ${error.message}`;
+                msgEl.className = 'error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '儲存變更';
             }
         }
 
