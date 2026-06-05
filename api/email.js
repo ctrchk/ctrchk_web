@@ -46,14 +46,31 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  const action = req.query.action || req.body?.action;
+  // Robust Body Parsing (Handle stringified JSON if Vercel doesn't parse it)
+  let body = req.body || {};
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      console.warn('Failed to parse body as JSON:', e.message);
+    }
+  }
+
+  // Robust Action Detection
+  let action = req.query.action || body.action;
+
+  // Fallback: If WEBHOOK_SECRET matches, default to webhook-incoming
+  if (!action && body.secret && process.env.WEBHOOK_SECRET && body.secret === process.env.WEBHOOK_SECRET) {
+    action = 'webhook-incoming';
+  }
 
   try {
     await ensureEmailTables();
+
     // 1. action=create-account (POST)
     if (action === 'create-account') {
-      if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
-      const { email_address, password, admin_secret } = req.body;
+      if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
+      const { email_address, password, admin_secret } = body;
 
       // Security: Check admin_secret
       if (!process.env.ADMIN_SECRET || admin_secret !== process.env.ADMIN_SECRET) {
@@ -82,8 +99,8 @@ export default async function handler(req, res) {
 
     // 2. action=login (POST)
     if (action === 'login') {
-      if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
-      const { email_address, password } = req.body;
+      if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
+      const { email_address, password } = body;
 
       const { rows } = await query('SELECT * FROM email_accounts WHERE email_address = $1', [email_address?.toLowerCase()]);
       if (rows.length === 0) return res.status(401).json({ message: 'Invalid credentials' });
@@ -128,15 +145,15 @@ export default async function handler(req, res) {
 
     // 4. action=send (POST)
     if (action === 'send') {
-      if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
+      if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
       const auth = req.headers.authorization;
       if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
 
       try {
         const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
-        const { to, subject, body } = req.body;
+        const { to, subject, body: emailBody } = body;
 
-        if (!to || !subject || !body) {
+        if (!to || !subject || !emailBody) {
           return res.status(400).json({ message: 'Missing fields (to, subject, or body)' });
         }
 
@@ -151,8 +168,8 @@ export default async function handler(req, res) {
             from: decoded.email,
             to: [to],
             subject: subject,
-            text: body,
-            html: body.replace(/\n/g, '<br>') // Simple text to html conversion if needed
+            text: emailBody,
+            html: emailBody.replace(/\n/g, '<br>')
           })
         });
 
@@ -164,7 +181,7 @@ export default async function handler(req, res) {
         // Database: Log SENT email
         await query(
           `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text) VALUES ($1, 'SENT', $2, $3, $4, $5)`,
-          [decoded.accountId, decoded.email, to, subject, body]
+          [decoded.accountId, decoded.email, to, subject, emailBody]
         );
 
         return res.status(200).json({ message: 'Email sent successfully', id: resendData.id });
@@ -175,8 +192,8 @@ export default async function handler(req, res) {
 
     // 5. action=webhook-incoming (POST)
     if (action === 'webhook-incoming') {
-      if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
-      const { sender, recipient, subject, body_text, body_html, secret } = req.body;
+      if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
+      const { sender, recipient, subject, body_text, body_html, secret } = body;
 
       // Security: Check WEBHOOK_SECRET
       if (!process.env.WEBHOOK_SECRET || secret !== process.env.WEBHOOK_SECRET) {
@@ -204,7 +221,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: 'Incoming email processed' });
     }
 
-    return res.status(400).json({ message: 'Unknown action' });
+    return res.status(400).json({ message: `Unknown action: ${action}` });
 
   } catch (error) {
     console.error('Email API Error:', error);
