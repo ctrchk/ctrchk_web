@@ -320,6 +320,10 @@
                 transition: transform 0.3s ease;
             }
 
+            .mobile-view-viewer {
+                overflow: hidden;
+            }
+
             .mobile-view-viewer .app-container {
                 transform: translateX(-50%); /* Slide to viewer */
             }
@@ -423,7 +427,7 @@
 
             <div class="sidebar-footer">
                 <div id="current-email" style="font-weight: bold; margin-bottom: 0.8rem;">---</div>
-                <button class="sidebar-btn" onclick="logout()" style="margin: 0; padding: 0.5rem 0; color: var(--error-color);">
+                <button class="sidebar-btn" onclick="logout()" style="margin: 0; padding: 0.5rem 0; color: #cf6679;">
                     <i class="fas fa-sign-out-alt"></i> 登出
                 </button>
             </div>
@@ -481,6 +485,13 @@
 
         document.getElementById('current-email').textContent = userEmail;
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         function formatRelativeTime(dateStr) {
             const now = new Date();
             const date = new Date(dateStr);
@@ -535,8 +546,8 @@
                 return `
                     <div class="email-item" onclick="viewEmail(${mail.id}, this)">
                         <div class="timestamp">${formatRelativeTime(mail.created_at)}</div>
-                        <span class="sender">${label} ${displayContact}</span>
-                        <span class="subject">${mail.subject || '(無主旨)'}</span>
+                        <span class="sender">${label} ${escapeHtml(displayContact)}</span>
+                        <span class="subject">${escapeHtml(mail.subject) || '(無主旨)'}</span>
                     </div>
                 `;
             }).join('');
@@ -559,15 +570,15 @@
 
             viewer.innerHTML = `
                 <div class="viewer-header">
-                    <h2 style="margin:0">${mail.subject || '(無主旨)'}</h2>
+                    <h2 style="margin:0">${escapeHtml(mail.subject) || '(無主旨)'}</h2>
                     <div class="viewer-meta">
-                        <span><strong>寄件者:</strong> ${mail.sender}</span>
-                        <span><strong>收件者:</strong> ${mail.recipient}</span>
+                        <span><strong>寄件者:</strong> ${escapeHtml(mail.sender)}</span>
+                        <span><strong>收件者:</strong> ${escapeHtml(mail.recipient)}</span>
                         <span><strong>時間:</strong> ${new Date(mail.created_at).toLocaleString('zh-HK')}</span>
                     </div>
                 </div>
                 <div class="viewer-body">
-                    ${mail.body_html || (mail.body_text ? mail.body_text.replace(/\n/g, '<br>') : '<em>(無內容)</em>')}
+                    ${mail.body_html || (mail.body_text ? escapeHtml(mail.body_text).replace(/\n/g, '<br>') : '<em>(無內容)</em>')}
                 </div>
             `;
         }
