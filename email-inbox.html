@@ -301,13 +301,110 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                overflow: hidden;
+            }
+
+            #mobile-header {
+                display: flex !important;
+                height: 60px;
+                box-sizing: border-box;
+            }
+
+            .app-container {
+                height: calc(100vh - 60px);
+                width: 200vw; /* Two columns wide for sliding */
+                transition: transform 0.3s ease;
+            }
+
+            .mobile-view-viewer .app-container {
+                transform: translateX(-50%); /* Slide to viewer */
+            }
+
+            .mobile-view-viewer #mobile-menu-btn {
+                display: none !important;
+            }
+
+            .mobile-view-viewer #mobile-back-btn {
+                display: block !important;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 0;
+                bottom: 0;
+                z-index: 2000;
+                transition: left 0.3s ease;
+                box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .email-list {
+                width: 100vw;
+                flex-shrink: 0;
+            }
+
+            .email-viewer {
+                width: 100vw;
+                flex-shrink: 0;
+            }
+
+            .mobile-only-btn {
+                display: block !important;
+            }
+
+            .viewer-header {
+                padding: 1.5rem;
+            }
+
+            .viewer-body {
+                padding: 1.5rem;
+            }
+
+            .email-item {
+                padding: 1.5rem 1.2rem;
+            }
+
+            .email-item .subject {
+                font-size: 1rem;
+            }
+
+            .modal-card {
+                width: 95%;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+        }
     </style>
 </head>
 <body>
 
+    <!-- Mobile Header -->
+    <div id="mobile-header" style="display: none; background: var(--sidebar-bg); padding: 1rem; align-items: center; gap: 1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1100;">
+        <button id="mobile-menu-btn" class="btn-ghost" onclick="toggleSidebar()" style="font-size: 1.2rem; color: var(--primary);">
+            <i class="fas fa-bars"></i>
+        </button>
+        <button id="mobile-back-btn" class="btn-ghost" onclick="backToList()" style="display: none; font-size: 1.2rem; color: var(--primary);">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="brand" style="margin: 0; padding: 0; font-size: 1.1rem;">
+            <i class="fas fa-paper-plane"></i> CTRCHK MAIL
+        </div>
+    </div>
+
     <div class="app-container">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1500;"></div>
+
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="app-sidebar">
             <div class="brand">
                 <i class="fas fa-paper-plane"></i> CTRCHK MAIL
             </div>
@@ -398,6 +495,10 @@
         }
 
         async function loadEmails() {
+            if (window.innerWidth <= 768) {
+                toggleSidebar(true);
+                backToList();
+            }
             const container = document.getElementById('mail-list-container');
             container.innerHTML = '<div style="text-align:center; padding: 2rem; color: #666;"><i class="fas fa-spinner fa-spin"></i> 正在載入郵件...</div>';
 
@@ -444,17 +545,21 @@
         function viewEmail(id, element) {
             // UI Feedback
             document.querySelectorAll('.email-item').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
+            if (element) element.classList.add('selected');
 
             const mail = allEmails.find(m => m.id === id);
             if (!mail) return;
 
             const viewer = document.getElementById('viewer-container');
-            const isSent = mail.direction === 'SENT';
+
+            // Mobile Transition
+            if (window.innerWidth <= 768) {
+                document.body.classList.add('mobile-view-viewer');
+            }
 
             viewer.innerHTML = `
                 <div class="viewer-header">
-                    <h2>${mail.subject || '(無主旨)'}</h2>
+                    <h2 style="margin:0">${mail.subject || '(無主旨)'}</h2>
                     <div class="viewer-meta">
                         <span><strong>寄件者:</strong> ${mail.sender}</span>
                         <span><strong>收件者:</strong> ${mail.recipient}</span>
@@ -467,8 +572,28 @@
             `;
         }
 
+        function backToList() {
+            document.body.classList.remove('mobile-view-viewer');
+            document.querySelectorAll('.email-item').forEach(el => el.classList.remove('selected'));
+        }
+
+        function toggleSidebar(forceClose = false) {
+            const sidebar = document.getElementById('app-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            if (forceClose) {
+                sidebar.classList.remove('active');
+                overlay.style.display = 'none';
+                return;
+            }
+
+            const isActive = sidebar.classList.toggle('active');
+            overlay.style.display = isActive ? 'block' : 'none';
+        }
+
         // Compose Logic
         function openCompose() {
+            if (window.innerWidth <= 768) toggleSidebar(true);
             document.getElementById('compose-modal').style.display = 'flex';
         }
 

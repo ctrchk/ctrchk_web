@@ -183,16 +183,22 @@ export default async function handler(req, res) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
+      // Robustness: Extract clean email from recipient (handles "Name <email@domain.com>" format)
+      const emailRegex = /(?:<|^)([^>\s]+@ctrchk\.com)(?:>|$)/i;
+      const match = recipient?.match(emailRegex);
+      const cleanRecipient = match ? match[1].toLowerCase() : recipient?.toLowerCase();
+
       // Logic: Match recipient to account_id
-      const { rows } = await query('SELECT id FROM email_accounts WHERE email_address = $1', [recipient?.toLowerCase()]);
+      const { rows } = await query('SELECT id FROM email_accounts WHERE email_address = $1', [cleanRecipient]);
       if (rows.length === 0) {
+        console.warn(`Incoming email skipped: Recipient ${cleanRecipient} not found in email_accounts.`);
         return res.status(200).json({ message: 'Recipient account not found, skipping' });
       }
 
       // Insert incoming email
       await query(
         `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text, body_html) VALUES ($1, 'INBOX', $2, $3, $4, $5, $6)`,
-        [rows[0].id, sender, recipient, subject || '(No Subject)', body_text, body_html]
+        [rows[0].id, sender, cleanRecipient, subject || '(No Subject)', body_text, body_html]
       );
 
       return res.status(200).json({ message: 'Incoming email processed' });
