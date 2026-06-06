@@ -98,7 +98,7 @@ export default async function handler(req, res) {
 
   // Fallback: If WEBHOOK_SECRET matches, or if it's a POST with email fields, default to webhook-incoming
   if (!action && req.method === 'POST') {
-    const hasEmailFields = body.sender && body.recipient && (body.body_text || body.body_html);
+    const hasEmailFields = (body.sender || body.from) && (body.recipient || body.to) && (body.body_text || body.body_html || body.text || body.html);
     const hasValidSecret = body.secret && process.env.WEBHOOK_SECRET && body.secret === process.env.WEBHOOK_SECRET;
 
     if (hasValidSecret || hasEmailFields) {
