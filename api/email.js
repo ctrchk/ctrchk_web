@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   // Robust Body Parsing (Handle stringified JSON or Raw Stream)
   let body = req.body || {};
 
-  if (req.method === 'POST' && (!req.body || Object.keys(req.body).length === 0)) {
+  if (req.method === 'POST' && (body === null || typeof body !== 'object' || Object.keys(body).length === 0)) {
     try {
       const chunks = [];
       for await (const chunk of req) {
@@ -64,16 +64,22 @@ export default async function handler(req, res) {
       }
       const rawBody = Buffer.concat(chunks).toString();
       if (rawBody) {
-        body = JSON.parse(rawBody);
+        const parsed = JSON.parse(rawBody);
+        if (parsed && typeof parsed === 'object') {
+          body = parsed;
+        }
       }
     } catch (e) {
-      console.warn('Failed to parse raw body as JSON:', e.message);
+      // If it's not JSON, we keep the original body (which might be the raw string if Vercel didn't parse)
+      if (typeof body !== 'object') body = {};
     }
-  } else if (typeof body === 'string') {
+  }
+
+  if (typeof body === 'string') {
     try {
       body = JSON.parse(body);
     } catch (e) {
-      console.warn('Failed to parse string body as JSON:', e.message);
+      body = {};
     }
   }
 
@@ -90,9 +96,14 @@ export default async function handler(req, res) {
     }
   }
 
-  // Fallback: If WEBHOOK_SECRET matches, default to webhook-incoming
-  if (!action && body.secret && process.env.WEBHOOK_SECRET && body.secret === process.env.WEBHOOK_SECRET) {
-    action = 'webhook-incoming';
+  // Fallback: If WEBHOOK_SECRET matches, or if it's a POST with email fields, default to webhook-incoming
+  if (!action && req.method === 'POST') {
+    const hasEmailFields = body.sender && body.recipient && (body.body_text || body.body_html);
+    const hasValidSecret = body.secret && process.env.WEBHOOK_SECRET && body.secret === process.env.WEBHOOK_SECRET;
+
+    if (hasValidSecret || hasEmailFields) {
+      action = 'webhook-incoming';
+    }
   }
 
   try {
@@ -237,7 +248,14 @@ export default async function handler(req, res) {
     // 5. action=webhook-incoming (POST)
     if (action === 'webhook-incoming') {
       if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
-      const { sender, recipient, subject, body_text, body_html, secret } = body;
+
+      // Robust field extraction with fallbacks
+      const sender = body.sender || body.from;
+      const recipient = body.recipient || body.to;
+      const subject = body.subject;
+      const body_text = body.body_text || body.text;
+      const body_html = body.body_html || body.html;
+      const secret = body.secret;
 
       // Security: Check WEBHOOK_SECRET
       if (!process.env.WEBHOOK_SECRET || secret !== process.env.WEBHOOK_SECRET) {
@@ -271,12 +289,15 @@ export default async function handler(req, res) {
       }
 
       // Insert incoming email
-      await query(
-        `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text, body_html) VALUES ($1, 'INBOX', $2, $3, $4, $5, $6)`,
+      const insertResult = await query(
+        `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text, body_html) VALUES ($1, 'INBOX', $2, $3, $4, $5, $6) RETURNING id`,
         [rows[0].id, sender || 'Unknown Sender', cleanRecipient, subject || '(No Subject)', body_text, body_html]
       );
 
-      return res.status(200).json({ message: 'Incoming email processed' });
+      return res.status(200).json({
+        message: 'Incoming email processed',
+        id: insertResult.rows[0].id
+      });
     }
 
     // 6. action=change-password (POST)
