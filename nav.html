@@ -25,6 +25,7 @@
     :root {
       --hud-green: #2ecc71;
       --hud-red: #e74c3c;
+      --hud-highway-green: rgba(27, 94, 32, 0.95);
       --hud-bg: rgba(18, 31, 20, 0.85);
       --hud-blur: blur(12px);
     }
@@ -45,30 +46,30 @@
       padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
     }
 
-    /* Top: Navigation Instructions */
+    /* Top: Navigation Instructions (Highway Green Style) */
     .hud-top {
       pointer-events: auto;
-      background: var(--hud-bg);
+      background: var(--hud-highway-green);
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
       border-radius: 16px;
       padding: 16px 20px;
       margin-top: 8px;
       display: flex;
       align-items: center;
       gap: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .hud-top.hidden { transform: translateY(-150%); }
 
-    .nav-next-icon { font-size: 32px; color: var(--hud-green); min-width: 40px; text-align: center; }
+    .nav-next-icon { font-size: 32px; color: #fff; min-width: 40px; text-align: center; }
     .nav-instruction-wrap { flex: 1; }
-    .nav-next-road { font-size: 14px; opacity: 0.8; color: #fff; margin-bottom: 2px; }
-    .nav-instruction { font-size: 20px; font-weight: 800; color: #fff; line-height: 1.2; }
-    .nav-dist-wrap { text-align: right; }
-    .nav-dist-val { font-size: 24px; font-weight: 900; color: #BFE340; line-height: 1; }
+    .nav-next-road { font-size: 14px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
+    .nav-instruction { font-size: 22px; font-weight: 800; color: #fff; line-height: 1.2; }
+    .nav-dist-wrap { text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 16px; }
+    .nav-dist-val { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; }
     .nav-dist-unit { font-size: 12px; color: #BFE340; opacity: 0.8; }
 
     /* Left: Stats Panel */
@@ -111,17 +112,18 @@
     }
 
     .btn-end-nav {
-      background: var(--hud-red);
-      color: #fff;
+      background: #e74c3c !important; /* Force industrial red */
+      color: #fff !important;
       border: none;
-      padding: 14px 48px;
+      padding: 16px 64px;
       border-radius: 999px;
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
-      box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+      box-shadow: 0 8px 24px rgba(231, 76, 60, 0.5);
       cursor: pointer;
       display: none;
       transition: transform 0.1s, background 0.2s;
+      pointer-events: auto;
     }
     .btn-end-nav:active { transform: scale(0.95); background: #c0392b; }
     body.is-navigating .btn-end-nav { display: block; }
@@ -138,11 +140,15 @@
       z-index: 200;
       box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      color: var(--app-text-primary, #fff);
     }
     body.is-navigating .setup-panel { transform: translateY(100%); }
 
+    .setup-title { color: var(--app-text-primary, #fff); font-size: 20px; text-align: center; margin-bottom: 20px; }
+    .setup-handle { width: 40px; height: 4px; background: var(--app-border, rgba(255,255,255,0.2)); border-radius: 2px; margin: 0 auto 12px; }
+
     .search-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
-    .search-row { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.1); }
+    .search-row { display: flex; align-items: center; gap: 12px; background: var(--app-bg-card, rgba(255,255,255,0.05)); border-radius: 12px; padding: 4px 12px; border: 1px solid var(--app-border, rgba(255,255,255,0.1)); }
     .search-icon { width: 24px; text-align: center; font-size: 18px; }
     .geocoder-container { flex: 1; z-index: 300; }
     /* Override Mapbox Geocoder styles to fit our UI */
@@ -151,11 +157,11 @@
       font-family: inherit;
       z-index: 300;
     }
-    .mapboxgl-ctrl-geocoder--input { color: #fff !important; padding-left: 36px !important; }
-    .mapboxgl-ctrl-geocoder--icon-search { left: 8px !important; }
-    .mapboxgl-ctrl-geocoder--icon-close { right: 8px !important; }
+    .mapboxgl-ctrl-geocoder--input { color: var(--app-text-primary, #fff) !important; padding-left: 36px !important; }
+    .mapboxgl-ctrl-geocoder--icon-search { left: 8px !important; fill: var(--app-text-secondary, #6dba65) !important; }
+    .mapboxgl-ctrl-geocoder--icon-close { right: 8px !important; fill: var(--app-text-secondary, #6dba65) !important; }
     .mapboxgl-ctrl-geocoder .suggestions { background: var(--app-bg-card, #1e3820) !important; border-radius: 12px; border: 1px solid var(--app-border, #2d4d2d); }
-    .mapboxgl-ctrl-geocoder .suggestions > li > a { color: #fff !important; }
+    .mapboxgl-ctrl-geocoder .suggestions > li > a { color: var(--app-text-primary, #fff) !important; }
     .mapboxgl-ctrl-geocoder .suggestions > .active > a { background: var(--app-accent, #6dba65) !important; }
 
     .btn-start-nav {
@@ -202,13 +208,32 @@
 
     /* Theme Support */
     body.app-light-theme {
-      --hud-bg: rgba(255, 255, 255, 0.9);
+      --app-bg-secondary: #f9fbf9;
+      --app-text-primary: #121f14;
+      --app-text-secondary: #4a7c44;
+      --app-border: rgba(0,0,0,0.1);
+      --app-bg-card: #ffffff;
+      --hud-bg: rgba(255, 255, 255, 0.95);
       --hud-green: #27ae60;
     }
-    body.app-light-theme .nav-next-road { color: #333; }
-    body.app-light-theme .nav-instruction { color: #000; }
+    /* Gold Theme */
+    body.gold-rank-theme {
+      --app-bg-secondary: #000000;
+      --app-accent: #f1c232;
+      --app-text-primary: #f1c232;
+      --app-border: rgba(241, 194, 50, 0.3);
+      --hud-bg: rgba(0, 0, 0, 0.9);
+    }
+
+    /* Contrast fixes for light theme */
+    body.app-light-theme .nav-next-road { color: rgba(255,255,255,0.9); }
+    body.app-light-theme .nav-instruction { color: #fff; }
+    body.app-light-theme .stat-val { color: #27ae60; } /* Darker green for white bg */
     body.app-light-theme .stat-unit { color: #666; }
     body.app-light-theme .mapboxgl-ctrl-geocoder--input { color: #000 !important; }
+    body.app-light-theme .setup-panel h2 { color: #000; }
+    body.app-light-theme .mapboxgl-ctrl-geocoder .suggestions > li > a { color: #000 !important; }
+    body.app-light-theme .mapboxgl-ctrl-geocoder .suggestions { background: #fff !important; }
 
     /* Custom Marker */
     .custom-marker {
@@ -275,10 +300,8 @@
 
   <!-- Setup & Search Panel -->
   <div class="setup-panel" id="setup-panel">
-    <div style="text-align: center; margin-bottom: 20px;">
-      <div style="width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 0 auto 12px;"></div>
-      <h2 style="color: #fff; font-size: 20px;">規劃行程</h2>
-    </div>
+    <div class="setup-handle"></div>
+    <h2 class="setup-title">規劃行程</h2>
 
     <div class="search-group">
       <div class="search-row">
@@ -473,10 +496,12 @@
           accessToken: mapboxgl.accessToken,
           mapboxgl: mapboxgl,
           country: 'hk',
+          bbox: [113.82987, 22.13012, 114.44403, 22.57803], // Strict Hong Kong bounding box
           language: 'zh-Hant',
           placeholder: '搜尋地點...',
           marker: false,
-          zoom: 16
+          zoom: 16,
+          proximity: this.currentLocation ? { longitude: this.currentLocation[0], latitude: this.currentLocation[1] } : 'ip'
         };
 
         this.startGC = new MapboxGeocoder({ ...geocoderOptions, placeholder: '📍 使用目前位置' });
@@ -551,9 +576,11 @@
           accessToken: mapboxgl.accessToken,
           mapboxgl: mapboxgl,
           country: 'hk',
+          bbox: [113.82987, 22.13012, 114.44403, 22.57803],
           language: 'zh-Hant',
           placeholder: '新增停靠點...',
-          marker: false
+          marker: false,
+          proximity: this.currentLocation ? { longitude: this.currentLocation[0], latitude: this.currentLocation[1] } : 'ip'
         });
         wpGC.addTo(`#geocoder-wp-${id}`);
 
@@ -916,12 +943,12 @@
             id: 'route-symbols',
             type: 'symbol',
             source: 'route',
-            minzoom: 15,
+            minzoom: 14,
             layout: {
               'symbol-placement': 'line',
-              'symbol-spacing': 40,
+              'symbol-spacing': 50,
               'text-field': '🚲',
-              'text-size': ['interpolate', ['linear'], ['zoom'], 15, 12, 19, 20],
+              'text-size': ['interpolate', ['linear'], ['zoom'], 14, 12, 18, 32],
               'text-pitch-alignment': 'map',
               'text-rotation-alignment': 'map',
               'text-keep-upright': true,
@@ -929,7 +956,9 @@
             },
             paint: {
               'text-color': '#ffffff',
-              'text-opacity': 0.9
+              'text-opacity': 0.9,
+              'text-halo-color': 'rgba(0,0,0,0.5)',
+              'text-halo-width': 2
             }
           });
 
