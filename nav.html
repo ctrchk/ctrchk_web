@@ -209,6 +209,63 @@
       cursor: pointer; margin-top: 0.5em;
     }
 
+    /* ── HUD Dashboard (3D Nav) ── */
+    .hud-panel {
+      position: fixed; z-index: 300;
+      background: var(--app-bg-secondary, rgba(26, 45, 28, 0.9));
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--app-border, rgba(255,255,255,0.1));
+      color: var(--app-text-primary, #e8f5e9);
+      border-radius: 16px;
+      display: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    body.is-navigating .hud-panel { display: flex; }
+
+    .hud-top {
+      top: calc(env(safe-area-inset-top) + 0.8em);
+      left: 0.8em; right: 0.8em;
+      padding: 1em 1.2em;
+      align-items: center; gap: 1em;
+    }
+    #hud-turn-icon { font-size: 2.4em; font-weight: bold; color: var(--app-accent, #04D93C); width: 1.2em; text-align: center; }
+    #hud-instruction-wrap { flex: 1; }
+    #hud-instruction-text { font-size: 1.1em; font-weight: 600; line-height: 1.2; }
+    #hud-next-dist { font-size: 1.5em; font-weight: 800; color: #BFE340; margin-top: 0.1em; }
+
+    .hud-left {
+      top: calc(env(safe-area-inset-top) + 7.5em);
+      left: 0.8em;
+      flex-direction: column;
+      padding: 1em 0.6em; gap: 1.2em;
+      min-width: 90px;
+      text-align: center;
+    }
+    .hud-stat-val { font-size: 1.6em; font-weight: 800; color: #BFE340; line-height: 1; }
+    .hud-stat-unit { font-size: 0.65em; opacity: 0.7; margin-top: 0.3em; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .hud-bottom {
+      position: fixed; bottom: calc(env(safe-area-inset-bottom) + 1.5em);
+      left: 0; right: 0; z-index: 300;
+      display: none; justify-content: center;
+      pointer-events: none;
+    }
+    body.is-navigating .hud-bottom { display: flex; }
+    .hud-btn-stop {
+      background: rgba(231, 76, 60, 0.9); color: #fff; border: none;
+      padding: 0.9em 2.5em; border-radius: 999px;
+      font-size: 1em; font-weight: bold;
+      box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+      cursor: pointer; pointer-events: auto;
+      transition: transform 0.1s, background 0.2s;
+    }
+    .hud-btn-stop:active { transform: scale(0.95); background: #e74c3c; }
+
+    /* Hide legacy elements when HUD is active */
+    body.is-navigating #nav-topbar,
+    body.is-navigating #turn-banner,
+    body.is-navigating #planner-panel { display: none !important; }
+
     /* ── GPS accuracy dot ── */
     #gps-dot {
       position: fixed; bottom: calc(env(safe-area-inset-bottom) + 0.5em); left: 1em; z-index: 201;
@@ -375,21 +432,36 @@
     }
 
     /* ── maplibre custom user dot ── */
+    .user-dot-wrap {
+      position: relative; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+    }
     .user-dot {
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #04D93C; border: 3px solid #fff;
-      box-shadow: 0 0 8px rgba(4,217,60,0.6);
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #04D93C; border: 2.5px solid #fff;
+      box-shadow: 0 0 10px rgba(4,217,60,0.8);
+      z-index: 2;
     }
     .user-cone {
-      width: 0; height: 0; position: absolute; top: -14px; left: 50%;
+      width: 0; height: 0; position: absolute; top: -6px; left: 50%;
       transform: translateX(-50%);
-      border-left: 7px solid transparent;
-      border-right: 7px solid transparent;
-      border-bottom: 14px solid rgba(4,217,60,0.5);
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-bottom: 20px solid rgba(4,217,60,0.7);
+      z-index: 1;
     }
-    .user-dot-wrap {
-      position: relative; width: 18px; height: 18px;
+    /* 3D Nav Arrow */
+    .user-nav-arrow {
+      width: 0; height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 30px solid #04D93C;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+      display: none;
     }
+    body.is-navigating .user-nav-arrow { display: block; }
+    body.is-navigating .user-dot,
+    body.is-navigating .user-cone { display: none; }
 
     /* ── Light theme overrides ── */
     body.app-light-theme .plan-input,
@@ -452,6 +524,29 @@
     <p data-i18n="nav_loading">正在載入地圖...</p>
   </div>
 
+  <!-- HUD Overlay (3D Navigation) -->
+  <div class="hud-panel hud-top">
+    <div id="hud-turn-icon">↑</div>
+    <div id="hud-instruction-wrap">
+      <div id="hud-instruction-text" data-i18n="nav_continue">沿單車徑繼續前行</div>
+      <div id="hud-next-dist">-- m</div>
+    </div>
+  </div>
+
+  <div class="hud-panel hud-left">
+    <div class="hud-stat">
+      <div class="hud-stat-val" id="hud-speed">0.0</div>
+      <div class="hud-stat-unit">km/h</div>
+    </div>
+    <div class="hud-stat">
+      <div class="hud-stat-val" id="hud-eta">--</div>
+      <div class="hud-stat-unit" data-i18n="stat_eta">預計到達</div>
+    </div>
+  </div>
+
+  <div class="hud-bottom">
+    <button class="hud-btn-stop" id="btn-hud-stop">⏹ 結束導航</button>
+  </div>
 
   <!-- Top bar -->
   <div id="nav-topbar">
@@ -1372,12 +1467,6 @@
       function add3DBuildingsLayer() {
         if (!map) return;
 
-        // 3D Buildings are a Gold Card feature
-        if (typeof window.hasPermission === 'function' && !window.hasPermission('map_3d_gold')) {
-            console.log('[Nav] User does not have 3D buildings permission');
-            return;
-        }
-
         const style = map.getStyle();
         // Check if any building layer exists
         const src = style.sources.openfreemap ? 'openfreemap' : (style.sources.openmaptiles ? 'openmaptiles' : 'vectorTiles');
@@ -1815,7 +1904,7 @@
         map.easeTo({
           center: lngLat,
           bearing: smoothBearing(bearing),
-          zoom: 18,
+          zoom: 18.5,
           pitch: 75,
           duration: 550,
           easing: t => 1 - Math.pow(1 - t, 2),
@@ -1894,6 +1983,9 @@
       const cone = el.querySelector('.user-cone');
       if (cone) cone.style.transform = `translateX(-50%) rotate(${bearing - 180}deg)`;
 
+      const arrow = el.querySelector('.user-nav-arrow');
+      if (arrow) arrow.style.transform = `rotate(${bearing - 180}deg)`;
+
       if (!userMarker) {
         userMarker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat([lon, lat])
@@ -1907,7 +1999,7 @@
       const wrap = document.createElement('div');
       wrap.id = 'user-marker-el';
       wrap.className = 'user-dot-wrap';
-      wrap.innerHTML = '<div class="user-cone"></div><div class="user-dot"></div>';
+      wrap.innerHTML = '<div class="user-cone"></div><div class="user-dot"></div><div class="user-nav-arrow"></div>';
       return wrap;
     }
 
@@ -2132,41 +2224,17 @@
 
       // ── 3D Lane Rendering ──
 
-      // Layer 1: Bottom dark shadow/outline
-      if (!map.getLayer('planned-route-shadow')) {
-        map.addLayer({
-          id: 'planned-route-shadow',
-          type: 'line',
-          source: 'planned-route',
-          paint: { 'line-color': '#02172d', 'line-width': 16, 'line-opacity': 0.3, 'line-blur': 6 },
-        });
-      }
+      // ── 3D Lane Rendering (Hong Kong Green Cycle Track) ──
 
-      // Layer 2: Wide gray asphalt base
+      // Layer 1: Bottom dark asphalt base (Wide)
       if (!map.getLayer('planned-route-asphalt')) {
         map.addLayer({
           id: 'planned-route-asphalt',
           type: 'line',
           source: 'planned-route',
           paint: {
-            'line-color': '#444444',
-            'line-width': 14,
-            'line-opacity': 0.85,
-            'line-cap': 'round',
-            'line-join': 'round',
-          },
-        });
-      }
-
-      // Layer 3: Main neon route highlight (lane body)
-      if (!map.getLayer('planned-route-line')) {
-        map.addLayer({
-          id: 'planned-route-line',
-          type: 'line',
-          source: 'planned-route',
-          paint: {
-            'line-color': '#00F3FF', // High-contrast neon cyan
-            'line-width': 10,
+            'line-color': '#2c3e50', // Deep asphalt grey
+            'line-width': 20,
             'line-opacity': 0.9,
             'line-cap': 'round',
             'line-join': 'round',
@@ -2174,17 +2242,34 @@
         });
       }
 
-      // Layer 4: Animated lane divider markings
-      if (!map.getLayer('planned-route-lane-mark')) {
+      // Layer 2: Mid green sand track
+      if (!map.getLayer('planned-route-green')) {
         map.addLayer({
-          id: 'planned-route-lane-mark',
+          id: 'planned-route-green',
           type: 'line',
           source: 'planned-route',
           paint: {
-            'line-color': '#FFFFFF',
-            'line-width': 2,
+            'line-color': '#2ecc71', // HK Green
+            'line-width': 10,
             'line-opacity': 0.8,
-            'line-dasharray': [2, 4],
+            'line-blur': 0.5,
+            'line-cap': 'round',
+            'line-join': 'round',
+          },
+        });
+      }
+
+      // Layer 3: Surface white dashed markings
+      if (!map.getLayer('planned-route-dashed')) {
+        map.addLayer({
+          id: 'planned-route-dashed',
+          type: 'line',
+          source: 'planned-route',
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 2,
+            'line-opacity': 0.9,
+            'line-dasharray': [2, 2],
           },
         });
       }
@@ -2205,6 +2290,30 @@
         });
       }
 
+      // Road markings: Bicycle icons along the track
+      if (!map.getLayer('planned-route-icons')) {
+        map.addLayer({
+          id: 'planned-route-icons',
+          type: 'symbol',
+          source: 'planned-route',
+          minzoom: 15,
+          layout: {
+            'symbol-placement': 'line',
+            'symbol-spacing': 30,
+            'text-field': '🚲',
+            'text-size': 14,
+            'text-pitch-alignment': 'map',
+            'text-rotation-alignment': 'map',
+            'text-keep-upright': true,
+            'text-allow-overlap': true
+          },
+          paint: {
+            'text-color': '#ffffff',
+            'text-opacity': 0.9
+          }
+        });
+      }
+
       // Animated direction arrows on route
       if (!map.getLayer('planned-route-arrows')) {
         map.addLayer({
@@ -2214,18 +2323,16 @@
           minzoom: 13,
           layout: {
             'symbol-placement': 'line',
-            'symbol-spacing': 42,
-            'icon-image': 'triangle-11',   // built-in MapLibre icon
-            'icon-size': 0.8,
+            'symbol-spacing': 80,
+            'icon-image': 'triangle-11',   // built-in icon
+            'icon-size': 0.6,
             'icon-rotate': 90,
             'icon-rotation-alignment': 'map',
             'icon-allow-overlap': true,
           },
           paint: {
             'icon-color': '#ffffff',
-            'icon-opacity': 0.9,
-            'icon-halo-color': '#00E5FF',
-            'icon-halo-width': 1.2,
+            'icon-opacity': 0.6,
           },
         });
       }
@@ -2273,7 +2380,7 @@
 
     function clearRouteLayers() {
       stopRouteFx();
-      ['planned-route-junction-guide','planned-route-arrows','planned-route-flow','planned-route-line','planned-route-shadow'].forEach(id => {
+      ['planned-route-junction-guide','planned-route-arrows','planned-route-icons','planned-route-dashed','planned-route-green','planned-route-asphalt','planned-route-flow'].forEach(id => {
         if (map.getLayer(id)) map.removeLayer(id);
       });
       if (map.getSource('planned-route-junction-guide')) map.removeSource('planned-route-junction-guide');
@@ -2312,6 +2419,7 @@
     function startNavigation() {
       if (!plannedRoute || !plannedSteps.length) return;
       isNavigating = true;
+      document.body.classList.add('is-navigating');
       finishInProgress = false;
       requestWakeLock();
       navStartTime = Date.now();
@@ -2359,6 +2467,7 @@
 
       // Update distance to next turn
       document.getElementById('turn-dist').textContent = formatDist(distToEnd);
+      document.getElementById('hud-next-dist').textContent = formatDist(distToEnd);
       const nextJunctionDistance = updateJunctionGuide(currentCoord);
       updateTopBarMeta(match || activeMatch, nextJunctionDistance);
 
@@ -2378,9 +2487,17 @@
       if (!step) return;
       const next = plannedSteps[currentStepIdx + 1];
       const modifier = next && next.maneuver ? next.maneuver.modifier : null;
-      document.getElementById('turn-icon').textContent = next ? turnEmoji(modifier) : '✅';
-      document.getElementById('turn-instruction').textContent = stepInstruction(next || step);
+      const icon = next ? turnEmoji(modifier) : '✅';
+      const instruction = stepInstruction(next || step);
+
+      document.getElementById('turn-icon').textContent = icon;
+      document.getElementById('hud-turn-icon').textContent = icon;
+
+      document.getElementById('turn-instruction').textContent = instruction;
+      document.getElementById('hud-instruction-text').textContent = instruction;
+
       document.getElementById('turn-dist').textContent = '-- m';
+      document.getElementById('hud-next-dist').textContent = '-- m';
     }
 
     function updateNavStats() {
@@ -2396,6 +2513,9 @@
       document.getElementById('nav-stat-remain').textContent  = formatDist(remain);
       document.getElementById('nav-stat-eta').textContent     = formatMinutes(etaMins);
       document.getElementById('nav-stat-speed').textContent   = lastSpeedKmh.toFixed(1);
+
+      document.getElementById('hud-speed').textContent = lastSpeedKmh.toFixed(1);
+      document.getElementById('hud-eta').textContent = formatMinutes(etaMins);
     }
 
     async function saveNavigationRide(summary) {
@@ -2597,6 +2717,7 @@
       if (finishInProgress) return;
       finishInProgress = true;
       isNavigating = false;
+      document.body.classList.remove('is-navigating');
       releaseWakeLock();
       clearGpsWatch();
       stopRouteFx();
@@ -2631,6 +2752,7 @@
 
     function endNavigation() {
       isNavigating = false;
+      document.body.classList.remove('is-navigating');
       finishInProgress = false;
       releaseWakeLock();
       document.getElementById('turn-banner').classList.remove('show');
@@ -2849,6 +2971,9 @@
     document.getElementById('btn-plan-route').addEventListener('click', planRoute);
     document.getElementById('btn-start-nav').addEventListener('click', startNavigation);
     document.getElementById('btn-end-nav').addEventListener('click', () => {
+      if (confirm('確定結束導航？')) endNavigation();
+    });
+    document.getElementById('btn-hud-stop').addEventListener('click', () => {
       if (confirm('確定結束導航？')) endNavigation();
     });
     document.getElementById('btn-arrived-done').addEventListener('click', () => {
