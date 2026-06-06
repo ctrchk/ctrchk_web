@@ -107,13 +107,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    await ensureEmailTables();
+    // Only run expensive DDL checks if explicitly requested or on health check
+    if (!action || action === 'init-db') {
+      await ensureEmailTables();
+    }
 
     // If no action provided, return a status message (Manual Trigger/Ping)
     if (!action) {
       return res.status(200).json({
         message: 'Email API is active and database tables are initialized.',
         status: 'ready'
+      });
+    }
+
+    if (action === 'init-db') {
+      return res.status(200).json({
+        message: 'Email tables initialized or already exist.',
+        status: 'success'
       });
     }
 
