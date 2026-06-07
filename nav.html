@@ -334,10 +334,18 @@
     body.app-light-theme .nav-instruction { color: #fff; }
     body.app-light-theme .stat-val { color: #27ae60; } /* Darker green for white bg */
     body.app-light-theme .stat-unit { color: #666; }
-    body.app-light-theme .mapboxgl-ctrl-geocoder--input { color: #000 !important; }
     body.app-light-theme .setup-panel h2 { color: #000; }
-    body.app-light-theme .mapboxgl-ctrl-geocoder .suggestions > li > a { color: #000 !important; }
-    body.app-light-theme .mapboxgl-ctrl-geocoder .suggestions { background: #fff !important; }
+    body.app-light-theme .search-row input { color: #000; }
+    body.app-light-theme .search-row input::placeholder { color: rgba(0,0,0,0.4); }
+    body.app-light-theme .search-result-name { color: #000; }
+    body.app-light-theme .search-result-addr { color: rgba(0,0,0,0.6); }
+    body.app-light-theme .search-result-item:hover { background: rgba(0,0,0,0.05); }
+    body.app-light-theme .search-result-tag { background: #27ae60; color: #fff; }
+    body.app-light-theme .search-row { background: #fff; border-color: rgba(0,0,0,0.1); }
+    body.app-light-theme .float-btn { background: #fff; color: #333; border-color: rgba(0,0,0,0.1); }
+
+    /* Hide app bottom nav during navigation */
+    body.is-navigating #app-bottom-nav { display: none !important; }
 
     /* Custom Marker */
     .custom-marker {
@@ -405,21 +413,42 @@
 
   <!-- Summary Modal -->
   <div id="summary-modal">
-    <div class="summary-title">行程摘要</div>
-    <div id="summary-route-name" style="font-size: 18px; opacity: 0.8; margin-bottom: 12px;"></div>
+    <div id="summary-emoji" style="font-size: 64px; margin-bottom: 8px;">🎉</div>
+    <div class="summary-title">導航完成！</div>
+    <div id="summary-xp-badge" style="background: #BFE340; color: #121f14; font-size: 24px; font-weight: 900; padding: 8px 24px; border-radius: 12px; margin: 12px 0;">+0 XP</div>
+
+    <div id="summary-route-name" style="font-size: 16px; opacity: 0.7; margin-bottom: 24px;"></div>
 
     <div class="summary-stats-grid">
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-dist">0.0</div>
-        <div class="summary-stat-lbl">距離 (km)</div>
+        <div class="summary-stat-val" id="sum-time">0</div>
+        <div class="summary-stat-lbl">⏱ 時間 (分)</div>
       </div>
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-time">0</div>
-        <div class="summary-stat-lbl">時間 (分鐘)</div>
+        <div class="summary-stat-val" id="sum-dist">0.0</div>
+        <div class="summary-stat-lbl">🚴 距離 (km)</div>
+      </div>
+      <div class="summary-stat-box">
+        <div class="summary-stat-val" id="sum-speed">0.0</div>
+        <div class="summary-stat-lbl">💨 均速 (km/h)</div>
+      </div>
+      <div class="summary-stat-box">
+        <div class="summary-stat-val" id="sum-xp">0</div>
+        <div class="summary-stat-lbl">⭐ 獲得 XP</div>
       </div>
     </div>
 
-    <button class="btn-summary-close" onclick="location.href='/dashboard.html'">確認並返回</button>
+    <div style="width: 100%; max-width: 400px; margin-bottom: 32px;">
+      <div style="display: flex; justify-content: space-between; font-size: 14px; opacity: 0.8; margin-bottom: 8px;">
+        <span id="sum-xp-level">Lv.1</span>
+        <span id="sum-xp-next">下一級 80 XP</span>
+      </div>
+      <div style="height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; overflow: hidden;">
+        <div id="sum-xp-bar" style="height: 100%; background: #BFE340; width: 0%; transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+      </div>
+    </div>
+
+    <button class="btn-summary-close" onclick="location.href='/dashboard.html'">確認並返回儀表板</button>
   </div>
 
   <!-- Setup & Search Panel -->
@@ -686,9 +715,9 @@
 
       // HK80 to WGS84 Conversion Logic
       hk80ToWgs84(N, E) {
-        // Precise origin for HK80 Grid
-        const lat = 22.312133 + (N - 819069.80) / 111000;
-        const lon = 114.178556 + (E - 835477.98) / 103000;
+        // More accurate linear approximation for HK region
+        const lat = 22.312133 + (N - 819069.80) / 111232.0;
+        const lon = 114.178556 + (E - 835477.98) / (111320.0 * Math.cos(22.312133 * Math.PI / 180));
         return [lon, lat];
       },
 
@@ -745,7 +774,22 @@
             el.onclick = () => {
               input.value = item.isStation ? `${item.code} ${item.name}` : item.name;
               container.classList.remove('show');
-              onSelect(item.center);
+
+              // Snap search result to nearest cycle track if possible
+              let finalCenter = item.center;
+              if (this.localTracks) {
+                const pt = turf.point(item.center);
+                let minDist = 0.2; // 200m search radius (don't snap if too far)
+                this.localTracks.features.forEach(f => {
+                   const d = turf.pointToLineDistance(pt, f);
+                   if (d < minDist) {
+                     minDist = d;
+                     const snapped = turf.nearestPointOnLine(f, pt);
+                     finalCenter = snapped.geometry.coordinates;
+                   }
+                });
+              }
+              onSelect(finalCenter);
             };
             container.appendChild(el);
           });
@@ -1111,7 +1155,7 @@
         if (!this.graph) return null;
 
         const snap = (p) => {
-          let best = null, minDist = 0.05; // Tighten threshold to 50m to prefer cycle tracks
+          let best = null, minDist = 1.0; // 1km snap radius to find cycle tracks more aggressively
           this.graph.nodes.forEach((coord, key) => {
             const d = turf.distance(p, coord);
             if (d < minDist) { minDist = d; best = key; }
@@ -1147,7 +1191,21 @@
         const path = [];
         let curr = endKey;
         while (curr) { path.unshift(this.graph.nodes.get(curr)); curr = prevs.get(curr); }
-        return { coords: path, distance: dists.get(endKey) * 1000 };
+
+        // Add connection to actual p1 and p2 to prioritize staying on cycle track graph
+        let totalD = dists.get(endKey) * 1000;
+        if (turf.distance(p1, path[0]) > 0.001) {
+          const dStart = turf.distance(p1, path[0]) * 1000;
+          totalD += dStart;
+          path.unshift(p1);
+        }
+        if (turf.distance(p2, path[path.length-1]) > 0.001) {
+          const dEnd = turf.distance(p2, path[path.length-1]) * 1000;
+          totalD += dEnd;
+          path.push(p2);
+        }
+
+        return { coords: path, distance: totalD };
       },
 
       drawRoute(coords) {
@@ -1284,6 +1342,7 @@
         const endTime = Date.now();
         const durationMins = Math.max(1, Math.ceil((endTime - this.navStartTime) / 60000));
         const distanceKm = this.routeData ? parseFloat((this.routeData.distance / 1000).toFixed(2)) : 0;
+        const avgSpeed = durationMins > 0 ? parseFloat((distanceKm / (durationMins / 60)).toFixed(1)) : 0;
 
         const tripData = {
           totalDistance: this.routeData ? this.routeData.distance : 0,
@@ -1291,15 +1350,10 @@
           path: this.trackingCoords
         };
 
-        // Show Summary Modal
-        document.getElementById('summary-route-name').textContent = document.getElementById('input-end').value || '自訂導航';
-        document.getElementById('sum-dist').textContent = distanceKm;
-        document.getElementById('sum-time').textContent = durationMins;
-        document.getElementById('summary-modal').classList.add('show');
-
         // Save to History (Persistence)
+        let apiResult = { xp_earned: 0, level: 1, xp: 0 };
         const token = localStorage.getItem('accessToken');
-        if (token && distanceKm > 0.1) {
+        if (token && (distanceKm > 0.1 || durationMins > 2)) {
           try {
             const body = {
               route_id: 'NAV_AUTO',
@@ -1309,7 +1363,7 @@
               end_time: new Date(endTime).toISOString(),
               distance_km: distanceKm,
               duration_minutes: durationMins,
-              avg_speed_kmh: durationMins > 0 ? parseFloat((distanceKm / (durationMins / 60)).toFixed(1)) : 0,
+              avg_speed_kmh: avgSpeed,
               stops_reached: [],
               stops_count: 0,
               all_stops: false,
@@ -1317,16 +1371,58 @@
               ride_mode: 'nav',
               path: this.trackingCoords
             };
-            await fetch('/api/getHistory', {
+            const res = await fetch('/api/getHistory', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify(body),
             });
+            if (res.ok) {
+              apiResult = await res.json();
+              // Update user storage
+              const u = JSON.parse(localStorage.getItem('user') || '{}');
+              u.level = apiResult.level;
+              u.xp = apiResult.xp;
+              localStorage.setItem('user', JSON.stringify(u));
+            }
             console.log('[Nav] History saved successfully');
           } catch (e) {
             console.warn('[Nav] Failed to save history', e);
           }
         }
+
+        // Show Summary Modal
+        document.getElementById('summary-route-name').textContent = document.getElementById('input-end').value || '自訂導航';
+        document.getElementById('sum-dist').textContent = distanceKm;
+        document.getElementById('sum-time').textContent = durationMins;
+        document.getElementById('sum-speed').textContent = avgSpeed;
+        document.getElementById('sum-xp').textContent = apiResult.xp_earned || 0;
+        document.getElementById('summary-xp-badge').textContent = `+${apiResult.xp_earned || 0} XP`;
+
+        // XP Progress Bar Logic
+        const LEVEL_XP = [0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600, 4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200, 28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900, 98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700, 267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000];
+
+        function getLevelThreshold(l) {
+          const n = l - 1;
+          if (n < LEVEL_XP.length) return LEVEL_XP[n];
+          const BASE_GAP = 61000;
+          const GROWTH = 1.10;
+          const BASE_XP = 654000;
+          const BASE_LVL = 50;
+          return BASE_XP + BASE_GAP * (Math.pow(GROWTH, n - BASE_LVL) - 1) / (GROWTH - 1);
+        }
+
+        const lvl = apiResult.level || 1;
+        const xpCur = getLevelThreshold(lvl);
+        const xpNext = getLevelThreshold(lvl + 1);
+        const totalXp = apiResult.xp || 0;
+        const pct = Math.min(100, Math.max(0, (totalXp - xpCur) / Math.max(1, xpNext - xpCur) * 100));
+
+        document.getElementById('sum-xp-level').textContent = `Lv.${lvl}`;
+        document.getElementById('sum-xp-next').textContent = (!xpNext || xpNext === Infinity) ? '最高等級' : `下一級 ${xpNext} XP`;
+        document.getElementById('summary-modal').classList.add('show');
+        setTimeout(() => {
+          document.getElementById('sum-xp-bar').style.width = pct + '%';
+        }, 500);
 
         // External Hook
         if (typeof onNavigationEnd === 'function') {
