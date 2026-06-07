@@ -15,8 +15,6 @@
   <!-- Mapbox GL JS & Geocoder -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
-  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -128,6 +126,67 @@
     .btn-end-nav:active { transform: scale(0.95); background: #c0392b; }
     body.is-navigating .btn-end-nav { display: block; }
 
+    .btn-exit-nav {
+      background: rgba(255,255,255,0.1) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      pointer-events: auto;
+      margin-bottom: 8px;
+    }
+    body.is-navigating .btn-exit-nav { display: block; }
+
+    /* --- Summary Modal --- */
+    #summary-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 31, 20, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+      color: #fff;
+    }
+    #summary-modal.show { display: flex; }
+    .summary-title { font-size: 32px; font-weight: 900; color: #6dba65; margin-bottom: 8px; }
+    .summary-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+      max-width: 400px;
+      margin: 32px 0;
+    }
+    .summary-stat-box {
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .summary-stat-val { font-size: 28px; font-weight: 900; color: #BFE340; }
+    .summary-stat-lbl { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+    .btn-summary-close {
+      background: #6dba65;
+      color: #121f14;
+      border: none;
+      padding: 16px 48px;
+      border-radius: 999px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(109, 186, 101, 0.4);
+    }
+
     /* --- Search & Setup Panel --- */
     .setup-panel {
       position: absolute;
@@ -136,13 +195,58 @@
       right: 0;
       background: var(--app-bg-secondary, #1a2e1a);
       border-radius: 24px 24px 0 0;
-      padding: 20px 20px calc(env(safe-area-inset-bottom) + 20px);
+      /* Adjust for PWA bottom nav: nav is ~60px + safe area */
+      padding: 20px 20px calc(env(safe-area-inset-bottom) + 80px);
       z-index: 200;
       box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       color: var(--app-text-primary, #fff);
     }
     body.is-navigating .setup-panel { transform: translateY(100%); }
+
+    /* Custom Search Dropdown */
+    .search-results-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--app-bg-card, #1e3820);
+      border: 1px solid var(--app-border, #2d4d2d);
+      border-radius: 12px;
+      margin-top: 4px;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .search-results-dropdown.show { display: block; }
+    .search-result-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--app-border, rgba(255,255,255,0.05));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: rgba(255,255,255,0.05); }
+    .search-result-item i { width: 20px; text-align: center; font-size: 14px; }
+    .search-result-name { font-size: 14px; color: #fff; font-weight: bold; }
+    .search-result-addr { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+    .search-result-tag { font-size: 10px; background: var(--app-accent, #6dba65); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+    /* Custom input override for search-row */
+    .search-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      padding: 10px 0;
+      outline: none;
+    }
+    .search-row input::placeholder { color: rgba(255,255,255,0.4); }
 
     .setup-title { color: var(--app-text-primary, #fff); font-size: 20px; text-align: center; margin-bottom: 20px; }
     .setup-handle { width: 40px; height: 4px; background: var(--app-border, rgba(255,255,255,0.2)); border-radius: 2px; margin: 0 auto 12px; }
@@ -294,8 +398,28 @@
     </div>
 
     <div class="hud-bottom">
-      <button class="btn-end-nav" id="btn-end-nav">結束導航</button>
+      <button class="btn-exit-nav" id="btn-exit-nav">退出</button>
+      <button class="btn-end-nav" id="btn-end-nav">結束騎行</button>
     </div>
+  </div>
+
+  <!-- Summary Modal -->
+  <div id="summary-modal">
+    <div class="summary-title">行程摘要</div>
+    <div id="summary-route-name" style="font-size: 18px; opacity: 0.8; margin-bottom: 12px;"></div>
+
+    <div class="summary-stats-grid">
+      <div class="summary-stat-box">
+        <div class="summary-stat-val" id="sum-dist">0.0</div>
+        <div class="summary-stat-lbl">距離 (km)</div>
+      </div>
+      <div class="summary-stat-box">
+        <div class="summary-stat-val" id="sum-time">0</div>
+        <div class="summary-stat-lbl">時間 (分鐘)</div>
+      </div>
+    </div>
+
+    <button class="btn-summary-close" onclick="location.href='/dashboard.html'">確認並返回</button>
   </div>
 
   <!-- Setup & Search Panel -->
@@ -304,14 +428,16 @@
     <h2 class="setup-title">規劃行程</h2>
 
     <div class="search-group">
-      <div class="search-row">
+      <div class="search-row" style="position: relative;">
         <div class="search-icon" style="color: #2ecc71;"><i class="fas fa-location-dot"></i></div>
-        <div id="geocoder-start" class="geocoder-container"></div>
+        <input type="text" id="input-start" placeholder="📍 使用目前位置" autocomplete="off">
+        <div id="results-start" class="search-results-dropdown"></div>
       </div>
       <div id="waypoint-container"></div>
-      <div class="search-row">
+      <div class="search-row" style="position: relative;">
         <div class="search-icon" style="color: #e74c3c;"><i class="fas fa-flag-checkered"></i></div>
-        <div id="geocoder-end" class="geocoder-container"></div>
+        <input type="text" id="input-end" placeholder="要去哪裡？" autocomplete="off">
+        <div id="results-end" class="search-results-dropdown"></div>
       </div>
     </div>
 
@@ -342,6 +468,7 @@
     const NavEngine = {
       map: null,
       graph: null, // Local routing graph
+      stations: [], // Local stations from routes.json
       userMarker: null,
       startMarker: null,
       endMarker: null,
@@ -351,6 +478,7 @@
       isNavigating: false,
       isFollowing: true,
       headingUp: true,
+      isLaneLevel: false,
 
       currentLocation: null,
       startLocation: null,
@@ -386,7 +514,8 @@
 
       async onMapLoad() {
         this.add3DBuildings();
-        this.initGeocoders();
+        this.initSearch();
+        this.loadStations();
 
         // Load local TKO tracks
         try {
@@ -491,46 +620,137 @@
         }, labelLayerId);
       },
 
-      initGeocoders() {
-        const geocoderOptions = {
-          accessToken: mapboxgl.accessToken,
-          mapboxgl: mapboxgl,
-          country: 'hk',
-          bbox: [113.82987, 22.13012, 114.44403, 22.57803], // Strict Hong Kong bounding box
-          language: 'zh-Hant',
-          placeholder: '搜尋地點...',
-          marker: false,
-          zoom: 16,
-          proximity: this.currentLocation ? { longitude: this.currentLocation[0], latitude: this.currentLocation[1] } : 'ip'
+      async loadStations() {
+        try {
+          const resp = await fetch('/routes.json');
+          const data = await resp.json();
+          const stationMap = new Map();
+          data.routes.forEach(r => {
+            (r.stops || []).forEach(s => {
+              const key = `${s.code || ''} ${s.name}`;
+              if (!stationMap.has(key)) {
+                stationMap.set(key, {
+                  name: s.name,
+                  code: s.code ? s.code.replace(/\s+/g, '') : '', // Normalize code (POA 01 -> POA01)
+                  center: [s.lon, s.lat],
+                  addr: s.road || r.alias,
+                  isStation: true
+                });
+              }
+            });
+          });
+          this.stations = Array.from(stationMap.values());
+          console.log(`[Nav] ${this.stations.length} stations loaded`);
+        } catch (e) {
+          console.warn('[Nav] Failed to load stations', e);
+        }
+      },
+
+      initSearch() {
+        this.setupSearchInput('input-start', 'results-start', (loc) => {
+          this.startLocation = loc;
+          this.updateMarkers();
+          this.checkReady();
+        });
+        this.setupSearchInput('input-end', 'results-end', (loc) => {
+          this.endLocation = loc;
+          this.updateMarkers();
+          this.checkReady();
+        });
+      },
+
+      setupSearchInput(inputId, resultsId, onSelect) {
+        const input = document.getElementById(inputId);
+        const results = document.getElementById(resultsId);
+        let debounceTimer;
+
+        input.oninput = () => {
+          clearTimeout(debounceTimer);
+          const val = input.value.trim();
+          if (!val) {
+            results.classList.remove('show');
+            return;
+          }
+          debounceTimer = setTimeout(() => this.performSearch(val, results, onSelect, input), 300);
         };
 
-        this.startGC = new MapboxGeocoder({ ...geocoderOptions, placeholder: '📍 使用目前位置' });
-        this.endGC = new MapboxGeocoder({ ...geocoderOptions, placeholder: '要去哪裡？' });
+        input.onfocus = () => { if (results.children.length > 0) results.classList.add('show'); };
 
-        this.startGC.addTo('#geocoder-start');
-        this.endGC.addTo('#geocoder-end');
-
-        this.startGC.on('result', (e) => {
-          this.startLocation = e.result.center;
-          this.updateMarkers();
-          this.checkReady();
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!input.contains(e.target) && !results.contains(e.target)) {
+            results.classList.remove('show');
+          }
         });
+      },
 
-        this.startGC.on('clear', () => {
-          this.startLocation = null;
-          this.checkReady();
-        });
+      // HK80 to WGS84 Conversion Logic
+      hk80ToWgs84(N, E) {
+        // Precise origin for HK80 Grid
+        const lat = 22.312133 + (N - 819069.80) / 111000;
+        const lon = 114.178556 + (E - 835477.98) / 103000;
+        return [lon, lat];
+      },
 
-        this.endGC.on('result', (e) => {
-          this.endLocation = e.result.center;
-          this.updateMarkers();
-          this.checkReady();
-        });
+      async performSearch(query, container, onSelect, input) {
+        const normalizedQuery = query.toUpperCase().replace(/\s+/g, '');
 
-        this.endGC.on('clear', () => {
-          this.endLocation = null;
-          this.checkReady();
-        });
+        // 1. Search local stations
+        const localResults = this.stations.filter(s => {
+          const combined = (s.code + s.name).toUpperCase().replace(/\s+/g, '');
+          return combined.includes(normalizedQuery) ||
+                 s.name.includes(query) ||
+                 s.code.includes(normalizedQuery);
+        }).slice(0, 5);
+
+        // 2. Search Gov API
+        let govResults = [];
+        try {
+          const resp = await fetch(`https://www.map.gov.hk/gs/api/v1.0.0/locationSearch?q=${encodeURIComponent(query)}`);
+          const data = await resp.json();
+          govResults = (data || []).slice(0, 10).map(item => {
+            // Check if coordinates need conversion (Gov API returns HK80 x, y)
+            const coords = this.hk80ToWgs84(parseFloat(item.y), parseFloat(item.x));
+            return {
+              name: item.nameZH,
+              addr: item.addressZH,
+              center: coords,
+              isGov: true
+            };
+          });
+        } catch (e) {
+          console.warn('Gov API search failed', e);
+        }
+
+        // Render results
+        container.innerHTML = '';
+        const all = [...localResults, ...govResults];
+
+        if (all.length === 0) {
+          container.innerHTML = '<div class="search-result-item" style="color: rgba(255,255,255,0.4);">無搜尋結果</div>';
+        } else {
+          all.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'search-result-item';
+            el.innerHTML = `
+              <i class="fas ${item.isStation ? 'fa-bicycle' : 'fa-location-dot'}"></i>
+              <div style="flex: 1;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="search-result-name">${item.name}</span>
+                  ${item.isStation ? `<span class="search-result-tag">${item.code || '站點'}</span>` : ''}
+                </div>
+                <div class="search-result-addr">${item.addr || ''}</div>
+              </div>
+            `;
+            el.onclick = () => {
+              input.value = item.isStation ? `${item.code} ${item.name}` : item.name;
+              container.classList.remove('show');
+              onSelect(item.center);
+            };
+            container.appendChild(el);
+          });
+        }
+        container.classList.add('show');
       },
 
       setupUI() {
@@ -551,6 +771,7 @@
 
         document.getElementById('btn-start-nav').onclick = () => this.startNavigation();
         document.getElementById('btn-end-nav').onclick = () => this.endNavigation();
+        document.getElementById('btn-exit-nav').onclick = () => this.exitNavigation();
         document.getElementById('btn-recenter').onclick = () => this.recenter();
         document.getElementById('btn-orient').onclick = () => {
           this.headingUp = !this.headingUp;
@@ -565,30 +786,20 @@
         row.className = 'search-row';
         row.id = `wp-row-${id}`;
         row.style.marginTop = '12px';
+        row.style.position = 'relative';
         row.innerHTML = `
           <div class="search-icon" style="color: #f1c232;"><i class="fas fa-location-dot"></i></div>
-          <div id="geocoder-wp-${id}" class="geocoder-container"></div>
+          <input type="text" id="input-wp-${id}" placeholder="新增停靠點..." autocomplete="off">
+          <div id="results-wp-${id}" class="search-results-dropdown"></div>
           <button class="remove-wp" style="background:none; border:none; color:#e74c3c; padding:0 8px; cursor:pointer;"><i class="fas fa-times"></i></button>
         `;
         container.appendChild(row);
 
-        const wpGC = new MapboxGeocoder({
-          accessToken: mapboxgl.accessToken,
-          mapboxgl: mapboxgl,
-          country: 'hk',
-          bbox: [113.82987, 22.13012, 114.44403, 22.57803],
-          language: 'zh-Hant',
-          placeholder: '新增停靠點...',
-          marker: false,
-          proximity: this.currentLocation ? { longitude: this.currentLocation[0], latitude: this.currentLocation[1] } : 'ip'
-        });
-        wpGC.addTo(`#geocoder-wp-${id}`);
-
-        const wpObj = { id, gc: wpGC, location: null, marker: null };
+        const wpObj = { id, location: null, marker: null };
         this.waypoints.push(wpObj);
 
-        wpGC.on('result', (e) => {
-          wpObj.location = e.result.center;
+        this.setupSearchInput(`input-wp-${id}`, `results-wp-${id}`, (loc) => {
+          wpObj.location = loc;
           this.updateMarkers();
           this.checkReady();
         });
@@ -642,6 +853,9 @@
           }
           this.trackingCoords.push(activeCoords);
           this.updateNavHUD(activeCoords, speedKmh);
+
+          // 1.1 Cycle Track / Lane Level Check
+          this.checkLaneLevel(activeCoords);
         }
 
         // 2. Heading Logic (GPS + Path-Stable)
@@ -659,12 +873,60 @@
           this.map.easeTo({
             center: activeCoords,
             bearing: this.headingUp ? (finalHeading || 0) : 0,
-            pitch: this.isNavigating ? this.PITCH_3D : 0,
-            zoom: this.isNavigating ? this.ZOOM_NAV : this.map.getZoom(),
+            pitch: this.isNavigating ? (this.isLaneLevel ? 75 : this.PITCH_3D) : 0,
+            zoom: this.isNavigating ? (this.isLaneLevel ? 19.5 : this.ZOOM_NAV) : this.map.getZoom(),
             duration: 800,
             easing: t => t * (2 - t)
           });
         }
+      },
+
+      checkLaneLevel(pos) {
+        if (!this.localTracks) return;
+        const pt = turf.point(pos);
+        let onTrack = false;
+
+        this.localTracks.features.forEach(f => {
+          if (onTrack) return;
+          const dist = turf.pointToLineDistance(pt, f, { units: 'meters' });
+          if (dist < 10) onTrack = true;
+        });
+
+        if (onTrack !== this.isLaneLevel) {
+          this.isLaneLevel = onTrack;
+          this.toggleLaneLevelUI(onTrack);
+        }
+      },
+
+      toggleLaneLevelUI(active) {
+        console.log('[Nav] Lane Level UI:', active);
+
+        // 1. Widen Cycle Track
+        this.map.setPaintProperty('route-line-green', 'line-width',
+          active ? ['interpolate', ['linear'], ['zoom'], 14, 20, 18, 100] : ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 14]
+        );
+        this.map.setPaintProperty('route-line-asphalt', 'line-width',
+          active ? ['interpolate', ['linear'], ['zoom'], 14, 30, 18, 120] : ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 24]
+        );
+
+        // 2. Hide standard roads
+        const roadLayers = this.map.getStyle().layers.filter(l =>
+          l.id.includes('road') || l.id.includes('highway') || l.id.includes('bridge')
+        );
+
+        roadLayers.forEach(l => {
+          if (l.id.startsWith('route-line-')) return; // Don't hide our route
+          if (l.id.startsWith('local-tracks-')) return; // Don't hide local tracks
+          this.map.setLayoutProperty(l.id, 'visibility', active ? 'none' : 'visible');
+        });
+
+        // 3. Hide map background / labels
+        const otherLayers = ['landuse', 'natural-line-label', 'natural-point-label', 'poi-label', 'settlement-label', 'settlement-subdivision-label'];
+        otherLayers.forEach(id => {
+          if (this.map.getLayer(id)) {
+            this.map.setLayoutProperty(id, 'visibility', active ? 'none' : 'visible');
+          }
+        });
       },
 
       getStableHeading(pos) {
@@ -849,7 +1111,7 @@
         if (!this.graph) return null;
 
         const snap = (p) => {
-          let best = null, minDist = 0.1; // 100m threshold
+          let best = null, minDist = 0.05; // Tighten threshold to 50m to prefer cycle tracks
           this.graph.nodes.forEach((coord, key) => {
             const d = turf.distance(p, coord);
             if (d < minDist) { minDist = d; best = key; }
@@ -993,6 +1255,11 @@
         this.trackingCoords = [];
         document.body.classList.add('is-navigating');
 
+        // Request Fullscreen if possible
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(e => console.warn('Fullscreen denied', e));
+        }
+
         // Show HUD
         document.getElementById('hud-top').classList.remove('hidden');
         document.getElementById('hud-left').classList.remove('hidden');
@@ -1005,12 +1272,18 @@
         this.recenter();
       },
 
-      endNavigation() {
-        if (!confirm('確定結束這次導航？')) return;
+      exitNavigation() {
+        if (!confirm('確定退出導航？行程將不會儲存。')) return;
+        this.resetNavigationState();
+      },
 
-        console.log('[Nav] Ending navigation');
+      async endNavigation() {
+        if (!confirm('確定結束這次騎行？')) return;
+
+        console.log('[Nav] Ending navigation and saving stats');
         const endTime = Date.now();
-        const durationMins = Math.ceil((endTime - this.navStartTime) / 60000);
+        const durationMins = Math.max(1, Math.ceil((endTime - this.navStartTime) / 60000));
+        const distanceKm = this.routeData ? parseFloat((this.routeData.distance / 1000).toFixed(2)) : 0;
 
         const tripData = {
           totalDistance: this.routeData ? this.routeData.distance : 0,
@@ -1018,13 +1291,60 @@
           path: this.trackingCoords
         };
 
+        // Show Summary Modal
+        document.getElementById('summary-route-name').textContent = document.getElementById('input-end').value || '自訂導航';
+        document.getElementById('sum-dist').textContent = distanceKm;
+        document.getElementById('sum-time').textContent = durationMins;
+        document.getElementById('summary-modal').classList.add('show');
+
+        // Save to History (Persistence)
+        const token = localStorage.getItem('accessToken');
+        if (token && distanceKm > 0.1) {
+          try {
+            const body = {
+              route_id: 'NAV_AUTO',
+              route_name: document.getElementById('input-end').value || '自訂導航',
+              ride_date: new Date().toISOString().slice(0, 10),
+              start_time: new Date(this.navStartTime).toISOString(),
+              end_time: new Date(endTime).toISOString(),
+              distance_km: distanceKm,
+              duration_minutes: durationMins,
+              avg_speed_kmh: durationMins > 0 ? parseFloat((distanceKm / (durationMins / 60)).toFixed(1)) : 0,
+              stops_reached: [],
+              stops_count: 0,
+              all_stops: false,
+              source: 'pwa',
+              ride_mode: 'nav',
+              path: this.trackingCoords
+            };
+            await fetch('/api/getHistory', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(body),
+            });
+            console.log('[Nav] History saved successfully');
+          } catch (e) {
+            console.warn('[Nav] Failed to save history', e);
+          }
+        }
+
         // External Hook
         if (typeof onNavigationEnd === 'function') {
           onNavigationEnd(tripData);
         }
 
+        this.resetNavigationState();
+      },
+
+      resetNavigationState() {
         this.isNavigating = false;
+        this.isLaneLevel = false;
         document.body.classList.remove('is-navigating');
+        this.toggleLaneLevelUI(false);
+
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
 
         // Hide HUD
         document.getElementById('hud-top').classList.add('hidden');
