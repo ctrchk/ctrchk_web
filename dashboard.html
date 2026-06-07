@@ -778,10 +778,23 @@
         return '入門車手';
     }
     var LEVEL_XP = [
-        0,80,200,380,620,950,1400,1980,2700,3600,
-        4000,5100,6500,8100,10000,12200,14800,17800,21200,25200,
-        Infinity
+        0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+        4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
+        28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
+        98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
+        267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
     ];
+
+    function getLevelThreshold(lvl) {
+        const n = lvl - 1;
+        if (n < LEVEL_XP.length) return LEVEL_XP[n];
+        const BASE_GAP = 61000;
+        const GROWTH = 1.10;
+        const BASE_XP = 654000;
+        const BASE_LVL = 50;
+        return BASE_XP + BASE_GAP * (Math.pow(GROWTH, n - BASE_LVL) - 1) / (GROWTH - 1);
+    }
+
     var historyExpanded = false;
     var HISTORY_INITIAL_COUNT = 8;
 
@@ -1184,21 +1197,20 @@
     }
 
     function renderGameProfile(level, xp, coins, ridesCount, conqueredCount) {
-        var lvl = Math.max(1, Math.min(level || 1, 20));
+        var lvl = Math.max(1, level || 1);
         var currentXp = xp || 0;
         var currentCoins = coins || 0;
-        var xpCurrent = LEVEL_XP[lvl - 1] || 0;
-        var xpNext = LEVEL_XP[lvl];
-        var xpBar = lvl >= 20 ? 100 : Math.round(Math.max(0, Math.min(100,
+
+        var xpCurrent = getLevelThreshold(lvl);
+        var xpNext = getLevelThreshold(lvl + 1);
+        var xpBar = Math.round(Math.max(0, Math.min(100,
             (currentXp - xpCurrent) / Math.max(1, xpNext - xpCurrent) * 100)));
 
         document.getElementById('db-level-badge').textContent = 'Lv.' + lvl;
         document.getElementById('db-level-title').textContent = getLevelTitle(lvl);
         document.getElementById('db-coins-display').innerHTML = '<span class="animate-float" style="display:inline-block;">💰</span> ' + currentCoins.toLocaleString() + ' 里程幣';
         document.getElementById('db-xp-bar').style.width = xpBar + '%';
-        document.getElementById('db-xp-label').textContent = lvl >= 20
-            ? 'XP: ' + currentXp.toLocaleString() + '（已達最高等級）'
-            : 'XP: ' + currentXp.toLocaleString() + ' / ' + xpNext.toLocaleString() + '（還需 ' + (xpNext - currentXp).toLocaleString() + ' XP）';
+        document.getElementById('db-xp-label').textContent = 'XP: ' + currentXp.toLocaleString() + ' / ' + xpNext.toLocaleString() + '（還需 ' + (xpNext - currentXp).toLocaleString() + ' XP）';
         document.getElementById('db-level-card').style.display = '';
         document.getElementById('db-level-card').classList.add('animate-spring-pop');
 
