@@ -359,15 +359,14 @@
                             <tr>
                                 <th>ID</th>
                                 <th>電郵</th>
-                                <th>用戶名</th>
                                 <th>姓名</th>
                                 <th>會員身份</th>
-                                <th>車手等級</th>
-                                <th>電郵驗證</th>
-                                <th>騎行次數</th>
-                                <th>總里程</th>
-                                <th>登入方式</th>
-                                <th>註冊日期</th>
+                                <th>等級/XP</th>
+                                <th>里程幣</th>
+                                <th>省下車資</th>
+                                <th>騎行數據</th>
+                                <th>個人資料</th>
+                                <th>登入/註冊</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -496,6 +495,11 @@
                                     <option value="silver">銀卡</option>
                                     <option value="gold">金卡</option>
                                 </select>
+                            </div>
+                            <div style="margin-bottom:1.2em;">
+                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">已省車資 ($)</label>
+                                <input type="number" id="gp-total-saved-fare" min="0" step="0.1"
+                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
                             </div>
                             <button class="cta-button" onclick="saveGameStats()" style="width:100%;">
                                 <i class="fas fa-save"></i> 儲存更改
@@ -714,6 +718,7 @@
                         <input id="rm-alias" type="text" placeholder="別稱（顯示名稱）">
                         <input id="rm-bg-color" type="text" placeholder="底色 #RRGGBB">
                         <input id="rm-estimated-minutes" type="number" min="1" placeholder="預計時間（分鐘）">
+                        <input id="rm-route-fare" type="number" step="0.1" min="0" placeholder="路線車資 (HKD)">
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
                         <input id="rm-length-text" type="text" placeholder="距離（自動計算）" readonly>
@@ -764,7 +769,7 @@
                         <table class="users-table">
                             <thead>
                                 <tr>
-                                    <th>路線</th><th>類型</th><th>起點</th><th>終點</th><th>中途站數</th><th>解鎖</th><th>操作</th>
+                                    <th>路線</th><th>類型</th><th>起點</th><th>終點</th><th>車資</th><th>中途站數</th><th>解鎖</th><th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="route-admin-tbody"></tbody>
@@ -1010,16 +1015,34 @@
                 return `
                     <tr>
                         <td>${user.id}</td>
-                        <td>${escapeHtml(user.email)}</td>
-                        <td>${escapeHtml(user.username || '-')}</td>
+                        <td>
+                            <div style="font-weight:bold;">${escapeHtml(user.email)}</div>
+                            <div style="font-size:0.8em; color:#888;">ID: ${user.username || '-'}</div>
+                            ${verifiedHtml}
+                        </td>
                         <td>${escapeHtml(user.full_name || '-')}</td>
                         <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
-                        <td>Lv.${Number(user.cyclist_level || 1)}（${cyclistTier(user.cyclist_level)}）</td>
-                        <td>${verifiedHtml}</td>
-                        <td>${user.ride_count || 0}</td>
-                        <td>${parseFloat(user.total_distance || 0).toFixed(1)} km</td>
-                        <td>${user.auth_provider || 'email'}</td>
-                        <td>${date}</td>
+                        <td>
+                            <div><strong>Lv.${Number(user.cyclist_level || 1)}</strong></div>
+                            <div style="font-size:0.8em; color:#666;">${user.xp || 0} XP</div>
+                            <div style="font-size:0.75em; color:#04D93C;">${cyclistTier(user.cyclist_level)}</div>
+                        </td>
+                        <td>🪙 ${user.coins || 0}</td>
+                        <td>$${parseFloat(user.total_saved_fare || 0).toFixed(1)}</td>
+                        <td>
+                            <div>${user.ride_count || 0} 次騎行</div>
+                            <div>${parseFloat(user.total_distance || 0).toFixed(1)} km</div>
+                            <div style="font-size:0.8em; color:#888;">時數: ${(Number(user.total_duration_minutes || 0) / 60).toFixed(1)} h</div>
+                        </td>
+                        <td style="font-size:0.85em;">
+                            <div>經驗: ${escapeHtml(user.experience || '-')}</div>
+                            <div>單車: ${escapeHtml(user.bike_type || '-')}</div>
+                            <div>地區: ${escapeHtml(user.preferred_area || '-')}</div>
+                        </td>
+                        <td style="font-size:0.85em;">
+                            <div>${user.auth_provider || 'email'}</div>
+                            <div style="color:#888;">${date}</div>
+                        </td>
                         <td>
                             ${user.user_role !== 'senior_admin'
                                 ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'senior_admin')">設高級管理員</button>`
@@ -1819,6 +1842,7 @@
                 document.getElementById('gp-coins').value       = user.coins;
                 document.getElementById('gp-mileage-km').value  = Number(user.mileage_km_365 || 0).toFixed(2);
                 document.getElementById('gp-mileage-rank').value = String(user.mileage_rank || 'bronze').toLowerCase();
+                document.getElementById('gp-total-saved-fare').value = Number(user.total_saved_fare || 0).toFixed(1);
                 document.getElementById('gp-stats-msg').textContent = '';
                 document.getElementById('gp-route-msg').textContent = '';
 
@@ -1854,6 +1878,7 @@
             const coins = parseInt(document.getElementById('gp-coins').value,  10);
             const mileageKm = parseFloat(document.getElementById('gp-mileage-km').value);
             const mileageRank = String(document.getElementById('gp-mileage-rank').value || '').toLowerCase();
+            const totalSavedFare = parseFloat(document.getElementById('gp-total-saved-fare').value);
             const msgEl = document.getElementById('gp-stats-msg');
 
             if (isNaN(xp)    || xp    < 0) { msgEl.style.color = 'red'; msgEl.textContent = 'XP 不可為負數。';     return; }
@@ -1878,7 +1903,8 @@
                         xp,
                         coins,
                         mileage_km_365: mileageKm,
-                        mileage_rank: mileageRank
+                        mileage_rank: mileageRank,
+                        total_saved_fare: totalSavedFare
                     })
                 });
                 if (handleTokenError(resp)) return;
@@ -2007,6 +2033,7 @@
                     document.getElementById('gp-coins').value = data.user.coins;
                     document.getElementById('gp-mileage-km').value = Number(data.user.mileage_km_365 || 0).toFixed(2);
                     document.getElementById('gp-mileage-rank').value = String(data.user.mileage_rank || 'bronze').toLowerCase();
+                    document.getElementById('gp-total-saved-fare').value = Number(data.user.total_saved_fare || 0).toFixed(1);
                     renderUnlockedRoutes(data.unlocked_routes);
                 }
             } catch (e) { console.error('[Admin] refreshGameProfile error:', e); }
@@ -2499,7 +2526,7 @@
 
         function resetManagedRouteForm() {
             managedRouteEditingKey = null;
-            ['rm-dept', 'rm-route-number', 'rm-alias', 'rm-bg-color', 'rm-estimated-minutes', 'rm-unlock-value', 'rm-tags',
+            ['rm-dept', 'rm-route-number', 'rm-alias', 'rm-bg-color', 'rm-estimated-minutes', 'rm-route-fare', 'rm-unlock-value', 'rm-tags',
              'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit', 'rm-length-text']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
             document.getElementById('rm-start-station').value = '';
@@ -2537,6 +2564,7 @@
                     <td>${escapeHtml(r.type || '-')}${r.is_legacy_route ? '<br><span style="font-size:0.76em;color:#666;">(內建路線)</span>' : ''}</td>
                     <td>${escapeHtml(r.start_station_name_zh || r.start_station_id || '-')}</td>
                     <td>${escapeHtml(r.end_station_name_zh || r.end_station_id || '-')}</td>
+                    <td>$${parseFloat(r.route_fare || 0).toFixed(1)}</td>
                     <td>${Array.isArray(r.stops) ? r.stops.length : 0}</td>
                     <td>${formatUnlock(r)}</td>
                     <td>
@@ -2556,6 +2584,7 @@
             document.getElementById('rm-alias').value = route.alias || '';
             document.getElementById('rm-bg-color').value = route.bg_color || '';
             document.getElementById('rm-estimated-minutes').value = route.estimated_minutes ?? '';
+            document.getElementById('rm-route-fare').value = route.route_fare ?? '';
             document.getElementById('rm-unlock-type').value = route.unlock_type || 'level';
             document.getElementById('rm-unlock-value').value = route.unlock_value ?? '';
             document.getElementById('rm-tags').value = Array.isArray(route.tags) ? route.tags.join(', ') : '';
@@ -2601,6 +2630,7 @@
                 alias: document.getElementById('rm-alias').value.trim(),
                 bg_color: document.getElementById('rm-bg-color').value.trim() || null,
                 estimated_minutes: document.getElementById('rm-estimated-minutes').value,
+                route_fare: document.getElementById('rm-route-fare').value,
                 unlock_type: document.getElementById('rm-unlock-type').value,
                 unlock_value: document.getElementById('rm-unlock-value').value,
                 tags: document.getElementById('rm-tags').value,

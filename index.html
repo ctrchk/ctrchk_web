@@ -639,8 +639,8 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                     <span class="lbl">里程</span>
                 </div>
                 <div class="app-stat-pill" id="streak-pill">
-                    <span class="val" id="app-home-streak">0</span>
-                    <span class="lbl">連戰</span>
+                    <span class="val" id="app-home-streak">$0.0</span>
+                    <span class="lbl">已省車資</span>
                 </div>
             </div>
         </div>
@@ -834,11 +834,10 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         document.getElementById('app-home-coins').textContent = formatNum(coins);
         document.getElementById('app-home-mileage').textContent = mileage.toFixed(1);
 
-        const streak = profile.commute_streak || 0;
+        const savedFare = profile.total_saved_fare || 0;
         const streakEl = document.getElementById('app-home-streak');
-        const streakPill = document.getElementById('streak-pill');
-        streakEl.textContent = streak;
-        if (streak === 0) {
+        streakEl.textContent = '$' + parseFloat(savedFare).toFixed(1);
+        if (savedFare === 0) {
             streakEl.style.color = '#888';
         } else {
             streakEl.style.color = '#BFE340';
@@ -1001,7 +1000,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
                     mileage_rolling_km: rollingKm,
                     mileage_km_365: rollingKm,
                     mileage_rank: profile.mileage_rank || 'bronze',
-                    commute_streak: profile.commute_streak || 0,
+                    total_saved_fare: profile.total_saved_fare || 0,
                     total_rides: history.length
                 };
                 localStorage.setItem('gameProfileCache', JSON.stringify(gameProfileCache));

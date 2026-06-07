@@ -638,12 +638,11 @@
             </div>
         </div>
 
-        <!-- Commute streak -->
-        <div class="db-streak-card" id="db-streak-card" style="display:none;">
-            <div class="db-streak-title">🔥 連續通勤</div>
-            <div class="db-streak-val" id="db-streak-value">0 天</div>
-            <div class="db-streak-sub" id="db-streak-sub">保持通勤連勝，提升你的里程聲望</div>
-            <button class="db-streak-btn" id="db-streak-repair-btn" style="display:none;">花費 100 里程幣修復連勝</button>
+        <!-- Saved Fares -->
+        <div class="db-streak-card" id="db-streak-card">
+            <div class="db-streak-title">💰 已省車資</div>
+            <div class="db-streak-val" id="db-streak-value">$0.0</div>
+            <div class="db-streak-sub" id="db-streak-sub">單車通勤，既健康又省錢</div>
         </div>
 
         <!-- IG Story poster export -->
@@ -821,55 +820,14 @@
         }
     }
 
-    function renderStreakCard(gameProfile, userCoins) {
+    function renderSavedFareCard(gameProfile) {
         const card = document.getElementById('db-streak-card');
         if (!card || !gameProfile) return;
-        const streakVal = Number(gameProfile.commute_streak || 0);
-        const pending = Number(gameProfile.commute_streak_pending || 0);
-        const pendingDate = gameProfile.commute_streak_pending_date
-            ? String(gameProfile.commute_streak_pending_date).slice(0, 10)
-            : null;
-        const today = new Date().toISOString().slice(0, 10);
-        const hasRepair = pending > 0 && pendingDate === today && userCoins >= 100;
-
         card.style.display = '';
-        const streakIcon = (streakVal > 0 && pending === 0) ? '🔥' : '<span style="filter: grayscale(100%)">🔥</span>';
-        document.getElementById('db-streak-value').innerHTML = `${streakIcon} ${streakVal} 天`;
-        document.getElementById('db-streak-sub').textContent = pending > 0
-            ? '連續通勤已中斷，可使用里程幣修復'
-            : '持續通勤可累積更高里程卡';
-        const repairBtn = document.getElementById('db-streak-repair-btn');
-        repairBtn.style.display = hasRepair ? '' : 'none';
-        if (hasRepair) {
-            repairBtn.onclick = async () => {
-                if (!confirm('是否花費 100 里程幣修復連勝？')) return;
-                try {
-                    const token = localStorage.getItem('accessToken');
-                    const resp = await fetch('/api/getHistory?action=repair-streak', {
-                        method: 'POST',
-                        headers: { 'Authorization': 'Bearer ' + token }
-                    });
-                    const data = await resp.json();
-                    if (!resp.ok) {
-                        alert(data.message || '修復失敗');
-                        return;
-                    }
-                    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                    storedUser.coins = data.coins ?? storedUser.coins;
-                    localStorage.setItem('user', JSON.stringify(storedUser));
-                    gameProfile.commute_streak = data.commute_streak;
-                    gameProfile.commute_streak_pending = 0;
-                    renderStreakCard(gameProfile, storedUser.coins || 0);
-                    var cq = (storedUser.conquered_route_ids || []).length;
-                    renderGameProfile(storedUser.level || 1, storedUser.xp || 0, storedUser.coins || 0, undefined, cq);
-                } catch (e) {
-                    alert('修復失敗：' + e.message);
-                }
-            };
-        }
+        document.getElementById('db-streak-value').textContent = `$${parseFloat(gameProfile.total_saved_fare || 0).toFixed(1)}`;
     }
 
-    function renderPosterCard(totalKm, context, streak) {
+    function renderPosterCard(totalKm, context, savedFare) {
         const card = document.getElementById('db-poster-card');
         if (!card) return;
         const canUse = context.permissions && context.permissions.poster_basic;
@@ -877,12 +835,12 @@
         if (!canUse) return;
         const desc = document.getElementById('db-poster-desc');
         let text = `近一年累積里程 ${formatKm(totalKm)} km`;
-        if (streak > 0) text += `，連續通勤 ${streak} 天`;
+        if (savedFare > 0) text += `，已省車資 $${parseFloat(savedFare).toFixed(1)}`;
         text += `，立即生成你的戰績海報。`;
         desc.textContent = text;
     }
 
-    function exportPoster(totalKm, context, history, streak) {
+    function exportPoster(totalKm, context, history, savedFare) {
         const HKD_PER_KM = 2.5;
         const CO2_PER_KM = 0.21;
         const CO2_PER_TREE = 21;
@@ -1110,13 +1068,13 @@
         drawStat(statX0 + statW,      statsY, statW, '省交通費', `$${savedCost.toFixed(0)}`, 'HKD');
         drawStat(statX0 + statW * 2,  statsY, statW, '減碳',     `${co2.toFixed(1)}`, 'kg CO₂');
 
-        // ── Streak Badge ──
-        if (streak > 0) {
-            const streakY = statsY + 190;
+        // ── Saved Fare Badge ──
+        if (savedFare > 0) {
+            const fareY = statsY + 190;
             ctx2d.fillStyle = accentColor;
             ctx2d.font = 'bold 44px sans-serif';
             ctx2d.textAlign = 'center';
-            ctx2d.fillText(`🔥 連續通勤 ${streak} 天`, cx, streakY);
+            ctx2d.fillText(`💰 已省車資 $${parseFloat(savedFare).toFixed(1)}`, cx, fareY);
         }
 
         // ── Gold motivational copy ──
@@ -1241,7 +1199,7 @@
                 _applyStatusSummary(user);
                 var cq = (user.conquered_route_ids || []).length;
                 renderGameProfile(gameProfile.level, gameProfile.xp, gameProfile.coins, history.length, cq);
-                renderStreakCard(gameProfile, gameProfile.coins || 0);
+                renderSavedFareCard(gameProfile);
             }
         } catch(e) {}
     }
@@ -1401,7 +1359,7 @@
                 var histArr = Array.isArray(data) ? data : (data.history || []);
                 var cq = (data.conquered_route_ids || []).length;
                 renderGameProfile(data.gameProfile.level, data.gameProfile.xp, data.gameProfile.coins, histArr.length, cq);
-                renderStreakCard(data.gameProfile, data.gameProfile.coins || 0);
+                renderSavedFareCard(data.gameProfile);
                 try {
                     var rollingKm = Number(data.gameProfile.mileage_km_365 || data.gameProfile.mileage_rolling_km || 0);
                     localStorage.setItem('gameProfileCache', JSON.stringify({
@@ -1425,13 +1383,13 @@
             var totalKm = history.reduce(function (sum, ride) {
                 return sum + (parseFloat(ride.distance_km) || 0);
             }, 0);
-            var streak = data.gameProfile ? Number(data.gameProfile.commute_streak || 0) : 0;
+            var savedFare = data.gameProfile ? Number(data.gameProfile.total_saved_fare || 0) : 0;
             var permCtx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
-            renderPosterCard(totalKm, permCtx, streak);
+            renderPosterCard(totalKm, permCtx, savedFare);
             var posterBtn = document.getElementById('db-poster-btn');
             if (posterBtn) {
                 posterBtn.onclick = function () {
-                    exportPoster(totalKm, permCtx, history, streak);
+                    exportPoster(totalKm, permCtx, history, savedFare);
                 };
             }
 

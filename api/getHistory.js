@@ -150,7 +150,7 @@ function calcLevel(xp) {
 async function ensureGameProfile(userId) {
   const { rows } = await query(
     `SELECT level, xp, coins, mileage_km_365, mileage_rank,
-            commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date
+            commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date, total_saved_fare
      FROM user_game_profile WHERE user_id = $1`,
     [userId]
   );
@@ -714,6 +714,33 @@ export default async function handler(req, res) {
       // 已移除過短騎行過濾 (由用戶要求保留所有紀錄)
       const distKmVal = parseFloat(distance_km) || 0;
 
+      // 0. 計算已省車資 (Saved Fare)
+      let savedFare = 0;
+      const normMode = normalizeRideMode(ride_mode);
+      if (normMode === 'free') {
+          savedFare = distKmVal;
+      } else if (route_id) {
+          try {
+              const { rows: routeRows } = await query(
+                  'SELECT route_fare, jsonb_array_length(stops) as total_stops FROM routes WHERE route_number = $1 OR (dept || \'-\' || route_number) = $1 LIMIT 1',
+                  [route_id]
+              );
+              if (routeRows.length > 0) {
+                  const fare = parseFloat(routeRows[0].route_fare || 0);
+                  const totalStops = parseInt(routeRows[0].total_stops || 0) || 1;
+                  const reachedCount = Number.isFinite(stops_count) ? stops_count : (Array.isArray(stops_reached) ? stops_reached.length : 0);
+                  // 如果是完成全程 (all_stops 為 true)，直接給全額車資
+                  if (all_stops) {
+                      savedFare = fare;
+                  } else {
+                      savedFare = fare * (reachedCount / totalStops);
+                  }
+              }
+          } catch (e) {
+              console.warn('[getHistory] Failed to fetch route fare:', e.message);
+          }
+      }
+
       // 1. 取得路線 XP 獎勵
       let xpReward = 0;
       let maxXpForRoute = Infinity;
@@ -868,13 +895,14 @@ export default async function handler(req, res) {
         await query(
           `INSERT INTO user_game_profile
              (user_id, level, xp, coins, mileage_km_365, mileage_rank,
-              commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+              commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date, total_saved_fare, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
            ON CONFLICT (user_id) DO UPDATE
              SET level = $2, xp = $3, coins = $4,
                  mileage_km_365 = $5, mileage_rank = $6,
                  commute_streak = $7, commute_streak_last_date = $8,
                  commute_streak_pending = $9, commute_streak_pending_date = $10,
+                 total_saved_fare = user_game_profile.total_saved_fare + EXCLUDED.total_saved_fare,
                  updated_at = NOW()`,
           [
             userData.userId,
@@ -887,6 +915,7 @@ export default async function handler(req, res) {
             commuteLastDate,
             commutePending,
             commutePendingDate,
+            savedFare,
           ]
         );
         await triggerDiscordBotSyncForUser(userData.userId);
@@ -910,6 +939,8 @@ export default async function handler(req, res) {
           mileage_rank: mileageUpdate.rank,
           mileage_km_365: mileageUpdate.rollingKm,
           commute_streak: commuteStreak,
+          total_saved_fare: parseFloat(((profile.total_saved_fare || 0) + savedFare).toFixed(1)),
+          saved_fare_earned: parseFloat(savedFare.toFixed(1)),
           streak_broken: streakBroken,
           streak_repair_available: streakBroken && newCoins >= STREAK_REPAIR_COST && commutePending > 0,
           streak_repair_cost: STREAK_REPAIR_COST,

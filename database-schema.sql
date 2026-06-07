@@ -135,6 +135,7 @@ ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak INTEGER DE
 ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_last_date DATE;
 ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_pending INTEGER DEFAULT 0;
 ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_pending_date DATE;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS total_saved_fare NUMERIC DEFAULT 0;
 
 -- =========================================================
 -- 遊戲化：用戶已解鎖路線
@@ -244,6 +245,7 @@ ALTER TABLE routes ADD COLUMN IF NOT EXISTS unlock_value INTEGER;
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32);
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS route_fare NUMERIC DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_routes_start_station ON routes(start_station_id);
 CREATE INDEX IF NOT EXISTS idx_routes_end_station ON routes(end_station_id);
