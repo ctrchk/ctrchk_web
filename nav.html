@@ -221,6 +221,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .search-results-dropdown.show { display: block; }
+    #results-end.show { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 8px; }
     .search-result-item {
       padding: 12px 16px;
       cursor: pointer;
@@ -566,22 +567,26 @@
             id: 'local-tracks-asphalt',
             type: 'line',
             source: 'tko-tracks',
+            layout: {
+              'line-cap': 'round'
+            },
             paint: {
               'line-color': '#1a1a1a',
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 20],
-              'line-opacity': 0.6,
-              'line-cap': 'round'
+              'line-opacity': 0.8
             }
           });
           this.map.addLayer({
             id: 'local-tracks-green',
             type: 'line',
             source: 'tko-tracks',
+            layout: {
+              'line-cap': 'round'
+            },
             paint: {
               'line-color': '#2ecc71',
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10],
-              'line-opacity': 0.4,
-              'line-cap': 'round'
+              'line-opacity': 0.4
             }
           });
           this.map.addLayer({
@@ -737,12 +742,20 @@
           const val = input.value.trim();
           if (!val) {
             results.classList.remove('show');
+            onSelect(null);
             return;
           }
           debounceTimer = setTimeout(() => this.performSearch(val, results, onSelect, input), 300);
         };
 
         input.onfocus = () => { if (results.children.length > 0) results.classList.add('show'); };
+
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter' && results.classList.contains('show')) {
+            const first = results.querySelector('.search-result-item');
+            if (first) first.click();
+          }
+        };
 
         // Close when clicking outside
         document.addEventListener('click', (e) => {
@@ -754,6 +767,7 @@
 
       // HK80 to WGS84 Conversion Logic
       hk80ToWgs84(N, E) {
+        if (isNaN(N) || isNaN(E)) return [114.178556, 22.312133];
         // More accurate linear approximation for HK region
         const lat = 22.312133 + (N - 819069.80) / 111232.0;
         const lon = 114.178556 + (E - 835477.98) / (111320.0 * Math.cos(22.312133 * Math.PI / 180));
@@ -778,7 +792,9 @@
           const data = await resp.json();
           govResults = (data || []).slice(0, 10).map(item => {
             // Check if coordinates need conversion (Gov API returns HK80 x, y)
-            const coords = this.hk80ToWgs84(parseFloat(item.y), parseFloat(item.x));
+            const ny = parseFloat(item.y);
+            const ex = parseFloat(item.x);
+            const coords = this.hk80ToWgs84(ny, ex);
             return {
               name: item.nameZH,
               addr: item.addressZH,
@@ -816,17 +832,22 @@
 
               // Snap search result to nearest cycle track if possible
               let finalCenter = item.center;
-              if (this.localTracks) {
-                const pt = turf.point(item.center);
-                let minDist = 0.2; // 200m search radius (don't snap if too far)
-                this.localTracks.features.forEach(f => {
-                   const d = turf.pointToLineDistance(pt, f);
-                   if (d < minDist) {
-                     minDist = d;
-                     const snapped = turf.nearestPointOnLine(f, pt);
-                     finalCenter = snapped.geometry.coordinates;
-                   }
-                });
+              try {
+                if (this.localTracks && item.center && !isNaN(item.center[0])) {
+                  const pt = turf.point(item.center);
+                  let minDist = 0.2; // 200m search radius
+                  this.localTracks.features.forEach(f => {
+                     // Pass only geometry for better compatibility
+                     const d = turf.pointToLineDistance(pt, f.geometry);
+                     if (d < minDist) {
+                       minDist = d;
+                       const snapped = turf.nearestPointOnLine(f.geometry, pt);
+                       finalCenter = snapped.geometry.coordinates;
+                     }
+                  });
+                }
+              } catch (e) {
+                console.warn('[Nav] Snapping failed', e);
               }
               onSelect(finalCenter);
             };
@@ -1161,7 +1182,16 @@
         const btn = document.getElementById('btn-start-nav');
         // Ensure end location is set AND (start location OR current location is available)
         const isReady = !!this.endLocation && (!!this.startLocation || !!this.currentLocation);
+
         btn.disabled = !isReady;
+
+        // Provide feedback if waiting for GPS
+        if (!!this.endLocation && !this.startLocation && !this.currentLocation) {
+          btn.textContent = '等待 GPS 定位...';
+        } else {
+          btn.textContent = '開始導航';
+        }
+
         if (isReady) {
           this.planRoute();
         }
