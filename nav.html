@@ -297,6 +297,7 @@
       width: 44px; height: 44px; border-radius: 50%; background: var(--hud-bg); backdrop-filter: var(--hud-blur);
       border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center;
       font-size: 18px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      pointer-events: auto;
     }
     .float-btn.active { color: #BFE340; border-color: #BFE340; }
 
@@ -436,6 +437,10 @@
         <div class="summary-stat-val" id="sum-xp">0</div>
         <div class="summary-stat-lbl">⭐ 獲得 XP</div>
       </div>
+      <div class="summary-stat-box">
+        <div class="summary-stat-val" id="sum-fare">$0.0</div>
+        <div class="summary-stat-lbl">💰 已省車資</div>
+      </div>
     </div>
 
     <div style="width: 100%; max-width: 400px; margin-bottom: 32px;">
@@ -481,7 +486,9 @@
 
   <!-- Floating Map Controls -->
   <div class="floating-controls">
-    <button class="float-btn" id="btn-recenter" title="回到中心"><i class="fas fa-crosshairs"></i></button>
+    <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
+    <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
+    <button class="float-btn active" id="btn-recenter" title="跟隨我"><i class="fas fa-crosshairs"></i></button>
     <button class="float-btn active" id="btn-orient" title="切換航向模式"><i class="fas fa-compass"></i></button>
   </div>
 
@@ -508,6 +515,7 @@
       isFollowing: true,
       headingUp: true,
       isLaneLevel: false,
+      navZoom: 18.5,
 
       currentLocation: null,
       startLocation: null,
@@ -545,6 +553,7 @@
         this.add3DBuildings();
         this.initSearch();
         this.loadStations();
+        this.loadParkingSpaces();
 
         // Load local TKO tracks
         try {
@@ -627,6 +636,36 @@
           }
         });
         this.graph = { nodes, adjacency };
+      },
+
+      async loadParkingSpaces() {
+        if (!window.hasPermission('map_cycparkspace')) return;
+        try {
+          const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
+          const data = await resp.json();
+          this.map.addSource('parking-spaces', { type: 'geojson', data });
+          this.map.addLayer({
+            id: 'parking-layer',
+            type: 'symbol',
+            source: 'parking-spaces',
+            layout: {
+              'icon-image': 'bicycle-15',
+              'icon-size': 1.5,
+              'icon-allow-overlap': true,
+              'text-field': ['get', 'PARKING_SPACE'],
+              'text-size': 10,
+              'text-offset': [0, 1.2],
+              'text-anchor': 'top'
+            },
+            paint: {
+              'text-color': '#ffffff',
+              'text-halo-color': '#000000',
+              'text-halo-width': 1
+            }
+          });
+        } catch (e) {
+          console.warn('[Nav] Failed to load parking spaces', e);
+        }
       },
 
       add3DBuildings() {
@@ -816,10 +855,30 @@
         document.getElementById('btn-start-nav').onclick = () => this.startNavigation();
         document.getElementById('btn-end-nav').onclick = () => this.endNavigation();
         document.getElementById('btn-exit-nav').onclick = () => this.exitNavigation();
-        document.getElementById('btn-recenter').onclick = () => this.recenter();
+        document.getElementById('btn-recenter').onclick = () => {
+          this.isFollowing = !this.isFollowing;
+          document.getElementById('btn-recenter').classList.toggle('active', this.isFollowing);
+          if (this.isFollowing) this.recenter();
+        };
+
+        this.map.on('dragstart', () => {
+          this.isFollowing = false;
+          document.getElementById('btn-recenter').classList.remove('active');
+        });
         document.getElementById('btn-orient').onclick = () => {
           this.headingUp = !this.headingUp;
           document.getElementById('btn-orient').classList.toggle('active', this.headingUp);
+        };
+
+        document.getElementById('btn-zoom-in').onclick = () => {
+          this.navZoom = Math.min(22, this.navZoom + 0.5);
+          if (this.isNavigating) this.recenter();
+          else this.map.zoomTo(this.navZoom);
+        };
+        document.getElementById('btn-zoom-out').onclick = () => {
+          this.navZoom = Math.max(10, this.navZoom - 0.5);
+          if (this.isNavigating) this.recenter();
+          else this.map.zoomTo(this.navZoom);
         };
       },
 
@@ -863,6 +922,7 @@
               this.currentLocation = [pos.coords.longitude, pos.coords.latitude];
               this.map.flyTo({ center: this.currentLocation, zoom: 16 });
               this.updateUserMarker(this.currentLocation, pos.coords.heading);
+              this.checkReady();
             },
             (err) => console.error(err),
             { enableHighAccuracy: true }
@@ -918,10 +978,15 @@
             center: activeCoords,
             bearing: this.headingUp ? (finalHeading || 0) : 0,
             pitch: this.isNavigating ? (this.isLaneLevel ? 75 : this.PITCH_3D) : 0,
-            zoom: this.isNavigating ? (this.isLaneLevel ? 19.5 : this.ZOOM_NAV) : this.map.getZoom(),
+            zoom: this.isNavigating ? (this.isLaneLevel ? this.navZoom + 1 : this.navZoom) : this.map.getZoom(),
             duration: 800,
             easing: t => t * (2 - t)
           });
+        } else {
+          // If not following, we still want to update zoom if it was changed by HUD
+          if (this.isNavigating) {
+             this.map.zoomTo(this.isLaneLevel ? this.navZoom + 1 : this.navZoom, { duration: 800 });
+          }
         }
       },
 
@@ -1091,7 +1156,8 @@
 
       checkReady() {
         const btn = document.getElementById('btn-start-nav');
-        const isReady = (this.startLocation || this.currentLocation) && this.endLocation;
+        // Ensure end location is set AND (start location OR current location is available)
+        const isReady = !!this.endLocation && (!!this.startLocation || !!this.currentLocation);
         btn.disabled = !isReady;
         if (isReady) {
           this.planRoute();
@@ -1300,7 +1366,7 @@
       recenter() {
         this.isFollowing = true;
         if (this.currentLocation) {
-          this.map.flyTo({ center: this.currentLocation, zoom: this.ZOOM_NAV, pitch: this.isNavigating ? this.PITCH_3D : 0 });
+          this.map.flyTo({ center: this.currentLocation, zoom: this.isNavigating ? this.navZoom : 16, pitch: this.isNavigating ? this.PITCH_3D : 0 });
         }
       },
 
@@ -1396,6 +1462,7 @@
         document.getElementById('sum-time').textContent = durationMins;
         document.getElementById('sum-speed').textContent = avgSpeed;
         document.getElementById('sum-xp').textContent = apiResult.xp_earned || 0;
+        document.getElementById('sum-fare').textContent = '$' + parseFloat(apiResult.saved_fare_earned || distanceKm).toFixed(1);
         document.getElementById('summary-xp-badge').textContent = `+${apiResult.xp_earned || 0} XP`;
 
         // XP Progress Bar Logic

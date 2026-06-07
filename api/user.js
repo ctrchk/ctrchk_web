@@ -88,11 +88,17 @@ export default async function handler(req, res) {
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS gpx JSONB NOT NULL DEFAULT '[]'::jsonb`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS stops JSONB NOT NULL DEFAULT '[]'::jsonb`);
       await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
+      await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS route_fare NUMERIC DEFAULT 0`);
       await query(`ALTER TABLE stations ADD COLUMN IF NOT EXISTS is_terminal BOOLEAN DEFAULT FALSE`);
 
-      const [{ rows: routes }, { rows: stations }, { rows: departments }] = await Promise.all([
+      const [
+        { rows: routes },
+        { rows: stations },
+        { rows: departments },
+        { rows: bigDataStats }
+      ] = await Promise.all([
         query(
-          `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, stops, rewards
+          `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, stops, rewards, route_fare
            FROM routes
            ORDER BY dept, route_number`
         ),
@@ -104,6 +110,12 @@ export default async function handler(req, res) {
           `SELECT dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available, unlock_cost, promo_cost, is_promo
            FROM department_config
            ORDER BY dept_id`
+        ),
+        query(
+          `SELECT route_id, COUNT(*) as ride_count, AVG(duration_minutes) as avg_duration
+           FROM cycling_history
+           WHERE route_id IS NOT NULL AND duration_minutes > 0
+           GROUP BY route_id`
         )
       ]);
 
@@ -118,7 +130,18 @@ export default async function handler(req, res) {
         dept: normalizeDeptId(t.area),
       }));
 
+      const statsMap = new Map();
+      bigDataStats.forEach(s => statsMap.set(s.route_id, s));
+
       const resolvedRoutes = routes.map(r => {
+        const fullId = `${r.dept}-${r.route_number}`;
+        const stats = statsMap.get(fullId) || statsMap.get(r.route_number);
+
+        let displayMinutes = r.estimated_minutes;
+        if (stats && parseInt(stats.ride_count) >= 100) {
+            displayMinutes = Math.round(parseFloat(stats.avg_duration));
+        }
+
         let tags = [];
         if (Array.isArray(r.tags)) {
           tags = r.tags;
@@ -163,13 +186,14 @@ export default async function handler(req, res) {
           dept: r.dept,
           alias: r.alias,
           bg_color: r.bg_color,
-          estimated_minutes: r.estimated_minutes,
+          estimated_minutes: displayMinutes,
           unlock_type: r.unlock_type || 'level',
           unlock_value: r.unlock_value,
           tags,
           gpx: Array.isArray(r.gpx) ? r.gpx : parseSafeJsonArray(r.gpx),
           stops: resolvedStops,
           length_text: r.length_text || null,
+          route_fare: parseFloat(r.route_fare || 0),
         };
       });
 
@@ -298,7 +322,7 @@ export default async function handler(req, res) {
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
                              gp.level, gp.xp, gp.coins, gp.mileage_rank, gp.mileage_km_365,
                              gp.commute_streak, gp.commute_streak_last_date, gp.commute_streak_pending,
-                             gp.commute_streak_pending_date,
+                             gp.commute_streak_pending_date, gp.total_saved_fare,
                              COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                              COALESCE((SELECT SUM(ch.distance_km)
                                        FROM cycling_history ch
