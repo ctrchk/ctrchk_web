@@ -1065,7 +1065,7 @@
         }
 
         drawStat(statX0,              statsY, statW, '總里程',   `${formatKm(totalKm)}`, 'km');
-        drawStat(statX0 + statW,      statsY, statW, '省交通費', `$${savedCost.toFixed(0)}`, 'HKD');
+        drawStat(statX0 + statW,      statsY, statW, '已省車資', `$${savedCost.toFixed(1)}`, 'HKD');
         drawStat(statX0 + statW * 2,  statsY, statW, '減碳',     `${co2.toFixed(1)}`, 'kg CO₂');
 
         // ── Saved Fare Badge ──

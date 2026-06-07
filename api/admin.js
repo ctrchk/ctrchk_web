@@ -254,6 +254,7 @@ export default async function handler(req, res) {
     }
     // Default: list users
     try {
+      await ensureAdminRouteSchema();
       const page = parseInt(req.query.page) || 1, limit = parseInt(req.query.limit) || 20, offset = (page - 1) * limit, search = req.query.search || '';
       let where = '', params = [limit, offset];
       if (search) { where = `WHERE u.email ILIKE $3 OR u.full_name ILIKE $3 OR u.username ILIKE $3`; params.push(`%${search}%`); }
