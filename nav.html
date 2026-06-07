@@ -944,6 +944,9 @@
         this.currentLocation = coords;
         document.getElementById('speed-val').textContent = speedKmh.toFixed(1);
 
+        // Re-check readiness as currentLocation changed
+        this.checkReady();
+
         // 1. Snapping Logic (Project to Route)
         let activeCoords = coords;
         if (this.isNavigating && this.routeData) {
