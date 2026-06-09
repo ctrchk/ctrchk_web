@@ -201,6 +201,8 @@
       box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       color: var(--app-text-primary, #fff);
+      max-height: 80vh;
+      overflow-y: auto;
     }
     body.is-navigating .setup-panel { transform: translateY(100%); }
 
@@ -365,6 +367,35 @@
       border-bottom: 30px solid #6dba65;
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
     }
+
+    /* Parking Popup Styles */
+    .parking-popup .mapboxgl-popup-content {
+      background: var(--hud-bg);
+      backdrop-filter: var(--hud-blur);
+      color: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .parking-popup .mapboxgl-popup-tip {
+      border-top-color: var(--hud-bg);
+    }
+    .btn-park-nav {
+      width: 100%;
+      background: var(--app-accent, #6dba65);
+      color: #121f14;
+      border: none;
+      padding: 10px;
+      border-radius: 12px;
+      font-weight: 800;
+      margin-top: 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .parking-info-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--app-accent, #6dba65); }
+    .parking-info-count { font-size: 24px; font-weight: 900; }
+    .parking-info-label { font-size: 12px; opacity: 0.7; }
   </style>
 </head>
 <body class="is-pwa">
@@ -482,6 +513,11 @@
         </button>
     </div>
 
+    <div id="route-options" style="margin-bottom: 20px; display: none;">
+        <div style="font-size: 14px; opacity: 0.7; margin-bottom: 8px;">選擇路線：</div>
+        <div id="route-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    </div>
+
     <button class="btn-start-nav" id="btn-start-nav" disabled>開始導航</button>
   </div>
 
@@ -489,6 +525,7 @@
   <div class="floating-controls">
     <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
     <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
+    <button class="float-btn active" id="btn-toggle-park" title="顯示/隱藏泊位"><i class="fas fa-parking"></i></button>
     <button class="float-btn active" id="btn-recenter" title="跟隨我"><i class="fas fa-crosshairs"></i></button>
     <button class="float-btn active" id="btn-orient" title="切換航向模式"><i class="fas fa-compass"></i></button>
   </div>
@@ -556,20 +593,24 @@
         this.loadStations();
         this.loadParkingSpaces();
 
-        // Load local TKO tracks
+        // Load local TKO tracks and pedestrian paths
         try {
-          const resp = await fetch('/data/TKO_full.geojson');
-          const data = await resp.json();
-          this.map.addSource('tko-tracks', { type: 'geojson', data });
+          const [respTrack, respPed] = await Promise.all([
+            fetch('/data/TKO_full.geojson'),
+            fetch('/data/tko_pedestrian.geojson')
+          ]);
+          const trackData = await respTrack.json();
+          const pedData = await respPed.json();
+
+          this.map.addSource('tko-tracks', { type: 'geojson', data: trackData });
+          this.map.addSource('tko-pedestrian', { type: 'geojson', data: pedData });
 
           // --- Render All Local Tracks in 3D ---
           this.map.addLayer({
             id: 'local-tracks-asphalt',
             type: 'line',
             source: 'tko-tracks',
-            layout: {
-              'line-cap': 'round'
-            },
+            layout: { 'line-cap': 'round' },
             paint: {
               'line-color': '#1a1a1a',
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 20],
@@ -580,9 +621,7 @@
             id: 'local-tracks-green',
             type: 'line',
             source: 'tko-tracks',
-            layout: {
-              'line-cap': 'round'
-            },
+            layout: { 'line-cap': 'round' },
             paint: {
               'line-color': '#2ecc71',
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10],
@@ -603,43 +642,71 @@
               'text-rotation-alignment': 'map',
               'text-keep-upright': true
             },
+            paint: { 'text-color': '#ffffff', 'text-opacity': 0.5 }
+          });
+
+          // Render Pedestrian Paths (Subtle)
+          this.map.addLayer({
+            id: 'local-pedestrian-line',
+            type: 'line',
+            source: 'tko-pedestrian',
+            minzoom: 14,
             paint: {
-              'text-color': '#ffffff',
-              'text-opacity': 0.5
+              'line-color': '#95a5a6',
+              'line-width': 2,
+              'line-opacity': 0.3,
+              'line-dasharray': [2, 2]
             }
           });
 
-          this.localTracks = data;
-          this.buildLocalGraph(data);
-          console.log('[Nav] Local TKO graph built');
+          this.localTracks = trackData;
+          this.localPedestrian = pedData;
+          this.buildLocalGraph(trackData, pedData);
+          console.log('[Nav] Local TKO weighted graph built');
         } catch (e) {
           console.warn('[Nav] Failed to load local tracks', e);
         }
       },
 
-      buildLocalGraph(geojson) {
+      buildLocalGraph(trackGeojson, pedGeojson) {
         const nodes = new Map();
         const adjacency = new Map();
 
         const getCoordKey = c => `${c[0].toFixed(6)},${c[1].toFixed(6)}`;
 
-        geojson.features.forEach(f => {
-          if (f.geometry.type !== 'LineString') return;
-          const coords = f.geometry.coordinates;
-          for (let i = 0; i < coords.length - 1; i++) {
-            const p1 = coords[i], p2 = coords[i+1];
-            const k1 = getCoordKey(p1), k2 = getCoordKey(p2);
+        const addEdge = (p1, p2, type) => {
+          const k1 = getCoordKey(p1), k2 = getCoordKey(p2);
+          if (!nodes.has(k1)) nodes.set(k1, p1);
+          if (!nodes.has(k2)) nodes.set(k2, p2);
+          if (!adjacency.has(k1)) adjacency.set(k1, []);
+          if (!adjacency.has(k2)) adjacency.set(k2, []);
 
-            if (!nodes.has(k1)) nodes.set(k1, p1);
-            if (!nodes.has(k2)) nodes.set(k2, p2);
-            if (!adjacency.has(k1)) adjacency.set(k1, []);
-            if (!adjacency.has(k2)) adjacency.set(k2, []);
+          const dist = turf.distance(p1, p2);
+          // Weighting: track x1, pedestrian x5
+          const weight = type === 'track' ? dist : dist * 5;
 
-            const dist = turf.distance(p1, p2);
-            adjacency.get(k1).push({ to: k2, dist });
-            adjacency.get(k2).push({ to: k1, dist });
-          }
-        });
+          adjacency.get(k1).push({ to: k2, dist, weight, type });
+          adjacency.get(k2).push({ to: k1, dist, weight, type });
+        };
+
+        const processGeojson = (geojson, type) => {
+          geojson.features.forEach(f => {
+            const processCoords = (coords) => {
+              for (let i = 0; i < coords.length - 1; i++) {
+                addEdge(coords[i], coords[i+1], type);
+              }
+            };
+            if (f.geometry.type === 'LineString') {
+              processCoords(f.geometry.coordinates);
+            } else if (f.geometry.type === 'MultiLineString') {
+              f.geometry.coordinates.forEach(processCoords);
+            }
+          });
+        };
+
+        processGeojson(trackGeojson, 'track');
+        processGeojson(pedGeojson, 'pedestrian');
+
         this.graph = { nodes, adjacency };
       },
 
@@ -651,26 +718,55 @@
           this.map.addSource('parking-spaces', { type: 'geojson', data });
           this.map.addLayer({
             id: 'parking-layer',
-            type: 'symbol',
+            type: 'circle',
             source: 'parking-spaces',
-            layout: {
-              'icon-image': 'bicycle-15',
-              'icon-size': 1.5,
-              'icon-allow-overlap': true,
-              'text-field': ['get', 'PARKING_SPACE'],
-              'text-size': 10,
-              'text-offset': [0, 1.2],
-              'text-anchor': 'top'
-            },
             paint: {
-              'text-color': '#ffffff',
-              'text-halo-color': '#000000',
-              'text-halo-width': 1
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 16, 8],
+              'circle-color': '#3498db',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff'
             }
           });
+
+          // Parking Click Handler
+          this.map.on('click', 'parking-layer', (e) => {
+            const feature = e.features[0];
+            const coords = feature.geometry.coordinates;
+            const count = feature.properties.PARKING_SPACE;
+
+            const html = `
+              <div class="parking-info">
+                <div class="parking-info-title">🚲 單車泊位</div>
+                <div class="parking-info-count">${count}</div>
+                <div class="parking-info-label">可容納數量</div>
+                <button class="btn-park-nav" onclick="NavEngine.setDestination(${coords[0]}, ${coords[1]}, '單車泊位 (${count})')">
+                  <i class="fas fa-route"></i> 導航前往
+                </button>
+              </div>
+            `;
+
+            this.popup = new mapboxgl.Popup({ className: 'parking-popup' })
+              .setLngLat(coords)
+              .setHTML(html)
+              .addTo(this.map);
+          });
+
+          this.map.on('mouseenter', 'parking-layer', () => { this.map.getCanvas().style.cursor = 'pointer'; });
+          this.map.on('mouseleave', 'parking-layer', () => { this.map.getCanvas().style.cursor = ''; });
+
         } catch (e) {
           console.warn('[Nav] Failed to load parking spaces', e);
         }
+      },
+
+      setDestination(lng, lat, name) {
+        this.endLocation = [lng, lat];
+        document.getElementById('input-end').value = name || '所選位置';
+        this.updateMarkers();
+        this.checkReady();
+        if (this.popup) this.popup.remove();
+        // Start planning route immediately
+        this.planRoute();
       },
 
       add3DBuildings() {
@@ -901,6 +997,16 @@
           if (this.isNavigating) this.recenter();
           else this.map.zoomTo(this.navZoom);
         };
+
+        document.getElementById('btn-toggle-park').onclick = () => {
+          if (!this.map.getLayer('parking-layer')) {
+            alert('泊位圖層尚未載入或無權限。');
+            return;
+          }
+          const visible = this.map.getLayoutProperty('parking-layer', 'visibility') !== 'none';
+          this.map.setLayoutProperty('parking-layer', 'visibility', visible ? 'none' : 'visible');
+          document.getElementById('btn-toggle-park').classList.toggle('active', !visible);
+        };
       },
 
       addWaypointInput() {
@@ -1099,16 +1205,36 @@
 
       updateRoadInfo(pos) {
         const point = turf.point(pos);
-        let currentRoad = '單車徑';
+        let currentRoad = '路徑';
+        let isPedestrian = false;
 
-        // Find nearest feature in local tracks to get road name
+        // 1. Identify if we are on a pedestrian segment based on routeData
+        if (this.routeData && this.routeData.coords && this.routeData.segmentTypes) {
+           const line = turf.lineString(this.routeData.coords);
+           const snapped = turf.nearestPointOnLine(line, point);
+           const idx = snapped.properties.index; // index of the segment start point
+           if (this.routeData.segmentTypes && this.routeData.segmentTypes[idx] === 'pedestrian') {
+             isPedestrian = true;
+           }
+        }
+
+        // Find nearest feature in local tracks/pedestrian to get road name
+        let minDist = 0.05; // 50m
         if (this.localTracks) {
-          let minDist = 0.05; // 50m
           this.localTracks.features.forEach(f => {
             const d = turf.pointToLineDistance(point, f);
             if (d < minDist) {
               minDist = d;
-              currentRoad = f.properties.roadName || f.properties.STREETNAME || f.properties.NAME || '單車徑';
+              currentRoad = f.properties.roadName || f.properties.STREETNAME || f.properties.NAME || (isPedestrian ? '行人路' : '單車徑');
+            }
+          });
+        }
+        if (isPedestrian && this.localPedestrian) {
+           this.localPedestrian.features.forEach(f => {
+            const d = turf.pointToLineDistance(point, f);
+            if (d < minDist) {
+              minDist = d;
+              currentRoad = f.properties.StreetNameTC || f.properties.AliasNameTC || '行人路';
             }
           });
         }
@@ -1118,12 +1244,18 @@
         // Destination check
         const dest = this.routeData.coords[this.routeData.coords.length - 1];
         const distToDest = turf.distance(pos, dest) * 1000;
+
         if (distToDest < 50) {
           document.getElementById('next-instruction').textContent = '即將抵達目的地';
           document.getElementById('next-icon').innerHTML = '<i class="fas fa-flag-checkered"></i>';
+        } else if (isPedestrian) {
+          document.getElementById('next-instruction').textContent = '行人路：請下車推行';
+          document.getElementById('next-icon').innerHTML = '<i class="fas fa-walking"></i>';
+          document.getElementById('hud-top').style.background = 'var(--hud-red)';
         } else {
           document.getElementById('next-instruction').textContent = '沿單車徑前行';
           document.getElementById('next-icon').innerHTML = '<i class="fas fa-arrow-up"></i>';
+          document.getElementById('hud-top').style.background = 'var(--hud-highway-green)';
         }
       },
 
@@ -1205,23 +1337,116 @@
         console.log('[Nav] Planning route...');
         const points = [start, ...this.waypoints.filter(w => w.location).map(w => w.location), end];
 
+        // For simplicity, if there are waypoints, we only find one route.
+        // If it's direct start-to-end, we can try to find two options.
+        if (points.length > 2) {
+          const route = await this.getFullPath(points);
+          if (route) {
+            this.useRoute(route);
+            document.getElementById('route-options').style.display = 'none';
+          }
+          return;
+        }
+
+        // Search for multiple routes between start and end
+        const routes = await this.findMultipleRoutes(start, end);
+        if (routes && routes.length > 0) {
+          this.displayRouteOptions(routes);
+          this.useRoute(routes[0]);
+        }
+      },
+
+      async getFullPath(points) {
         let fullPath = [];
         let totalDist = 0;
+        let totalWeight = 0;
+        let allSegmentTypes = [];
 
         for (let i = 0; i < points.length - 1; i++) {
           const segment = await this.getRouteSegment(points[i], points[i+1]);
           if (segment) {
             fullPath = fullPath.concat(i === 0 ? segment.coords : segment.coords.slice(1));
             totalDist += segment.distance;
+            totalWeight += (segment.weight || (segment.distance * 5));
+            allSegmentTypes = allSegmentTypes.concat(segment.segmentTypes || new Array(segment.coords.length - 1).fill('pedestrian'));
           }
         }
+        return fullPath.length > 0 ? { coords: fullPath, distance: totalDist, weight: totalWeight, segmentTypes: allSegmentTypes } : null;
+      },
 
-        if (fullPath.length > 0) {
-          this.routeData = { coords: fullPath, distance: totalDist };
-          this.drawRoute(fullPath);
-          document.getElementById('remain-val').textContent = (totalDist / 1000).toFixed(1);
-          document.getElementById('eta-val').textContent = Math.ceil(totalDist / 1000 / 15 * 60) + 'm';
+      async findMultipleRoutes(p1, p2) {
+        const routes = [];
+        // 1. Primary route (weighted)
+        const primary = await this.getRouteSegment(p1, p2);
+        if (primary) routes.push(primary);
+
+        // 2. Try to find a secondary route by temporarily penalizing the nodes in primary route
+        // This is a bit complex for a simple graph, so we'll just use the primary one
+        // and maybe a Mapbox fallback as alternative if they differ significantly.
+        const mapbox = await this.getMapboxRoute(p1, p2);
+        if (mapbox && Math.abs(mapbox.weight - primary.weight) > 100) {
+           routes.push(mapbox);
         }
+
+        return routes;
+      },
+
+      async getMapboxRoute(p1, p2) {
+        const url = `https://api.mapbox.com/directions/v5/mapbox/cycling/${p1[0]},${p1[1]};${p2[0]},${p2[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+        try {
+          const resp = await fetch(url);
+          const data = await resp.json();
+          if (data.routes && data.routes[0]) {
+            return {
+              coords: data.routes[0].geometry.coordinates,
+              distance: data.routes[0].distance,
+              weight: data.routes[0].distance * 5,
+              segmentTypes: new Array(data.routes[0].geometry.coordinates.length - 1).fill('pedestrian'),
+              isMapbox: true
+            };
+          }
+        } catch (e) {}
+        return null;
+      },
+
+      displayRouteOptions(routes) {
+        const container = document.getElementById('route-options');
+        const list = document.getElementById('route-list');
+        list.innerHTML = '';
+
+        if (routes.length <= 1) {
+          container.style.display = 'none';
+          return;
+        }
+
+        routes.forEach((r, idx) => {
+          const btn = document.createElement('div');
+          btn.style.cssText = 'padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+          const isPed = r.segmentTypes.includes('pedestrian');
+          btn.innerHTML = `
+            <div>
+              <div style="font-weight: bold; color: ${idx === 0 ? 'var(--app-accent)' : '#fff'};">${idx === 0 ? '推薦路線' : '備選路線 ' + idx}</div>
+              <div style="font-size: 12px; opacity: 0.6;">${(r.distance / 1000).toFixed(1)} km ${isPed ? ' | 含行人路' : ''}</div>
+            </div>
+            <i class="fas fa-chevron-right" style="opacity: 0.3;"></i>
+          `;
+          btn.onclick = () => {
+             this.useRoute(r);
+             Array.from(list.children).forEach(c => c.style.borderColor = 'rgba(255,255,255,0.1)');
+             btn.style.borderColor = 'var(--app-accent)';
+          };
+          if (idx === 0) btn.style.borderColor = 'var(--app-accent)';
+          list.appendChild(btn);
+        });
+
+        container.style.display = 'block';
+      },
+
+      useRoute(route) {
+        this.routeData = route;
+        this.drawRoute(route.coords, route.segmentTypes);
+        document.getElementById('remain-val').textContent = (route.distance / 1000).toFixed(1);
+        document.getElementById('eta-val').textContent = Math.ceil(route.distance / 1000 / 15 * 60) + 'm';
       },
 
       async getRouteSegment(p1, p2) {
@@ -1241,7 +1466,9 @@
           if (data.routes && data.routes[0]) {
             return {
               coords: data.routes[0].geometry.coordinates,
-              distance: data.routes[0].distance
+              distance: data.routes[0].distance,
+              weight: data.routes[0].distance * 5,
+              segmentTypes: new Array(data.routes[0].geometry.coordinates.length - 1).fill('pedestrian')
             };
           }
         } catch (e) {
@@ -1254,7 +1481,7 @@
         if (!this.graph) return null;
 
         const snap = (p) => {
-          let best = null, minDist = 1.0; // 1km snap radius to find cycle tracks more aggressively
+          let best = null, minDist = 0.5; // 500m snap
           this.graph.nodes.forEach((coord, key) => {
             const d = turf.distance(p, coord);
             if (d < minDist) { minDist = d; best = key; }
@@ -1265,21 +1492,22 @@
         const startKey = snap(p1), endKey = snap(p2);
         if (!startKey || !endKey) return null;
 
-        // Simple A* / Dijkstra
-        const dists = new Map(), prevs = new Map(), pq = new Set([startKey]);
+        const weights = new Map(), dists = new Map(), prevs = new Map(), pq = new Set([startKey]);
+        weights.set(startKey, 0);
         dists.set(startKey, 0);
 
         while (pq.size > 0) {
-          let curr = null, minD = Infinity;
-          pq.forEach(k => { if (dists.get(k) < minD) { minD = dists.get(k); curr = k; } });
+          let curr = null, minW = Infinity;
+          pq.forEach(k => { if (weights.get(k) < minW) { minW = weights.get(k); curr = k; } });
           if (!curr || curr === endKey) break;
           pq.delete(curr);
 
           (this.graph.adjacency.get(curr) || []).forEach(edge => {
-            const newDist = dists.get(curr) + edge.dist;
-            if (!dists.has(edge.to) || newDist < dists.get(edge.to)) {
-              dists.set(edge.to, newDist);
-              prevs.set(edge.to, curr);
+            const newWeight = weights.get(curr) + edge.weight;
+            if (!weights.has(edge.to) || newWeight < weights.get(edge.to)) {
+              weights.set(edge.to, newWeight);
+              dists.set(edge.to, dists.get(curr) + edge.dist);
+              prevs.set(edge.to, { from: curr, type: edge.type });
               pq.add(edge.to);
             }
           });
@@ -1287,28 +1515,48 @@
 
         if (!prevs.has(endKey)) return null;
 
-        const path = [];
-        let curr = endKey;
-        while (curr) { path.unshift(this.graph.nodes.get(curr)); curr = prevs.get(curr); }
+        const coords = [];
+        const segmentTypes = [];
+        let currKey = endKey;
+        while (currKey) {
+          coords.unshift(this.graph.nodes.get(currKey));
+          const prev = prevs.get(currKey);
+          if (prev) {
+            segmentTypes.unshift(prev.type);
+            currKey = prev.from;
+          } else { currKey = null; }
+        }
 
-        // Add connection to actual p1 and p2 to prioritize staying on cycle track graph
         let totalD = dists.get(endKey) * 1000;
-        if (turf.distance(p1, path[0]) > 0.001) {
-          const dStart = turf.distance(p1, path[0]) * 1000;
-          totalD += dStart;
-          path.unshift(p1);
+        let totalW = weights.get(endKey) * 1000;
+
+        // Add connection to actual p1 and p2
+        if (turf.distance(p1, coords[0]) > 0.0001) {
+          const d = turf.distance(p1, coords[0]);
+          totalD += d * 1000; totalW += d * 5000;
+          coords.unshift(p1); segmentTypes.unshift('pedestrian');
         }
-        if (turf.distance(p2, path[path.length-1]) > 0.001) {
-          const dEnd = turf.distance(p2, path[path.length-1]) * 1000;
-          totalD += dEnd;
-          path.push(p2);
+        if (turf.distance(p2, coords[coords.length - 1]) > 0.0001) {
+          const d = turf.distance(p2, coords[coords.length - 1]);
+          totalD += d * 1000; totalW += d * 5000;
+          coords.push(p2); segmentTypes.push('pedestrian');
         }
 
-        return { coords: path, distance: totalD };
+        return { coords, distance: totalD, weight: totalW, segmentTypes };
       },
 
-      drawRoute(coords) {
-        const geojson = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } };
+      drawRoute(coords, types) {
+        // Create a FeatureCollection where each segment can have its own type
+        const features = [];
+        for (let i = 0; i < coords.length - 1; i++) {
+          features.push({
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: [coords[i], coords[i+1]] },
+            properties: { type: (types && types[i]) || 'track' }
+          });
+        }
+        const geojson = { type: 'FeatureCollection', features };
+
         if (this.map.getSource('route')) {
           this.map.getSource('route').setData(geojson);
         } else {
@@ -1322,7 +1570,7 @@
             type: 'line',
             source: 'route',
             paint: {
-              'line-color': '#1a1a1a',
+              'line-color': ['match', ['get', 'type'], 'pedestrian', '#2c3e50', '#1a1a1a'],
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 24],
               'line-opacity': 0.9,
               'line-cap': 'round',
@@ -1330,13 +1578,13 @@
             }
           });
 
-          // 2. Green Surface (Mid)
+          // 2. Surface (Mid)
           this.map.addLayer({
             id: 'route-line-green',
             type: 'line',
             source: 'route',
             paint: {
-              'line-color': '#2ecc71',
+              'line-color': ['match', ['get', 'type'], 'pedestrian', '#e67e22', '#2ecc71'],
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 14],
               'line-opacity': 0.8,
               'line-cap': 'round',
@@ -1366,7 +1614,7 @@
             layout: {
               'symbol-placement': 'line',
               'symbol-spacing': 50,
-              'text-field': '🚲',
+              'text-field': ['match', ['get', 'type'], 'pedestrian', '🚶', '🚲'],
               'text-size': ['interpolate', ['linear'], ['zoom'], 14, 12, 18, 32],
               'text-pitch-alignment': 'map',
               'text-rotation-alignment': 'map',
@@ -1387,7 +1635,7 @@
             type: 'line',
             source: 'route',
             paint: {
-              'line-color': '#2ecc71',
+              'line-color': ['match', ['get', 'type'], 'pedestrian', '#e67e22', '#2ecc71'],
               'line-width': 30,
               'line-opacity': 0.15,
               'line-blur': 15
