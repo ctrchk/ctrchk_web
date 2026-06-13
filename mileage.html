@@ -23,10 +23,18 @@
         .ml-stat { background: var(--app-bg-card, rgba(255,255,255,0.04)); border:1px solid var(--app-border, rgba(255,255,255,0.08)); border-radius: 12px; padding: 0.7em; }
         .ml-stat .k { font-size: 0.76em; color: var(--app-text-secondary, #a7c1aa); }
         .ml-stat .v { font-size: 1.15em; font-weight: 800; margin-top: 0.2em; color: var(--app-text-primary, #e8f3e9); }
-        .ml-progress { margin-top: 0.8em; }
-        .ml-progress-bar { height: 12px; border-radius: 999px; background: var(--app-bg-primary, #132018); overflow: hidden; border:1px solid var(--app-border, #2f4b36); }
-        .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6dba65, var(--app-accent, #BFE340)); }
-        .ml-progress-label { font-size: 0.78em; margin-top: 0.35em; color: var(--app-text-secondary, #a7c1aa); }
+        .ml-progress-group { margin-top: 1.2em; display: flex; flex-direction: column; gap: 1em; }
+        .ml-progress-item { }
+        .ml-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4em; }
+        .ml-progress-title { font-size: 0.82em; font-weight: 700; color: var(--app-text-primary); }
+        .ml-progress-val { font-size: 0.78em; color: var(--app-accent); font-weight: 800; }
+        .ml-progress-bar { height: 10px; border-radius: 999px; background: var(--app-bg-primary, #132018); overflow: hidden; border:1px solid var(--app-border, #2f4b36); position: relative; }
+        .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6dba65, var(--app-accent, #BFE340)); transition: width 1s ease-out; }
+        .ml-progress-fill.warning { background: linear-gradient(90deg, #f1c40f, #e67e22); }
+        .ml-progress-fill.danger { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .ml-progress-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.3); z-index: 2; }
+        .ml-progress-label { font-size: 0.72em; margin-top: 0.35em; color: var(--app-text-secondary, #a7c1aa); display: block; }
+
         .ml-section-title { margin:1.15em 0 0.35em; font-size:1em; color: var(--app-accent, #BFE340); }
         .ml-section-desc { margin: 0 0 0.8em; color: var(--app-text-secondary, #9cb29e); font-size:0.82em; line-height:1.55; }
         .ml-benefits-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.7em; margin-top:0.3em; }
@@ -127,9 +135,27 @@
                 <div class="ml-stat"><div class="k">近 365 天里程</div><div class="v" id="ml-km">0.0 km</div></div>
                 <div class="ml-stat"><div class="k">騎行次數</div><div class="v" id="ml-rides">0</div></div>
             </div>
-            <div class="ml-progress">
-                <div class="ml-progress-bar"><div class="ml-progress-fill" id="ml-progress-fill"></div></div>
-                <div class="ml-progress-label" id="ml-progress-label">完成騎行後會自動更新里程進度</div>
+            <div class="ml-progress-group">
+                <div class="ml-progress-item">
+                    <div class="ml-progress-header">
+                        <span class="ml-progress-title">卡級升級/保級進度</span>
+                        <span class="ml-progress-val" id="ml-progress-val-rank">0%</span>
+                    </div>
+                    <div class="ml-progress-bar">
+                        <div class="ml-progress-fill" id="ml-progress-fill-rank"></div>
+                    </div>
+                    <span class="ml-progress-label" id="ml-progress-label-rank">載入中...</span>
+                </div>
+                <div class="ml-progress-item">
+                    <div class="ml-progress-header">
+                        <span class="ml-progress-title">里程過期壓力測試 (近 30 天)</span>
+                        <span class="ml-progress-val" id="ml-progress-val-expiry">0%</span>
+                    </div>
+                    <div class="ml-progress-bar">
+                        <div class="ml-progress-fill" id="ml-progress-fill-expiry"></div>
+                    </div>
+                    <span class="ml-progress-label" id="ml-progress-label-expiry">顯示即將過期的里程比例</span>
+                </div>
             </div>
         </section>
 
@@ -144,7 +170,7 @@
             <a class="ml-action" href="/weather"><i class="fas fa-cloud-sun"></i> 查看天氣資訊</a>
         </section>
         <p class="ml-note">
-            里程卡依近 365 天騎行總里程計算：銅卡 0–499.9 km、銀卡 500–1999.9 km、金卡 2000 km 以上。金卡保級線為 1500 km，銀卡保級線為 400 km。
+            里程卡依近 365 天滾動總里程計算：銅卡 0–149.9 km、銀卡 150–499.9 km、金卡 500 km 以上。金卡保級線為 400 km，銀卡保級線為 120 km。里程採 365 天滾動制，每日會自動扣除一年前的里程。
         </p>
     </main>
     <footer><p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p></footer>
@@ -197,7 +223,7 @@
                     const km = Number(user.mileage_rolling_km || user.mileage_km_365 || 0);
                     const rides = Number(user.total_rides || 0);
                     const card = user.mileage_card || '銅卡';
-                    renderMileage(card, km, rides);
+                    renderMileage(card, km, rides, []); // Will be updated by histResp
                 }
             }
             const histResp = await fetch('/api/getHistory', { headers: { Authorization: 'Bearer ' + token } });
@@ -207,34 +233,81 @@
                 const history = Array.isArray(data.history) ? data.history : [];
                 const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
                 const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
-                renderMileage(card, km, history.length);
+                renderMileage(card, km, history.length, history);
             }
         } catch (_) {}
     })();
 
-    function renderMileage(card, km, rides) {
+    function renderMileage(card, km, rides, history = []) {
         const cardEl = document.getElementById('ml-card');
         const kmEl = document.getElementById('ml-km');
         const ridesEl = document.getElementById('ml-rides');
-        const fill = document.getElementById('ml-progress-fill');
-        const label = document.getElementById('ml-progress-label');
+
+        const fillRank = document.getElementById('ml-progress-fill-rank');
+        const labelRank = document.getElementById('ml-progress-label-rank');
+        const valRank = document.getElementById('ml-progress-val-rank');
+
+        const fillExpiry = document.getElementById('ml-progress-fill-expiry');
+        const labelExpiry = document.getElementById('ml-progress-label-expiry');
+        const valExpiry = document.getElementById('ml-progress-val-expiry');
+
         cardEl.textContent = card || '銅卡';
         kmEl.textContent = (Number(km || 0)).toFixed(1) + ' km';
         ridesEl.textContent = Number(rides || 0).toLocaleString();
+
         const v = Number(km || 0);
-        let pct = 0;
-        let msg = '距離銀卡還有 ' + Math.max(0, 500 - v).toFixed(1) + ' km';
-        if (v >= 2000) {
-            pct = 100;
-            msg = '已達金卡，維持 1500 km 可保級';
-        } else if (v >= 500) {
-            pct = Math.max(5, Math.min(100, ((v - 500) / 1500) * 100));
-            msg = '距離金卡還有 ' + Math.max(0, 2000 - v).toFixed(1) + ' km';
+        let pctRank = 0;
+        let msgRank = '';
+
+        // Thresholds
+        const SILVER_THRESHOLD = 150;
+        const GOLD_THRESHOLD = 500;
+        const SILVER_MAINTAIN = 120;
+        const GOLD_MAINTAIN = 400;
+
+        if (v >= GOLD_THRESHOLD) {
+            pctRank = 100;
+            msgRank = `已達金卡 (保級線: ${GOLD_MAINTAIN} km)`;
+        } else if (v >= SILVER_THRESHOLD) {
+            // Progress towards Gold (from 150 to 500)
+            pctRank = ((v - SILVER_THRESHOLD) / (GOLD_THRESHOLD - SILVER_THRESHOLD)) * 100;
+            msgRank = `距離金卡還有 ${Math.max(0, GOLD_THRESHOLD - v).toFixed(1)} km`;
         } else {
-            pct = Math.max(3, (v / 500) * 100);
+            // Progress towards Silver (from 0 to 150)
+            pctRank = (v / SILVER_THRESHOLD) * 100;
+            msgRank = `距離銀卡還有 ${Math.max(0, SILVER_THRESHOLD - v).toFixed(1)} km`;
         }
-        fill.style.width = pct.toFixed(1) + '%';
-        label.textContent = msg;
+
+        fillRank.style.width = Math.min(100, Math.max(3, pctRank)).toFixed(1) + '%';
+        valRank.textContent = Math.round(pctRank) + '%';
+        labelRank.textContent = msgRank;
+
+        // Expiry logic: calculate km from rides more than 335 days old (expiring in 30 days)
+        if (history && history.length > 0) {
+            const now = new Date();
+            const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86400000);
+            const oneYearAgo = new Date(now.getTime() - 365 * 86400000);
+            const expiringSoonDate = new Date(now.getTime() - (365 - 30) * 86400000); // Rides older than this will expire in 30 days
+
+            let expiringKm = 0;
+            history.forEach(h => {
+                const rDate = new Date(h.date || h.ride_date);
+                if (rDate > oneYearAgo && rDate <= expiringSoonDate) {
+                    expiringKm += Number(h.distance_km || 0);
+                }
+            });
+
+            const pctExpiry = v > 0 ? (expiringKm / v) * 100 : 0;
+            fillExpiry.style.width = Math.min(100, pctExpiry).toFixed(1) + '%';
+            valExpiry.textContent = Math.round(pctExpiry) + '%';
+            labelExpiry.textContent = `未來 30 天內將有 ${expiringKm.toFixed(1)} km 里程過期`;
+
+            if (pctExpiry > 50) fillExpiry.classList.add('danger');
+            else if (pctExpiry > 20) fillExpiry.classList.add('warning');
+            else fillExpiry.classList.remove('warning', 'danger');
+        } else {
+            labelExpiry.textContent = '暫無騎行紀錄可分析過期里程';
+        }
     }
     </script>
 </body>

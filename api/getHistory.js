@@ -27,10 +27,10 @@ function normalizeRideMode(mode) {
 function calcMileageRank(rollingKm, previousRank) {
   const km = Number(rollingKm || 0);
   const prev = String(previousRank || 'bronze').toLowerCase();
-  if (km >= 2000) return 'gold';
-  if (prev === 'gold' && km >= 1500) return 'gold';
-  if (km >= 500) return 'silver';
-  if (prev === 'silver' && km >= 400) return 'silver';
+  if (km >= 500) return 'gold';
+  if (prev === 'gold' && km >= 400) return 'gold';
+  if (km >= 150) return 'silver';
+  if (prev === 'silver' && km >= 120) return 'silver';
   return 'bronze';
 }
 

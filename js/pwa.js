@@ -15,7 +15,7 @@
     { id: 4, key: 'poster_basic', rank: 'bronze', label: '騎行戰績海報（標準版）' },
     { id: 5, key: 'discord_basic', rank: 'bronze', label: 'Discord 基礎頻道訪問權' },
     { id: 6, key: 'reward_variable', rank: 'bronze', label: '騎行完成隨機獎勵（XP/里程幣）' },
-    { id: 7, key: 'map_cycparkspace', rank: 'silver', label: 'CYCPARKSPACE 單車泊位圖層' },
+    { id: 7, key: 'map_cycparkspace', rank: 'bronze', label: 'CYCPARKSPACE 單車泊位圖層' },
     { id: 8, key: 'theme_silver', rank: 'silver', label: '銀卡專屬介面主題' },
     { id: 9, key: 'nav_multistop', rank: 'silver', label: '多站點自訂路線規劃（最多 5 站）' },
     { id: 10, key: 'weather_heavy_rain_alert', rank: 'silver', label: '惡劣天氣提醒（規劃中）' },
