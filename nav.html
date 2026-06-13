@@ -711,7 +711,10 @@
       },
 
       async loadParkingSpaces() {
-        if (!window.hasPermission('map_cycparkspace')) return;
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isSenior = user.user_role === 'senior' || user.user_role === 'admin';
+        if (!window.hasPermission('map_cycparkspace') && !isSenior) return;
+
         try {
           const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
           const data = await resp.json();
@@ -721,12 +724,12 @@
             type: 'circle',
             source: 'parking-spaces',
             paint: {
-              'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 16, 8],
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 2, 16, 5],
               'circle-color': '#3498db',
-              'circle-stroke-width': 2,
+              'circle-stroke-width': 1,
               'circle-stroke-color': '#ffffff'
             }
-          });
+          }, 'route-symbols'); // Place above route but below instructions
 
           // Parking Click Handler
           this.map.on('click', 'parking-layer', (e) => {
