@@ -13,7 +13,30 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>香港城市運輸單車 - 網誌</title>
+
+    <!-- SEO Meta Tags -->
+    <title>單車網誌 | 香港城市運輸單車 (CTRC HK) - 分享騎行故事與技巧</title>
+    <meta name="description" content="瀏覽香港城市運輸單車 (CTRC HK) 的官方網誌，獲取最新的單車路線故事、維修保養教學、城市騎行貼士及社群動態。">
+    <meta name="keywords" content="單車網誌, 騎行故事, 單車教學, 香港單車新聞, 單車維修, CTRC HK 文章, 將軍澳單車故事">
+    <link rel="canonical" href="https://ctrchk.com/blog">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ctrchk.com/blog">
+    <meta property="og:title" content="單車網誌 - 香港城市運輸單車 (CTRC HK)">
+    <meta property="og:description" content="分享關於城市單車、路線故事與最新動態。立即閱讀，探索單車生活的無限可能。">
+    <meta property="og:image" content="https://ctrchk.com/images/blog-welcome-banner.jpg">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "香港城市運輸單車官方網誌",
+      "description": "分享香港城市騎行心得、路線介紹與單車知識。",
+      "url": "https://ctrchk.com/blog"
+    }
+    </script>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -272,7 +295,15 @@
                 const resp = await fetch('/api/blog');
                 if (!resp.ok) throw new Error('載入失敗');
                 const data = await resp.json();
-                const posts = data.posts || [];
+                let posts = data.posts || [];
+
+                // Merge with hardcoded posts from window.blogPosts if available
+                if (window.blogPosts && Array.isArray(window.blogPosts)) {
+                    // Avoid duplicates by ID
+                    const existingIds = new Set(posts.map(p => String(p.id)));
+                    const hardcodedPosts = window.blogPosts.filter(p => !existingIds.has(String(p.id)));
+                    posts = [...hardcodedPosts, ...posts];
+                }
 
                 if (posts.length === 0) {
                     container.innerHTML = '<p style="text-align:center;">目前還沒有文章。</p>';
@@ -283,16 +314,16 @@
                 posts.forEach(post => {
                     const postElement = document.createElement('article');
                     postElement.className = 'blog-post-summary animated-element';
-                    const imgHtml = post.image_url
-                        ? `<div class="post-summary-image"><a href="/blog_post?id=${post.id}"><img src="${escHtml(post.image_url)}" alt="${escHtml(post.title)}"></a></div>`
+                    const imgHtml = (post.image_url || post.image)
+                        ? `<div class="post-summary-image"><a href="/blog_post?id=${post.id}"><img src="${escHtml(post.image_url || post.image)}" alt="${escHtml(post.title)}"></a></div>`
                         : '';
                     postElement.innerHTML = `
                         ${imgHtml}
                         <div class="post-summary-content">
                             <h2><a href="/blog_post?id=${post.id}">${escHtml(post.title)}</a></h2>
                             <div class="post-meta-summary">
-                                <span><i class="fas fa-user"></i> ${escHtml(post.author_name || '管理員')}</span>
-                                <span><i class="fas fa-calendar-alt"></i> ${new Date(post.created_at).toLocaleDateString('zh-HK')}</span>
+                                <span><i class="fas fa-user"></i> ${escHtml(post.author_name || post.author || '管理員')}</span>
+                                <span><i class="fas fa-calendar-alt"></i> ${new Date(post.created_at || post.date).toLocaleDateString('zh-HK')}</span>
                             </div>
                             <p class="post-excerpt">${escHtml(post.summary || '')}</p>
                             <a href="/blog_post?id=${post.id}" class="read-more-link">閱讀更多 &rarr;</a>
@@ -301,9 +332,10 @@
                     container.appendChild(postElement);
                 });
 
-                if (typeof initAnimatedElements === 'function') initAnimatedElements();
+                if (window.initAnimatedElements) window.initAnimatedElements();
             } catch (err) {
                 container.innerHTML = `<p style="text-align:center; color:#e74c3c;">載入文章失敗：${err.message}</p>`;
+                console.error('loadPosts error:', err);
             }
         }
 
