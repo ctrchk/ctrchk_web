@@ -297,8 +297,11 @@ document.addEventListener('DOMContentLoaded', function() {
             id: 'welcome-post', // 給文章一個獨特的 ID (不要用純數字開頭)
             title: '歡迎來到城市運輸單車網誌！',
             author: 'CTRC HK 團隊',
+            author_name: 'CTRC HK 團隊', // Normalization for API compatibility
             date: '2025年10月21日', // 你可以修改日期
-            image: 'images/blog/blog-welcome-banner.jpg', // 【新】文章預覽圖 (你需要準備一張圖片)
+            created_at: '2025-10-21T00:00:00.000Z', // API compatibility
+            image: 'images/blog/blog-welcome-banner.jpg', // 【新】文章預覽圖
+            image_url: 'images/blog/blog-welcome-banner.jpg', // API compatibility
             summary: '你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往...', // 文章摘要
             content: `
                 <p>你好！歡迎踏入香港城市運輸單車 (CTRC HK) 的網誌空間。我們創立這個平台的初衷，源於對單車的熱愛，以及對更環保、更健康城市生活的嚮往。</p>
@@ -309,12 +312,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <li><strong>城市觀察：</strong> 分享我們對香港單車文化、基建發展的觀察與思考。</li>
                     <li><strong>最新動態：</strong> 關於 城市運輸單車的最新消息、活動預告等。</li>
                 </ul>
-                <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發和實用的資訊。</p>
+                <p>我們相信，單車不僅是一種交通工具，更是一種生活態度，一種連結城市與自然的媒介。無論你是經驗豐富的騎手，還是剛對單車產生興趣的新手，我們都希望這個網誌能為你帶來啟發與實用的資訊。</p>
                 <p>準備好和我們一起，用兩個輪子探索香港的無限可能了嗎？敬請期待我們的第一篇正式文章！</p>
                 <p>如果你有任何想看的主題或建議，歡迎隨時<a href="/contact">聯絡我們</a>。</p>
             ` // 完整的文章 HTML 內容
         }
     ];
+    window.blogPosts = blogPosts;
 
     // =========================================================================
     // 全站共用函式 (你原有的程式碼)
@@ -361,6 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
         initLangSwitcher();
         // ***************************
     }
+    window.loadSharedComponents = loadSharedComponents;
 
     /**
      * 初始化語言切換下拉選單（點擊地球圖示展開）
@@ -469,6 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
             animatedElements.forEach(el => el.classList.add('is-visible'));
         }
     }
+    window.initAnimatedElements = initAnimatedElements;
 
     // =========================================================================
     // Blog 頁面處理函式 (你原有的程式碼)
