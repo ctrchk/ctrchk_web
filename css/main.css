@@ -908,14 +908,31 @@ body.app-light-theme {
 }
 /* ── PWA SPA Containers ── */
 #pwa-shell {
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 .pwa-page-container {
     display: none;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--app-bg-primary);
 }
 .pwa-page-container.active {
     display: block !important;
+}
+
+/* Body constraints for PWA shell */
+body.is-pwa {
+    overflow: hidden !important;
+    height: 100% !important;
+    position: fixed;
+    width: 100%;
 }
 
 #app-bottom-nav {

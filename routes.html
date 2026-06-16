@@ -1328,10 +1328,12 @@ document.addEventListener('DOMContentLoaded', () => {
         startBtn.addEventListener('click', () => {
             if (!selectedRouteId) return;
             if (!isLoggedIn) {
-                window.location.href = '/login';
+                if (window.navigateTo) window.navigateTo('/login');
+                else window.location.href = '/login';
                 return;
             }
-            window.location.href = `/ride?id=${selectedRouteId}&dir=${selectedDirIndex}`;
+            if (window.navigateTo) window.navigateTo(`/ride?id=${selectedRouteId}&dir=${selectedDirIndex}`);
+            else window.location.href = `/ride?id=${selectedRouteId}&dir=${selectedDirIndex}`;
         });
     }
 
@@ -1897,12 +1899,18 @@ window.addEventListener('popstate', (e) => {
 
 window.addEventListener('pwa-page-show', (e) => {
     if (e.detail.path === '/routes' && map) {
-        setTimeout(() => map.invalidateSize(), 50);
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 50);
     }
 });
 
-if (document.readyState !== 'loading') initAppRidePage();
-else document.addEventListener('DOMContentLoaded', initAppRidePage);
+if (window.isSPA && window.isSPA()) {
+    window.onPWAReady(initAppRidePage);
+} else {
+    if (document.readyState !== 'loading') initAppRidePage();
+    else document.addEventListener('DOMContentLoaded', initAppRidePage);
+}
 
 // Re-run after PWA class is confirmed (pwa.js sets body.is-pwa on DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {

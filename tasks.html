@@ -1671,7 +1671,7 @@
     });
 
     // ── Init ──────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', async () => {
+    window.onPWAReady(async () => {
         // Render immediately from local cache so the page is usable right away
         updateHero();
         renderCheckin();
