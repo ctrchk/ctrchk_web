@@ -593,10 +593,7 @@
         // 頁面守衛：在渲染前確認已登入
         (function checkAuth() {
             if (!localStorage.getItem('accessToken')) {
-                if (window.isSPA && window.isSPA()) {
-                    console.warn('[SPA] Auth failed for dashboard, but skipping redirect to prevent shell hijacking.');
-                    return;
-                }
+                if (window.isSPA && window.isSPA()) return;
                 window.location.replace('/login');
                 throw new Error('未授權訪問');
             }
@@ -1231,7 +1228,11 @@
     }
 
     // ── Main init ─────────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', async function () {
+    let _dbInited = false;
+    async function initDashboard() {
+        if (_dbInited && !(window.isSPA && window.isSPA())) return;
+        _dbInited = true;
+
         renderFromCache();
         try {
             var user;
@@ -1302,6 +1303,14 @@
 
         } catch (e) {
             console.error('儀表板初始化失敗:', e);
+        }
+    }
+
+    window.onPWAReady(initDashboard);
+
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/dashboard') {
+            initDashboard();
         }
     });
 

@@ -358,7 +358,6 @@
   };
 
   function initPWAShell() {
-    console.log('[PWA-SPA] initPWAShell. isStandalone:', isStandalone, 'active:', window.PWA_ROUTER_ACTIVE);
     if (!isStandalone || window.PWA_ROUTER_ACTIVE) return;
     window.PWA_ROUTER_ACTIVE = true;
 
@@ -521,22 +520,48 @@
         });
 
         const scripts = doc.querySelectorAll('script');
-        scripts.forEach(oldScript => {
+        // Use a sequence to load external scripts before inline scripts
+        const scriptPromises = [];
+
+        for (const oldScript of scripts) {
           if (oldScript.src) {
-              if (/main\.js|pwa\.js|leaflet\.js|mapbox-gl\.js/.test(oldScript.src)) return;
-              const newScript = document.createElement('script');
-              newScript.src = oldScript.src;
-              newScript.async = false;
-              document.body.appendChild(newScript);
+              // Only exclude pwa.js and main.js as they are already loaded globally
+              if (oldScript.src.includes('pwa.js') || oldScript.src.includes('main.js')) {
+                  console.log('[PWA-SPA] Skipping global script:', oldScript.src);
+                  continue;
+              }
+
+              // Prevent duplicate library loading (e.g. leaflet, mapbox)
+              const filename = oldScript.src.split('/').pop();
+              if (document.querySelector(`script[src*="${filename}"]`)) {
+                  console.log('[PWA-SPA] Script already exists, skipping:', filename);
+                  continue;
+              }
+
+              const promise = new Promise((resolve) => {
+                  const newScript = document.createElement('script');
+                  newScript.src = oldScript.src;
+                  newScript.async = false;
+                  newScript.onload = resolve;
+                  newScript.onerror = resolve;
+                  document.head.appendChild(newScript);
+              });
+              scriptPromises.append ? scriptPromises.push(promise) : scriptPromises.push(promise);
           } else {
-              let code = oldScript.textContent;
-              // Replace DOMContentLoaded with PWA readiness helper
-              code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
-              const newScript = document.createElement('script');
-              newScript.textContent = code;
-              document.body.appendChild(newScript);
+              // For inline scripts, wait for external ones first
+              (async () => {
+                  await Promise.all(scriptPromises);
+                  let code = oldScript.textContent;
+                  // Replace DOMContentLoaded and window.onload with PWA readiness helper
+                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
+                  code = code.replace(/window\.addEventListener\(['"]load['"]\s*,\s*/g, 'window.onPWAReady(');
+
+                  const newScript = document.createElement('script');
+                  newScript.textContent = code;
+                  document.body.appendChild(newScript);
+              })();
           }
-        });
+        }
 
         return container;
       }
@@ -579,6 +604,13 @@
     }
     // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();
+  });
+
+  // Re-init shell on pageshow to handle potential history state issues
+  window.addEventListener('pageshow', (e) => {
+      if (isStandalone && !window.PWA_ROUTER_ACTIVE) {
+          initPWAShell();
+      }
   });
   window.addEventListener('pageshow', refreshMembershipTheme);
   window.addEventListener('storage', (event) => {

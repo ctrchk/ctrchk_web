@@ -1912,6 +1912,12 @@ if (window.isSPA && window.isSPA()) {
     else document.addEventListener('DOMContentLoaded', initAppRidePage);
 }
 
+window.addEventListener('pwa-page-show', (e) => {
+    if (e.detail.path === '/routes') {
+        initAppRidePage();
+    }
+});
+
 // Re-run after PWA class is confirmed (pwa.js sets body.is-pwa on DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('app-dept-close-btn');
