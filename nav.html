@@ -151,6 +151,38 @@
     }
     body.is-navigating .btn-exit-nav { display: block; }
 
+    .btn-pause-nav {
+      background: #f1c232 !important;
+      color: #000 !important;
+      border: 1px solid rgba(0,0,0,0.1);
+      padding: 8px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+      pointer-events: auto;
+      margin-bottom: 8px;
+    }
+    body.is-navigating .btn-pause-nav { display: block; }
+
+    #resume-panel {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 8px);
+      left: 16px;
+      right: 16px;
+      background: rgba(18, 31, 20, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 16px;
+      border-radius: 16px;
+      z-index: 2000;
+      display: none;
+      border: 1px solid #6dba65;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      color: #fff;
+    }
+
     /* --- Summary Modal --- */
     #summary-modal {
       position: fixed;
@@ -415,6 +447,24 @@
     <div style="color: #6dba65; font-weight: bold; font-size: 18px;">系統初始化中...</div>
   </div>
 
+  <!-- Resume Modal -->
+  <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--hud-bg); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
+      <div style="font-size:48px; margin-bottom:16px;">🚲</div>
+      <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
+      <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
+          <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="map"></div>
 
   <!-- Industrial HUD -->
@@ -449,6 +499,7 @@
     </div>
 
     <div class="hud-bottom">
+      <button class="btn-pause-nav" id="btn-pause-nav">暫停行程</button>
       <button class="btn-exit-nav" id="btn-exit-nav">退出</button>
       <button class="btn-end-nav" id="btn-end-nav">結束騎行</button>
     </div>
@@ -533,6 +584,7 @@
 
   <!-- Floating Map Controls -->
   <div class="floating-controls">
+    <button class="float-btn" id="btn-open-resume" style="display:none; background:#BFE340; color:#1a252f; border-color:#BFE340;" title="未完成行程"><i class="fas fa-history"></i></button>
     <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
     <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
     <button class="float-btn active" id="btn-toggle-park" title="顯示/隱藏泊位"><i class="fas fa-parking"></i></button>
@@ -595,6 +647,74 @@
 
         this.setupUI();
         this.requestLocation();
+        this.checkActiveRide();
+      },
+
+      async checkActiveRide() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        try {
+          const res = await fetch('/api/user?action=active-ride', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data && data.state) {
+            this.activeRideState = data.state;
+            const openBtn = document.getElementById('btn-open-resume');
+            openBtn.style.display = 'flex';
+            openBtn.onclick = () => {
+               document.getElementById('resume-modal').style.display = 'flex';
+               document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
+            };
+
+            // Auto open modal on load
+            document.getElementById('resume-modal').style.display = 'flex';
+            document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
+
+            document.getElementById('btn-resume-yes').onclick = () => this.resumeRide(data.state);
+            document.getElementById('btn-resume-cancel').onclick = () => {
+               document.getElementById('resume-modal').style.display = 'none';
+            };
+            document.getElementById('btn-resume-delete').onclick = async () => {
+              if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
+              await fetch('/api/user?action=active-ride', {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              document.getElementById('resume-modal').style.display = 'none';
+              document.getElementById('btn-open-resume').style.display = 'none';
+            };
+          }
+        } catch (e) {
+          console.warn('[Nav] Failed to check active ride', e);
+        }
+      },
+
+      resumeRide(state) {
+        console.log('[Nav] Resuming ride', state);
+        this.routeData = state.routeData;
+        this.trackingCoords = state.trackingCoords || [];
+        this.navStartTime = state.navStartTime;
+        this.endLocation = state.endLocation;
+
+        // Restore Waypoints
+        this.waypoints = (state.waypoints || []).map(wp => {
+           return { id: wp.id, location: wp.location, marker: null };
+        });
+
+        document.getElementById('input-end').value = state.endLocationName || '';
+        document.getElementById('resume-modal').style.display = 'none';
+        document.getElementById('btn-open-resume').style.display = 'none';
+
+        // Render restored route
+        if (this.routeData) {
+          this.drawRoute(this.routeData.coords, this.routeData.segmentTypes);
+        }
+        this.updateMarkers();
+
+        // Start navigation in resuming mode
+        this.startNavigation({ isResuming: true });
       },
 
       async onMapLoad() {
@@ -985,6 +1105,7 @@
         document.getElementById('btn-start-nav').onclick = () => this.startNavigation();
         document.getElementById('btn-end-nav').onclick = () => this.endNavigation();
         document.getElementById('btn-exit-nav').onclick = () => this.exitNavigation();
+        document.getElementById('btn-pause-nav').onclick = () => this.pauseNavigation();
         document.getElementById('btn-recenter').onclick = () => {
           this.isFollowing = !this.isFollowing;
           document.getElementById('btn-recenter').classList.toggle('active', this.isFollowing);
@@ -1666,11 +1787,13 @@
 
       // --- Hooks & Logic ---
 
-      startNavigation() {
+      startNavigation(options = {}) {
         console.log('[Nav] Starting navigation');
         this.isNavigating = true;
-        this.navStartTime = Date.now();
-        this.trackingCoords = [];
+        if (!options.isResuming) {
+          this.navStartTime = Date.now();
+          this.trackingCoords = [];
+        }
         document.body.classList.add('is-navigating');
 
         // Request Fullscreen if possible
@@ -1688,6 +1811,45 @@
         }
 
         this.recenter();
+
+        // Heartbeat synchronization
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = setInterval(() => this.syncActiveRide(), 1000);
+      },
+
+      async syncActiveRide() {
+        if (!this.isNavigating) return;
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const state = {
+          routeData: this.routeData,
+          trackingCoords: this.trackingCoords,
+          navStartTime: this.navStartTime,
+          endLocation: this.endLocation,
+          endLocationName: document.getElementById('input-end').value,
+          waypoints: this.waypoints.map(wp => ({ id: wp.id, location: wp.location }))
+        };
+
+        try {
+          await fetch('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'active-ride', state })
+          });
+        } catch (e) {
+          console.warn('[Nav] Heartbeat sync failed', e);
+        }
+      },
+
+      async pauseNavigation() {
+        if (!confirm('確定暫停行程？您可以稍後在首頁頂部尋回並繼續。')) return;
+
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        await this.syncActiveRide();
+
+        this.resetNavigationState();
+        location.href = '/dashboard.html';
       },
 
       exitNavigation() {
@@ -1794,6 +1956,7 @@
       },
 
       resetNavigationState() {
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
         this.isNavigating = false;
         this.isLaneLevel = false;
         document.body.classList.remove('is-navigating');

@@ -812,6 +812,13 @@ export default async function handler(req, res) {
       );
       const rideId = newRide[0].id;
 
+      // 清除未完成騎行記錄
+      try {
+        await query('DELETE FROM active_rides WHERE user_id = $1', [userData.userId]);
+      } catch (e) {
+        console.warn('[getHistory] Failed to clear active ride:', e.message);
+      }
+
       // 3. 更新遊戲進度
       let gameResult = { level: 1, xp: xpReward, coins: 0, level_up: false, coins_earned: 0, unlocked_routes: [] };
       try {

@@ -7,6 +7,7 @@
 //   POST /api/user             → update profile (replaces update-profile.js)
 //
 import { query } from '../lib/db.js';
+import jwt from 'jsonwebtoken';
 import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } from '../lib/permissions.js';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -70,9 +71,26 @@ function parseSafeJsonArray(value) {
   }
 }
 
+async function authenticate(req, res) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ message: 'Authorization header missing or invalid' });
+    return null;
+  }
+  const token = authHeader.split(' ')[1];
+  const JWT_SECRET = process.env.JWT_SECRET;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded;
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid or expired token' });
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
@@ -220,6 +238,22 @@ export default async function handler(req, res) {
   }
 
   // ── GET → fetch user info ───────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'active-ride') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      const { rows } = await query(
+        `SELECT state FROM active_rides
+         WHERE user_id = $1 AND updated_at >= NOW() - INTERVAL '24 hours'`,
+        [userData.userId]
+      );
+      return res.status(200).json({ state: rows.length > 0 ? rows[0].state : null });
+    } catch (error) {
+      console.error('[active-ride GET] error:', error);
+      return res.status(500).json({ message: 'Failed to fetch active ride' });
+    }
+  }
+
   if (req.method === 'GET') {
     if (req.query.action === 'friends') {
       try {
@@ -409,6 +443,37 @@ export default async function handler(req, res) {
   }
 
   // ── POST → update profile ───────────────────────────────────────────────
+  if (req.method === 'POST' && req.body.action === 'active-ride') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      const { state } = req.body || {};
+      if (!state) return res.status(400).json({ message: 'State is required' });
+      await query(
+        `INSERT INTO active_rides (user_id, state, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
+        [userData.userId, JSON.stringify(state)]
+      );
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('[active-ride POST] error:', error);
+      return res.status(500).json({ message: 'Failed to sync active ride' });
+    }
+  }
+
+  if (req.method === 'DELETE' && req.query.action === 'active-ride') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      await query('DELETE FROM active_rides WHERE user_id = $1', [userData.userId]);
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('[active-ride DELETE] error:', error);
+      return res.status(500).json({ message: 'Failed to clear active ride' });
+    }
+  }
+
   if (req.method === 'POST') {
     if (req.body.action === 'add_friend') {
       try {
