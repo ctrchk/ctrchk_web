@@ -1820,7 +1820,16 @@
     }
 
     // Run Engine
-    NavEngine.init();
+    if (!window.PWA_MAPS_INITED.has('nav')) {
+        window.PWA_MAPS_INITED.add('nav');
+        NavEngine.init();
+    }
+
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/nav' && NavEngine.map) {
+            setTimeout(() => NavEngine.map.resize(), 50);
+        }
+    });
 
   </script>
 </body>

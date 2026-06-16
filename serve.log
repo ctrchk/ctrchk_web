@@ -1,0 +1,356 @@
+npm warn exec The following package was not found and will be installed: serve@14.2.6
+ INFO  Accepting connections at http://localhost:3000
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 GET /?pwa=true
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 Returned 200 in 264 ms
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 GET /images/icon-192.png
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 GET /images/bike-commute.jpg
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 Returned 200 in 5 ms
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 Returned 200 in 7 ms
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 Returned 200 in 6 ms
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 Returned 200 in 8 ms
+ HTTP  6/16/2026 2:46:56 PM 127.0.0.1 Returned 200 in 15 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /header.html
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /routes.json
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /images/900.jpg
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /images/960.jpg
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /images/966T.jpg
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 6 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 7 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 18 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 23 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 404 in 19 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 404 in 5 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 10 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /sw.js
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 4 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /routes
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 6 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 5 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /login
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /ride
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /nav
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 5 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /chat
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 6 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 4 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /forum
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 3 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /leaderboard
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 5 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /manifest.json
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /routes.json
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /images/icon-192.png
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /images/icon-512.png
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 200 in 3 ms
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 GET /api/user?action=route-data
+ HTTP  6/16/2026 2:46:57 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /?pwa=true
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /images/bike-commute.jpg
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /api/user?action=route-data
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /images/900.jpg
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /images/960.jpg
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /images/966T.jpg
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 404 in 8 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 404 in 4 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:46:58 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /tasks.html
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /routes.html
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 301 in 0 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /nav.html
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /dashboard.html
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 301 in 0 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /routes
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /nav
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /api/oauth?action=status
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /login
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 5 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 5 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:46:59 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /?pwa=true
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/icon-192.png
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/bike-commute.jpg
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /header.html
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /routes.json
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/900.jpg
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/960.jpg
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/966T.jpg
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 404 in 3 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /api/user?action=route-data
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /sw.js
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /routes
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /login
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /ride
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /nav
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /chat
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 3 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 4 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /forum
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /leaderboard
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 3 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 3 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /manifest.json
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /routes.json
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/icon-192.png
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /images/icon-512.png
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /tasks.html
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:47:42 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /api/user?action=route-data
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:47:43 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:47:45 PM 127.0.0.1 GET /sw.js
+ HTTP  6/16/2026 2:47:45 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /?pwa=true
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/icon-192.png
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/bike-commute.jpg
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 3 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /header.html
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /routes.json
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/900.jpg
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/960.jpg
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/966T.jpg
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /api/user?action=route-data
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /sw.js
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /routes
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /login
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /ride
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /nav
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /chat
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /forum
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /leaderboard
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /manifest.json
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /routes.json
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/icon-192.png
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /images/icon-512.png
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 200 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /tasks.html
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 301 in 1 ms
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 GET /tasks
+ HTTP  6/16/2026 2:48:52 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /routes.html
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 301 in 0 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /routes
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /dashboard.html
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 301 in 0 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/oauth?action=status
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /login
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 2 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 11 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 13 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 13 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 8 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /dashboard
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /css/main.css
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/main.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/login.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 3 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /js/pwa.js
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 0 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/user?action=route-data
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/user?action=config
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/user?user_id=1
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /header
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/oauth?action=status
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 304 in 1 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 4 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 4 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 3 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 2 ms
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 GET /api/getHistory
+ HTTP  6/16/2026 2:48:53 PM 127.0.0.1 Returned 404 in 1 ms
+ HTTP  6/16/2026 2:48:55 PM 127.0.0.1 GET /sw.js
+ HTTP  6/16/2026 2:48:55 PM 127.0.0.1 Returned 304 in 1 ms

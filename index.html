@@ -819,6 +819,9 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
 <script>
 // App home screen logic
 (function() {
+    if (window.PWA_MAPS_INITED.has('home')) return;
+    window.PWA_MAPS_INITED.add('home');
+
     const THRESHOLDS = [
         0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
         4700, 6050, 7650, 9550, 11800, 14400, 17400, 20900, 25000, 29700,
