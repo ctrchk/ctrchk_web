@@ -775,6 +775,8 @@ body.app-light-theme .app-filter-chip.random-btn {
 // ════════ App Ride Page Logic ════════
 (function() {
 'use strict';
+if (window.PWA_MAPS_INITED.has('routes')) return;
+window.PWA_MAPS_INITED.add('routes');
 
 const ROUTE_XP = {
     '7E':80,'7W':80,
@@ -1664,6 +1666,7 @@ function enterDepartment(dept, pushState) {
     // Recenter map on department (initMap is idempotent; ensures map exists)
     initMap();
     map.setView(dept.mapCenter, dept.mapZoom, { animate: !!pushState });
+    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
 
     // Show only the terminal markers for the selected department
     TERMINALS.forEach(terminal => {
@@ -1974,6 +1977,12 @@ window.addEventListener('popstate', (e) => {
     // Default: re-enter first available department
     const defaultDept = DEPARTMENTS.find(d => d.available);
     if (defaultDept) enterDepartment(defaultDept, false);
+});
+
+window.addEventListener('pwa-page-show', (e) => {
+    if (e.detail.path === '/routes' && map) {
+        setTimeout(() => map.invalidateSize(), 50);
+    }
 });
 
 if (document.readyState !== 'loading') initAppRidePage();

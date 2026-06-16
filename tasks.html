@@ -809,6 +809,8 @@
     <script>
     (function() {
     'use strict';
+    if (window.PWA_MAPS_INITED.has('tasks')) return;
+    window.PWA_MAPS_INITED.add('tasks');
 
     // ── Language helper ───────────────────────────────────────────────
     const isEn = () => localStorage.getItem('appLang') === 'en';

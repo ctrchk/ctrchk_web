@@ -906,6 +906,18 @@ body.app-light-theme {
         --app-border: #c8e6c9;
     }
 }
+/* ── PWA SPA Containers ── */
+#pwa-shell {
+    position: relative;
+    width: 100%;
+}
+.pwa-page-container {
+    display: none;
+}
+.pwa-page-container.active {
+    display: block !important;
+}
+
 #app-bottom-nav {
     position: fixed;
     bottom: 0;

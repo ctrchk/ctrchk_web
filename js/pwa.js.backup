@@ -345,16 +345,6 @@
     return p;
   }
 
-  // SPA readiness helper for injected scripts
-  window.onPWAReady = function(fn) {
-    if (window.CTRCHK_IS_STANDALONE) {
-      setTimeout(fn, 1);
-    } else {
-      if (document.readyState !== 'loading') fn();
-      else document.addEventListener('DOMContentLoaded', fn);
-    }
-  };
-
   function initPWAShell() {
     if (!isStandalone) return;
 
@@ -383,7 +373,7 @@
     // Intercept clicks
     document.addEventListener('click', (e) => {
       const link = e.target.closest('a');
-      if (!link || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (!link) return;
 
       const url = new URL(link.href, window.location.origin);
       if (url.origin !== window.location.origin) return;
@@ -396,8 +386,9 @@
     });
 
     // Handle back/forward
-    window.addEventListener('popstate', () => {
-      navigateTo(window.location.pathname + window.location.search, { pushState: false });
+    window.addEventListener('popstate', (e) => {
+      const path = window.location.pathname;
+      navigateTo(path, { pushState: false });
     });
 
     window.navigateTo = navigateTo;
@@ -428,8 +419,10 @@
     if (targetContainer) {
       document.querySelectorAll('.pwa-page-container').forEach(c => {
           c.classList.remove('active');
+          c.style.display = 'none';
       });
       targetContainer.classList.add('active');
+      targetContainer.style.display = 'block';
 
       if (config.title) document.title = config.title;
 
@@ -466,8 +459,6 @@
           fetchPath = path.split('?')[0].split('#')[0] + '.html';
           const search = path.includes('?') ? '?' + path.split('?')[1] : '';
           fetchPath += search;
-      } else if (path === '/') {
-          fetchPath = '/index.html';
       }
 
       const response = await fetch(fetchPath);
@@ -498,24 +489,24 @@
         pageContainers.set(normalizedPath, container);
 
         const styles = doc.querySelectorAll('style');
-        styles.forEach(s => {
-            const newStyle = s.cloneNode(true);
-            newStyle.dataset.page = normalizedPath;
-            document.head.appendChild(newStyle);
-        });
+        styles.forEach(s => document.head.appendChild(s.cloneNode(true)));
 
         const scripts = doc.querySelectorAll('script');
         scripts.forEach(oldScript => {
           if (oldScript.src) {
-              if (/main\.js|pwa\.js|leaflet\.js|mapbox-gl\.js/.test(oldScript.src)) return;
+              if (oldScript.src.includes('main.js') || oldScript.src.includes('pwa.js') ||
+                  oldScript.src.includes('leaflet.js') || oldScript.src.includes('mapbox-gl.js')) return;
+
               const newScript = document.createElement('script');
               newScript.src = oldScript.src;
               newScript.async = false;
               document.body.appendChild(newScript);
           } else {
               let code = oldScript.textContent;
-              // Replace DOMContentLoaded with PWA readiness helper
-              code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
+              if (code.includes('DOMContentLoaded')) {
+                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g, '(async () => {');
+                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*function\s*\(\s*\)\s*\{/g, '(function() {');
+              }
               const newScript = document.createElement('script');
               newScript.textContent = code;
               document.body.appendChild(newScript);
@@ -543,25 +534,21 @@
 
     paths.forEach(path => {
       if (path !== current) {
-        setTimeout(() => fetchPage(path), 1200);
+        setTimeout(() => fetchPage(path), 1000);
       }
     });
   }
 
   onReady(() => {
-    // Ensure body class is set (body is now definitely available)
     if (isStandalone) {
       document.body.classList.add('is-pwa');
       initPWAShell();
       injectAppBottomNav();
       prefetchPWAPages();
-      // Update theme-color meta tag to dark app theme
       const themeColorMeta = document.querySelector('meta[name="theme-color"]');
       if (themeColorMeta) themeColorMeta.setAttribute('content', '#121f14');
-      // Apply iOS Liquid Glass if applicable
       detectLiquidGlass();
     }
-    // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();
   });
   window.addEventListener('pageshow', refreshMembershipTheme);
@@ -579,13 +566,11 @@
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      // Subscribe to server-side push now that permission is granted
       subscribeToPush();
     }
     return permission === 'granted';
   }
 
-  // 顯示本地通知（報站用）
   function sendLocalNotification(title, body, tag) {
     if (Notification.permission !== 'granted') return;
     new Notification(title, {
@@ -596,12 +581,6 @@
     });
   }
 
-  // ── 每日簽到提醒 ──────────────────────────────────────────────────────────
-  // Schedules a daily check-in reminder notification using setTimeout.
-  // The reminder fires once per day if the user hasn't checked in yet.
-  // Reminders are ON by default; disabled only when the user explicitly turns
-  // them off (checkinReminderDisabled==='1') or turns off all notifications
-  // (pushNotificationsDisabled==='1').
   function scheduleDailyCheckinReminder() {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
@@ -611,26 +590,22 @@
     const now = new Date();
     const todayKey = now.toISOString().slice(0, 10);
 
-    // Don't remind if already checked in today
     try {
       const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
       if (checkins[todayKey]) return;
     } catch (_) {}
 
-    // Schedule reminder for 09:00 today; if already past, skip to tomorrow
     let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
     if (target <= now) {
-      // Already past 9am — schedule for tomorrow
       target.setDate(target.getDate() + 1);
     }
 
     const delay = target.getTime() - now.getTime();
     setTimeout(() => {
-      // Re-check: user may have changed settings between scheduling and firing
       const todayKeyNow = new Date().toISOString().slice(0, 10);
       try {
         const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
-        if (checkins[todayKeyNow]) return; // already done
+        if (checkins[todayKeyNow]) return;
       } catch (_) {}
       if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
       if (localStorage.getItem('checkinReminderDisabled') === '1') return;
@@ -639,20 +614,11 @@
         '連續簽到可解鎖豐厚 XP 及里程幣獎勵，快來打卡吧！',
         'ctrc-checkin-reminder'
       );
-      // Re-schedule for tomorrow
       scheduleDailyCheckinReminder();
     }, delay);
   }
 
-  // Kick off reminder scheduling and push subscription when the page loads.
-  // Notifications are ON by default: automatically request permission if not
-  // yet asked, and subscribe to push unless the user has opted out.
   window.addEventListener('load', () => {
-    // One-time migration: re-enable push notifications for all existing users.
-    // Any previous opt-out (pushNotificationsDisabled='1') is cleared so that
-    // every user starts fresh with notifications enabled by default.
-    // The 'notifReset_v1' key can be removed from this migration block after
-    // most active users have visited once (e.g. after ~6 months).
     if (!localStorage.getItem('notifReset_v1')) {
       localStorage.removeItem('pushNotificationsDisabled');
       localStorage.setItem('notifReset_v1', '1');
@@ -665,17 +631,11 @@
       subscribeToPush();
       scheduleDailyCheckinReminder();
     } else if (Notification.permission !== 'denied') {
-      // Auto-request permission on first visit (default ON behavior)
       requestNotificationPermission().then((granted) => {
         if (granted) scheduleDailyCheckinReminder();
       });
     }
   });
-
-  // ── Web Push 訂閱 ─────────────────────────────────────────────────────────
-  // Subscribes the current device to server-side Web Push notifications
-  // using the VAPID public key. The subscription is sent to /api/push
-  // so the server can send push notifications even when the app is closed.
 
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -689,7 +649,6 @@
     if (Notification.permission !== 'granted') return;
 
     try {
-      // Fetch the server-side VAPID public key
       const keyRes = await fetch('/api/push');
       if (!keyRes.ok) return;
       const { publicKey } = await keyRes.json();
@@ -718,9 +677,6 @@
     }
   }
 
-  // ── Web Push 退訂 ─────────────────────────────────────────────────────────
-  // Unsubscribes the current device from server-side Web Push notifications
-  // and removes the stored subscription from the server.
   async function unsubscribeFromPush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     try {
@@ -744,12 +700,6 @@
     }
   }
 
-  // ── 階段性位置權限詢問 ────────────────────────────────────────────────────
-  /**
-   * 詢問位置權限。如果本會話（Session）已同意過，則直接執行回調。
-   * @param {Function} onAllowed 同意後執行的函數
-   * @param {Function} onDenied 拒絕或關閉後執行的函數
-   */
   window.confirmLocationPermission = function(onAllowed, onDenied) {
     if (sessionStorage.getItem('locationApproved') === '1') {
       if (onAllowed) onAllowed();
@@ -794,7 +744,6 @@
     };
   };
 
-  // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
     isStandalone,
     requestNotificationPermission,
@@ -802,7 +751,6 @@
     scheduleDailyCheckinReminder,
     subscribeToPush,
     unsubscribeFromPush,
-    // Manually enable/disable Liquid Glass (for settings UI)
     enableLiquidGlass() {
       document.body.classList.add('liquid-glass');
       localStorage.setItem('liquid-glass-enabled', '1');
