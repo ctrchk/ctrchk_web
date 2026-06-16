@@ -814,7 +814,8 @@ export default async function handler(req, res) {
 
       // 清除未完成騎行記錄
       try {
-        await query('DELETE FROM active_rides WHERE user_id = $1', [userData.userId]);
+        const type = ride_mode === 'nav' ? 'navigation' : 'route';
+        await query('DELETE FROM active_rides WHERE user_id = $1 AND ride_type = $2', [userData.userId, type]);
       } catch (e) {
         console.warn('[getHistory] Failed to clear active ride:', e.message);
       }

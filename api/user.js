@@ -242,10 +242,11 @@ export default async function handler(req, res) {
     const userData = await authenticate(req, res);
     if (!userData) return;
     try {
+      const type = req.query.type || 'route';
       const { rows } = await query(
         `SELECT state FROM active_rides
-         WHERE user_id = $1 AND updated_at >= NOW() - INTERVAL '24 hours'`,
-        [userData.userId]
+         WHERE user_id = $1 AND ride_type = $2 AND updated_at >= NOW() - INTERVAL '24 hours'`,
+        [userData.userId, type]
       );
       return res.status(200).json({ state: rows.length > 0 ? rows[0].state : null });
     } catch (error) {
@@ -449,11 +450,12 @@ export default async function handler(req, res) {
     try {
       const { state } = req.body || {};
       if (!state) return res.status(400).json({ message: 'State is required' });
+      const type = state.type || 'route';
       await query(
-        `INSERT INTO active_rides (user_id, state, updated_at)
-         VALUES ($1, $2, NOW())
-         ON CONFLICT (user_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
-        [userData.userId, JSON.stringify(state)]
+        `INSERT INTO active_rides (user_id, ride_type, state, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (user_id, ride_type) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
+        [userData.userId, type, JSON.stringify(state)]
       );
       return res.status(200).json({ success: true });
     } catch (error) {
@@ -466,7 +468,8 @@ export default async function handler(req, res) {
     const userData = await authenticate(req, res);
     if (!userData) return;
     try {
-      await query('DELETE FROM active_rides WHERE user_id = $1', [userData.userId]);
+      const type = req.query.type || 'route';
+      await query('DELETE FROM active_rides WHERE user_id = $1 AND ride_type = $2', [userData.userId, type]);
       return res.status(200).json({ success: true });
     } catch (error) {
       console.error('[active-ride DELETE] error:', error);

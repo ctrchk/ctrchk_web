@@ -486,6 +486,24 @@
 })();
 </script>
 
+  <!-- Resume Modal -->
+  <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:rgba(26,37,47,0.93); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
+      <div style="font-size:48px; margin-bottom:16px;">🚲</div>
+      <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
+      <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
+          <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Loading screen -->
   <div id="ride-loading">
     <div class="spinner"></div>
@@ -508,6 +526,9 @@
     <a href="javascript:confirmLeave()" id="btn-back-ride" class="btn-click-effect" aria-label="返回">
       <i class="fas fa-chevron-left"></i>
     </a>
+    <button id="btn-pause-ride" class="btn-click-effect" style="display:none; background: #f1c232; color: #1a252f; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; align-items: center; justify-content: center; font-size: 0.9em; flex-shrink: 0;" title="暫停">
+      <i class="fas fa-pause"></i>
+    </button>
     <span id="ride-route-label">載入中...</span>
     <span id="ride-timer-display">00:00</span>
     <button id="btn-free-mode" class="btn-click-effect" style="background: #BFE340; color: #1a252f; border: none; border-radius: 20px; padding: 4px 12px; font-size: 0.8em; font-weight: bold; cursor: pointer; margin-left: 10px;">自由模式</button>
@@ -1320,8 +1341,47 @@
         }
     }
 
+    async function syncActiveRide() {
+      if (!rideStarted) return;
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const state = {
+        type: 'route',
+        routeId: routeId,
+        dirIndex: dirIndex,
+        totalDistM: totalDistM,
+        reachedStops: [...reachedStops],
+        startTime: startTime,
+        sessionXp: sessionXp,
+        isFreeMode: isFreeMode,
+        lastLat: lastLat,
+        lastLon: lastLon,
+        routeAlias: routeData ? routeData.alias : (isFreeMode ? '自由騎行' : routeId)
+      };
+
+      try {
+        await fetch('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ action: 'active-ride', state })
+        });
+      } catch (e) {
+        console.warn('[Ride] Heartbeat sync failed', e);
+      }
+    }
+
+    window.pauseRide = async function() {
+      if (!confirm('確定暫停行程？您可以稍後在路線頁面尋回並繼續。')) return;
+      if (timerInterval) clearInterval(timerInterval);
+      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      await syncActiveRide();
+      rideStarted = false; // Prevent confirmLeave from triggering confirm again
+      location.href = '/dashboard';
+    };
+
     // Called when user enters the start zone (or skips)
-    function beginRide() {
+    function beginRide(options = {}) {
       if (rideStarted) return;
       goToStartPhase = false;
       rideStarted = true;
@@ -1330,6 +1390,15 @@
       requestWakeLock();
 
       document.getElementById('btn-free-mode').style.display = 'none';
+      const pauseBtn = document.getElementById('btn-pause-ride');
+      if (pauseBtn) {
+        pauseBtn.style.display = 'flex';
+        pauseBtn.onclick = () => window.pauseRide();
+      }
+
+      // Heartbeat
+      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = setInterval(() => syncActiveRide(), 1000);
 
       // Hide go-to-start banner; show ride HUD
       const gtsBanner = document.getElementById('go-to-start-banner');
@@ -1957,6 +2026,72 @@
       };
     }
 
+    async function checkActiveRide() {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      try {
+        const res = await fetch('/api/user?action=active-ride&type=route', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data && data.state && data.state.routeId === routeId) {
+            const modal = document.getElementById('resume-modal');
+            const info = document.getElementById('resume-info');
+            info.textContent = `您有一段往 ${data.state.routeAlias || routeId} 的行程未完成。`;
+            modal.style.display = 'flex';
+
+            document.getElementById('btn-resume-yes').onclick = () => {
+                resumeRide(data.state);
+            };
+            document.getElementById('btn-resume-cancel').onclick = () => {
+                modal.style.display = 'none';
+            };
+            document.getElementById('btn-resume-delete').onclick = async () => {
+                if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
+                await fetch('/api/user?action=active-ride&type=route', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                modal.style.display = 'none';
+            };
+            return true;
+        }
+      } catch (e) {
+        console.warn('[Ride] Failed to check active ride', e);
+      }
+      return false;
+    }
+
+    function resumeRide(state) {
+      console.log('[Ride] Resuming ride', state);
+      isFreeMode = state.isFreeMode;
+      totalDistM = state.totalDistM || 0;
+      reachedStops = new Set(state.reachedStops || []);
+      startTime = state.startTime;
+      sessionXp = state.sessionXp || 0;
+      lastLat = state.lastLat;
+      lastLon = state.lastLon;
+
+      if (isFreeMode) {
+         document.getElementById('ride-route-label').textContent = '自由騎行模式';
+         document.getElementById('btn-free-mode').style.display = 'none';
+         initFreeModeControls();
+      }
+
+      document.getElementById('resume-modal').style.display = 'none';
+
+      // Mark restored stops in UI
+      reachedStops.forEach(order => {
+         const pill = document.getElementById('pill-' + order);
+         if (pill) pill.classList.add('reached');
+      });
+      updateNextStopUI();
+      updateSessionXpDisplay();
+
+      beginRide({ isResuming: true });
+    }
+
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
       const mode = params.get('mode');
@@ -2065,6 +2200,10 @@
 
       plotStops(routeStops);
       buildStopsUI(routeStops);
+
+      // Check for resume
+      const resumed = await checkActiveRide();
+      if (resumed) return;
 
       // Set up go-to-start banner or skip if no stops
       if (routeStops.length > 0) {

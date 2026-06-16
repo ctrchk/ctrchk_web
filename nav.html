@@ -655,7 +655,7 @@
         if (!token) return;
 
         try {
-          const res = await fetch('/api/user?action=active-ride', {
+          const res = await fetch('/api/user?action=active-ride&type=navigation', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const data = await res.json();
@@ -678,7 +678,7 @@
             };
             document.getElementById('btn-resume-delete').onclick = async () => {
               if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
-              await fetch('/api/user?action=active-ride', {
+              await fetch('/api/user?action=active-ride&type=navigation', {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
               });
@@ -1823,6 +1823,7 @@
         if (!token) return;
 
         const state = {
+          type: 'navigation',
           routeData: this.routeData,
           trackingCoords: this.trackingCoords,
           navStartTime: this.navStartTime,
