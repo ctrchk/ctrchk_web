@@ -447,13 +447,21 @@
     <div style="color: #6dba65; font-weight: bold; font-size: 18px;">系統初始化中...</div>
   </div>
 
-  <!-- Resume Panel -->
-  <div id="resume-panel">
-    <div style="font-weight: 800; font-size: 18px; margin-bottom: 4px;">🚲 發現未完成行程</div>
-    <div id="resume-info" style="font-size: 14px; opacity: 0.8; margin-bottom: 12px;">您有一段未完成的騎行記錄。</div>
-    <div style="display: flex; gap: 12px;">
-      <button id="btn-resume-yes" style="flex: 1; background: #6dba65; color: #121f14; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">繼續騎行</button>
-      <button id="btn-resume-no" style="flex: 1; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer;">刪除記錄</button>
+  <!-- Resume Modal -->
+  <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--hud-bg); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
+      <div style="font-size:48px; margin-bottom:16px;">🚲</div>
+      <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
+      <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
+          <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -576,6 +584,7 @@
 
   <!-- Floating Map Controls -->
   <div class="floating-controls">
+    <button class="float-btn" id="btn-open-resume" style="display:none; background:#BFE340; color:#1a252f; border-color:#BFE340;" title="未完成行程"><i class="fas fa-history"></i></button>
     <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
     <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
     <button class="float-btn active" id="btn-toggle-park" title="顯示/隱藏泊位"><i class="fas fa-parking"></i></button>
@@ -646,25 +655,35 @@
         if (!token) return;
 
         try {
-          const res = await fetch('/api/active-ride', {
+          const res = await fetch('/api/user?action=active-ride', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const data = await res.json();
           if (data && data.state) {
             this.activeRideState = data.state;
-            document.getElementById('resume-panel').style.display = 'block';
-            document.getElementById('setup-panel').style.display = 'none';
+            const openBtn = document.getElementById('btn-open-resume');
+            openBtn.style.display = 'flex';
+            openBtn.onclick = () => {
+               document.getElementById('resume-modal').style.display = 'flex';
+               document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
+            };
+
+            // Auto open modal on load
+            document.getElementById('resume-modal').style.display = 'flex';
             document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
 
             document.getElementById('btn-resume-yes').onclick = () => this.resumeRide(data.state);
-            document.getElementById('btn-resume-no').onclick = async () => {
-              if (!confirm('確定刪除此記錄？')) return;
-              await fetch('/api/active-ride', {
+            document.getElementById('btn-resume-cancel').onclick = () => {
+               document.getElementById('resume-modal').style.display = 'none';
+            };
+            document.getElementById('btn-resume-delete').onclick = async () => {
+              if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
+              await fetch('/api/user?action=active-ride', {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
               });
-              document.getElementById('resume-panel').style.display = 'none';
-              document.getElementById('setup-panel').style.display = 'block';
+              document.getElementById('resume-modal').style.display = 'none';
+              document.getElementById('btn-open-resume').style.display = 'none';
             };
           }
         } catch (e) {
@@ -681,13 +700,12 @@
 
         // Restore Waypoints
         this.waypoints = (state.waypoints || []).map(wp => {
-           // We need to re-create waypoint inputs if we want them to show in setup panel
-           // but since setup panel is hidden, we just restore the data for markers
            return { id: wp.id, location: wp.location, marker: null };
         });
 
         document.getElementById('input-end').value = state.endLocationName || '';
-        document.getElementById('resume-panel').style.display = 'none';
+        document.getElementById('resume-modal').style.display = 'none';
+        document.getElementById('btn-open-resume').style.display = 'none';
 
         // Render restored route
         if (this.routeData) {
@@ -1814,10 +1832,10 @@
         };
 
         try {
-          await fetch('/api/active-ride', {
+          await fetch('/api/user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ state })
+            body: JSON.stringify({ action: 'active-ride', state })
           });
         } catch (e) {
           console.warn('[Nav] Heartbeat sync failed', e);
