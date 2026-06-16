@@ -73,10 +73,12 @@ async function handleGoogleCredentialResponse(response) {
 
             if (!data.user.profile_completed) {
                 alert('歡迎加入城市運輸單車！\n請補充您的資料以升級為高級會員，享受完整功能。');
-                window.location.href = '/profile-setup.html';
+                if (window.navigateTo) window.navigateTo('/profile-setup');
+                else window.location.href = '/profile-setup.html';
             } else {
                 alert('Google 登入成功！');
-                window.location.href = '/dashboard';
+                if (window.navigateTo) window.navigateTo('/dashboard');
+                else window.location.href = '/dashboard';
             }
         } else {
             alert('Google 登入失敗：' + (data.message || '未知錯誤'));
@@ -169,7 +171,8 @@ async function handleRegister(e) {
             // 新用戶需要驗證電郵，不進行自動登入
             const successMsg = data.message || '註冊成功！';
             alert(successMsg + '\n\n請先查閱你的郵箱並點擊驗證連結，完成驗證後再登入。');
-            window.location.href = '/verify-email?pending=1';
+            if (window.navigateTo) window.navigateTo('/verify-email?pending=1');
+            else window.location.href = '/verify-email?pending=1';
         } else {
             let errorMessage = data.message || '註冊失敗';
             
@@ -232,7 +235,8 @@ async function handleLogin(e) {
             
             const name = data.user?.full_name || data.user?.email || '用戶';
             alert(`歡迎回來，${name}！`);
-            window.location.href = '/dashboard';
+            if (window.navigateTo) window.navigateTo('/dashboard');
+            else window.location.href = '/dashboard';
         } else {
             throw new Error(data.message || '登入失敗');
         }
@@ -247,7 +251,8 @@ function handleLogout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     alert('你已成功登出。');
-    window.location.href = '/index.html';
+    if (window.navigateTo) window.navigateTo('/');
+    else window.location.href = '/index.html';
 }
 
 // --- 輔助函數：檢查登入狀態 ---
@@ -279,7 +284,8 @@ async function fetchProtectedData(url) {
         alert('你的登入已過期，請重新登入。');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        window.location.href = '/login.html';
+        if (window.navigateTo) window.navigateTo('/login');
+        else window.location.href = '/login.html';
         throw new Error('Unauthorized');
     }
     

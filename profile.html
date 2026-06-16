@@ -27,6 +27,10 @@
         (function() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
+                if (window.isSPA && window.isSPA()) {
+                    console.warn('[SPA] Auth failed for profile, but skipping redirect.');
+                    return;
+                }
                 alert('你需要登入才能查看此頁面。');
                 window.location.replace('/login');
             }
@@ -581,7 +585,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const userData = localStorage.getItem('user');
         if (!userData) {
-            window.location.replace('/login');
+            if (!(window.isSPA && window.isSPA())) window.location.replace('/login');
             return;
         }
         const user = JSON.parse(userData);

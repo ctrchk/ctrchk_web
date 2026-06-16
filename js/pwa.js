@@ -337,6 +337,8 @@
     '/dashboard': { id: 'pwa-page-dashboard', title: '我的' },
   };
 
+  window.isSPA = () => !!window.PWA_ROUTER_ACTIVE;
+
   const pageContainers = new Map();
 
   function getNormalizedPath(path) {
@@ -356,7 +358,9 @@
   };
 
   function initPWAShell() {
-    if (!isStandalone) return;
+    console.log('[PWA-SPA] initPWAShell. isStandalone:', isStandalone, 'active:', window.PWA_ROUTER_ACTIVE);
+    if (!isStandalone || window.PWA_ROUTER_ACTIVE) return;
+    window.PWA_ROUTER_ACTIVE = true;
 
     // Create shell if not exists
     let shell = document.getElementById('pwa-shell');
@@ -374,7 +378,11 @@
 
       // Move existing children into a container
       const appElements = document.querySelectorAll('main, #app-home, #app-ride-page, .tasks-container, .db-content, #map, .hud-container, .setup-panel, .floating-controls');
-      appElements.forEach(el => container.appendChild(el));
+      appElements.forEach(el => {
+          if (el.parentNode === document.body || el.parentNode === shell) {
+              container.appendChild(el);
+          }
+      });
 
       shell.appendChild(container);
       document.body.prepend(shell);
@@ -431,13 +439,13 @@
       });
       targetContainer.classList.add('active');
 
+      // Update styles: enable current page's styles, disable others
+      document.querySelectorAll('style[data-page]').forEach(s => {
+          s.disabled = (s.dataset.page !== normalizedPath);
+      });
+
       if (config.title) document.title = config.title;
 
-      if (normalizedPath === '/nav') {
-        document.body.classList.add('is-navigating');
-      } else {
-        document.body.classList.remove('is-navigating');
-      }
 
       const bottomNav = document.getElementById('app-bottom-nav');
       if (bottomNav) {
@@ -449,6 +457,13 @@
 
       window.dispatchEvent(new CustomEvent('pwa-page-show', { detail: { path: normalizedPath } }));
       window.scrollTo(0, 0);
+
+      // Global splash hiding helper
+      const splash = document.getElementById('app-splash');
+      if (splash && splash.style.display !== 'none') {
+          splash.classList.add('splash-fade-out');
+          setTimeout(() => { splash.style.display = 'none'; }, 450);
+      }
     }
   }
 
@@ -501,6 +516,7 @@
         styles.forEach(s => {
             const newStyle = s.cloneNode(true);
             newStyle.dataset.page = normalizedPath;
+            newStyle.disabled = true; // Initially disabled
             document.head.appendChild(newStyle);
         });
 

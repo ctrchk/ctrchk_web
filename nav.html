@@ -39,9 +39,8 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; min-height: 400px; }
 
     /* --- Industrial HUD Layout --- */
     .hud-container {
@@ -1984,9 +1983,16 @@
     }
 
     // Run Engine
-    if (!window.PWA_MAPS_INITED.has('nav')) {
+    function initNavOnce() {
+        if (window.PWA_MAPS_INITED.has('nav')) return;
         window.PWA_MAPS_INITED.add('nav');
         NavEngine.init();
+    }
+
+    if (window.isSPA && window.isSPA()) {
+        window.onPWAReady(initNavOnce);
+    } else {
+        document.addEventListener('DOMContentLoaded', initNavOnce);
     }
 
     window.addEventListener('pwa-page-show', (e) => {

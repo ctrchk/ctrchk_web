@@ -593,6 +593,10 @@
         // 頁面守衛：在渲染前確認已登入
         (function checkAuth() {
             if (!localStorage.getItem('accessToken')) {
+                if (window.isSPA && window.isSPA()) {
+                    console.warn('[SPA] Auth failed for dashboard, but skipping redirect to prevent shell hijacking.');
+                    return;
+                }
                 window.location.replace('/login');
                 throw new Error('未授權訪問');
             }
@@ -1237,10 +1241,13 @@
                 console.error('無法讀取登入資料:', e);
                 user = null;
             }
-            if (!user) { window.location.href = '/login'; return; }
+            if (!user) {
+                if (!(window.isSPA && window.isSPA())) window.location.href = '/login';
+                return;
+            }
 
             if (user.email_verified === false) {
-                window.location.href = '/verify-email?pending=1';
+                if (!(window.isSPA && window.isSPA())) window.location.href = '/verify-email?pending=1';
                 return;
             }
 
@@ -1473,7 +1480,8 @@
         if (btn) {
             btn.addEventListener('click', function () {
                 _clearAuth();
-                window.location.href = '/login';
+                if (window.navigateTo) window.navigateTo('/login');
+                else window.location.href = '/login';
             });
         }
     });
