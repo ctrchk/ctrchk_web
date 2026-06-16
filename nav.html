@@ -151,6 +151,38 @@
     }
     body.is-navigating .btn-exit-nav { display: block; }
 
+    .btn-pause-nav {
+      background: #f1c232 !important;
+      color: #000 !important;
+      border: 1px solid rgba(0,0,0,0.1);
+      padding: 8px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+      pointer-events: auto;
+      margin-bottom: 8px;
+    }
+    body.is-navigating .btn-pause-nav { display: block; }
+
+    #resume-panel {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 8px);
+      left: 16px;
+      right: 16px;
+      background: rgba(18, 31, 20, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 16px;
+      border-radius: 16px;
+      z-index: 2000;
+      display: none;
+      border: 1px solid #6dba65;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      color: #fff;
+    }
+
     /* --- Summary Modal --- */
     #summary-modal {
       position: fixed;
@@ -415,6 +447,16 @@
     <div style="color: #6dba65; font-weight: bold; font-size: 18px;">系統初始化中...</div>
   </div>
 
+  <!-- Resume Panel -->
+  <div id="resume-panel">
+    <div style="font-weight: 800; font-size: 18px; margin-bottom: 4px;">🚲 發現未完成行程</div>
+    <div id="resume-info" style="font-size: 14px; opacity: 0.8; margin-bottom: 12px;">您有一段未完成的騎行記錄。</div>
+    <div style="display: flex; gap: 12px;">
+      <button id="btn-resume-yes" style="flex: 1; background: #6dba65; color: #121f14; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">繼續騎行</button>
+      <button id="btn-resume-no" style="flex: 1; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer;">刪除記錄</button>
+    </div>
+  </div>
+
   <div id="map"></div>
 
   <!-- Industrial HUD -->
@@ -449,6 +491,7 @@
     </div>
 
     <div class="hud-bottom">
+      <button class="btn-pause-nav" id="btn-pause-nav">暫停行程</button>
       <button class="btn-exit-nav" id="btn-exit-nav">退出</button>
       <button class="btn-end-nav" id="btn-end-nav">結束騎行</button>
     </div>
@@ -595,6 +638,65 @@
 
         this.setupUI();
         this.requestLocation();
+        this.checkActiveRide();
+      },
+
+      async checkActiveRide() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        try {
+          const res = await fetch('/api/active-ride', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data && data.state) {
+            this.activeRideState = data.state;
+            document.getElementById('resume-panel').style.display = 'block';
+            document.getElementById('setup-panel').style.display = 'none';
+            document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
+
+            document.getElementById('btn-resume-yes').onclick = () => this.resumeRide(data.state);
+            document.getElementById('btn-resume-no').onclick = async () => {
+              if (!confirm('確定刪除此記錄？')) return;
+              await fetch('/api/active-ride', {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              document.getElementById('resume-panel').style.display = 'none';
+              document.getElementById('setup-panel').style.display = 'block';
+            };
+          }
+        } catch (e) {
+          console.warn('[Nav] Failed to check active ride', e);
+        }
+      },
+
+      resumeRide(state) {
+        console.log('[Nav] Resuming ride', state);
+        this.routeData = state.routeData;
+        this.trackingCoords = state.trackingCoords || [];
+        this.navStartTime = state.navStartTime;
+        this.endLocation = state.endLocation;
+
+        // Restore Waypoints
+        this.waypoints = (state.waypoints || []).map(wp => {
+           // We need to re-create waypoint inputs if we want them to show in setup panel
+           // but since setup panel is hidden, we just restore the data for markers
+           return { id: wp.id, location: wp.location, marker: null };
+        });
+
+        document.getElementById('input-end').value = state.endLocationName || '';
+        document.getElementById('resume-panel').style.display = 'none';
+
+        // Render restored route
+        if (this.routeData) {
+          this.drawRoute(this.routeData.coords, this.routeData.segmentTypes);
+        }
+        this.updateMarkers();
+
+        // Start navigation in resuming mode
+        this.startNavigation({ isResuming: true });
       },
 
       async onMapLoad() {
@@ -985,6 +1087,7 @@
         document.getElementById('btn-start-nav').onclick = () => this.startNavigation();
         document.getElementById('btn-end-nav').onclick = () => this.endNavigation();
         document.getElementById('btn-exit-nav').onclick = () => this.exitNavigation();
+        document.getElementById('btn-pause-nav').onclick = () => this.pauseNavigation();
         document.getElementById('btn-recenter').onclick = () => {
           this.isFollowing = !this.isFollowing;
           document.getElementById('btn-recenter').classList.toggle('active', this.isFollowing);
@@ -1666,11 +1769,13 @@
 
       // --- Hooks & Logic ---
 
-      startNavigation() {
+      startNavigation(options = {}) {
         console.log('[Nav] Starting navigation');
         this.isNavigating = true;
-        this.navStartTime = Date.now();
-        this.trackingCoords = [];
+        if (!options.isResuming) {
+          this.navStartTime = Date.now();
+          this.trackingCoords = [];
+        }
         document.body.classList.add('is-navigating');
 
         // Request Fullscreen if possible
@@ -1688,6 +1793,45 @@
         }
 
         this.recenter();
+
+        // Heartbeat synchronization
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = setInterval(() => this.syncActiveRide(), 1000);
+      },
+
+      async syncActiveRide() {
+        if (!this.isNavigating) return;
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const state = {
+          routeData: this.routeData,
+          trackingCoords: this.trackingCoords,
+          navStartTime: this.navStartTime,
+          endLocation: this.endLocation,
+          endLocationName: document.getElementById('input-end').value,
+          waypoints: this.waypoints.map(wp => ({ id: wp.id, location: wp.location }))
+        };
+
+        try {
+          await fetch('/api/active-ride', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ state })
+          });
+        } catch (e) {
+          console.warn('[Nav] Heartbeat sync failed', e);
+        }
+      },
+
+      async pauseNavigation() {
+        if (!confirm('確定暫停行程？您可以稍後在首頁頂部尋回並繼續。')) return;
+
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        await this.syncActiveRide();
+
+        this.resetNavigationState();
+        location.href = '/dashboard.html';
       },
 
       exitNavigation() {
@@ -1794,6 +1938,7 @@
       },
 
       resetNavigationState() {
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
         this.isNavigating = false;
         this.isLaneLevel = false;
         document.body.classList.remove('is-navigating');
