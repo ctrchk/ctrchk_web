@@ -27,10 +27,7 @@
         (function() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
-                if (window.isSPA && window.isSPA()) {
-                    console.warn('[SPA] Auth failed for profile, but skipping redirect.');
-                    return;
-                }
+                if (window.isSPA && window.isSPA()) return;
                 alert('你需要登入才能查看此頁面。');
                 window.location.replace('/login');
             }

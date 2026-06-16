@@ -848,6 +848,7 @@
           const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
           const data = await resp.json();
           this.map.addSource('parking-spaces', { type: 'geojson', data });
+          const beforeLayer = this.map.getLayer('route-symbols') ? 'route-symbols' : undefined;
           this.map.addLayer({
             id: 'parking-layer',
             type: 'circle',
@@ -858,7 +859,7 @@
               'circle-stroke-width': 1,
               'circle-stroke-color': '#ffffff'
             }
-          }, 'route-symbols'); // Place above route but below instructions
+          }, beforeLayer); // Place above route but below instructions
 
           // Parking Click Handler
           this.map.on('click', 'parking-layer', (e) => {
@@ -1996,8 +1997,11 @@
     }
 
     window.addEventListener('pwa-page-show', (e) => {
-        if (e.detail.path === '/nav' && NavEngine.map) {
-            setTimeout(() => NavEngine.map.resize(), 50);
+        if (e.detail.path === '/nav') {
+            initNavOnce();
+            if (NavEngine.map) {
+                setTimeout(() => NavEngine.map.resize(), 50);
+            }
         }
     });
 
