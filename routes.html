@@ -643,6 +643,23 @@ body.app-light-theme .app-filter-chip.random-btn {
 
     <!-- ════════ APP-ONLY ride / cycling page ════════ -->
     <div id="app-ride-page" class="app-only" style="display:none;">
+    <!-- Resume Modal -->
+    <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:var(--app-bg-card, #1e3820); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
+            <div style="font-size:48px; margin-bottom:16px;">🚲</div>
+            <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
+            <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
+
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
+
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
+                    <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
         <!-- Route Catalog / Progress Header -->
         <div id="app-catalog-header">
@@ -806,6 +823,7 @@ rebuildTerminalIndex();
 
 // State
 let appRoutes = [];
+let activeRideState = null;
 let map = null;
 let routeLayer = null;
 let selectedRouteId = null;
@@ -1005,11 +1023,74 @@ function matchesSearch(route) {
     return haystack.includes(searchTerm);
 }
 
+async function checkActiveRideInList() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/user?action=active-ride', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data && data.state) {
+            activeRideState = data.state;
+            renderRoutes(); // Re-render to show unfinished card
+        }
+    } catch (e) {
+        console.warn('[AppRide] Failed to check active ride', e);
+    }
+}
+
 function renderRoutes() {
     const container = document.getElementById('app-routes-list');
     if (!container) return;
 
     container.innerHTML = '';
+
+    // If an unfinished ride exists, show the Unfinished Card at the very top
+    if (activeRideState) {
+        const resumeCard = document.createElement('div');
+        resumeCard.className = 'app-route-card';
+        resumeCard.style.borderColor = '#BFE340';
+        resumeCard.style.background = 'rgba(191,227,64,0.05)';
+        resumeCard.onclick = () => {
+            const modal = document.getElementById('resume-modal');
+            const info = document.getElementById('resume-info');
+            info.textContent = `您有一段往 ${activeRideState.routeAlias || (activeRideState.type === 'route' ? activeRideState.routeId : '目的地')} 的行程未完成。`;
+            modal.style.display = 'flex';
+
+            document.getElementById('btn-resume-yes').onclick = () => {
+                if (activeRideState.type === 'route') {
+                   window.location.href = `/ride?id=${activeRideState.routeId}&dir=${activeRideState.dirIndex || 0}`;
+                } else {
+                   window.location.href = '/nav';
+                }
+            };
+            document.getElementById('btn-resume-cancel').onclick = () => { modal.style.display = 'none'; };
+            document.getElementById('btn-resume-delete').onclick = async () => {
+                if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
+                const token = localStorage.getItem('accessToken');
+                await fetch(`/api/user?action=active-ride&type=${activeRideState.type || 'route'}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                activeRideState = null;
+                modal.style.display = 'none';
+                renderRoutes();
+            };
+        };
+        resumeCard.innerHTML = `
+            <div class="app-route-header">
+                <span class="app-route-id" style="background:#BFE340; color:#1a252f;"><i class="fas fa-history"></i></span>
+                <span class="app-route-alias">未完成行程</span>
+                <span class="app-route-xp" style="background:#BFE340; color:#1a252f;">點擊繼續</span>
+            </div>
+            <div class="app-route-meta">
+                <span><i class="fas fa-clock"></i> 上次更新：${new Date().toLocaleTimeString()}</span>
+            </div>
+        `;
+        container.appendChild(resumeCard);
+    }
 
     // Always prepend Free Mode Card (Pinned at top)
     const freeModeCard = document.createElement('div');
@@ -1618,6 +1699,9 @@ async function initAppRidePage() {
     _appRideInited = true;
 
     isLoggedIn = !!localStorage.getItem('accessToken');
+    if (isLoggedIn) {
+        checkActiveRideInList();
+    }
     userLevel = getUserLevel();
 
     // Fetch fresh user data (including coins/level) from the API to ensure up-to-date values
