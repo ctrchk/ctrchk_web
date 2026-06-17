@@ -232,6 +232,7 @@
     '/ride': { id: 'pwa-page-ride', title: '騎行中' },
     '/nav': { id: 'pwa-page-nav', title: '導航' },
     '/dashboard': { id: 'pwa-page-dashboard', title: '我的' },
+    '/history': { id: 'pwa-page-history', title: '騎行紀錄' },
   };
 
   const pageContainers = new Map();
@@ -368,6 +369,7 @@
       else if (normalizedPath === '/routes') content = doc.querySelector('#app-ride-page');
       else if (normalizedPath === '/tasks') content = doc.querySelector('.tasks-container');
       else if (normalizedPath === '/dashboard') content = doc.querySelector('.db-content');
+      else if (normalizedPath === '/history') content = doc.querySelector('#history-page-container');
       else if (normalizedPath === '/nav') {
           const navElements = doc.querySelectorAll('#map, .hud-container, .setup-panel, .floating-controls, #summary-modal, #loading-overlay, #resume-panel');
           const navWrap = document.createElement('div');

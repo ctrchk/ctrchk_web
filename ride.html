@@ -176,13 +176,14 @@
     /* Bottom: HUD Controls */
     .hud-bottom {
       pointer-events: auto;
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
       gap: 12px;
       margin-bottom: 12px;
       width: 100%;
     }
+    body.is-navigating .hud-bottom { display: flex; }
 
     .hud-btn-row {
         display: flex;
@@ -572,14 +573,6 @@
         </div>
       </div>
     </div>
-
-    <div class="hud-bottom">
-        <button id="btn-hud-end-ride" style="background:#e74c3c; color:#fff; border:none; padding:16px 64px; border-radius:999px; font-size:20px; font-weight:800; box-shadow:0 8px 24px rgba(231,76,60,0.5); cursor:pointer;">結束騎行</button>
-        <div class="hud-btn-row">
-            <button class="btn-hud-secondary" id="btn-hud-pause">暫停行程</button>
-            <button class="btn-hud-secondary" id="btn-hud-exit">退出</button>
-        </div>
-    </div>
   </div>
 
   <!-- Loading screen -->
@@ -655,6 +648,14 @@
           <div class="stat-unit">公里</div>
         </div>
       </div>
+    </div>
+
+    <div class="hud-bottom">
+        <button id="btn-hud-end-ride" style="background:#e74c3c; color:#fff; border:none; padding:16px 64px; border-radius:999px; font-size:20px; font-weight:800; box-shadow:0 8px 24px rgba(231,76,60,0.5); cursor:pointer;">結束騎行</button>
+        <div class="hud-btn-row">
+            <button class="btn-hud-secondary" id="btn-hud-pause">暫停行程</button>
+            <button class="btn-hud-secondary" id="btn-hud-exit">退出</button>
+        </div>
     </div>
   </div>
 
@@ -1437,7 +1438,9 @@
     function toggleLaneLevelUI(active) {
         console.log('[Ride] Lane Level UI:', active);
         if (map.getLayer('route-line')) {
-            map.setPaintProperty('route-line', 'line-width', active ? 40 : 5);
+            map.setPaintProperty('route-line', 'line-width',
+                active ? ['interpolate', ['linear'], ['zoom'], 14, 20, 18, 100] : 5
+            );
         }
         const roadLayers = map.getStyle().layers.filter(l =>
             l.id.includes('road') || l.id.includes('highway') || l.id.includes('bridge')
@@ -2358,8 +2361,16 @@
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data && data.state) {
-            const state = data.state;
+
+        let state = data.state;
+        // If we are looking for a specific route ride but got a different one as primary,
+        // search the "all" list for a matching route ID.
+        if (data.all && state && (state.type !== 'route' || state.routeId !== routeId)) {
+          const match = data.all.find(r => r.ride_type === 'route' && r.state.routeId === routeId);
+          if (match) state = match.state;
+        }
+
+        if (state) {
             if (state.type === 'route' && state.routeId === routeId) {
                 const modal = document.getElementById('ride-resume-modal');
                 const info = document.getElementById('ride-resume-info');
