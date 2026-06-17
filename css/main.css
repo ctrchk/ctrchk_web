@@ -807,18 +807,21 @@ footer {
 
 /* iOS Safari fallback: JS adds .is-pwa to <body> via navigator.standalone */
 body.is-pwa .web-only { display: none !important; }
-body.is-pwa .app-only { display: block !important; }
-body.is-pwa div.app-only:not(.app-dir-row):not(.db-more-grid) { display: block !important; }
+body.is-pwa .app-only:not(nav):not(footer) { display: block !important; }
 body.is-pwa .db-more-grid.app-only { display: grid !important; }
 body.is-pwa .app-dir-row.app-only { display: flex !important; }
+body.is-pwa #app-bottom-nav { display: flex !important; }
 
 /* Specific flex containers in app mode */
 body.is-pwa #app-home { display: flex !important; }
 body.is-pwa #app-ride-page { display: flex !important; }
+
 @media (display-mode: standalone) {
     .web-only { display: none !important; }
-    .app-only { display: block !important; }
+    .app-only:not(nav):not(footer) { display: block !important; }
     .db-more-grid.app-only { display: grid !important; }
+    .app-dir-row.app-only { display: flex !important; }
+    #app-bottom-nav { display: flex !important; }
     #app-home { display: flex !important; }
     #app-ride-page { display: flex !important; }
 }
@@ -913,34 +916,7 @@ body.app-light-theme {
         --app-border: #c8e6c9;
     }
 }
-/* ── PWA SPA Containers ── */
-#pwa-shell {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-.pwa-page-container {
-    display: none;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    background: var(--app-bg-primary);
-}
-.pwa-page-container.active {
-    display: block !important;
-}
-
-/* Body constraints for PWA shell */
-body.is-pwa {
-    overflow: hidden !important;
-    height: 100% !important;
-    position: fixed;
-    width: 100%;
-}
+/* ── PWA Shell logic removed ── */
 
 #app-bottom-nav {
     position: fixed;
