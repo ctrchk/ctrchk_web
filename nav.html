@@ -2024,14 +2024,6 @@
         document.addEventListener('DOMContentLoaded', initNavOnce);
     }
 
-    window.addEventListener('pwa-page-show', (e) => {
-        if (e.detail.path === '/nav') {
-            initNavOnce();
-            if (NavEngine.map) {
-                setTimeout(() => NavEngine.map.resize(), 50);
-            }
-        }
-    });
 
   </script>
 </body>

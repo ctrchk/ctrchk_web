@@ -1981,26 +1981,8 @@ window.addEventListener('popstate', (e) => {
     if (defaultDept) enterDepartment(defaultDept, false);
 });
 
-window.addEventListener('pwa-page-show', (e) => {
-    if (e.detail.path === '/routes' && map) {
-        setTimeout(() => {
-            if (map) map.invalidateSize();
-        }, 50);
-    }
-});
-
-if (window.isSPA && window.isSPA()) {
-    window.onPWAReady(initAppRidePage);
-} else {
-    if (document.readyState !== 'loading') initAppRidePage();
-    else document.addEventListener('DOMContentLoaded', initAppRidePage);
-}
-
-window.addEventListener('pwa-page-show', (e) => {
-    if (e.detail.path === '/routes') {
-        initAppRidePage();
-    }
-});
+if (document.readyState !== 'loading') initAppRidePage();
+else document.addEventListener('DOMContentLoaded', initAppRidePage);
 
 // Re-run after PWA class is confirmed (pwa.js sets body.is-pwa on DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {

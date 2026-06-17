@@ -2308,14 +2308,6 @@
     });
     history.pushState(null, '', location.href);
 
-    window.addEventListener('pwa-page-show', (e) => {
-        if (e.detail.path === '/ride') {
-            init();
-            if (map) {
-                setTimeout(() => map.invalidateSize(), 150);
-            }
-        }
-    });
   })();
   </script>
 </body>

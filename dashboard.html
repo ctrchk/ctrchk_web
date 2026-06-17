@@ -1308,13 +1308,6 @@
 
     window.onPWAReady(initDashboard);
 
-    window.addEventListener('pwa-page-show', (e) => {
-        if (e.detail.path === '/dashboard') {
-            _dbInited = false; // Force re-init to refresh history and stats
-            initDashboard();
-        }
-    });
-
     function _applyUserUI(user) {
         document.getElementById('db-user-name').textContent =
             user.full_name || user.username || user.email || '騎士';
