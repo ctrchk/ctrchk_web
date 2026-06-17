@@ -41,7 +41,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body.is-navigating { overflow: hidden; }
 
-    #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; min-height: 400px; }
+    #nav-map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; min-height: 400px; }
 
     /* --- Industrial HUD Layout --- */
     .hud-container {
@@ -442,107 +442,107 @@
 </head>
 <body class="is-pwa">
 
-  <div id="loading-overlay">
+  <div id="nav-loading-overlay">
     <div class="loader-ring"></div>
     <div style="color: #6dba65; font-weight: bold; font-size: 18px;">系統初始化中...</div>
   </div>
 
   <!-- Resume Modal -->
-  <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
+  <div id="nav-resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
     <div style="background:var(--hud-bg); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
       <div style="font-size:48px; margin-bottom:16px;">🚲</div>
       <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
-      <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
+      <p id="nav-resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
 
       <div style="display:flex; flex-direction:column; gap:12px;">
-        <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
+        <button id="nav-btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
 
         <div style="display:flex; align-items:center; gap:12px;">
-          <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
-          <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
+          <button id="nav-btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
+          <button id="nav-btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="map"></div>
+  <div id="nav-map"></div>
 
   <!-- Industrial HUD -->
   <div class="hud-container">
-    <div class="hud-top hidden" id="hud-top">
-      <div class="nav-next-icon" id="next-icon"><i class="fas fa-arrow-up"></i></div>
+    <div class="hud-top hidden" id="nav-hud-top">
+      <div class="nav-next-icon" id="nav-next-icon"><i class="fas fa-arrow-up"></i></div>
       <div class="nav-instruction-wrap">
-        <div class="nav-next-road" id="next-road">目前路段</div>
-        <div class="nav-instruction" id="next-instruction">沿單車徑前行</div>
+        <div class="nav-next-road" id="nav-next-road">目前路段</div>
+        <div class="nav-instruction" id="nav-next-instruction">沿單車徑前行</div>
       </div>
       <div class="nav-dist-wrap">
-        <div class="nav-dist-val" id="next-dist">--</div>
+        <div class="nav-dist-val" id="nav-next-dist">--</div>
         <div class="nav-dist-unit">m</div>
       </div>
     </div>
 
     <div class="hud-middle-row">
-      <div class="hud-left hidden" id="hud-left">
+      <div class="hud-left hidden" id="nav-hud-left">
         <div class="stat-item">
-          <div class="stat-val" id="speed-val">0.0</div>
+          <div class="stat-val" id="nav-speed-val">0.0</div>
           <div class="stat-unit">km/h</div>
         </div>
         <div class="stat-item">
-          <div class="stat-val" id="eta-val">--</div>
+          <div class="stat-val" id="nav-eta-val">--</div>
           <div class="stat-unit">ETA</div>
         </div>
         <div class="stat-item">
-          <div class="stat-val" id="remain-val">--</div>
+          <div class="stat-val" id="nav-remain-val">--</div>
           <div class="stat-unit">公里</div>
         </div>
       </div>
     </div>
 
     <div class="hud-bottom">
-      <button class="btn-pause-nav" id="btn-pause-nav">暫停行程</button>
-      <button class="btn-exit-nav" id="btn-exit-nav">退出</button>
-      <button class="btn-end-nav" id="btn-end-nav">結束騎行</button>
+      <button class="btn-pause-nav" id="nav-btn-pause-nav">暫停行程</button>
+      <button class="btn-exit-nav" id="nav-btn-exit-nav">退出</button>
+      <button class="btn-end-nav" id="nav-btn-end-nav">結束騎行</button>
     </div>
   </div>
 
   <!-- Summary Modal -->
-  <div id="summary-modal">
-    <div id="summary-emoji" style="font-size: 64px; margin-bottom: 8px;">🎉</div>
+  <div id="nav-summary-modal">
+    <div id="nav-summary-emoji" style="font-size: 64px; margin-bottom: 8px;">🎉</div>
     <div class="summary-title">導航完成！</div>
-    <div id="summary-xp-badge" style="background: #BFE340; color: #121f14; font-size: 24px; font-weight: 900; padding: 8px 24px; border-radius: 12px; margin: 12px 0;">+0 XP</div>
+    <div id="nav-summary-xp-badge" style="background: #BFE340; color: #121f14; font-size: 24px; font-weight: 900; padding: 8px 24px; border-radius: 12px; margin: 12px 0;">+0 XP</div>
 
-    <div id="summary-route-name" style="font-size: 16px; opacity: 0.7; margin-bottom: 24px;"></div>
+    <div id="nav-summary-route-name" style="font-size: 16px; opacity: 0.7; margin-bottom: 24px;"></div>
 
     <div class="summary-stats-grid">
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-time">0</div>
+        <div class="summary-stat-val" id="nav-sum-time">0</div>
         <div class="summary-stat-lbl">⏱ 時間 (分)</div>
       </div>
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-dist">0.0</div>
+        <div class="summary-stat-val" id="nav-sum-dist">0.0</div>
         <div class="summary-stat-lbl">🚴 距離 (km)</div>
       </div>
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-speed">0.0</div>
+        <div class="summary-stat-val" id="nav-sum-speed">0.0</div>
         <div class="summary-stat-lbl">💨 均速 (km/h)</div>
       </div>
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-xp">0</div>
+        <div class="summary-stat-val" id="nav-sum-xp">0</div>
         <div class="summary-stat-lbl">⭐ 獲得 XP</div>
       </div>
       <div class="summary-stat-box">
-        <div class="summary-stat-val" id="sum-fare">$0.0</div>
+        <div class="summary-stat-val" id="nav-sum-fare">$0.0</div>
         <div class="summary-stat-lbl">💰 已省車資</div>
       </div>
     </div>
 
     <div style="width: 100%; max-width: 400px; margin-bottom: 32px;">
       <div style="display: flex; justify-content: space-between; font-size: 14px; opacity: 0.8; margin-bottom: 8px;">
-        <span id="sum-xp-level">Lv.1</span>
-        <span id="sum-xp-next">下一級 80 XP</span>
+        <span id="nav-sum-xp-level">Lv.1</span>
+        <span id="nav-sum-xp-next">下一級 80 XP</span>
       </div>
       <div style="height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; overflow: hidden;">
-        <div id="sum-xp-bar" style="height: 100%; background: #BFE340; width: 0%; transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+        <div id="nav-sum-xp-bar" style="height: 100%; background: #BFE340; width: 0%; transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
       </div>
     </div>
 
@@ -550,46 +550,46 @@
   </div>
 
   <!-- Setup & Search Panel -->
-  <div class="setup-panel" id="setup-panel">
+  <div class="setup-panel" id="nav-setup-panel">
     <div class="setup-handle"></div>
     <h2 class="setup-title">規劃行程</h2>
 
     <div class="search-group">
       <div class="search-row" style="position: relative;">
         <div class="search-icon" style="color: #2ecc71;"><i class="fas fa-location-dot"></i></div>
-        <input type="text" id="input-start" placeholder="📍 使用目前位置" autocomplete="off">
-        <div id="results-start" class="search-results-dropdown"></div>
+        <input type="text" id="nav-input-start" placeholder="📍 使用目前位置" autocomplete="off">
+        <div id="nav-results-start" class="search-results-dropdown"></div>
       </div>
-      <div id="waypoint-container"></div>
+      <div id="nav-waypoint-container"></div>
       <div class="search-row" style="position: relative;">
         <div class="search-icon" style="color: #e74c3c;"><i class="fas fa-flag-checkered"></i></div>
-        <input type="text" id="input-end" placeholder="要去哪裡？" autocomplete="off">
-        <div id="results-end" class="search-results-dropdown"></div>
+        <input type="text" id="nav-input-end" placeholder="要去哪裡？" autocomplete="off">
+        <div id="nav-results-end" class="search-results-dropdown"></div>
       </div>
     </div>
 
     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-        <button id="btn-add-wp" style="flex: 1; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.3); color: #6dba65; font-weight: bold; cursor: pointer;">
+        <button id="nav-btn-add-wp" style="flex: 1; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.3); color: #6dba65; font-weight: bold; cursor: pointer;">
             <i class="fas fa-plus"></i> 增加停靠點
         </button>
     </div>
 
-    <div id="route-options" style="margin-bottom: 20px; display: none;">
+    <div id="nav-route-options" style="margin-bottom: 20px; display: none;">
         <div style="font-size: 14px; opacity: 0.7; margin-bottom: 8px;">選擇路線：</div>
-        <div id="route-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        <div id="nav-route-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
     </div>
 
-    <button class="btn-start-nav" id="btn-start-nav" disabled>開始導航</button>
+    <button class="btn-start-nav" id="nav-btn-start-nav" disabled>開始導航</button>
   </div>
 
   <!-- Floating Map Controls -->
   <div class="floating-controls">
-    <button class="float-btn" id="btn-open-resume" style="display:none; background:#BFE340; color:#1a252f; border-color:#BFE340;" title="未完成行程"><i class="fas fa-history"></i></button>
-    <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
-    <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
-    <button class="float-btn active" id="btn-toggle-park" title="顯示/隱藏泊位"><i class="fas fa-parking"></i></button>
-    <button class="float-btn active" id="btn-recenter" title="跟隨我"><i class="fas fa-crosshairs"></i></button>
-    <button class="float-btn active" id="btn-orient" title="切換航向模式"><i class="fas fa-compass"></i></button>
+    <button class="float-btn" id="nav-btn-open-resume" style="display:none; background:#BFE340; color:#1a252f; border-color:#BFE340;" title="未完成行程"><i class="fas fa-history"></i></button>
+    <button class="float-btn" id="nav-btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
+    <button class="float-btn" id="nav-btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
+    <button class="float-btn active" id="nav-btn-toggle-park" title="顯示/隱藏泊位"><i class="fas fa-parking"></i></button>
+    <button class="float-btn active" id="nav-btn-recenter" title="跟隨我"><i class="fas fa-crosshairs"></i></button>
+    <button class="float-btn active" id="nav-btn-orient" title="切換航向模式"><i class="fas fa-compass"></i></button>
   </div>
 
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
@@ -631,7 +631,7 @@
 
       init() {
         NavEngine.map = new mapboxgl.Map({
-          container: 'map',
+          container: 'nav-map',
           style: 'mapbox://styles/mapbox/dark-v11',
           center: [114.2597, 22.3083], // Default TKO
           zoom: 13,
@@ -642,14 +642,14 @@
 
         NavEngine.map.on('load', () => {
           NavEngine.onMapLoad();
-          document.getElementById('loading-overlay').classList.add('hidden');
+          document.getElementById('nav-loading-overlay').classList.add('hidden');
 
           // Handle Autostart from URL
           const params = new URLSearchParams(location.search);
           if (params.get('autostart') === '1') {
               const to = params.get('to');
               if (to) {
-                  document.getElementById('input-end').value = to;
+                  document.getElementById('nav-input-end').value = to;
                   // Try to find coordinates for 'to' if it's a known station
                   const station = NavEngine.stations.find(s => (s.code + s.name).includes(to.replace(/\s+/g, '')));
                   if (station) {
@@ -661,9 +661,9 @@
                               NavEngine.endLocation = loc;
                               NavEngine.updateMarkers();
                               NavEngine.checkReady();
-                              setTimeout(() => { if (!document.getElementById('btn-start-nav').disabled) NavEngine.startNavigation(); }, 1500);
+                              setTimeout(() => { if (!document.getElementById('nav-btn-start-nav').disabled) NavEngine.startNavigation(); }, 1500);
                           }
-                      }, document.getElementById('input-end'));
+                      }, document.getElementById('nav-input-end'));
                   }
               }
           }
@@ -696,29 +696,29 @@
           if (state) {
             if (state.type === 'navigation') {
                 NavEngine.activeRideState = state;
-                const openBtn = document.getElementById('btn-open-resume');
+                const openBtn = document.getElementById('nav-btn-open-resume');
                 openBtn.style.display = 'flex';
                 openBtn.onclick = () => {
-                   document.getElementById('resume-modal').style.display = 'flex';
-                   document.getElementById('resume-info').textContent = `您有一段往 ${state.endLocationName || '目的地'} 的行程未完成。`;
+                   document.getElementById('nav-resume-modal').style.display = 'flex';
+                   document.getElementById('nav-resume-info').textContent = `您有一段往 ${state.endLocationName || '目的地'} 的行程未完成。`;
                 };
 
                 // Auto open modal on load
-                document.getElementById('resume-modal').style.display = 'flex';
-                document.getElementById('resume-info').textContent = `您有一段往 ${state.endLocationName || '目的地'} 的行程未完成。`;
+                document.getElementById('nav-resume-modal').style.display = 'flex';
+                document.getElementById('nav-resume-info').textContent = `您有一段往 ${state.endLocationName || '目的地'} 的行程未完成。`;
 
-                document.getElementById('btn-resume-yes').onclick = () => NavEngine.resumeRide(state);
-                document.getElementById('btn-resume-cancel').onclick = () => {
-                   document.getElementById('resume-modal').style.display = 'none';
+                document.getElementById('nav-btn-resume-yes').onclick = () => NavEngine.resumeRide(state);
+                document.getElementById('nav-btn-resume-cancel').onclick = () => {
+                   document.getElementById('nav-resume-modal').style.display = 'none';
                 };
-                document.getElementById('btn-resume-delete').onclick = async () => {
+                document.getElementById('nav-btn-resume-delete').onclick = async () => {
                   if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
                   await fetch('/api/user?action=active-ride&type=navigation', {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                   });
-                  document.getElementById('resume-modal').style.display = 'none';
-                  document.getElementById('btn-open-resume').style.display = 'none';
+                  document.getElementById('nav-resume-modal').style.display = 'none';
+                  document.getElementById('nav-btn-open-resume').style.display = 'none';
                 };
             } else if (state.type === 'route') {
                 // If it's a route ride, offer to go to ride page
@@ -744,9 +744,9 @@
            return { id: wp.id, location: wp.location, marker: null };
         });
 
-        document.getElementById('input-end').value = state.endLocationName || '';
-        document.getElementById('resume-modal').style.display = 'none';
-        document.getElementById('btn-open-resume').style.display = 'none';
+        document.getElementById('nav-input-end').value = state.endLocationName || '';
+        document.getElementById('nav-resume-modal').style.display = 'none';
+        document.getElementById('nav-btn-open-resume').style.display = 'none';
 
         // Render restored route
         if (NavEngine.routeData) {
@@ -936,7 +936,7 @@
 
       setDestination(lng, lat, name) {
         NavEngine.endLocation = [lng, lat];
-        document.getElementById('input-end').value = name || '所選位置';
+        document.getElementById('nav-input-end').value = name || '所選位置';
         NavEngine.updateMarkers();
         NavEngine.checkReady();
         if (NavEngine.popup) NavEngine.popup.remove();
@@ -991,12 +991,12 @@
       },
 
       initSearch() {
-        NavEngine.setupSearchInput('input-start', 'results-start', (loc) => {
+        NavEngine.setupSearchInput('nav-input-start', 'nav-results-start', (loc) => {
           NavEngine.startLocation = loc;
           NavEngine.updateMarkers();
           NavEngine.checkReady();
         });
-        NavEngine.setupSearchInput('input-end', 'results-end', (loc) => {
+        NavEngine.setupSearchInput('nav-input-end', 'nav-results-end', (loc) => {
           NavEngine.endLocation = loc;
           NavEngine.updateMarkers();
           NavEngine.checkReady();
@@ -1132,7 +1132,7 @@
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const rank = (user.permission_rank || user.mileage_rank || 'bronze').toLowerCase();
 
-        document.getElementById('btn-add-wp').onclick = () => {
+        document.getElementById('nav-btn-add-wp').onclick = () => {
           if (rank === 'bronze') {
             alert('停靠點功能為銀卡及金卡會員專屬。');
             return;
@@ -1144,50 +1144,50 @@
           NavEngine.addWaypointInput();
         };
 
-        document.getElementById('btn-start-nav').onclick = () => NavEngine.startNavigation();
-        document.getElementById('btn-end-nav').onclick = () => NavEngine.endNavigation();
-        document.getElementById('btn-exit-nav').onclick = () => NavEngine.exitNavigation();
-        document.getElementById('btn-pause-nav').onclick = () => NavEngine.pauseNavigation();
-        document.getElementById('btn-recenter').onclick = () => {
+        document.getElementById('nav-btn-start-nav').onclick = () => NavEngine.startNavigation();
+        document.getElementById('nav-btn-end-nav').onclick = () => NavEngine.endNavigation();
+        document.getElementById('nav-btn-exit-nav').onclick = () => NavEngine.exitNavigation();
+        document.getElementById('nav-btn-pause-nav').onclick = () => NavEngine.pauseNavigation();
+        document.getElementById('nav-btn-recenter').onclick = () => {
           NavEngine.isFollowing = !NavEngine.isFollowing;
-          document.getElementById('btn-recenter').classList.toggle('active', NavEngine.isFollowing);
+          document.getElementById('nav-btn-recenter').classList.toggle('active', NavEngine.isFollowing);
           if (NavEngine.isFollowing) NavEngine.recenter();
         };
 
         NavEngine.map.on('dragstart', () => {
           NavEngine.isFollowing = false;
-          document.getElementById('btn-recenter').classList.remove('active');
+          document.getElementById('nav-btn-recenter').classList.remove('active');
         });
-        document.getElementById('btn-orient').onclick = () => {
+        document.getElementById('nav-btn-orient').onclick = () => {
           NavEngine.headingUp = !NavEngine.headingUp;
-          document.getElementById('btn-orient').classList.toggle('active', NavEngine.headingUp);
+          document.getElementById('nav-btn-orient').classList.toggle('active', NavEngine.headingUp);
         };
 
-        document.getElementById('btn-zoom-in').onclick = () => {
+        document.getElementById('nav-btn-zoom-in').onclick = () => {
           NavEngine.navZoom = Math.min(22, NavEngine.navZoom + 0.5);
           if (NavEngine.isNavigating) NavEngine.recenter();
           else NavEngine.map.zoomTo(NavEngine.navZoom);
         };
-        document.getElementById('btn-zoom-out').onclick = () => {
+        document.getElementById('nav-btn-zoom-out').onclick = () => {
           NavEngine.navZoom = Math.max(10, NavEngine.navZoom - 0.5);
           if (NavEngine.isNavigating) NavEngine.recenter();
           else NavEngine.map.zoomTo(NavEngine.navZoom);
         };
 
-        document.getElementById('btn-toggle-park').onclick = () => {
+        document.getElementById('nav-btn-toggle-park').onclick = () => {
           if (!NavEngine.map.getLayer('parking-layer')) {
             alert('泊位圖層尚未載入或無權限。');
             return;
           }
           const visible = NavEngine.map.getLayoutProperty('parking-layer', 'visibility') !== 'none';
           NavEngine.map.setLayoutProperty('parking-layer', 'visibility', visible ? 'none' : 'visible');
-          document.getElementById('btn-toggle-park').classList.toggle('active', !visible);
+          document.getElementById('nav-btn-toggle-park').classList.toggle('active', !visible);
         };
       },
 
       addWaypointInput() {
         const id = Date.now();
-        const container = document.getElementById('waypoint-container');
+        const container = document.getElementById('nav-waypoint-container');
         const row = document.createElement('div');
         row.className = 'search-row';
         row.id = `wp-row-${id}`;
@@ -1195,8 +1195,8 @@
         row.style.position = 'relative';
         row.innerHTML = `
           <div class="search-icon" style="color: #f1c232;"><i class="fas fa-location-dot"></i></div>
-          <input type="text" id="input-wp-${id}" placeholder="新增停靠點..." autocomplete="off">
-          <div id="results-wp-${id}" class="search-results-dropdown"></div>
+          <input type="text" id="nav-input-wp-${id}" placeholder="新增停靠點..." autocomplete="off">
+          <div id="nav-results-wp-${id}" class="search-results-dropdown"></div>
           <button class="remove-wp" style="background:none; border:none; color:#e74c3c; padding:0 8px; cursor:pointer;"><i class="fas fa-times"></i></button>
         `;
         container.appendChild(row);
@@ -1245,7 +1245,7 @@
         const speedKmh = (pos.coords.speed || 0) * 3.6;
 
         NavEngine.currentLocation = coords;
-        document.getElementById('speed-val').textContent = speedKmh.toFixed(1);
+        document.getElementById('nav-speed-val').textContent = speedKmh.toFixed(1);
 
         // Re-check readiness as currentLocation changed
         NavEngine.checkReady();
@@ -1365,18 +1365,18 @@
         const currentLoc = snapped.properties.location * 1000; // to meters
 
         const remain = Math.max(0, totalDist - currentLoc);
-        document.getElementById('remain-val').textContent = (remain / 1000).toFixed(1);
+        document.getElementById('nav-remain-val').textContent = (remain / 1000).toFixed(1);
 
         // ETA based on current speed (fallback to 15kmh)
         const activeSpeed = speed > 5 ? speed : 15;
         const etaMins = Math.ceil((remain / 1000) / activeSpeed * 60);
-        document.getElementById('eta-val').textContent = etaMins + 'm';
+        document.getElementById('nav-eta-val').textContent = etaMins + 'm';
 
         // Road Name & Next Instruction
         NavEngine.updateRoadInfo(pos);
 
         // Next Junction logic (approximate by path segments)
-        document.getElementById('next-dist').textContent = Math.round(remain < 100 ? remain : 100);
+        document.getElementById('nav-next-dist').textContent = Math.round(remain < 100 ? remain : 100);
       },
 
       updateRoadInfo(pos) {
@@ -1415,23 +1415,23 @@
           });
         }
 
-        document.getElementById('next-road').textContent = currentRoad;
+        document.getElementById('nav-next-road').textContent = currentRoad;
 
         // Destination check
         const dest = NavEngine.routeData.coords[NavEngine.routeData.coords.length - 1];
         const distToDest = turf.distance(pos, dest) * 1000;
 
         if (distToDest < 50) {
-          document.getElementById('next-instruction').textContent = '即將抵達目的地';
-          document.getElementById('next-icon').innerHTML = '<i class="fas fa-flag-checkered"></i>';
+          document.getElementById('nav-next-instruction').textContent = '即將抵達目的地';
+          document.getElementById('nav-next-icon').innerHTML = '<i class="fas fa-flag-checkered"></i>';
         } else if (isPedestrian) {
-          document.getElementById('next-instruction').textContent = '行人路：請下車推行';
-          document.getElementById('next-icon').innerHTML = '<i class="fas fa-walking"></i>';
-          document.getElementById('hud-top').style.background = 'var(--hud-red)';
+          document.getElementById('nav-next-instruction').textContent = '行人路：請下車推行';
+          document.getElementById('nav-next-icon').innerHTML = '<i class="fas fa-walking"></i>';
+          document.getElementById('nav-hud-top').style.background = 'var(--hud-red)';
         } else {
-          document.getElementById('next-instruction').textContent = '沿單車徑前行';
-          document.getElementById('next-icon').innerHTML = '<i class="fas fa-arrow-up"></i>';
-          document.getElementById('hud-top').style.background = 'var(--hud-highway-green)';
+          document.getElementById('nav-next-instruction').textContent = '沿單車徑前行';
+          document.getElementById('nav-next-icon').innerHTML = '<i class="fas fa-arrow-up"></i>';
+          document.getElementById('nav-hud-top').style.background = 'var(--hud-highway-green)';
         }
       },
 
@@ -1487,7 +1487,7 @@
       },
 
       checkReady() {
-        const btn = document.getElementById('btn-start-nav');
+        const btn = document.getElementById('nav-btn-start-nav');
         // Ensure end location is set AND (start location OR current location is available)
         const isReady = !!NavEngine.endLocation && (!!NavEngine.startLocation || !!NavEngine.currentLocation);
 
@@ -1523,7 +1523,7 @@
           const route = await NavEngine.getFullPath(points);
           if (route) {
             NavEngine.useRoute(route);
-            document.getElementById('route-options').style.display = 'none';
+            document.getElementById('nav-route-options').style.display = 'none';
           }
           return;
         }
@@ -1590,8 +1590,8 @@
       },
 
       displayRouteOptions(routes) {
-        const container = document.getElementById('route-options');
-        const list = document.getElementById('route-list');
+        const container = document.getElementById('nav-route-options');
+        const list = document.getElementById('nav-route-list');
         list.innerHTML = '';
 
         if (routes.length <= 1) {
@@ -1625,8 +1625,8 @@
       useRoute(route) {
         NavEngine.routeData = route;
         NavEngine.drawRoute(route.coords, route.segmentTypes);
-        document.getElementById('remain-val').textContent = (route.distance / 1000).toFixed(1);
-        document.getElementById('eta-val').textContent = Math.ceil(route.distance / 1000 / 15 * 60) + 'm';
+        document.getElementById('nav-remain-val').textContent = (route.distance / 1000).toFixed(1);
+        document.getElementById('nav-eta-val').textContent = Math.ceil(route.distance / 1000 / 15 * 60) + 'm';
       },
 
       async getRouteSegment(p1, p2) {
@@ -1848,8 +1848,8 @@
         }
 
         // Show HUD
-        document.getElementById('hud-top').classList.remove('hidden');
-        document.getElementById('hud-left').classList.remove('hidden');
+        document.getElementById('nav-hud-top').classList.remove('hidden');
+        document.getElementById('nav-hud-left').classList.remove('hidden');
 
         // External Hook
         if (typeof onNavigationStart === 'function') {
@@ -1874,7 +1874,7 @@
           trackingCoords: NavEngine.trackingCoords,
           navStartTime: NavEngine.navStartTime,
           endLocation: NavEngine.endLocation,
-          endLocationName: document.getElementById('input-end').value,
+          endLocationName: document.getElementById('nav-input-end').value,
           waypoints: NavEngine.waypoints.map(wp => ({ id: wp.id, location: wp.location }))
         };
 
@@ -1926,7 +1926,7 @@
           try {
             const body = {
               route_id: 'NAV_AUTO',
-              route_name: document.getElementById('input-end').value || '自訂導航',
+              route_name: document.getElementById('nav-input-end').value || '自訂導航',
               ride_date: new Date().toISOString().slice(0, 10),
               start_time: new Date(NavEngine.navStartTime).toISOString(),
               end_time: new Date(endTime).toISOString(),
@@ -1960,13 +1960,13 @@
         }
 
         // Show Summary Modal
-        document.getElementById('summary-route-name').textContent = document.getElementById('input-end').value || '自訂導航';
-        document.getElementById('sum-dist').textContent = distanceKm;
-        document.getElementById('sum-time').textContent = durationMins;
-        document.getElementById('sum-speed').textContent = avgSpeed;
-        document.getElementById('sum-xp').textContent = apiResult.xp_earned || 0;
-        document.getElementById('sum-fare').textContent = '$' + parseFloat(apiResult.saved_fare_earned || distanceKm).toFixed(1);
-        document.getElementById('summary-xp-badge').textContent = `+${apiResult.xp_earned || 0} XP`;
+        document.getElementById('nav-summary-route-name').textContent = document.getElementById('nav-input-end').value || '自訂導航';
+        document.getElementById('nav-sum-dist').textContent = distanceKm;
+        document.getElementById('nav-sum-time').textContent = durationMins;
+        document.getElementById('nav-sum-speed').textContent = avgSpeed;
+        document.getElementById('nav-sum-xp').textContent = apiResult.xp_earned || 0;
+        document.getElementById('nav-sum-fare').textContent = '$' + parseFloat(apiResult.saved_fare_earned || distanceKm).toFixed(1);
+        document.getElementById('nav-summary-xp-badge').textContent = `+${apiResult.xp_earned || 0} XP`;
 
         // XP Progress Bar Logic
         const LEVEL_XP = [0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600, 4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200, 28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900, 98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700, 267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000];
@@ -1987,11 +1987,11 @@
         const totalXp = apiResult.xp || 0;
         const pct = Math.min(100, Math.max(0, (totalXp - xpCur) / Math.max(1, xpNext - xpCur) * 100));
 
-        document.getElementById('sum-xp-level').textContent = `Lv.${lvl}`;
-        document.getElementById('sum-xp-next').textContent = (!xpNext || xpNext === Infinity) ? '最高等級' : `下一級 ${xpNext} XP`;
-        document.getElementById('summary-modal').classList.add('show');
+        document.getElementById('nav-sum-xp-level').textContent = `Lv.${lvl}`;
+        document.getElementById('nav-sum-xp-next').textContent = (!xpNext || xpNext === Infinity) ? '最高等級' : `下一級 ${xpNext} XP`;
+        document.getElementById('nav-summary-modal').classList.add('show');
         setTimeout(() => {
-          document.getElementById('sum-xp-bar').style.width = pct + '%';
+          document.getElementById('nav-sum-xp-bar').style.width = pct + '%';
         }, 500);
 
         // External Hook
@@ -2014,8 +2014,8 @@
         }
 
         // Hide HUD
-        document.getElementById('hud-top').classList.add('hidden');
-        document.getElementById('hud-left').classList.add('hidden');
+        document.getElementById('nav-hud-top').classList.add('hidden');
+        document.getElementById('nav-hud-left').classList.add('hidden');
 
         NavEngine.map.easeTo({ pitch: 0, bearing: 0, zoom: 14 });
       }
@@ -2037,15 +2037,24 @@
     }
 
     if (window.isSPA && window.isSPA()) {
-        window.onPWAReady(initNavOnce);
+        window.onPWAReady(() => {
+            initNavOnce();
+            // In SPA mode, if we were already inited, the loading overlay might still be there from the fresh fetch
+            document.getElementById('nav-loading-overlay').classList.add('hidden');
+        });
     } else {
         document.addEventListener('DOMContentLoaded', initNavOnce);
     }
 
     // PWA SPA Support: Trigger map resize when switching pages
     window.addEventListener('pwa-page-show', (e) => {
-        if (e.detail.path === '/nav' && NavEngine.map) {
-            setTimeout(() => NavEngine.map.resize(), 150);
+        if (e.detail.path === '/nav') {
+            if (NavEngine.map) {
+                setTimeout(() => NavEngine.map.resize(), 150);
+            } else {
+                initNavOnce();
+            }
+            document.getElementById('nav-loading-overlay').classList.add('hidden');
         }
     });
 

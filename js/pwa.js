@@ -387,39 +387,64 @@
         document.getElementById('pwa-shell').appendChild(container);
         pageContainers.set(normalizedPath, container);
 
-        const styles = doc.querySelectorAll('style');
-        styles.forEach(s => {
+        // Inject Styles
+        doc.querySelectorAll('style').forEach(s => {
           let css = s.textContent;
-          // Prevent sub-page body/html styles from leaking to the global shell
-          // Replace 'html' and 'body' with the specific container ID
           css = css.replace(/(?:^|[\s,])html(?=[\s,{]|$)/g, ' #' + config.id);
           css = css.replace(/(?:^|[\s,])body(?=[\s,{]|$)/g, ' #' + config.id);
-
           const scopedStyle = document.createElement('style');
           scopedStyle.textContent = css;
           scopedStyle.dataset.page = normalizedPath;
           document.head.appendChild(scopedStyle);
         });
 
-        const scripts = doc.querySelectorAll('script');
-        scripts.forEach(oldScript => {
-          if (oldScript.src) {
-              if (oldScript.src.includes('main.js') || oldScript.src.includes('pwa.js') ||
-                  oldScript.src.includes('leaflet.js') || oldScript.src.includes('mapbox-gl.js')) return;
+        // Inject Link Tags (External CSS)
+        const linkPromises = [];
+        doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+          if (document.querySelector(`link[href="${link.href}"]`)) return;
+          const newLink = document.createElement('link');
+          newLink.rel = 'stylesheet';
+          newLink.href = link.href;
+          linkPromises.push(new Promise(resolve => {
+              newLink.onload = resolve;
+              newLink.onerror = resolve;
+          }));
+          document.head.appendChild(newLink);
+        });
+        await Promise.all(linkPromises);
 
-              const newScript = document.createElement('script');
-              newScript.src = oldScript.src;
-              newScript.async = false;
-              document.body.appendChild(newScript);
-          } else {
-              let code = oldScript.textContent;
-              // Replace DOMContentLoaded with a custom helper that runs immediately if we are in SPA
-              code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
+        const scripts = Array.from(doc.querySelectorAll('script'));
+        const externalScripts = [];
+        const inlineScripts = [];
 
-              const newScript = document.createElement('script');
-              newScript.textContent = `(function(){\n${code}\n})();`;
-              document.body.appendChild(newScript);
-          }
+        scripts.forEach(s => {
+            if (s.src) {
+                if (!document.querySelector(`script[src="${s.src}"]`)) {
+                    externalScripts.push(s.src);
+                }
+            } else {
+                inlineScripts.push(s.textContent);
+            }
+        });
+
+        for (const src of externalScripts) {
+            await new Promise((resolve) => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = resolve;
+                document.body.appendChild(s);
+            });
+        }
+
+        inlineScripts.forEach(code => {
+            let processedCode = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
+            // Replace const/let with var to prevent 'identifier already declared' in SPA mode when re-running scripts
+            processedCode = processedCode.replace(/(^|[^a-zA-Z0-9_$])(const|let)\s+([a-zA-Z0-9_$]+)/g, '$1var $3');
+
+            const s = document.createElement('script');
+            s.textContent = processedCode;
+            document.body.appendChild(s);
         });
 
         return container;
