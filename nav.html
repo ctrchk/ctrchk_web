@@ -60,25 +60,25 @@
       background: var(--hud-highway-green);
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
-      border: 2px solid rgba(255,255,255,0.2);
-      border-radius: 20px;
-      padding: 20px 24px;
-      margin-top: 12px;
+      border: 3px solid rgba(255,255,255,0.25);
+      border-radius: 28px;
+      padding: 28px 32px;
+      margin-top: calc(16px + env(safe-area-inset-top));
       display: flex;
       align-items: center;
-      gap: 20px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      gap: 28px;
+      box-shadow: 0 15px 60px rgba(0,0,0,0.7);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      min-height: 100px;
+      min-height: 140px;
     }
-    .hud-top.hidden { transform: translateY(-200%); }
+    .hud-top.hidden { transform: translateY(-250%); }
 
-    .nav-next-icon { font-size: 40px; color: #fff; min-width: 50px; text-align: center; }
+    .nav-next-icon { font-size: 56px; color: #fff; min-width: 70px; text-align: center; }
     .nav-instruction-wrap { flex: 1; }
-    .nav-next-road { font-size: 16px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 4px; }
-    .nav-instruction { font-size: 26px; font-weight: 900; color: #fff; line-height: 1.1; }
-    .nav-dist-wrap { text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 16px; }
-    .nav-dist-val { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; }
+    .nav-next-road { font-size: 20px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 8px; }
+    .nav-instruction { font-size: 38px; font-weight: 900; color: #fff; line-height: 1.1; }
+    .nav-dist-wrap { text-align: right; border-left: 3px solid rgba(255,255,255,0.25); padding-left: 24px; }
+    .nav-dist-val { font-size: 42px; font-weight: 900; color: #fff; line-height: 1; }
     .nav-dist-unit { font-size: 12px; color: #BFE340; opacity: 0.8; }
 
     /* Left: Stats Panel */
@@ -1939,7 +1939,7 @@
               all_stops: false,
               source: 'pwa',
               ride_mode: 'nav',
-              path: NavEngine.trackingCoords
+              gpx_track: NavEngine.trackingCoords
             };
             const res = await fetch('/api/getHistory', {
               method: 'POST',

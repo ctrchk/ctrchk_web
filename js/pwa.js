@@ -335,6 +335,27 @@
 
       window.dispatchEvent(new CustomEvent('pwa-page-show', { detail: { path: normalizedPath } }));
       window.scrollTo(0, 0);
+
+      // Fallback: Ensure global loaders are hidden after navigation
+      setTimeout(() => {
+          const overlays = ['#nav-loading-overlay', '#ride-page-loading', '#loading-overlay', '#app-rides-loading', '#app-splash'];
+          overlays.forEach(selector => {
+              const el = document.querySelector(selector);
+              if (!el) return;
+              if (selector === '#app-splash') {
+                  if (el.style.display !== 'none') {
+                      el.classList.add('splash-fade-out');
+                      setTimeout(() => { el.style.display = 'none'; }, 500);
+                  }
+              } else {
+                  if (!el.classList.contains('hidden')) el.classList.add('hidden');
+                  // Also handle display: none directly if needed
+                  if (window.getComputedStyle(el).display !== 'none') {
+                      el.style.display = 'none';
+                  }
+              }
+          });
+      }, 5000);
     }
   }
 
@@ -371,12 +392,12 @@
       else if (normalizedPath === '/dashboard') content = doc.querySelector('.db-content');
       else if (normalizedPath === '/history') content = doc.querySelector('#history-page-container');
       else if (normalizedPath === '/nav') {
-          const navElements = doc.querySelectorAll('#map, .hud-container, .setup-panel, .floating-controls, #summary-modal, #loading-overlay, #resume-panel');
+          const navElements = doc.querySelectorAll('#nav-map, .hud-container, .setup-panel, .floating-controls, #nav-summary-modal, #nav-loading-overlay, #nav-resume-panel');
           const navWrap = document.createElement('div');
           navElements.forEach(el => navWrap.appendChild(el));
           content = navWrap;
       } else if (normalizedPath === '/ride') {
-          const rideElements = doc.querySelectorAll('#ride-map, #ride-top, .hud-container, #next-stop-card, #free-mode-panel, #go-to-start-banner, #ride-bottom-sheet, #ride-summary, #ride-resume-modal, #ride-loading, #ride-locked');
+          const rideElements = doc.querySelectorAll('#ride-page-map, #ride-top, .hud-container, #ride-next-stop-card, #ride-free-mode-panel, #ride-go-to-start-banner, #ride-bottom-sheet, #ride-summary, #ride-resume-modal, #ride-page-loading, #ride-locked');
           const rideWrap = document.createElement('div');
           rideElements.forEach(el => rideWrap.appendChild(el));
           content = rideWrap;
@@ -387,11 +408,25 @@
         document.getElementById('pwa-shell').appendChild(container);
         pageContainers.set(normalizedPath, container);
 
-        // Inject Styles
+        // Inject Styles with full scoping
         doc.querySelectorAll('style').forEach(s => {
           let css = s.textContent;
-          css = css.replace(/(?:^|[\s,])html(?=[\s,{]|$)/g, ' #' + config.id);
-          css = css.replace(/(?:^|[\s,])body(?=[\s,{]|$)/g, ' #' + config.id);
+          // Scope all rules to the container ID
+          // Skip @rules like @media, @keyframes
+          css = css.replace(/([^\r\n,{}]+)(?=[^{}]*\{)/g, (match) => {
+              if (match.trim().startsWith('@')) return match;
+              const selectors = match.split(',');
+              return selectors.map(sel => {
+                  const str = sel.trim();
+                  if (!str) return '';
+                  let s = str;
+                  if (s.startsWith('html')) s = s.replace('html', '#' + config.id);
+                  else if (s.startsWith('body')) s = s.replace('body', '#' + config.id);
+                  else if (!s.startsWith('#' + config.id)) s = '#' + config.id + ' ' + s;
+                  return s;
+              }).join(', ');
+          });
+
           const scopedStyle = document.createElement('style');
           scopedStyle.textContent = css;
           scopedStyle.dataset.page = normalizedPath;
@@ -399,19 +434,13 @@
         });
 
         // Inject Link Tags (External CSS)
-        const linkPromises = [];
         doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
           if (document.querySelector(`link[href="${link.href}"]`)) return;
           const newLink = document.createElement('link');
           newLink.rel = 'stylesheet';
           newLink.href = link.href;
-          linkPromises.push(new Promise(resolve => {
-              newLink.onload = resolve;
-              newLink.onerror = resolve;
-          }));
           document.head.appendChild(newLink);
         });
-        await Promise.all(linkPromises);
 
         const scripts = Array.from(doc.querySelectorAll('script'));
         const externalScripts = [];
@@ -441,9 +470,13 @@
             const combinedCode = inlineScripts.join('\n\n');
             let processedCode = combinedCode.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
 
+            // To prevent 'identifier already declared' when re-running scripts,
+            // we'll replace 'const' and 'let' with 'var' in the injected code.
+            // Using a more inclusive regex to catch declarations within blocks/loops too.
+            processedCode = processedCode.replace(/\b(const|let)\b/g, 'var');
+
             const s = document.createElement('script');
-            // Wrap all inline scripts in a single IIFE to allow scope sharing while avoiding global redeclaration errors
-            s.textContent = `(function(){\n${processedCode}\n})();`;
+            s.textContent = 'try {\n' + processedCode + '\n} catch(e) { console.error("[PWA-SPA] Injected script error", e); }';
             document.body.appendChild(s);
         }
 
