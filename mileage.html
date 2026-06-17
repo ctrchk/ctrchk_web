@@ -234,7 +234,15 @@
     (async function initMileagePage() {
         const token = localStorage.getItem('accessToken');
         renderMileageBenefits();
-        if (!token) return;
+        if (!token) {
+            const isSPA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || window.location.search.includes('pwa=true') || document.body.classList.contains('is-pwa');
+            const path = window.location.pathname.replace(/\.html$/, '');
+            if (!isSPA || path === '/mileage') {
+                if (window.navigateTo) window.navigateTo('/login');
+                else window.location.replace('/login');
+            }
+            return;
+        }
         try {
             const cached = JSON.parse(localStorage.getItem('user') || '{}');
             const userId = cached.id;

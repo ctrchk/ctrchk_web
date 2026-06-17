@@ -892,7 +892,17 @@ function isCoinRouteUnlocked(route) {
 
 // ── Map initialisation ─────────────────────────────────────────────────
 function initMap() {
-    if (map) return; // already initialized
+    const container = document.getElementById('app-ride-map');
+    if (!container) return;
+
+    // If map already exists, check if it's still attached to the current DOM container
+    if (map) {
+        if (map.getContainer() === container) return;
+        // Container changed (SPA re-fetch), destroy old map
+        map.remove();
+        map = null;
+    }
+
     map = L.map('app-ride-map', {
         zoomControl: false,
         attributionControl: false,
@@ -1676,15 +1686,17 @@ function enterDepartment(dept, pushState) {
     setTimeout(() => { if (map) map.invalidateSize(); }, 100);
 
     // Show only the terminal markers for the selected department
-    TERMINALS.forEach(terminal => {
-        const marker = terminalMarkers.get(terminal.id);
-        if (!marker) return;
-        if (terminal.dept === dept.id) {
-            if (!map.hasLayer(marker)) marker.addTo(map);
-        } else {
-            if (map.hasLayer(marker)) map.removeLayer(marker);
-        }
-    });
+    if (map) {
+        TERMINALS.forEach(terminal => {
+            const marker = terminalMarkers.get(terminal.id);
+            if (!marker) return;
+            if (terminal.dept === dept.id) {
+                if (!map.hasLayer(marker)) marker.addTo(map);
+            } else {
+                if (map.hasLayer(marker)) map.removeLayer(marker);
+            }
+        });
+    }
     // Clear terminal selection if the selected terminal belongs to another dept
     if (selectedTerminalId) {
         const selTerminal = TERMINALS.find(t => t.id === selectedTerminalId);
@@ -1749,8 +1761,27 @@ async function initAppRidePage() {
         } catch (e) { console.error('[AppRide] Failed to fetch fresh user data:', e); }
     }
 
-    // Init map
+    // Init map immediately
     initMap();
+
+    // Re-render routes and invalidate map size when navigating back in SPA mode
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/routes') {
+            if (map) {
+                setTimeout(() => {
+                    map.invalidateSize();
+                    // Ensure current department markers are correct
+                    if (selectedDeptId) {
+                        const dept = DEPARTMENTS.find(d => d.id === selectedDeptId);
+                        if (dept) enterDepartment(dept, false);
+                    }
+                }, 150);
+            } else {
+                initMap();
+            }
+            renderRoutes();
+        }
+    });
 
     // Load routes — fetch static JSON and admin overrides in parallel for speed
     const ROUTE_DATA_CACHE_KEY = 'routeDataCache_v2';
@@ -1976,6 +2007,10 @@ async function initAppRidePage() {
 
 // Handle browser back/forward navigation
 window.addEventListener('popstate', (e) => {
+    // Only handle if we are on the routes page
+    const path = window.location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+    if (path !== '/routes' && path !== '/en/routes') return;
+
     const state = e.state || {};
     if (state.page === 'routes' && state.dept) {
         const dept = DEPARTMENTS.find(d => d.id === state.dept);

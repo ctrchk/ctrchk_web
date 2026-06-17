@@ -592,13 +592,17 @@
     <script>
         // 頁面守衛：在渲染前確認已登入
         (function checkAuth() {
-            if (!localStorage.getItem('accessToken')) {
-                if (window.navigateTo) {
-                    window.navigateTo('/login');
-                } else {
-                    window.location.replace('/login');
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                const isSPA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || window.location.search.includes('pwa=true') || document.body.classList.contains('is-pwa');
+                const path = window.location.pathname.replace(/\.html$/, '');
+
+                // Only redirect if NOT in SPA mode (legacy) or if this IS the current active page in SPA
+                if (!isSPA || path === '/dashboard') {
+                    if (window.navigateTo) window.navigateTo('/login');
+                    else window.location.replace('/login');
+                    throw new Error('未授權訪問');
                 }
-                throw new Error('未授權訪問');
             }
         })();
     </script>

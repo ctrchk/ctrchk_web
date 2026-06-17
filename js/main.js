@@ -70,8 +70,11 @@ function setAppTheme(theme) {
                           '/ride', '/routes', '/login', '/register', '/forgot-password',
                           '/reset-password', '/profile-setup', '/verify-email',
                           '/auth-callback', '/admin', '/weather', '/chat', '/forum',
-                          '/route_detail', '/gpx', '/sw.js'];
-    const isAppOnlyPage = appOnlyPages.some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '?'));
+                          '/route_detail', '/gpx', '/sw.js', '/history'];
+    const isAppOnlyPage = appOnlyPages.some(p => {
+        const cleanPath = path.replace(/\.html$/, '');
+        return cleanPath === p || cleanPath.startsWith(p + '/') || cleanPath.startsWith(p + '?');
+    });
     if (isAppOnlyPage) return;
 
     if (lang === 'en' && !isEnPage) {

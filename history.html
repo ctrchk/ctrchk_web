@@ -154,6 +154,13 @@
             const token = localStorage.getItem('accessToken');
 
             if (!token) {
+                const isSPA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || window.location.search.includes('pwa=true') || document.body.classList.contains('is-pwa');
+                const path = window.location.pathname.replace(/\.html$/, '');
+                if (!isSPA || path === '/history') {
+                    if (window.navigateTo) window.navigateTo('/login');
+                    else window.location.replace('/login');
+                    return;
+                }
                 list.innerHTML = '<div class="history-empty">請先登入以查看紀錄。</div>';
                 return;
             }

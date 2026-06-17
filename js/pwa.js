@@ -259,7 +259,7 @@
       container.className = 'pwa-page-container active';
       pageContainers.set(initialPath, container);
 
-      const appElements = document.querySelectorAll('main, #app-home, #app-ride-page, .tasks-container, .db-content, #map, #ride-map, .hud-container, .setup-panel, .floating-controls, #ride-top, #next-stop-card, #ride-bottom-sheet');
+      const appElements = document.querySelectorAll('main, #app-home, #app-ride-page, .tasks-container, .db-content, #map, #ride-map, #nav-map, #ride-page-map, #app-ride-map, .hud-container, .setup-panel, .floating-controls, #ride-top, #next-stop-card, #ride-bottom-sheet');
       appElements.forEach(el => container.appendChild(el));
 
       shell.appendChild(container);
@@ -336,26 +336,32 @@
       window.dispatchEvent(new CustomEvent('pwa-page-show', { detail: { path: normalizedPath } }));
       window.scrollTo(0, 0);
 
-      // Fallback: Ensure global loaders are hidden after navigation
-      setTimeout(() => {
-          const overlays = ['#nav-loading-overlay', '#ride-page-loading', '#loading-overlay', '#app-rides-loading', '#app-splash'];
+      // Fallback: Ensure ALL potential global loaders are hidden after navigation
+      // This is a safety net for any page-specific loaders that might get stuck
+      const clearLoaders = () => {
+          const overlays = [
+              '#nav-loading-overlay', '#ride-page-loading', '#loading-overlay',
+              '#app-rides-loading', '#app-splash', '#ride-loading', '#app-rides-loading'
+          ];
           overlays.forEach(selector => {
-              const el = document.querySelector(selector);
-              if (!el) return;
-              if (selector === '#app-splash') {
-                  if (el.style.display !== 'none') {
+              document.querySelectorAll(selector).forEach(el => {
+                  if (selector === '#app-splash') {
                       el.classList.add('splash-fade-out');
                       setTimeout(() => { el.style.display = 'none'; }, 500);
-                  }
-              } else {
-                  if (!el.classList.contains('hidden')) el.classList.add('hidden');
-                  // Also handle display: none directly if needed
-                  if (window.getComputedStyle(el).display !== 'none') {
+                  } else {
+                      el.classList.add('hidden');
                       el.style.display = 'none';
+                      el.style.opacity = '0';
+                      el.style.pointerEvents = 'none';
                   }
-              }
+              });
           });
-      }, 5000);
+      };
+
+      // Clear immediately and again after 2s and 5s to catch late-renders
+      clearLoaders();
+      setTimeout(clearLoaders, 2000);
+      setTimeout(clearLoaders, 5000);
     }
   }
 
