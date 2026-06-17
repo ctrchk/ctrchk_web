@@ -629,7 +629,7 @@
       ZOOM_NAV: 18.5,
 
       init() {
-        this.map = new mapboxgl.Map({
+        NavEngine.map = new mapboxgl.Map({
           container: 'map',
           style: 'mapbox://styles/mapbox/dark-v11',
           center: [114.2597, 22.3083], // Default TKO
@@ -639,8 +639,8 @@
           attributionControl: false
         });
 
-        this.map.on('load', () => {
-          this.onMapLoad();
+        NavEngine.map.on('load', () => {
+          NavEngine.onMapLoad();
           document.getElementById('loading-overlay').classList.add('hidden');
 
           // Handle Autostart from URL
@@ -650,17 +650,17 @@
               if (to) {
                   document.getElementById('input-end').value = to;
                   // Try to find coordinates for 'to' if it's a known station
-                  const station = this.stations.find(s => (s.code + s.name).includes(to.replace(/\s+/g, '')));
+                  const station = NavEngine.stations.find(s => (s.code + s.name).includes(to.replace(/\s+/g, '')));
                   if (station) {
-                      this.setDestination(station.center[0], station.center[1], to);
+                      NavEngine.setDestination(station.center[0], station.center[1], to);
                   } else {
                       // Fallback: search Gov API
-                      this.performSearch(to, document.getElementById('results-end'), (loc) => {
+                      NavEngine.performSearch(to, document.getElementById('results-end'), (loc) => {
                           if (loc) {
-                              this.endLocation = loc;
-                              this.updateMarkers();
-                              this.checkReady();
-                              setTimeout(() => { if (!document.getElementById('btn-start-nav').disabled) this.startNavigation(); }, 1500);
+                              NavEngine.endLocation = loc;
+                              NavEngine.updateMarkers();
+                              NavEngine.checkReady();
+                              setTimeout(() => { if (!document.getElementById('btn-start-nav').disabled) NavEngine.startNavigation(); }, 1500);
                           }
                       }, document.getElementById('input-end'));
                   }
@@ -668,9 +668,9 @@
           }
         });
 
-        this.setupUI();
-        this.requestLocation();
-        this.checkActiveRide();
+        NavEngine.setupUI();
+        NavEngine.requestLocation();
+        NavEngine.checkActiveRide();
       },
 
       async checkActiveRide() {
@@ -678,36 +678,45 @@
         if (!token) return;
 
         try {
-          const res = await fetch('/api/user?action=active-ride&type=navigation', {
+          // Check for any active ride, prioritize navigation type for this page
+          const res = await fetch('/api/user?action=active-ride', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const data = await res.json();
           if (data && data.state) {
-            this.activeRideState = data.state;
-            const openBtn = document.getElementById('btn-open-resume');
-            openBtn.style.display = 'flex';
-            openBtn.onclick = () => {
-               document.getElementById('resume-modal').style.display = 'flex';
-               document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
-            };
+            const state = data.state;
+            if (state.type === 'navigation') {
+                NavEngine.activeRideState = state;
+                const openBtn = document.getElementById('btn-open-resume');
+                openBtn.style.display = 'flex';
+                openBtn.onclick = () => {
+                   document.getElementById('resume-modal').style.display = 'flex';
+                   document.getElementById('resume-info').textContent = `您有一段往 ${state.endLocationName || '目的地'} 的行程未完成。`;
+                };
 
-            // Auto open modal on load
-            document.getElementById('resume-modal').style.display = 'flex';
-            document.getElementById('resume-info').textContent = `您有一段往 ${data.state.endLocationName || '目的地'} 的行程未完成。`;
+                // Auto open modal on load
+                document.getElementById('resume-modal').style.display = 'flex';
+                document.getElementById('resume-info').textContent = `您有一段往 ${state.endLocationName || '目的地'} 的行程未完成。`;
 
-            document.getElementById('btn-resume-yes').onclick = () => this.resumeRide(data.state);
-            document.getElementById('btn-resume-cancel').onclick = () => {
-               document.getElementById('resume-modal').style.display = 'none';
-            };
-            document.getElementById('btn-resume-delete').onclick = async () => {
-              if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
-              await fetch('/api/user?action=active-ride&type=navigation', {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              document.getElementById('resume-modal').style.display = 'none';
-              document.getElementById('btn-open-resume').style.display = 'none';
-            };
+                document.getElementById('btn-resume-yes').onclick = () => NavEngine.resumeRide(state);
+                document.getElementById('btn-resume-cancel').onclick = () => {
+                   document.getElementById('resume-modal').style.display = 'none';
+                };
+                document.getElementById('btn-resume-delete').onclick = async () => {
+                  if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
+                  await fetch('/api/user?action=active-ride&type=navigation', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  document.getElementById('resume-modal').style.display = 'none';
+                  document.getElementById('btn-open-resume').style.display = 'none';
+                };
+            } else if (state.type === 'route') {
+                // If it's a route ride, offer to go to ride page
+                if (confirm(`您有一段往 ${state.routeAlias || state.routeId} 的路線行程未完成。是否前往繼續？`)) {
+                    window.location.href = `/ride?id=${state.routeId}&dir=${state.dirIndex || 0}`;
+                }
+            }
           }
         } catch (e) {
           console.warn('[Nav] Failed to check active ride', e);
@@ -716,13 +725,13 @@
 
       resumeRide(state) {
         console.log('[Nav] Resuming ride', state);
-        this.routeData = state.routeData;
-        this.trackingCoords = state.trackingCoords || [];
-        this.navStartTime = state.navStartTime;
-        this.endLocation = state.endLocation;
+        NavEngine.routeData = state.routeData;
+        NavEngine.trackingCoords = state.trackingCoords || [];
+        NavEngine.navStartTime = state.navStartTime;
+        NavEngine.endLocation = state.endLocation;
 
         // Restore Waypoints
-        this.waypoints = (state.waypoints || []).map(wp => {
+        NavEngine.waypoints = (state.waypoints || []).map(wp => {
            return { id: wp.id, location: wp.location, marker: null };
         });
 
@@ -731,20 +740,20 @@
         document.getElementById('btn-open-resume').style.display = 'none';
 
         // Render restored route
-        if (this.routeData) {
-          this.drawRoute(this.routeData.coords, this.routeData.segmentTypes);
+        if (NavEngine.routeData) {
+          NavEngine.drawRoute(NavEngine.routeData.coords, NavEngine.routeData.segmentTypes);
         }
-        this.updateMarkers();
+        NavEngine.updateMarkers();
 
         // Start navigation in resuming mode
-        this.startNavigation({ isResuming: true });
+        NavEngine.startNavigation({ isResuming: true });
       },
 
       async onMapLoad() {
-        this.add3DBuildings();
-        this.initSearch();
-        this.loadStations();
-        this.loadParkingSpaces();
+        NavEngine.add3DBuildings();
+        NavEngine.initSearch();
+        NavEngine.loadStations();
+        NavEngine.loadParkingSpaces();
 
         // Load local TKO tracks and pedestrian paths
         try {
@@ -755,11 +764,11 @@
           const trackData = await respTrack.json();
           const pedData = await respPed.json();
 
-          this.map.addSource('tko-tracks', { type: 'geojson', data: trackData });
-          this.map.addSource('tko-pedestrian', { type: 'geojson', data: pedData });
+          NavEngine.map.addSource('tko-tracks', { type: 'geojson', data: trackData });
+          NavEngine.map.addSource('tko-pedestrian', { type: 'geojson', data: pedData });
 
           // --- Render All Local Tracks in 3D ---
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'local-tracks-asphalt',
             type: 'line',
             source: 'tko-tracks',
@@ -770,7 +779,7 @@
               'line-opacity': 0.8
             }
           });
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'local-tracks-green',
             type: 'line',
             source: 'tko-tracks',
@@ -781,7 +790,7 @@
               'line-opacity': 0.4
             }
           });
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'local-tracks-symbols',
             type: 'symbol',
             source: 'tko-tracks',
@@ -799,7 +808,7 @@
           });
 
           // Render Pedestrian Paths (Subtle)
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'local-pedestrian-line',
             type: 'line',
             source: 'tko-pedestrian',
@@ -812,9 +821,9 @@
             }
           });
 
-          this.localTracks = trackData;
-          this.localPedestrian = pedData;
-          this.buildLocalGraph(trackData, pedData);
+          NavEngine.localTracks = trackData;
+          NavEngine.localPedestrian = pedData;
+          NavEngine.buildLocalGraph(trackData, pedData);
           console.log('[Nav] Local TKO weighted graph built');
         } catch (e) {
           console.warn('[Nav] Failed to load local tracks', e);
@@ -860,7 +869,7 @@
         processGeojson(trackGeojson, 'track');
         processGeojson(pedGeojson, 'pedestrian');
 
-        this.graph = { nodes, adjacency };
+        NavEngine.graph = { nodes, adjacency };
       },
 
       async loadParkingSpaces() {
@@ -871,9 +880,9 @@
         try {
           const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
           const data = await resp.json();
-          this.map.addSource('parking-spaces', { type: 'geojson', data });
-          const beforeLayer = this.map.getLayer('route-symbols') ? 'route-symbols' : undefined;
-          this.map.addLayer({
+          NavEngine.map.addSource('parking-spaces', { type: 'geojson', data });
+          const beforeLayer = NavEngine.map.getLayer('route-symbols') ? 'route-symbols' : undefined;
+          NavEngine.map.addLayer({
             id: 'parking-layer',
             type: 'circle',
             source: 'parking-spaces',
@@ -886,7 +895,7 @@
           }, beforeLayer); // Place above route but below instructions
 
           // Parking Click Handler
-          this.map.on('click', 'parking-layer', (e) => {
+          NavEngine.map.on('click', 'parking-layer', (e) => {
             const feature = e.features[0];
             const coords = feature.geometry.coordinates;
             const count = feature.properties.PARKING_SPACE;
@@ -902,14 +911,14 @@
               </div>
             `;
 
-            this.popup = new mapboxgl.Popup({ className: 'parking-popup' })
+            NavEngine.popup = new mapboxgl.Popup({ className: 'parking-popup' })
               .setLngLat(coords)
               .setHTML(html)
-              .addTo(this.map);
+              .addTo(NavEngine.map);
           });
 
-          this.map.on('mouseenter', 'parking-layer', () => { this.map.getCanvas().style.cursor = 'pointer'; });
-          this.map.on('mouseleave', 'parking-layer', () => { this.map.getCanvas().style.cursor = ''; });
+          NavEngine.map.on('mouseenter', 'parking-layer', () => { NavEngine.map.getCanvas().style.cursor = 'pointer'; });
+          NavEngine.map.on('mouseleave', 'parking-layer', () => { NavEngine.map.getCanvas().style.cursor = ''; });
 
         } catch (e) {
           console.warn('[Nav] Failed to load parking spaces', e);
@@ -917,20 +926,20 @@
       },
 
       setDestination(lng, lat, name) {
-        this.endLocation = [lng, lat];
+        NavEngine.endLocation = [lng, lat];
         document.getElementById('input-end').value = name || '所選位置';
-        this.updateMarkers();
-        this.checkReady();
-        if (this.popup) this.popup.remove();
+        NavEngine.updateMarkers();
+        NavEngine.checkReady();
+        if (NavEngine.popup) NavEngine.popup.remove();
         // Start planning route immediately
-        this.planRoute();
+        NavEngine.planRoute();
       },
 
       add3DBuildings() {
-        const layers = this.map.getStyle().layers;
+        const layers = NavEngine.map.getStyle().layers;
         const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field']).id;
 
-        this.map.addLayer({
+        NavEngine.map.addLayer({
           'id': '3d-buildings',
           'source': 'composite',
           'source-layer': 'building',
@@ -965,23 +974,23 @@
               }
             });
           });
-          this.stations = Array.from(stationMap.values());
-          console.log(`[Nav] ${this.stations.length} stations loaded`);
+          NavEngine.stations = Array.from(stationMap.values());
+          console.log(`[Nav] ${NavEngine.stations.length} stations loaded`);
         } catch (e) {
           console.warn('[Nav] Failed to load stations', e);
         }
       },
 
       initSearch() {
-        this.setupSearchInput('input-start', 'results-start', (loc) => {
-          this.startLocation = loc;
-          this.updateMarkers();
-          this.checkReady();
+        NavEngine.setupSearchInput('input-start', 'results-start', (loc) => {
+          NavEngine.startLocation = loc;
+          NavEngine.updateMarkers();
+          NavEngine.checkReady();
         });
-        this.setupSearchInput('input-end', 'results-end', (loc) => {
-          this.endLocation = loc;
-          this.updateMarkers();
-          this.checkReady();
+        NavEngine.setupSearchInput('input-end', 'results-end', (loc) => {
+          NavEngine.endLocation = loc;
+          NavEngine.updateMarkers();
+          NavEngine.checkReady();
         });
       },
 
@@ -998,7 +1007,7 @@
             onSelect(null);
             return;
           }
-          debounceTimer = setTimeout(() => this.performSearch(val, results, onSelect, input), 300);
+          debounceTimer = setTimeout(() => NavEngine.performSearch(val, results, onSelect, input), 300);
         };
 
         input.onfocus = () => { if (results.children.length > 0) results.classList.add('show'); };
@@ -1031,7 +1040,7 @@
         const normalizedQuery = query.toUpperCase().replace(/\s+/g, '');
 
         // 1. Search local stations
-        const localResults = this.stations.filter(s => {
+        const localResults = NavEngine.stations.filter(s => {
           const combined = (s.code + s.name).toUpperCase().replace(/\s+/g, '');
           return combined.includes(normalizedQuery) ||
                  s.name.includes(query) ||
@@ -1047,7 +1056,7 @@
             // Check if coordinates need conversion (Gov API returns HK80 x, y)
             const ny = parseFloat(item.y);
             const ex = parseFloat(item.x);
-            const coords = this.hk80ToWgs84(ny, ex);
+            const coords = NavEngine.hk80ToWgs84(ny, ex);
             return {
               name: item.nameZH,
               addr: item.addressZH,
@@ -1086,10 +1095,10 @@
               // Snap search result to nearest cycle track if possible
               let finalCenter = item.center;
               try {
-                if (this.localTracks && item.center && !isNaN(item.center[0])) {
+                if (NavEngine.localTracks && item.center && !isNaN(item.center[0])) {
                   const pt = turf.point(item.center);
                   let minDist = 0.2; // 200m search radius
-                  this.localTracks.features.forEach(f => {
+                  NavEngine.localTracks.features.forEach(f => {
                      // Pass only geometry for better compatibility
                      const d = turf.pointToLineDistance(pt, f.geometry);
                      if (d < minDist) {
@@ -1119,50 +1128,50 @@
             alert('停靠點功能為銀卡及金卡會員專屬。');
             return;
           }
-          if (this.waypoints.length >= (rank === 'gold' ? 8 : 3)) {
+          if (NavEngine.waypoints.length >= (rank === 'gold' ? 8 : 3)) {
             alert('已達到最大停靠點數量。');
             return;
           }
-          this.addWaypointInput();
+          NavEngine.addWaypointInput();
         };
 
-        document.getElementById('btn-start-nav').onclick = () => this.startNavigation();
-        document.getElementById('btn-end-nav').onclick = () => this.endNavigation();
-        document.getElementById('btn-exit-nav').onclick = () => this.exitNavigation();
-        document.getElementById('btn-pause-nav').onclick = () => this.pauseNavigation();
+        document.getElementById('btn-start-nav').onclick = () => NavEngine.startNavigation();
+        document.getElementById('btn-end-nav').onclick = () => NavEngine.endNavigation();
+        document.getElementById('btn-exit-nav').onclick = () => NavEngine.exitNavigation();
+        document.getElementById('btn-pause-nav').onclick = () => NavEngine.pauseNavigation();
         document.getElementById('btn-recenter').onclick = () => {
-          this.isFollowing = !this.isFollowing;
-          document.getElementById('btn-recenter').classList.toggle('active', this.isFollowing);
-          if (this.isFollowing) this.recenter();
+          NavEngine.isFollowing = !NavEngine.isFollowing;
+          document.getElementById('btn-recenter').classList.toggle('active', NavEngine.isFollowing);
+          if (NavEngine.isFollowing) NavEngine.recenter();
         };
 
-        this.map.on('dragstart', () => {
-          this.isFollowing = false;
+        NavEngine.map.on('dragstart', () => {
+          NavEngine.isFollowing = false;
           document.getElementById('btn-recenter').classList.remove('active');
         });
         document.getElementById('btn-orient').onclick = () => {
-          this.headingUp = !this.headingUp;
-          document.getElementById('btn-orient').classList.toggle('active', this.headingUp);
+          NavEngine.headingUp = !NavEngine.headingUp;
+          document.getElementById('btn-orient').classList.toggle('active', NavEngine.headingUp);
         };
 
         document.getElementById('btn-zoom-in').onclick = () => {
-          this.navZoom = Math.min(22, this.navZoom + 0.5);
-          if (this.isNavigating) this.recenter();
-          else this.map.zoomTo(this.navZoom);
+          NavEngine.navZoom = Math.min(22, NavEngine.navZoom + 0.5);
+          if (NavEngine.isNavigating) NavEngine.recenter();
+          else NavEngine.map.zoomTo(NavEngine.navZoom);
         };
         document.getElementById('btn-zoom-out').onclick = () => {
-          this.navZoom = Math.max(10, this.navZoom - 0.5);
-          if (this.isNavigating) this.recenter();
-          else this.map.zoomTo(this.navZoom);
+          NavEngine.navZoom = Math.max(10, NavEngine.navZoom - 0.5);
+          if (NavEngine.isNavigating) NavEngine.recenter();
+          else NavEngine.map.zoomTo(NavEngine.navZoom);
         };
 
         document.getElementById('btn-toggle-park').onclick = () => {
-          if (!this.map.getLayer('parking-layer')) {
+          if (!NavEngine.map.getLayer('parking-layer')) {
             alert('泊位圖層尚未載入或無權限。');
             return;
           }
-          const visible = this.map.getLayoutProperty('parking-layer', 'visibility') !== 'none';
-          this.map.setLayoutProperty('parking-layer', 'visibility', visible ? 'none' : 'visible');
+          const visible = NavEngine.map.getLayoutProperty('parking-layer', 'visibility') !== 'none';
+          NavEngine.map.setLayoutProperty('parking-layer', 'visibility', visible ? 'none' : 'visible');
           document.getElementById('btn-toggle-park').classList.toggle('active', !visible);
         };
       },
@@ -1184,19 +1193,19 @@
         container.appendChild(row);
 
         const wpObj = { id, location: null, marker: null };
-        this.waypoints.push(wpObj);
+        NavEngine.waypoints.push(wpObj);
 
-        this.setupSearchInput(`input-wp-${id}`, `results-wp-${id}`, (loc) => {
+        NavEngine.setupSearchInput(`input-wp-${id}`, `results-wp-${id}`, (loc) => {
           wpObj.location = loc;
-          this.updateMarkers();
-          this.checkReady();
+          NavEngine.updateMarkers();
+          NavEngine.checkReady();
         });
 
         row.querySelector('.remove-wp').onclick = () => {
           row.remove();
           if (wpObj.marker) wpObj.marker.remove();
-          this.waypoints = this.waypoints.filter(w => w.id !== id);
-          this.checkReady();
+          NavEngine.waypoints = NavEngine.waypoints.filter(w => w.id !== id);
+          NavEngine.checkReady();
         };
       },
 
@@ -1204,17 +1213,17 @@
         if ("geolocation" in navigator) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
-              this.currentLocation = [pos.coords.longitude, pos.coords.latitude];
-              this.map.flyTo({ center: this.currentLocation, zoom: 16 });
-              this.updateUserMarker(this.currentLocation, pos.coords.heading);
-              this.checkReady();
+              NavEngine.currentLocation = [pos.coords.longitude, pos.coords.latitude];
+              NavEngine.map.flyTo({ center: NavEngine.currentLocation, zoom: 16 });
+              NavEngine.updateUserMarker(NavEngine.currentLocation, pos.coords.heading);
+              NavEngine.checkReady();
             },
             (err) => console.error(err),
             { enableHighAccuracy: true }
           );
 
-          this.watchId = navigator.geolocation.watchPosition(
-            (pos) => this.handlePositionUpdate(pos),
+          NavEngine.watchId = navigator.geolocation.watchPosition(
+            (pos) => NavEngine.handlePositionUpdate(pos),
             (err) => console.error(err),
             { enableHighAccuracy: true, frequency: 1000 }
           );
@@ -1226,72 +1235,72 @@
         const rawHeading = pos.coords.heading;
         const speedKmh = (pos.coords.speed || 0) * 3.6;
 
-        this.currentLocation = coords;
+        NavEngine.currentLocation = coords;
         document.getElementById('speed-val').textContent = speedKmh.toFixed(1);
 
         // Re-check readiness as currentLocation changed
-        this.checkReady();
+        NavEngine.checkReady();
 
         // 1. Snapping Logic (Project to Route)
         let activeCoords = coords;
-        if (this.isNavigating && this.routeData) {
+        if (NavEngine.isNavigating && NavEngine.routeData) {
           const point = turf.point(coords);
-          const line = turf.lineString(this.routeData.coords);
+          const line = turf.lineString(NavEngine.routeData.coords);
           const snapped = turf.nearestPointOnLine(line, point, { units: 'meters' });
 
           // Only snap if within 30m of the path
           if (snapped.properties.dist < 30) {
             activeCoords = snapped.geometry.coordinates;
           }
-          this.trackingCoords.push(activeCoords);
-          this.updateNavHUD(activeCoords, speedKmh);
+          NavEngine.trackingCoords.push(activeCoords);
+          NavEngine.updateNavHUD(activeCoords, speedKmh);
 
           // 1.1 Cycle Track / Lane Level Check
-          this.checkLaneLevel(activeCoords);
+          NavEngine.checkLaneLevel(activeCoords);
         }
 
         // 2. Heading Logic (GPS + Path-Stable)
         let finalHeading = rawHeading;
-        if (this.isNavigating && (rawHeading === null || speedKmh < 3)) {
+        if (NavEngine.isNavigating && (rawHeading === null || speedKmh < 3)) {
           // Stable heading from path when stationary or no GPS heading
-          finalHeading = this.getStableHeading(activeCoords);
+          finalHeading = NavEngine.getStableHeading(activeCoords);
         }
 
         // 3. Update UI & Marker
-        this.updateUserMarker(activeCoords, finalHeading);
+        NavEngine.updateUserMarker(activeCoords, finalHeading);
 
         // 4. Camera Follow
-        if (this.isFollowing) {
-          this.map.easeTo({
+        if (NavEngine.isFollowing) {
+          NavEngine.map.easeTo({
             center: activeCoords,
-            bearing: this.headingUp ? (finalHeading || 0) : 0,
-            pitch: this.isNavigating ? (this.isLaneLevel ? 75 : this.PITCH_3D) : 0,
-            zoom: this.isNavigating ? (this.isLaneLevel ? this.navZoom + 1 : this.navZoom) : this.map.getZoom(),
+            bearing: NavEngine.headingUp ? (finalHeading || 0) : 0,
+            pitch: NavEngine.isNavigating ? (NavEngine.isLaneLevel ? 75 : NavEngine.PITCH_3D) : 0,
+            zoom: NavEngine.isNavigating ? (NavEngine.isLaneLevel ? NavEngine.navZoom + 1 : NavEngine.navZoom) : NavEngine.map.getZoom(),
             duration: 800,
             easing: t => t * (2 - t)
           });
         } else {
           // If not following, we still want to update zoom if it was changed by HUD
-          if (this.isNavigating) {
-             this.map.zoomTo(this.isLaneLevel ? this.navZoom + 1 : this.navZoom, { duration: 800 });
+          if (NavEngine.isNavigating) {
+             NavEngine.map.zoomTo(NavEngine.isLaneLevel ? NavEngine.navZoom + 1 : NavEngine.navZoom, { duration: 800 });
           }
         }
       },
 
       checkLaneLevel(pos) {
-        if (!this.localTracks) return;
+        if (!NavEngine.localTracks) return;
         const pt = turf.point(pos);
         let onTrack = false;
 
-        this.localTracks.features.forEach(f => {
+        NavEngine.localTracks.features.forEach(f => {
           if (onTrack) return;
           const dist = turf.pointToLineDistance(pt, f, { units: 'meters' });
           if (dist < 10) onTrack = true;
         });
 
-        if (onTrack !== this.isLaneLevel) {
-          this.isLaneLevel = onTrack;
-          this.toggleLaneLevelUI(onTrack);
+        if (onTrack !== NavEngine.isLaneLevel) {
+          NavEngine.isLaneLevel = onTrack;
+          NavEngine.toggleLaneLevelUI(onTrack);
         }
       },
 
@@ -1299,36 +1308,36 @@
         console.log('[Nav] Lane Level UI:', active);
 
         // 1. Widen Cycle Track
-        this.map.setPaintProperty('route-line-green', 'line-width',
+        NavEngine.map.setPaintProperty('route-line-green', 'line-width',
           active ? ['interpolate', ['linear'], ['zoom'], 14, 20, 18, 100] : ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 14]
         );
-        this.map.setPaintProperty('route-line-asphalt', 'line-width',
+        NavEngine.map.setPaintProperty('route-line-asphalt', 'line-width',
           active ? ['interpolate', ['linear'], ['zoom'], 14, 30, 18, 120] : ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 24]
         );
 
         // 2. Hide standard roads
-        const roadLayers = this.map.getStyle().layers.filter(l =>
+        const roadLayers = NavEngine.map.getStyle().layers.filter(l =>
           l.id.includes('road') || l.id.includes('highway') || l.id.includes('bridge')
         );
 
         roadLayers.forEach(l => {
           if (l.id.startsWith('route-line-')) return; // Don't hide our route
           if (l.id.startsWith('local-tracks-')) return; // Don't hide local tracks
-          this.map.setLayoutProperty(l.id, 'visibility', active ? 'none' : 'visible');
+          NavEngine.map.setLayoutProperty(l.id, 'visibility', active ? 'none' : 'visible');
         });
 
         // 3. Hide map background / labels
         const otherLayers = ['landuse', 'natural-line-label', 'natural-point-label', 'poi-label', 'settlement-label', 'settlement-subdivision-label'];
         otherLayers.forEach(id => {
-          if (this.map.getLayer(id)) {
-            this.map.setLayoutProperty(id, 'visibility', active ? 'none' : 'visible');
+          if (NavEngine.map.getLayer(id)) {
+            NavEngine.map.setLayoutProperty(id, 'visibility', active ? 'none' : 'visible');
           }
         });
       },
 
       getStableHeading(pos) {
-        if (!this.routeData) return 0;
-        const line = turf.lineString(this.routeData.coords);
+        if (!NavEngine.routeData) return 0;
+        const line = turf.lineString(NavEngine.routeData.coords);
         const pt = turf.point(pos);
         const snapped = turf.nearestPointOnLine(line, pt);
         const location = snapped.properties.location;
@@ -1339,11 +1348,11 @@
       },
 
       updateNavHUD(pos, speed) {
-        if (!this.routeData) return;
-        const line = turf.lineString(this.routeData.coords);
+        if (!NavEngine.routeData) return;
+        const line = turf.lineString(NavEngine.routeData.coords);
         const pt = turf.point(pos);
         const snapped = turf.nearestPointOnLine(line, pt);
-        const totalDist = this.routeData.distance;
+        const totalDist = NavEngine.routeData.distance;
         const currentLoc = snapped.properties.location * 1000; // to meters
 
         const remain = Math.max(0, totalDist - currentLoc);
@@ -1355,7 +1364,7 @@
         document.getElementById('eta-val').textContent = etaMins + 'm';
 
         // Road Name & Next Instruction
-        this.updateRoadInfo(pos);
+        NavEngine.updateRoadInfo(pos);
 
         // Next Junction logic (approximate by path segments)
         document.getElementById('next-dist').textContent = Math.round(remain < 100 ? remain : 100);
@@ -1367,19 +1376,19 @@
         let isPedestrian = false;
 
         // 1. Identify if we are on a pedestrian segment based on routeData
-        if (this.routeData && this.routeData.coords && this.routeData.segmentTypes) {
-           const line = turf.lineString(this.routeData.coords);
+        if (NavEngine.routeData && NavEngine.routeData.coords && NavEngine.routeData.segmentTypes) {
+           const line = turf.lineString(NavEngine.routeData.coords);
            const snapped = turf.nearestPointOnLine(line, point);
            const idx = snapped.properties.index; // index of the segment start point
-           if (this.routeData.segmentTypes && this.routeData.segmentTypes[idx] === 'pedestrian') {
+           if (NavEngine.routeData.segmentTypes && NavEngine.routeData.segmentTypes[idx] === 'pedestrian') {
              isPedestrian = true;
            }
         }
 
         // Find nearest feature in local tracks/pedestrian to get road name
         let minDist = 0.05; // 50m
-        if (this.localTracks) {
-          this.localTracks.features.forEach(f => {
+        if (NavEngine.localTracks) {
+          NavEngine.localTracks.features.forEach(f => {
             const d = turf.pointToLineDistance(point, f);
             if (d < minDist) {
               minDist = d;
@@ -1387,8 +1396,8 @@
             }
           });
         }
-        if (isPedestrian && this.localPedestrian) {
-           this.localPedestrian.features.forEach(f => {
+        if (isPedestrian && NavEngine.localPedestrian) {
+           NavEngine.localPedestrian.features.forEach(f => {
             const d = turf.pointToLineDistance(point, f);
             if (d < minDist) {
               minDist = d;
@@ -1400,7 +1409,7 @@
         document.getElementById('next-road').textContent = currentRoad;
 
         // Destination check
-        const dest = this.routeData.coords[this.routeData.coords.length - 1];
+        const dest = NavEngine.routeData.coords[NavEngine.routeData.coords.length - 1];
         const distToDest = turf.distance(pos, dest) * 1000;
 
         if (distToDest < 50) {
@@ -1418,52 +1427,52 @@
       },
 
       updateUserMarker(coords, heading) {
-        if (!this.userMarker) {
+        if (!NavEngine.userMarker) {
           const el = document.createElement('div');
           el.className = 'user-arrow';
-          this.userMarker = new mapboxgl.Marker({ element: el })
+          NavEngine.userMarker = new mapboxgl.Marker({ element: el })
             .setLngLat(coords)
-            .addTo(this.map);
+            .addTo(NavEngine.map);
         } else {
-          this.userMarker.setLngLat(coords);
-          this.userMarker.getElement().style.transform = `rotate(${heading || 0}deg)`;
+          NavEngine.userMarker.setLngLat(coords);
+          NavEngine.userMarker.getElement().style.transform = `rotate(${heading || 0}deg)`;
         }
       },
 
       updateMarkers() {
-        if (this.startLocation) {
-          if (!this.startMarker) {
+        if (NavEngine.startLocation) {
+          if (!NavEngine.startMarker) {
             const el = document.createElement('div');
             el.className = 'custom-marker';
             el.innerHTML = '<i class="fas fa-location-dot"></i>';
-            this.startMarker = new mapboxgl.Marker({ element: el }).setLngLat(this.startLocation).addTo(this.map);
+            NavEngine.startMarker = new mapboxgl.Marker({ element: el }).setLngLat(NavEngine.startLocation).addTo(NavEngine.map);
           } else {
-            this.startMarker.setLngLat(this.startLocation);
+            NavEngine.startMarker.setLngLat(NavEngine.startLocation);
           }
         }
 
-        this.waypoints.forEach(wp => {
+        NavEngine.waypoints.forEach(wp => {
           if (wp.location) {
             if (!wp.marker) {
               const el = document.createElement('div');
               el.className = 'custom-marker';
               el.style.background = '#f1c232';
               el.innerHTML = '<i class="fas fa-location-dot"></i>';
-              wp.marker = new mapboxgl.Marker({ element: el }).setLngLat(wp.location).addTo(this.map);
+              wp.marker = new mapboxgl.Marker({ element: el }).setLngLat(wp.location).addTo(NavEngine.map);
             } else {
               wp.marker.setLngLat(wp.location);
             }
           }
         });
 
-        if (this.endLocation) {
-          if (!this.endMarker) {
+        if (NavEngine.endLocation) {
+          if (!NavEngine.endMarker) {
             const el = document.createElement('div');
             el.className = 'custom-marker end';
             el.innerHTML = '<i class="fas fa-flag-checkered"></i>';
-            this.endMarker = new mapboxgl.Marker({ element: el }).setLngLat(this.endLocation).addTo(this.map);
+            NavEngine.endMarker = new mapboxgl.Marker({ element: el }).setLngLat(NavEngine.endLocation).addTo(NavEngine.map);
           } else {
-            this.endMarker.setLngLat(this.endLocation);
+            NavEngine.endMarker.setLngLat(NavEngine.endLocation);
           }
         }
       },
@@ -1471,50 +1480,50 @@
       checkReady() {
         const btn = document.getElementById('btn-start-nav');
         // Ensure end location is set AND (start location OR current location is available)
-        const isReady = !!this.endLocation && (!!this.startLocation || !!this.currentLocation);
+        const isReady = !!NavEngine.endLocation && (!!NavEngine.startLocation || !!NavEngine.currentLocation);
 
         btn.disabled = !isReady;
 
         // Provide feedback if waiting for GPS
-        if (!!this.endLocation && !this.startLocation && !this.currentLocation) {
+        if (!!NavEngine.endLocation && !NavEngine.startLocation && !NavEngine.currentLocation) {
           btn.textContent = '等待 GPS 定位...';
         } else {
           btn.textContent = '開始導航';
         }
 
         if (isReady) {
-          this.planRoute();
+          NavEngine.planRoute();
           const params = new URLSearchParams(location.search);
-          if (params.get('autostart') === '1' && !this.isNavigating) {
-              setTimeout(() => { if (!btn.disabled) this.startNavigation(); }, 1000);
+          if (params.get('autostart') === '1' && !NavEngine.isNavigating) {
+              setTimeout(() => { if (!btn.disabled) NavEngine.startNavigation(); }, 1000);
           }
         }
       },
 
       async planRoute() {
-        const start = this.startLocation || this.currentLocation;
-        const end = this.endLocation;
+        const start = NavEngine.startLocation || NavEngine.currentLocation;
+        const end = NavEngine.endLocation;
         if (!start || !end) return;
 
         console.log('[Nav] Planning route...');
-        const points = [start, ...this.waypoints.filter(w => w.location).map(w => w.location), end];
+        const points = [start, ...NavEngine.waypoints.filter(w => w.location).map(w => w.location), end];
 
         // For simplicity, if there are waypoints, we only find one route.
         // If it's direct start-to-end, we can try to find two options.
         if (points.length > 2) {
-          const route = await this.getFullPath(points);
+          const route = await NavEngine.getFullPath(points);
           if (route) {
-            this.useRoute(route);
+            NavEngine.useRoute(route);
             document.getElementById('route-options').style.display = 'none';
           }
           return;
         }
 
         // Search for multiple routes between start and end
-        const routes = await this.findMultipleRoutes(start, end);
+        const routes = await NavEngine.findMultipleRoutes(start, end);
         if (routes && routes.length > 0) {
-          this.displayRouteOptions(routes);
-          this.useRoute(routes[0]);
+          NavEngine.displayRouteOptions(routes);
+          NavEngine.useRoute(routes[0]);
         }
       },
 
@@ -1525,7 +1534,7 @@
         let allSegmentTypes = [];
 
         for (let i = 0; i < points.length - 1; i++) {
-          const segment = await this.getRouteSegment(points[i], points[i+1]);
+          const segment = await NavEngine.getRouteSegment(points[i], points[i+1]);
           if (segment) {
             fullPath = fullPath.concat(i === 0 ? segment.coords : segment.coords.slice(1));
             totalDist += segment.distance;
@@ -1539,13 +1548,13 @@
       async findMultipleRoutes(p1, p2) {
         const routes = [];
         // 1. Primary route (weighted)
-        const primary = await this.getRouteSegment(p1, p2);
+        const primary = await NavEngine.getRouteSegment(p1, p2);
         if (primary) routes.push(primary);
 
         // 2. Try to find a secondary route by temporarily penalizing the nodes in primary route
         // This is a bit complex for a simple graph, so we'll just use the primary one
         // and maybe a Mapbox fallback as alternative if they differ significantly.
-        const mapbox = await this.getMapboxRoute(p1, p2);
+        const mapbox = await NavEngine.getMapboxRoute(p1, p2);
         if (mapbox && Math.abs(mapbox.weight - primary.weight) > 100) {
            routes.push(mapbox);
         }
@@ -1593,7 +1602,7 @@
             <i class="fas fa-chevron-right" style="opacity: 0.3;"></i>
           `;
           btn.onclick = () => {
-             this.useRoute(r);
+             NavEngine.useRoute(r);
              Array.from(list.children).forEach(c => c.style.borderColor = 'rgba(255,255,255,0.1)');
              btn.style.borderColor = 'var(--app-accent)';
           };
@@ -1605,15 +1614,15 @@
       },
 
       useRoute(route) {
-        this.routeData = route;
-        this.drawRoute(route.coords, route.segmentTypes);
+        NavEngine.routeData = route;
+        NavEngine.drawRoute(route.coords, route.segmentTypes);
         document.getElementById('remain-val').textContent = (route.distance / 1000).toFixed(1);
         document.getElementById('eta-val').textContent = Math.ceil(route.distance / 1000 / 15 * 60) + 'm';
       },
 
       async getRouteSegment(p1, p2) {
         // 1. Try local A* first
-        const local = this.planLocalRoute(p1, p2);
+        const local = NavEngine.planLocalRoute(p1, p2);
         if (local) {
           console.log('[Nav] Using local route segment');
           return local;
@@ -1640,11 +1649,11 @@
       },
 
       planLocalRoute(p1, p2) {
-        if (!this.graph) return null;
+        if (!NavEngine.graph) return null;
 
         const snap = (p) => {
           let best = null, minDist = 0.5; // 500m snap
-          this.graph.nodes.forEach((coord, key) => {
+          NavEngine.graph.nodes.forEach((coord, key) => {
             const d = turf.distance(p, coord);
             if (d < minDist) { minDist = d; best = key; }
           });
@@ -1664,7 +1673,7 @@
           if (!curr || curr === endKey) break;
           pq.delete(curr);
 
-          (this.graph.adjacency.get(curr) || []).forEach(edge => {
+          (NavEngine.graph.adjacency.get(curr) || []).forEach(edge => {
             const newWeight = weights.get(curr) + edge.weight;
             if (!weights.has(edge.to) || newWeight < weights.get(edge.to)) {
               weights.set(edge.to, newWeight);
@@ -1681,7 +1690,7 @@
         const segmentTypes = [];
         let currKey = endKey;
         while (currKey) {
-          coords.unshift(this.graph.nodes.get(currKey));
+          coords.unshift(NavEngine.graph.nodes.get(currKey));
           const prev = prevs.get(currKey);
           if (prev) {
             segmentTypes.unshift(prev.type);
@@ -1719,15 +1728,15 @@
         }
         const geojson = { type: 'FeatureCollection', features };
 
-        if (this.map.getSource('route')) {
-          this.map.getSource('route').setData(geojson);
+        if (NavEngine.map.getSource('route')) {
+          NavEngine.map.getSource('route').setData(geojson);
         } else {
-          this.map.addSource('route', { type: 'geojson', data: geojson });
+          NavEngine.map.addSource('route', { type: 'geojson', data: geojson });
 
           // --- Industrial 3D Road Triple-Stack ---
 
           // 1. Asphalt Base (Wide)
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'route-line-asphalt',
             type: 'line',
             source: 'route',
@@ -1741,7 +1750,7 @@
           });
 
           // 2. Surface (Mid)
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'route-line-green',
             type: 'line',
             source: 'route',
@@ -1755,7 +1764,7 @@
           });
 
           // 3. Center Markings (Dashed)
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'route-line-dashed',
             type: 'line',
             source: 'route',
@@ -1768,7 +1777,7 @@
           });
 
           // --- 3D Road Icons (Painted look) ---
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'route-symbols',
             type: 'symbol',
             source: 'route',
@@ -1792,7 +1801,7 @@
           });
 
           // Add Glow effect for navigation
-          this.map.addLayer({
+          NavEngine.map.addLayer({
             id: 'route-glow',
             type: 'line',
             source: 'route',
@@ -1807,9 +1816,9 @@
       },
 
       recenter() {
-        this.isFollowing = true;
-        if (this.currentLocation) {
-          this.map.flyTo({ center: this.currentLocation, zoom: this.isNavigating ? this.navZoom : 16, pitch: this.isNavigating ? this.PITCH_3D : 0 });
+        NavEngine.isFollowing = true;
+        if (NavEngine.currentLocation) {
+          NavEngine.map.flyTo({ center: NavEngine.currentLocation, zoom: NavEngine.isNavigating ? NavEngine.navZoom : 16, pitch: NavEngine.isNavigating ? NavEngine.PITCH_3D : 0 });
         }
       },
 
@@ -1817,10 +1826,10 @@
 
       startNavigation(options = {}) {
         console.log('[Nav] Starting navigation');
-        this.isNavigating = true;
+        NavEngine.isNavigating = true;
         if (!options.isResuming) {
-          this.navStartTime = Date.now();
-          this.trackingCoords = [];
+          NavEngine.navStartTime = Date.now();
+          NavEngine.trackingCoords = [];
         }
         document.body.classList.add('is-navigating');
 
@@ -1835,29 +1844,29 @@
 
         // External Hook
         if (typeof onNavigationStart === 'function') {
-          onNavigationStart(this.startLocation || this.currentLocation);
+          onNavigationStart(NavEngine.startLocation || NavEngine.currentLocation);
         }
 
-        this.recenter();
+        NavEngine.recenter();
 
         // Heartbeat synchronization
-        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-        this.heartbeatInterval = setInterval(() => this.syncActiveRide(), 1000);
+        if (NavEngine.heartbeatInterval) clearInterval(NavEngine.heartbeatInterval);
+        NavEngine.heartbeatInterval = setInterval(() => NavEngine.syncActiveRide(), 1000);
       },
 
       async syncActiveRide() {
-        if (!this.isNavigating) return;
+        if (!NavEngine.isNavigating) return;
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
         const state = {
           type: 'navigation',
-          routeData: this.routeData,
-          trackingCoords: this.trackingCoords,
-          navStartTime: this.navStartTime,
-          endLocation: this.endLocation,
+          routeData: NavEngine.routeData,
+          trackingCoords: NavEngine.trackingCoords,
+          navStartTime: NavEngine.navStartTime,
+          endLocation: NavEngine.endLocation,
           endLocationName: document.getElementById('input-end').value,
-          waypoints: this.waypoints.map(wp => ({ id: wp.id, location: wp.location }))
+          waypoints: NavEngine.waypoints.map(wp => ({ id: wp.id, location: wp.location }))
         };
 
         try {
@@ -1874,16 +1883,16 @@
       async pauseNavigation() {
         if (!confirm('確定暫停行程？您可以稍後在首頁頂部尋回並繼續。')) return;
 
-        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-        await this.syncActiveRide();
+        if (NavEngine.heartbeatInterval) clearInterval(NavEngine.heartbeatInterval);
+        await NavEngine.syncActiveRide();
 
-        this.resetNavigationState();
+        NavEngine.resetNavigationState();
         location.href = '/dashboard.html';
       },
 
       exitNavigation() {
         if (!confirm('確定退出導航？行程將不會儲存。')) return;
-        this.resetNavigationState();
+        NavEngine.resetNavigationState();
       },
 
       async endNavigation() {
@@ -1891,14 +1900,14 @@
 
         console.log('[Nav] Ending navigation and saving stats');
         const endTime = Date.now();
-        const durationMins = Math.max(1, Math.ceil((endTime - this.navStartTime) / 60000));
-        const distanceKm = this.routeData ? parseFloat((this.routeData.distance / 1000).toFixed(2)) : 0;
+        const durationMins = Math.max(1, Math.ceil((endTime - NavEngine.navStartTime) / 60000));
+        const distanceKm = NavEngine.routeData ? parseFloat((NavEngine.routeData.distance / 1000).toFixed(2)) : 0;
         const avgSpeed = durationMins > 0 ? parseFloat((distanceKm / (durationMins / 60)).toFixed(1)) : 0;
 
         const tripData = {
-          totalDistance: this.routeData ? this.routeData.distance : 0,
+          totalDistance: NavEngine.routeData ? NavEngine.routeData.distance : 0,
           totalTime: durationMins,
-          path: this.trackingCoords
+          path: NavEngine.trackingCoords
         };
 
         // Save to History (Persistence)
@@ -1910,7 +1919,7 @@
               route_id: 'NAV_AUTO',
               route_name: document.getElementById('input-end').value || '自訂導航',
               ride_date: new Date().toISOString().slice(0, 10),
-              start_time: new Date(this.navStartTime).toISOString(),
+              start_time: new Date(NavEngine.navStartTime).toISOString(),
               end_time: new Date(endTime).toISOString(),
               distance_km: distanceKm,
               duration_minutes: durationMins,
@@ -1920,7 +1929,7 @@
               all_stops: false,
               source: 'pwa',
               ride_mode: 'nav',
-              path: this.trackingCoords
+              path: NavEngine.trackingCoords
             };
             const res = await fetch('/api/getHistory', {
               method: 'POST',
@@ -1981,15 +1990,15 @@
           onNavigationEnd(tripData);
         }
 
-        this.resetNavigationState();
+        NavEngine.resetNavigationState();
       },
 
       resetNavigationState() {
-        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-        this.isNavigating = false;
-        this.isLaneLevel = false;
+        if (NavEngine.heartbeatInterval) clearInterval(NavEngine.heartbeatInterval);
+        NavEngine.isNavigating = false;
+        NavEngine.isLaneLevel = false;
         document.body.classList.remove('is-navigating');
-        this.toggleLaneLevelUI(false);
+        NavEngine.toggleLaneLevelUI(false);
 
         if (document.exitFullscreen && document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
@@ -1999,7 +2008,7 @@
         document.getElementById('hud-top').classList.add('hidden');
         document.getElementById('hud-left').classList.add('hidden');
 
-        this.map.easeTo({ pitch: 0, bearing: 0, zoom: 14 });
+        NavEngine.map.easeTo({ pitch: 0, bearing: 0, zoom: 14 });
       }
     };
 

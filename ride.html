@@ -19,38 +19,203 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="城市運輸單車">
   <link rel="apple-touch-icon" href="/images/icon-192.png">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>騎行中 - 城市運輸單車</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
+    :root {
+      --hud-green: #2ecc71;
+      --hud-red: #e74c3c;
+      --hud-highway-green: rgba(27, 94, 32, 0.95);
+      --hud-bg: rgba(18, 31, 20, 0.85);
+      --hud-blur: blur(12px);
+      --app-accent: #BFE340;
+    }
+
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: #1a252f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif; }
+    html, body { height: 100%; overflow: hidden; background: #121f14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif; }
 
     /* ── Full-screen map ── */
     #ride-map { position: fixed; inset: 0; z-index: 0; background: #0d1a24; }
 
+    /* --- Industrial HUD Layout --- */
+    .hud-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+    }
+
+    /* Top: Navigation Instructions */
+    .hud-top {
+      pointer-events: auto;
+      background: var(--hud-highway-green);
+      backdrop-filter: var(--hud-blur);
+      -webkit-backdrop-filter: var(--hud-blur);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hud-top.hidden { transform: translateY(-150%); }
+
+    .nav-next-icon { font-size: 32px; color: #fff; min-width: 40px; text-align: center; }
+    .nav-instruction-wrap { flex: 1; }
+    .nav-next-road { font-size: 14px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
+    .nav-instruction { font-size: 22px; font-weight: 800; color: #fff; line-height: 1.2; }
+    .nav-dist-wrap { text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 16px; }
+    .nav-dist-val { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; }
+    .nav-dist-unit { font-size: 12px; color: #BFE340; opacity: 0.8; }
+
+    /* Left Stats Panel */
+    .hud-middle-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin: 16px 0;
+    }
+    .hud-left {
+      pointer-events: auto;
+      background: var(--hud-bg);
+      backdrop-filter: var(--hud-blur);
+      -webkit-backdrop-filter: var(--hud-blur);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 90px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hud-left.hidden { transform: translateX(-150%); }
+
+    .stat-item { text-align: center; }
+    .stat-val { font-size: 24px; font-weight: 900; color: #BFE340; line-height: 1; }
+    .stat-unit { font-size: 10px; opacity: 0.6; text-transform: uppercase; margin-top: 4px; color: #fff; }
+
+    /* Free Mode Styles */
+    .free-mode-hud {
+      pointer-events: auto;
+      background: var(--hud-bg);
+      backdrop-filter: var(--hud-blur);
+      -webkit-backdrop-filter: var(--hud-blur);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 12px;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      color: #fff;
+    }
+    .free-mode-title { font-weight: 800; color: var(--app-accent); font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    .free-mode-input {
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+      color: #fff; padding: 10px; font-size: 14px; width: 100%; outline: none;
+    }
+
+    /* Bottom HUD (for non-navigating state) */
+    #ride-bottom-sheet {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(18, 31, 20, 0.93);
+      border-radius: 18px 18px 0 0;
+      backdrop-filter: blur(8px);
+      padding-bottom: env(safe-area-inset-bottom);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: auto;
+    }
+    #ride-bottom-sheet.hidden-below { transform: translateY(100%); }
+    body.is-navigating #ride-bottom-sheet { transform: translateY(100%); }
+
+    /* Handle / collapsed area */
+    #rbs-handle { padding: 0.55em 1.2em 0.5em; cursor: pointer; user-select: none; }
+    .rbs-handle-bar { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.25); margin: 0 auto 0.55em; }
+    .rbs-stats-row { display: flex; align-items: center; gap: 0.3em; color: #fff; }
+    .rbs-stat { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+    .rbs-stat .val { font-size: 1.05em; font-weight: bold; color: #BFE340; white-space: nowrap; }
+    .rbs-stat .lbl { font-size: 0.64em; opacity: 0.6; margin-top: 0.1em; }
+    .rbs-divider { width: 1px; height: 2em; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+    #rbs-toggle-btn {
+      margin-left: auto; flex-shrink: 0;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.75); border-radius: 14px;
+      padding: 0.28em 0.8em; font-size: 0.75em; cursor: pointer;
+    }
+    #gps-status-text { font-size: 0.67em; opacity: 0.5; text-align: center; margin-top: 0.25em; color:#fff; }
+
+    /* Expanded panel */
+    #rbs-expanded { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1); }
+    #ride-bottom-sheet.expanded #rbs-expanded { max-height: 65vh; overflow-y: auto; }
+    .rbs-expanded-inner { padding: 0.5em 1.2em 1em; }
+
+    /* End Ride Button */
+    #btn-end-ride {
+      width: 100%; padding: 16px; border: none; border-radius: 14px;
+      background: #e74c3c; color: #fff; font-size: 18px; font-weight: 800;
+      cursor: pointer; transition: background 0.2s;
+      margin-bottom: 8px; box-shadow: 0 8px 24px rgba(231, 76, 60, 0.4);
+    }
+    #btn-end-ride:active { transform: scale(0.98); background: #c0392b; }
+
+    /* Bottom: HUD Controls */
+    .hud-bottom {
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+
+    .hud-btn-row {
+        display: flex;
+        gap: 12px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-hud-secondary {
+      background: rgba(255,255,255,0.1) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
     /* ── Go-to-start banner ── */
     #go-to-start-banner {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
-      background: linear-gradient(135deg, #1a252f, #223040);
+      background: rgba(18, 31, 20, 0.95);
       color: #fff; border-radius: 18px 18px 0 0;
       padding: 1.2em 1.4em calc(env(safe-area-inset-bottom) + 1.2em);
       text-align: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+      backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.1);
     }
     #go-to-start-banner .gts-icon { font-size: 2.5em; margin-bottom: 0.2em; }
-    #go-to-start-banner h3 {
-      font-size: 1.1em; font-weight: bold; color: #BFE340; margin-bottom: 0.3em;
-    }
-    #go-to-start-banner p {
-      font-size: 0.85em; opacity: 0.75; margin-bottom: 0.8em; line-height: 1.4;
-    }
-    #gts-dist-row {
-      display: flex; align-items: center; justify-content: center; gap: 0.5em;
-      font-size: 1.3em; font-weight: bold; color: #BFE340; margin-bottom: 0.8em;
-    }
+    #go-to-start-banner h3 { font-size: 1.1em; font-weight: bold; color: #BFE340; margin-bottom: 0.3em; }
+    #go-to-start-banner p { font-size: 0.85em; opacity: 0.75; margin-bottom: 0.8em; line-height: 1.4; }
+    #gts-dist-row { display: flex; align-items: center; justify-content: center; gap: 0.5em; font-size: 1.3em; font-weight: bold; color: #BFE340; margin-bottom: 0.8em; }
     #gts-dist-val { font-size: 1.4em; }
     #btn-skip-gts {
       background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
@@ -63,137 +228,42 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       display: flex; align-items: center; gap: 0.6em;
       padding: calc(env(safe-area-inset-top) + 0.6em) 1em 0.6em;
-      background: linear-gradient(to bottom, rgba(26,37,47,0.92) 70%, transparent);
+      background: linear-gradient(to bottom, rgba(18,31,20,0.92) 70%, transparent);
       color: #fff;
     }
+    body.is-navigating #ride-top { display: none; }
     #btn-back-ride {
       background: rgba(255,255,255,0.15); border: none; color: #fff;
       width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 1.1em;
       flex-shrink: 0; text-decoration: none;
     }
-    #ride-route-label {
-      flex: 1; min-width: 0; font-weight: bold; font-size: 1em; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis;
-    }
-    #btn-free-mode { flex-shrink: 0; }
+    #ride-route-label { flex: 1; min-width: 0; font-weight: bold; font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #ride-timer-display {
       font-size: 1.1em; font-weight: bold; font-variant-numeric: tabular-nums;
       background: rgba(0,0,0,0.4); padding: 0.3em 0.6em; border-radius: 6px;
       flex-shrink: 0;
     }
 
-    #btn-open-catalog-ride {
-      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-      color: #fff; width: 36px; height: 36px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; font-size: 1em;
-      cursor: pointer; margin-left: auto;
+    /* Floating Map Controls */
+    .floating-controls {
+      position: absolute; right: 16px; top: calc(env(safe-area-inset-top) + 120px);
+      display: flex; flex-direction: column; gap: 12px; z-index: 50;
     }
+    .float-btn {
+      width: 44px; height: 44px; border-radius: 50%; background: var(--hud-bg); backdrop-filter: var(--hud-blur);
+      border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); pointer-events: auto;
+    }
+    .float-btn.active { color: #BFE340; border-color: #BFE340; }
 
-    /* ── Next stop card (overlaid on map) ── */
-    #next-stop-card {
-      position: fixed; top: calc(env(safe-area-inset-top) + 3.6em); left: 50%;
-      transform: translateX(-50%); z-index: 200;
-      background: rgba(26,37,47,0.92); color: #fff;
-      border-radius: 12px; padding: 0.7em 1.2em;
-      min-width: min(320px, calc(100vw - 2em));
-      text-align: center; backdrop-filter: blur(4px);
+    /* Custom Arrow Marker */
+    .user-arrow {
+      width: 0; height: 0;
+      border-left: 12px solid transparent; border-right: 12px solid transparent;
+      border-bottom: 30px solid #6dba65;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
     }
-    #next-stop-label { font-size: 0.72em; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.05em; }
-    #next-stop-name  { font-size: 1.05em; font-weight: bold; margin: 0.15em 0; }
-    #next-stop-dist  { font-size: 1.3em; font-weight: bold; color: #BFE340; }
-
-    /* ── Floating bottom sheet (overlaid on map) ── */
-    #ride-bottom-sheet {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(26,37,47,0.93);
-      border-radius: 18px 18px 0 0;
-      backdrop-filter: blur(8px);
-      padding-bottom: env(safe-area-inset-bottom);
-      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-    }
-    #ride-bottom-sheet.hidden-below { transform: translateY(100%); }
-
-    /* Handle / collapsed area */
-    #rbs-handle {
-      padding: 0.55em 1.2em 0.5em;
-      cursor: pointer;
-      user-select: none;
-    }
-    .rbs-handle-bar {
-      width: 36px; height: 4px; border-radius: 2px;
-      background: rgba(255,255,255,0.25);
-      margin: 0 auto 0.55em;
-    }
-    .rbs-stats-row {
-      display: flex; align-items: center; gap: 0.3em; color: #fff;
-    }
-    .rbs-stat { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
-    .rbs-stat .val { font-size: 1.05em; font-weight: bold; color: #BFE340; white-space: nowrap; }
-    .rbs-stat .lbl { font-size: 0.64em; opacity: 0.6; margin-top: 0.1em; }
-    .rbs-divider { width: 1px; height: 2em; background: rgba(255,255,255,0.15); flex-shrink: 0; }
-    #rbs-toggle-btn {
-      margin-left: auto; flex-shrink: 0;
-      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.75); border-radius: 14px;
-      padding: 0.28em 0.8em; font-size: 0.75em; cursor: pointer;
-    }
-    #gps-status-text { font-size: 0.67em; opacity: 0.5; text-align: center; margin-top: 0.25em; }
-
-    /* Expanded panel */
-    #rbs-expanded {
-      max-height: 0; overflow: hidden;
-      transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
-    }
-    #ride-bottom-sheet.expanded #rbs-expanded {
-      max-height: 65vh; overflow-y: auto;
-    }
-    .rbs-expanded-inner { padding: 0.5em 1.2em 1em; }
-
-    /* Stats grid inside expanded panel */
-    #ride-stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.6em;
-      margin-bottom: 1em;
-    }
-    .ride-stat-card {
-      background: rgba(255,255,255,0.07);
-      border-radius: 12px;
-      padding: 0.8em 0.6em;
-      text-align: center;
-    }
-    .ride-stat-card.wide { grid-column: span 2; }
-    .ride-stat-card .val { font-size: 1.35em; font-weight: bold; color: #BFE340; }
-    .ride-stat-card .lbl { font-size: 0.66em; opacity: 0.65; margin-top: 0.22em; }
-
-    /* Stops progress inside expanded panel */
-    .stats-page-stops-label {
-      font-size: 0.78em; color: #a8d8a0; margin-bottom: 0.5em; font-weight: 600;
-      letter-spacing: 0.06em;
-    }
-    #stops-progress {
-      display: flex; gap: 0.3em; overflow-x: auto; margin-bottom: 0.9em;
-      padding-bottom: 0.2em; scrollbar-width: none;
-    }
-    #stops-progress::-webkit-scrollbar { display: none; }
-    .stop-pill {
-      flex-shrink: 0; display: flex; align-items: center; gap: 0.3em;
-      background: rgba(255,255,255,0.1); border-radius: 20px;
-      padding: 0.3em 0.7em; font-size: 0.78em; white-space: nowrap;
-      transition: background 0.3s, color 0.3s;
-    }
-    .stop-pill.reached { background: #04D93C; color: #1a252f; font-weight: bold; }
-    .stop-pill.next { background: #BFE340; color: #1a252f; font-weight: bold; box-shadow: 0 0 8px rgba(191,227,64,0.5); }
-
-    /* End-ride button */
-    #btn-end-ride {
-      width: 100%; padding: 0.9em; border: none; border-radius: 10px;
-      background: #e74c3c; color: #fff; font-size: 1em; font-weight: bold;
-      cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s;
-      margin-bottom: 0.5em;
-    }
-    #btn-end-ride:active { background: #c0392b; }
 
     /* ── Go-to-start stop selector ── */
     #gts-custom-start {
@@ -219,7 +289,7 @@
     /* ── Locked screen ── */
     #ride-locked {
       display: none; position: fixed; inset: 0; z-index: 500;
-      background: #1a252f; color: #fff;
+      background: #121f14; color: #fff;
       flex-direction: column; align-items: center; justify-content: center;
       text-align: center; padding: 2em;
     }
@@ -232,7 +302,7 @@
     /* ── Loading screen ── */
     #ride-loading {
       position: fixed; inset: 0; z-index: 500;
-      background: #1a252f; color: #fff;
+      background: #121f14; color: #fff;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 1em;
     }
@@ -247,7 +317,7 @@
     /* ── End ride summary overlay ── */
     #ride-summary {
       display: none; position: fixed; inset: 0; z-index: 600;
-      background: rgba(26,37,47,0.97); color: #fff;
+      background: rgba(18,31,20,0.97); color: #fff;
       flex-direction: column; align-items: center; justify-content: center;
       padding: 2em; text-align: center; overflow-y: auto;
     }
@@ -502,6 +572,14 @@
         </div>
       </div>
     </div>
+
+    <div class="hud-bottom">
+        <button id="btn-hud-end-ride" style="background:#e74c3c; color:#fff; border:none; padding:16px 64px; border-radius:999px; font-size:20px; font-weight:800; box-shadow:0 8px 24px rgba(231,76,60,0.5); cursor:pointer;">結束騎行</button>
+        <div class="hud-btn-row">
+            <button class="btn-hud-secondary" id="btn-hud-pause">暫停行程</button>
+            <button class="btn-hud-secondary" id="btn-hud-exit">退出</button>
+        </div>
+    </div>
   </div>
 
   <!-- Loading screen -->
@@ -521,7 +599,7 @@
   <!-- Fullscreen map -->
   <div id="ride-map"></div>
 
-  <!-- Top HUD -->
+  <!-- Top HUD (Standard) -->
   <div id="ride-top">
     <a href="javascript:confirmLeave()" id="btn-back-ride" class="btn-click-effect" aria-label="返回">
       <i class="fas fa-chevron-left"></i>
@@ -537,11 +615,62 @@
     </button>
   </div>
 
-  <!-- Next stop card -->
+  <!-- Industrial HUD (Navigation Mode) -->
+  <div class="hud-container">
+    <!-- Standard Navigation Top -->
+    <div class="hud-top hidden" id="hud-top">
+      <div class="nav-next-icon" id="next-icon"><i class="fas fa-arrow-up"></i></div>
+      <div class="nav-instruction-wrap">
+        <div class="nav-next-road" id="next-road">目前路段</div>
+        <div class="nav-instruction" id="next-instruction">沿單車徑前行</div>
+      </div>
+      <div class="nav-dist-wrap">
+        <div class="nav-dist-val" id="next-dist">--</div>
+        <div class="nav-dist-unit">m</div>
+      </div>
+    </div>
+
+    <!-- Free Mode Top -->
+    <div class="free-mode-hud hidden" id="free-mode-hud">
+        <div class="free-mode-title"><i class="fas fa-bicycle"></i> 自由騎行模式</div>
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="free-nav-input" class="free-mode-input" placeholder="輸入目的地直接導航...">
+            <button id="btn-free-nav-go" style="background:var(--app-accent); color:#121f14; border:none; border-radius:8px; padding:0 12px; font-weight:bold; cursor:pointer;">開始</button>
+        </div>
+        <div id="free-nearby-chips" style="display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; font-size:12px;"></div>
+    </div>
+
+    <div class="hud-middle-row">
+      <div class="hud-left hidden" id="hud-left">
+        <div class="stat-item">
+          <div class="stat-val" id="speed-val">0.0</div>
+          <div class="stat-unit">km/h</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="eta-val">--</div>
+          <div class="stat-unit">ETA</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="remain-val">--</div>
+          <div class="stat-unit">公里</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next stop card (Standard Mode) -->
   <div id="next-stop-card">
     <div id="next-stop-label">下一個站點</div>
     <div id="next-stop-name">正在獲取位置...</div>
     <div id="next-stop-dist">-- m</div>
+  </div>
+
+  <!-- Floating Map Controls -->
+  <div class="floating-controls">
+    <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
+    <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
+    <button class="float-btn active" id="btn-recenter" title="跟隨我"><i class="fas fa-crosshairs"></i></button>
+    <button class="float-btn active" id="btn-orient" title="切換航向模式"><i class="fas fa-compass"></i></button>
   </div>
 
   <!-- Free mode control panel -->
@@ -694,12 +823,24 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
   // ── Ride Session ─────────────────────────────────────────────────────────
   (function () {
     'use strict';
+
+    // Mapbox Token
+    mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
+
+    const RideApp = {
+      isFollowing: true,
+      headingUp: false,
+      isNavigating: false,
+      localTracks: null,
+      heartbeatInterval: null,
+      localPedestrian: null
+    };
 
     // ── Level config (50 levels, no hard cap) ─────────────────────────────
     const LEVEL_XP = [
@@ -760,7 +901,7 @@
     let routeLayer = null;
     let stopMarkers = [];
     let userMarker = null;
-    let accuracyCircle = null;
+    let isLaneLevel = false;
     let watchId = null;
     let rideStarted = false;
     let goToStartPhase = true;  // true = waiting at start; false = ride in progress
@@ -969,54 +1110,133 @@
     // ── Map ───────────────────────────────────────────────────────────────
     function initMap(lat, lon) {
       if (map) return;
-      map = L.map('ride-map', { zoomControl: false, attributionControl: false })
-             .setView([lat, lon], 15);
-      // Choose map tile based on current theme
-      const isLightTheme = document.body.classList.contains('app-light-theme') ||
-        (!document.body.classList.contains('app-theme-explicit') &&
-          window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
-      const tileUrl = isLightTheme
-        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      L.tileLayer(tileUrl, {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap © CartoDB'
-      }).addTo(map);
-      L.control.attribution({ position: 'bottomleft', prefix: '' }).addTo(map);
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      map = new mapboxgl.Map({
+        container: 'ride-map',
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [lon, lat],
+        zoom: 15,
+        pitch: 0,
+        antialias: true,
+        attributionControl: false
+      });
+
+      map.on('load', () => {
+        add3DBuildings();
+        loadLocalTracks();
+        if (routeData) {
+            // If routeData already loaded, plot everything
+            const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];
+            if (gpxEntry) loadGpx(gpxEntry.file, routeData.color);
+            plotStops(routeStops);
+        }
+      });
+    }
+
+    async function loadLocalTracks() {
+        try {
+            const resp = await fetch('/data/TKO_full.geojson');
+            const data = await resp.json();
+            map.addSource('tko-tracks', { type: 'geojson', data });
+            RideApp.localTracks = data;
+
+            map.addLayer({
+                id: 'local-tracks-asphalt',
+                type: 'line',
+                source: 'tko-tracks',
+                layout: { 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#1a1a1a',
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 14, 8, 18, 20],
+                    'line-opacity': 0.6
+                }
+            });
+            map.addLayer({
+                id: 'local-tracks-green',
+                type: 'line',
+                source: 'tko-tracks',
+                layout: { 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#2ecc71',
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 14, 4, 18, 10],
+                    'line-opacity': 0.3
+                }
+            });
+        } catch(e) { console.warn('Failed to load local tracks', e); }
+    }
+
+    function add3DBuildings() {
+        if (!map) return;
+        const layers = map.getStyle().layers;
+        const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field']).id;
+        map.addLayer({
+          'id': '3d-buildings',
+          'source': 'composite',
+          'source-layer': 'building',
+          'filter': ['==', 'extrude', 'true'],
+          'type': 'fill-extrusion',
+          'minzoom': 15,
+          'paint': {
+            'fill-extrusion-color': '#aaa',
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+            'fill-extrusion-opacity': 0.6
+          }
+        }, labelLayerId);
     }
 
     async function loadGpx(file, color) {
       if (!map || !file) return;
-      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
       try {
         const res = await fetch('/gpx/' + file);
         if (!res.ok) return;
         const xml = await res.text();
         const doc = new DOMParser().parseFromString(xml, 'application/xml');
         const pts = [...doc.querySelectorAll('trkpt')].map(p => [
-          parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))
+          parseFloat(p.getAttribute('lon')), parseFloat(p.getAttribute('lat'))
         ]).filter(([a, b]) => !isNaN(a) && !isNaN(b));
+
         if (pts.length) {
-          routeLayer = L.polyline(pts, { color: color || '#BFE340', weight: 5, opacity: 0.85 });
-          routeLayer.addTo(map);
-          map.fitBounds(routeLayer.getBounds(), { padding: [60, 60] });
+          const geojson = {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: pts }
+          };
+
+          if (map.getSource('route-line')) {
+            map.getSource('route-line').setData(geojson);
+          } else {
+            map.addSource('route-line', { type: 'geojson', data: geojson });
+            map.addLayer({
+              id: 'route-line',
+              type: 'line',
+              source: 'route-line',
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': color || '#BFE340',
+                'line-width': 5,
+                'line-opacity': 0.85
+              }
+            });
+          }
+
+          const bounds = pts.reduce((acc, coord) => acc.extend(coord), new mapboxgl.LngLatBounds(pts[0], pts[0]));
+          map.fitBounds(bounds, { padding: 60 });
         }
       } catch (e) { console.warn('[Ride] GPX load failed', e); }
     }
 
     function plotStops(stops) {
       if (!map) return;
-      stopMarkers.forEach(m => map.removeLayer(m));
+      stopMarkers.forEach(m => m.remove());
       stopMarkers = [];
       stops.forEach(s => {
-        const icon = L.divIcon({
-          className: '',
-          html: `<div style="background:#2c3e50;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${s.order}</div>`,
-          iconSize: [26, 26], iconAnchor: [13, 13],
-        });
-        const marker = L.marker([s.lat, s.lon], { icon })
-          .bindPopup(`<b>${s.code || '站 ' + s.order}</b><br>${s.name}${s.name_en ? '<br><span style="font-size:0.85em;opacity:0.8">' + s.name_en + '</span>' : ''}`)
+        const el = document.createElement('div');
+        el.style.cssText = `background:#2c3e50;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;box-shadow:0 1px 3px rgba(0,0,0,0.4);`;
+        el.textContent = s.order;
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([s.lon, s.lat])
+          .setPopup(new mapboxgl.Popup({ offset: 25 })
+            .setHTML(`<b>${s.code || '站 ' + s.order}</b><br>${s.name}`))
           .addTo(map);
         stopMarkers.push(marker);
       });
@@ -1199,8 +1419,43 @@
         document.getElementById('free-mode-panel').style.display = 'none';
     }
 
+    function checkLaneLevel(pos) {
+        if (!RideApp.localTracks) return;
+        const pt = turf.point(pos);
+        let onTrack = false;
+        RideApp.localTracks.features.forEach(f => {
+            if (onTrack) return;
+            const dist = turf.pointToLineDistance(pt, f, { units: 'meters' });
+            if (dist < 10) onTrack = true;
+        });
+        if (onTrack !== isLaneLevel) {
+            isLaneLevel = onTrack;
+            toggleLaneLevelUI(onTrack);
+        }
+    }
+
+    function toggleLaneLevelUI(active) {
+        console.log('[Ride] Lane Level UI:', active);
+        if (map.getLayer('route-line')) {
+            map.setPaintProperty('route-line', 'line-width', active ? 40 : 5);
+        }
+        const roadLayers = map.getStyle().layers.filter(l =>
+            l.id.includes('road') || l.id.includes('highway') || l.id.includes('bridge')
+        );
+        roadLayers.forEach(l => {
+            if (l.id === 'route-line') return;
+            if (l.id.startsWith('local-tracks-')) return;
+            map.setLayoutProperty(l.id, 'visibility', active ? 'none' : 'visible');
+        });
+        const otherLayers = ['landuse', 'natural-line-label', 'natural-point-label', 'poi-label', 'settlement-label', 'settlement-subdivision-label'];
+        otherLayers.forEach(id => {
+            if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', active ? 'none' : 'visible');
+        });
+    }
+
     function onPosition(pos) {
-      const { latitude: lat, longitude: lon, accuracy, speed } = pos.coords;
+      const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
+      const coords = [lon, lat];
 
       // Update status
       document.getElementById('gps-status-text').textContent =
@@ -1208,28 +1463,32 @@
 
       // Update or create user marker
       if (!userMarker) {
-        const icon = L.divIcon({
-          className: '',
-          html: '<div style="background:#04D93C;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 8px rgba(4,217,60,0.6);"></div>',
-          iconSize: [18, 18], iconAnchor: [9, 9],
-        });
-        userMarker = L.marker([lat, lon], { icon, zIndexOffset: 1000 }).addTo(map);
+        const el = document.createElement('div');
+        el.className = 'user-arrow';
+        userMarker = new mapboxgl.Marker({ element: el })
+          .setLngLat(coords)
+          .addTo(map);
       } else {
-        userMarker.setLatLng([lat, lon]);
+        userMarker.setLngLat(coords);
+        userMarker.getElement().style.transform = `rotate(${heading || 0}deg)`;
       }
-      // Accuracy circle
-      if (!accuracyCircle) {
-        accuracyCircle = L.circle([lat, lon], {
-          radius: accuracy, color: '#04D93C', fillColor: '#04D93C',
-          fillOpacity: 0.08, weight: 1
-        }).addTo(map);
-      } else {
-        accuracyCircle.setLatLng([lat, lon]);
-        accuracyCircle.setRadius(accuracy);
+
+      checkLaneLevel(coords);
+
+      if (RideApp.isNavigating && !isFreeMode) {
+          updateNavHUD(coords, speed);
       }
-      // Pan to user (only if near center)
-      if (!map.getBounds().contains([lat, lon])) {
-        map.panTo([lat, lon]);
+
+      // Pan to user
+      if (RideApp.isFollowing) {
+          const targetBearing = RideApp.headingUp ? (heading || 0) : 0;
+          map.easeTo({
+              center: coords,
+              bearing: targetBearing,
+              pitch: isLaneLevel ? 75 : 0,
+              zoom: isLaneLevel ? 19.5 : 15,
+              duration: 800
+          });
       }
 
       // ── Go-to-start phase ─────────────────────────────────────────────
@@ -1380,7 +1639,7 @@
     window.pauseRide = async function() {
       if (!confirm('確定暫停行程？您可以稍後在路線頁面尋回並繼續。')) return;
       if (timerInterval) clearInterval(timerInterval);
-      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      if (RideApp.heartbeatInterval) clearInterval(RideApp.heartbeatInterval);
       await syncActiveRide();
       rideStarted = false; // Prevent confirmLeave from triggering confirm again
       location.href = '/dashboard';
@@ -1391,6 +1650,8 @@
       if (rideStarted) return;
       goToStartPhase = false;
       rideStarted = true;
+      RideApp.isNavigating = true;
+      document.body.classList.add('is-navigating');
       startTime = Date.now();
       startTimer();
       requestWakeLock();
@@ -1403,24 +1664,34 @@
       }
 
       // Heartbeat
-      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = setInterval(() => syncActiveRide(), 1000);
+      if (RideApp.heartbeatInterval) clearInterval(RideApp.heartbeatInterval);
+      RideApp.heartbeatInterval = setInterval(() => syncActiveRide(), 1000);
 
-      // Hide go-to-start banner; show ride HUD
+      // Hide go-to-start banner
       const gtsBanner = document.getElementById('go-to-start-banner');
       if (gtsBanner) gtsBanner.style.display = 'none';
+
+      // Standard HUD
       showRideHUD(true);
-      // Ensure HUD elements are visible/correct
       document.getElementById('stat-time').textContent = '00:00';
       document.getElementById('stat-dist').textContent = '0 m';
 
+      // Industrial HUD common
+      document.getElementById('hud-left').classList.remove('hidden');
+      document.getElementById('next-stop-card').style.display = 'none';
+
       if (!isFreeMode) {
-        document.getElementById('next-stop-card').style.display = '';
+        // Navigation Mode HUD
+        document.getElementById('hud-top').classList.remove('hidden');
+        document.getElementById('free-mode-hud').classList.add('hidden');
       } else {
-        document.getElementById('next-stop-card').style.display = 'none';
+        // Free Mode HUD
+        document.getElementById('hud-top').classList.add('hidden');
+        document.getElementById('free-mode-hud').classList.remove('hidden');
         document.getElementById('stat-stops').textContent = '0';
         const stopsLbl = document.querySelector('.rbs-stat:nth-child(5) .lbl');
         if (stopsLbl) stopsLbl.textContent = '🚩 站點';
+        initFreeModeHUDControls();
       }
       document.getElementById('btn-end-ride').disabled = false;
 
@@ -1451,6 +1722,38 @@
         beginRide();
       }
     };
+
+    function updateNavHUD(pos, speed) {
+        if (!routeStops.length) return;
+        const next = routeStops.find(s => !reachedStops.has(s.order));
+        if (!next) {
+            document.getElementById('hud-top').classList.add('hidden');
+            return;
+        }
+
+        const distM = haversineM(pos[1], pos[0], next.lat, next.lon);
+        document.getElementById('hud-top').classList.remove('hidden');
+        document.getElementById('hud-left').classList.remove('hidden');
+
+        document.getElementById('next-dist').textContent = Math.round(distM);
+        document.getElementById('next-road').textContent = next.road || '單車徑';
+        document.getElementById('next-instruction').textContent = `前往 ${next.name}`;
+
+        // Speed & ETA
+        const speedKmh = speed != null ? speed * 3.6 : 15;
+        document.getElementById('speed-val').textContent = speedKmh.toFixed(1);
+        const etaMins = Math.ceil((distM / 1000) / Math.max(5, speedKmh) * 60);
+        document.getElementById('eta-val').textContent = etaMins + 'm';
+
+        // Remaining total distance
+        let remainM = distM;
+        const nextIdx = routeStops.indexOf(next);
+        for (let i = nextIdx + 1; i < routeStops.length; i++) {
+            const s1 = routeStops[i-1], s2 = routeStops[i];
+            remainM += haversineM(s1.lat, s1.lon, s2.lat, s2.lon);
+        }
+        document.getElementById('remain-val').textContent = (remainM / 1000).toFixed(1);
+    }
 
     function onGpsError(err) {
       document.getElementById('gps-status-text').textContent = 'GPS 錯誤：' + err.message;
@@ -2016,23 +2319,33 @@
       }
     }
 
-    function initFreeModeControls() {
-      const panel = document.getElementById('free-mode-panel');
-      const btn = document.getElementById('btn-free-start-nav');
-      const input = document.getElementById('free-destination-input');
-      if (!panel || !btn || !input) return;
+    function initFreeModeHUDControls() {
+        const input = document.getElementById('free-nav-input');
+        const btn = document.getElementById('btn-free-nav-go');
+        if (!input || !btn) return;
 
-      panel.style.display = (isFreeMode && !rideStarted) ? '' : 'none';
-      renderFreeModeTerminalOptions();
+        btn.onclick = () => {
+            const to = String(input.value || '').trim();
+            if (!to) return;
+            location.href = `/nav?from=${encodeURIComponent('📍 使用目前位置')}&to=${encodeURIComponent(to)}&autostart=1`;
+        };
 
-      btn.onclick = () => {
-        const to = String(input.value || '').trim();
-        if (!to) {
-          alert('請先輸入終點');
-          return;
+        // Populate nearby chips
+        const chips = document.getElementById('free-nearby-chips');
+        if (chips) {
+            chips.innerHTML = '';
+            allTerminals.slice(0, 5).forEach(t => {
+                const chip = document.createElement('div');
+                chip.style.cssText = 'background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px; white-space:nowrap; cursor:pointer;';
+                chip.textContent = t.name;
+                chip.onclick = () => { input.value = t.name; btn.click(); };
+                chips.appendChild(chip);
+            });
         }
-        location.href = `/nav?from=${encodeURIComponent('📍 使用目前位置')}&to=${encodeURIComponent(to)}&autostart=1`;
-      };
+    }
+
+    function initFreeModeControls() {
+      // Compatibility with old call, but actual controls are now in HUD
     }
 
     async function checkActiveRide() {
@@ -2040,31 +2353,43 @@
       if (!token) return;
 
       try {
-        const res = await fetch('/api/user?action=active-ride&type=route', {
+        // Fetch any active ride
+        const res = await fetch('/api/user?action=active-ride', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data && data.state && data.state.routeId === routeId) {
-            const modal = document.getElementById('ride-resume-modal');
-            const info = document.getElementById('ride-resume-info');
-            info.textContent = `您有一段往 ${data.state.routeAlias || routeId} 的行程未完成。`;
-            modal.style.display = 'flex';
+        if (data && data.state) {
+            const state = data.state;
+            if (state.type === 'route' && state.routeId === routeId) {
+                const modal = document.getElementById('ride-resume-modal');
+                const info = document.getElementById('ride-resume-info');
+                info.textContent = `您有一段往 ${state.routeAlias || routeId} 的行程未完成。`;
+                modal.style.display = 'flex';
 
-            document.getElementById('btn-ride-resume-yes').onclick = () => {
-                resumeRide(data.state);
-            };
-            document.getElementById('btn-ride-resume-cancel').onclick = () => {
-                modal.style.display = 'none';
-            };
-            document.getElementById('btn-ride-resume-delete').onclick = async () => {
-                if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
-                await fetch('/api/user?action=active-ride&type=route', {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                modal.style.display = 'none';
-            };
-            return true;
+                document.getElementById('btn-ride-resume-yes').onclick = () => {
+                    resumeRide(state);
+                };
+                document.getElementById('btn-ride-resume-cancel').onclick = () => {
+                    modal.style.display = 'none';
+                };
+                document.getElementById('btn-ride-resume-delete').onclick = async () => {
+                    if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
+                    await fetch('/api/user?action=active-ride&type=route', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    modal.style.display = 'none';
+                };
+                return true;
+            } else if (state.type === 'navigation') {
+                if (confirm(`您有一段往 ${state.endLocationName || '目的地'} 的導航行程未完成。是否前往繼續？`)) {
+                    window.location.href = '/nav';
+                }
+            } else if (state.type === 'route' && state.routeId !== routeId) {
+                if (confirm(`您有一段往 ${state.routeAlias || state.routeId} 的不同路線行程未完成。是否前往繼續？`)) {
+                    window.location.href = `/ride?id=${state.routeId}&dir=${state.dirIndex || 0}`;
+                }
+            }
         }
       } catch (e) {
         console.warn('[Ride] Failed to check active ride', e);
@@ -2104,6 +2429,10 @@
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
       // Reset Session State (Crucial for SPA mode)
+      RideApp.isFollowing = true;
+      RideApp.headingUp = false;
+      RideApp.isNavigating = false;
+
       const params = new URLSearchParams(location.search);
       routeId = params.get('id') || '';
       dirIndex = parseInt(params.get('dir') || '0', 10);
@@ -2114,7 +2443,7 @@
       isFreeMode = false;
       startTime = null;
       if (timerInterval) clearInterval(timerInterval);
-      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      if (RideApp.heartbeatInterval) clearInterval(RideApp.heartbeatInterval);
       reachedStops = new Set();
       totalDistM = 0;
       lastLat = null; lastLon = null;
@@ -2226,6 +2555,7 @@
         : [22.3143, 114.2697];
 
       initMap(center[0], center[1]);
+      setupMapControls();
 
       // Load GPX for selected direction
       if (routeData && routeData.gpx && routeData.gpx.length > 0) {
@@ -2289,6 +2619,24 @@
 
       // Also request wake lock early to prevent screen off during "go to start"
       requestWakeLock();
+    }
+
+    function setupMapControls() {
+        document.getElementById('btn-zoom-in').onclick = () => map.zoomIn();
+        document.getElementById('btn-zoom-out').onclick = () => map.zoomOut();
+        document.getElementById('btn-recenter').onclick = () => {
+            RideApp.isFollowing = !RideApp.isFollowing;
+            document.getElementById('btn-recenter').classList.toggle('active', RideApp.isFollowing);
+        };
+        document.getElementById('btn-orient').onclick = () => {
+            RideApp.headingUp = !RideApp.headingUp;
+            document.getElementById('btn-orient').classList.toggle('active', RideApp.headingUp);
+        };
+
+        // HUD Controls
+        document.getElementById('btn-hud-end-ride').onclick = () => endRide();
+        document.getElementById('btn-hud-pause').onclick = () => window.pauseRide();
+        document.getElementById('btn-hud-exit').onclick = () => confirmLeave();
     }
 
     document.addEventListener('DOMContentLoaded', init);
