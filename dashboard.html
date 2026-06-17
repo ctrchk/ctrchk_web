@@ -593,8 +593,11 @@
         // 頁面守衛：在渲染前確認已登入
         (function checkAuth() {
             if (!localStorage.getItem('accessToken')) {
-                if (window.isSPA && window.isSPA()) return;
-                window.location.replace('/login');
+                if (window.navigateTo) {
+                    window.navigateTo('/login');
+                } else {
+                    window.location.replace('/login');
+                }
                 throw new Error('未授權訪問');
             }
         })();
@@ -1317,6 +1320,13 @@
 
     window.onPWAReady(initDashboard);
 
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/dashboard') {
+            _dbInited = false;
+            initDashboard();
+        }
+    });
+
     async function checkActiveRideGlobal() {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
@@ -1429,6 +1439,7 @@
 
     async function loadHistory() {
         var list = document.getElementById('db-history-list');
+        if (!list) return;
         list.innerHTML = '<div style="padding:1.5em;text-align:center;color:var(--app-text-secondary,#a8d8a0);"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
         try {
             var token = localStorage.getItem('accessToken');

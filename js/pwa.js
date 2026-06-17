@@ -437,15 +437,15 @@
             });
         }
 
-        inlineScripts.forEach(code => {
-            let processedCode = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
-            // Replace const/let with var to prevent 'identifier already declared' in SPA mode when re-running scripts
-            processedCode = processedCode.replace(/(^|[^a-zA-Z0-9_$])(const|let)\s+([a-zA-Z0-9_$]+)/g, '$1var $3');
+        if (inlineScripts.length > 0) {
+            const combinedCode = inlineScripts.join('\n\n');
+            let processedCode = combinedCode.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
 
             const s = document.createElement('script');
-            s.textContent = processedCode;
+            // Wrap all inline scripts in a single IIFE to allow scope sharing while avoiding global redeclaration errors
+            s.textContent = `(function(){\n${processedCode}\n})();`;
             document.body.appendChild(s);
-        });
+        }
 
         return container;
       }

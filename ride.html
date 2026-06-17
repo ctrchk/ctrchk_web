@@ -61,21 +61,22 @@
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
       border: 2px solid rgba(255,255,255,0.2);
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin-top: 8px;
+      border-radius: 20px;
+      padding: 20px 24px;
+      margin-top: 12px;
       display: flex;
       align-items: center;
-      gap: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      gap: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      min-height: 100px;
     }
-    .hud-top.hidden { transform: translateY(-150%); }
+    .hud-top.hidden { transform: translateY(-200%); }
 
-    .nav-next-icon { font-size: 32px; color: #fff; min-width: 40px; text-align: center; }
+    .nav-next-icon { font-size: 40px; color: #fff; min-width: 50px; text-align: center; }
     .nav-instruction-wrap { flex: 1; }
-    .nav-next-road { font-size: 14px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
-    .nav-instruction { font-size: 22px; font-weight: 800; color: #fff; line-height: 1.2; }
+    .nav-next-road { font-size: 16px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 4px; }
+    .nav-instruction { font-size: 26px; font-weight: 900; color: #fff; line-height: 1.1; }
     .nav-dist-wrap { text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 16px; }
     .nav-dist-val { font-size: 28px; font-weight: 900; color: #fff; line-height: 1; }
     .nav-dist-unit { font-size: 12px; color: #BFE340; opacity: 0.8; }
@@ -836,7 +837,7 @@
     // Mapbox Token
     mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
 
-    const RideApp = {
+    window.RideApp = {
       isFollowing: true,
       headingUp: false,
       isNavigating: false,
@@ -2636,10 +2637,11 @@
       // Free Mode button
       const freeModeBtn = document.getElementById('ride-btn-free-mode');
       if (freeModeBtn) {
-          freeModeBtn.addEventListener('click', () => {
+          freeModeBtn.onclick = () => {
+              console.log('[Ride] Free Mode button clicked');
               if (rideStarted) return;
               startFreeModeSequence();
-          });
+          };
       }
 
       // Hide loading, start GPS
@@ -2671,7 +2673,7 @@
         document.getElementById('ride-btn-hud-exit').onclick = () => confirmLeave();
     }
 
-    document.addEventListener('DOMContentLoaded', init);
+    window.onPWAReady(init);
 
     // PWA SPA Support: Re-init state when switching pages to handle new parameters
     window.addEventListener('pwa-page-show', (e) => {
