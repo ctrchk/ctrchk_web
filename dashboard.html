@@ -1310,6 +1310,7 @@
 
     window.addEventListener('pwa-page-show', (e) => {
         if (e.detail.path === '/dashboard') {
+            _dbInited = false; // Force re-init to refresh history and stats
             initDashboard();
         }
     });

@@ -807,11 +807,18 @@ footer {
 
 /* iOS Safari fallback: JS adds .is-pwa to <body> via navigator.standalone */
 body.is-pwa .web-only { display: none !important; }
-body.is-pwa .app-only { display: revert !important; }
+body.is-pwa .app-only { display: block !important; }
+body.is-pwa div.app-only:not(.app-dir-row):not(.db-more-grid) { display: block !important; }
+body.is-pwa .db-more-grid.app-only { display: grid !important; }
+body.is-pwa .app-dir-row.app-only { display: flex !important; }
+
 /* Specific flex containers in app mode */
 body.is-pwa #app-home { display: flex !important; }
 body.is-pwa #app-ride-page { display: flex !important; }
 @media (display-mode: standalone) {
+    .web-only { display: none !important; }
+    .app-only { display: block !important; }
+    .db-more-grid.app-only { display: grid !important; }
     #app-home { display: flex !important; }
     #app-ride-page { display: flex !important; }
 }

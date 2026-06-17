@@ -487,18 +487,18 @@
 </script>
 
   <!-- Resume Modal -->
-  <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
+  <div id="ride-resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
     <div style="background:rgba(26,37,47,0.93); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
       <div style="font-size:48px; margin-bottom:16px;">🚲</div>
       <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
-      <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
+      <p id="ride-resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
 
       <div style="display:flex; flex-direction:column; gap:12px;">
-        <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
+        <button id="btn-ride-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
 
         <div style="display:flex; align-items:center; gap:12px;">
-          <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
-          <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
+          <button id="btn-ride-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
+          <button id="btn-ride-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
         </div>
       </div>
     </div>
@@ -734,9 +734,8 @@
       '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
     };
     // ── State ─────────────────────────────────────────────────────────────
-    const params = new URLSearchParams(location.search);
-    const routeId = params.get('id') || '';
-    const dirIndex = parseInt(params.get('dir') || '0', 10);
+    let routeId = '';
+    let dirIndex = 0;
 
     const STOP_DETECTION_RADIUS_M = 50;  // metres within which a stop is considered reached
     const MAX_GPS_JUMP_M = 500;          // discard GPS position updates larger than this (likely a jump/error)
@@ -758,6 +757,8 @@
     let allTerminals = [];
     let routeStops = [];
     let map = null;
+    let routeLayer = null;
+    let stopMarkers = [];
     let userMarker = null;
     let accuracyCircle = null;
     let watchId = null;
@@ -987,6 +988,7 @@
 
     async function loadGpx(file, color) {
       if (!map || !file) return;
+      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
       try {
         const res = await fetch('/gpx/' + file);
         if (!res.ok) return;
@@ -996,24 +998,27 @@
           parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))
         ]).filter(([a, b]) => !isNaN(a) && !isNaN(b));
         if (pts.length) {
-          const line = L.polyline(pts, { color: color || '#BFE340', weight: 5, opacity: 0.85 });
-          line.addTo(map);
-          map.fitBounds(line.getBounds(), { padding: [60, 60] });
+          routeLayer = L.polyline(pts, { color: color || '#BFE340', weight: 5, opacity: 0.85 });
+          routeLayer.addTo(map);
+          map.fitBounds(routeLayer.getBounds(), { padding: [60, 60] });
         }
       } catch (e) { console.warn('[Ride] GPX load failed', e); }
     }
 
     function plotStops(stops) {
       if (!map) return;
+      stopMarkers.forEach(m => map.removeLayer(m));
+      stopMarkers = [];
       stops.forEach(s => {
         const icon = L.divIcon({
           className: '',
           html: `<div style="background:#2c3e50;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${s.order}</div>`,
           iconSize: [26, 26], iconAnchor: [13, 13],
         });
-        L.marker([s.lat, s.lon], { icon })
+        const marker = L.marker([s.lat, s.lon], { icon })
           .bindPopup(`<b>${s.code || '站 ' + s.order}</b><br>${s.name}${s.name_en ? '<br><span style="font-size:0.85em;opacity:0.8">' + s.name_en + '</span>' : ''}`)
           .addTo(map);
+        stopMarkers.push(marker);
       });
     }
 
@@ -1183,7 +1188,6 @@
         // Let beginRide set rideStarted = true to ensure timer and HUD init
         document.getElementById('ride-route-label').textContent = '自由騎行模式';
         document.getElementById('btn-free-mode').style.display = 'none';
-        initFreeModeControls();
 
         // Hide route specific UI
         const gtsBanner = document.getElementById('go-to-start-banner');
@@ -1191,6 +1195,8 @@
         document.getElementById('next-stop-card').style.display = 'none';
 
         beginRide();
+        // Hide free mode panel after starting ride to keep HUD clean
+        document.getElementById('free-mode-panel').style.display = 'none';
     }
 
     function onPosition(pos) {
@@ -1436,11 +1442,14 @@
     window.startFromSelectedStop = function () {
       const sel = document.getElementById('gts-stop-select');
       const idx = sel ? parseInt(sel.value, 10) : 0;
-      if (!isNaN(idx) && idx >= 0 && idx < routeStops.length && idx > 0) {
-        routeStops = routeStops.slice(idx).map((s, i) => ({ ...s, order: i + 1 }));
-        buildStopsUI(routeStops);
+      if (!isNaN(idx) && idx >= 0 && idx < routeStops.length) {
+        if (idx > 0) {
+            routeStops = routeStops.slice(idx).map((s, i) => ({ ...s, order: i + 1 }));
+            buildStopsUI(routeStops);
+            plotStops(routeStops);
+        }
+        beginRide();
       }
-      beginRide();
     };
 
     function onGpsError(err) {
@@ -2013,7 +2022,7 @@
       const input = document.getElementById('free-destination-input');
       if (!panel || !btn || !input) return;
 
-      panel.style.display = '';
+      panel.style.display = (isFreeMode && !rideStarted) ? '' : 'none';
       renderFreeModeTerminalOptions();
 
       btn.onclick = () => {
@@ -2036,18 +2045,18 @@
         });
         const data = await res.json();
         if (data && data.state && data.state.routeId === routeId) {
-            const modal = document.getElementById('resume-modal');
-            const info = document.getElementById('resume-info');
+            const modal = document.getElementById('ride-resume-modal');
+            const info = document.getElementById('ride-resume-info');
             info.textContent = `您有一段往 ${data.state.routeAlias || routeId} 的行程未完成。`;
             modal.style.display = 'flex';
 
-            document.getElementById('btn-resume-yes').onclick = () => {
+            document.getElementById('btn-ride-resume-yes').onclick = () => {
                 resumeRide(data.state);
             };
-            document.getElementById('btn-resume-cancel').onclick = () => {
+            document.getElementById('btn-ride-resume-cancel').onclick = () => {
                 modal.style.display = 'none';
             };
-            document.getElementById('btn-resume-delete').onclick = async () => {
+            document.getElementById('btn-ride-resume-delete').onclick = async () => {
                 if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
                 await fetch('/api/user?action=active-ride&type=route', {
                     method: 'DELETE',
@@ -2079,7 +2088,7 @@
          initFreeModeControls();
       }
 
-      document.getElementById('resume-modal').style.display = 'none';
+      document.getElementById('ride-resume-modal').style.display = 'none';
 
       // Mark restored stops in UI
       reachedStops.forEach(order => {
@@ -2094,7 +2103,33 @@
 
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
+      // Reset Session State (Crucial for SPA mode)
+      const params = new URLSearchParams(location.search);
+      routeId = params.get('id') || '';
+      dirIndex = parseInt(params.get('dir') || '0', 10);
       const mode = params.get('mode');
+
+      rideStarted = false;
+      goToStartPhase = true;
+      isFreeMode = false;
+      startTime = null;
+      if (timerInterval) clearInterval(timerInterval);
+      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      reachedStops = new Set();
+      totalDistM = 0;
+      lastLat = null; lastLon = null;
+      sessionXp = 0;
+      pendingSummary = null;
+      gtsTargetStopIdx = 0;
+      document.getElementById('ride-timer-display').textContent = '00:00';
+      document.getElementById('stat-time').textContent = '00:00';
+      document.getElementById('stat-dist').textContent = '0 m';
+      document.getElementById('stat-xp').textContent = '0';
+      document.getElementById('stat-stops').textContent = '0/0';
+      document.getElementById('ride-summary').classList.remove('show');
+      document.getElementById('ride-locked').classList.remove('show');
+      document.getElementById('ride-resume-modal').style.display = 'none';
+
       await loadRouteCatalog();
 
       // End ride button listener (must be before early return)
@@ -2272,6 +2307,15 @@
       }
     });
     history.pushState(null, '', location.href);
+
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/ride') {
+            init();
+            if (map) {
+                setTimeout(() => map.invalidateSize(), 150);
+            }
+        }
+    });
   })();
   </script>
 </body>
