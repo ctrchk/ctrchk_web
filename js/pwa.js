@@ -388,7 +388,18 @@
         pageContainers.set(normalizedPath, container);
 
         const styles = doc.querySelectorAll('style');
-        styles.forEach(s => document.head.appendChild(s.cloneNode(true)));
+        styles.forEach(s => {
+          let css = s.textContent;
+          // Prevent sub-page body/html styles from leaking to the global shell
+          // Replace 'html' and 'body' with the specific container ID
+          css = css.replace(/(?:^|[\s,])html(?=[\s,{]|$)/g, ' #' + config.id);
+          css = css.replace(/(?:^|[\s,])body(?=[\s,{]|$)/g, ' #' + config.id);
+
+          const scopedStyle = document.createElement('style');
+          scopedStyle.textContent = css;
+          scopedStyle.dataset.page = normalizedPath;
+          document.head.appendChild(scopedStyle);
+        });
 
         const scripts = doc.querySelectorAll('script');
         scripts.forEach(oldScript => {

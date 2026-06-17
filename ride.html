@@ -37,7 +37,8 @@
 
     /* ── Reset & base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: #121f14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif; }
+    html, body { height: 100%; background: #121f14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif; }
+    body.is-navigating { overflow: hidden; }
 
     /* ── Full-screen map ── */
     #ride-map { position: fixed; inset: 0; z-index: 0; background: #0d1a24; }
@@ -50,7 +51,7 @@
       z-index: 100;
       display: flex;
       flex-direction: column;
-      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+      padding: env(safe-area-inset-top) 16px max(16px, env(safe-area-inset-bottom));
     }
 
     /* Top: Navigation Instructions */
@@ -180,6 +181,7 @@
       flex-direction: column;
       align-items: center;
       gap: 12px;
+      margin-top: auto;
       margin-bottom: 12px;
       width: 100%;
     }
@@ -917,6 +919,7 @@
     let pendingSummary = null;   // stored after API response
     let sessionXp = 0;          // running XP total for this ride session
     let lastReachedDistrict = null; // for district-change bonus tracking
+    let trackingCoords = [];    // collected path coordinates
     let gtsTargetStopIdx = 0;       // index in routeStops that we're navigating to in go-to-start phase
     let lastFreeNearbyUpdateAt = 0;
     let sessionCompletionCoins = 0;
@@ -1530,7 +1533,10 @@
       const MIN_DIST_M = 3;
       if (lastLat !== null && rideStarted) {
         const d = haversineM(lastLat, lastLon, lat, lon);
-        if (d >= MIN_DIST_M && d < MAX_GPS_JUMP_M && accuracy <= 50) totalDistM += d;
+        if (d >= MIN_DIST_M && d < MAX_GPS_JUMP_M && accuracy <= 50) {
+            totalDistM += d;
+            trackingCoords.push(coords);
+        }
       }
       lastLat = lat; lastLon = lon;
 
@@ -1620,6 +1626,7 @@
         dirIndex: dirIndex,
         totalDistM: totalDistM,
         reachedStops: [...reachedStops],
+        trackingCoords: trackingCoords,
         startTime: startTime,
         sessionXp: sessionXp,
         isFreeMode: isFreeMode,
@@ -1879,6 +1886,7 @@
             bonus_coins: bonusCoins,
             miles_reward_override: distKm * 0.8,
             total_stops: isFreeMode ? reachedStops.size : routeStops.length,
+            path: trackingCoords,
           };
           const res = await fetch('/api/getHistory', {
             method: 'POST',
@@ -1937,7 +1945,7 @@
           stops_reached: [...reachedStops],
           all_stops: allStopsReached,
           districts_count: districtsCount,
-          coords: [], // simplified for now
+          coords: trackingCoords,
         });
         // Keep at most 200 recent rides
         if (history.length > 200) history.splice(0, history.length - 200); // keep last 200
@@ -2413,6 +2421,7 @@
       isFreeMode = state.isFreeMode;
       totalDistM = state.totalDistM || 0;
       reachedStops = new Set(state.reachedStops || []);
+      trackingCoords = state.trackingCoords || [];
       startTime = state.startTime;
       sessionXp = state.sessionXp || 0;
       lastLat = state.lastLat;
@@ -2439,10 +2448,20 @@
 
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
+      // Cleanup previous state if any (essential for SPA re-entry)
+      if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+      }
+      if (timerInterval) clearInterval(timerInterval);
+      if (RideApp.heartbeatInterval) clearInterval(RideApp.heartbeatInterval);
+      releaseWakeLock();
+
       // Reset Session State (Crucial for SPA mode)
       RideApp.isFollowing = true;
       RideApp.headingUp = false;
       RideApp.isNavigating = false;
+      isLaneLevel = false;
 
       const params = new URLSearchParams(location.search);
       routeId = params.get('id') || '';
@@ -2453,14 +2472,15 @@
       goToStartPhase = true;
       isFreeMode = false;
       startTime = null;
-      if (timerInterval) clearInterval(timerInterval);
-      if (RideApp.heartbeatInterval) clearInterval(RideApp.heartbeatInterval);
       reachedStops = new Set();
+      trackingCoords = [];
       totalDistM = 0;
       lastLat = null; lastLon = null;
       sessionXp = 0;
       pendingSummary = null;
       gtsTargetStopIdx = 0;
+
+      // Reset UI Visibility
       document.getElementById('ride-timer-display').textContent = '00:00';
       document.getElementById('stat-time').textContent = '00:00';
       document.getElementById('stat-dist').textContent = '0 m';
@@ -2469,6 +2489,13 @@
       document.getElementById('ride-summary').classList.remove('show');
       document.getElementById('ride-locked').classList.remove('show');
       document.getElementById('ride-resume-modal').style.display = 'none';
+      document.getElementById('go-to-start-banner').style.display = 'none';
+      document.getElementById('next-stop-card').style.display = 'none';
+      document.getElementById('hud-top').classList.add('hidden');
+      document.getElementById('hud-left').classList.add('hidden');
+      document.getElementById('free-mode-hud').classList.add('hidden');
+      document.getElementById('btn-free-mode').style.display = 'block';
+      document.body.classList.remove('is-navigating');
 
       await loadRouteCatalog();
 
@@ -2651,6 +2678,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', init);
+
+    // PWA SPA Support: Re-init state when switching pages to handle new parameters
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/ride') {
+            init();
+            if (map) {
+                setTimeout(() => map.resize(), 150);
+            }
+        }
+    });
 
     // Handle visibility change to re-acquire wake lock
     document.addEventListener('visibilitychange', async () => {

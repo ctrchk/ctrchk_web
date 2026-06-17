@@ -816,6 +816,14 @@ body.is-pwa #app-bottom-nav { display: flex !important; }
 body.is-pwa #app-home { display: flex !important; }
 body.is-pwa #app-ride-page { display: flex !important; }
 
+/* SPA Container Management */
+.pwa-page-container {
+    display: none;
+}
+.pwa-page-container.active {
+    display: block !important;
+}
+
 @media (display-mode: standalone) {
     .web-only { display: none !important; }
     .app-only:not(nav):not(footer) { display: block !important; }

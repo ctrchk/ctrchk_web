@@ -39,6 +39,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body.is-navigating { overflow: hidden; }
 
     #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; min-height: 400px; }
 
@@ -2040,6 +2041,13 @@
     } else {
         document.addEventListener('DOMContentLoaded', initNavOnce);
     }
+
+    // PWA SPA Support: Trigger map resize when switching pages
+    window.addEventListener('pwa-page-show', (e) => {
+        if (e.detail.path === '/nav' && NavEngine.map) {
+            setTimeout(() => NavEngine.map.resize(), 150);
+        }
+    });
 
 
   </script>
