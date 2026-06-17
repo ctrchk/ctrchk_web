@@ -400,15 +400,11 @@
               document.body.appendChild(newScript);
           } else {
               let code = oldScript.textContent;
-              if (code.includes('DOMContentLoaded')) {
-                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g, '(async () => {');
-                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*function\s*\(\s*\)\s*\{/g, '(function() {');
-              }
-              // Prevent duplicate variable declarations (very basic fix for SPA)
-              code = code.replace(/const\s+/g, 'var ');
-              code = code.replace(/let\s+/g, 'var ');
+              // Replace DOMContentLoaded with a custom helper that runs immediately if we are in SPA
+              code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*/g, 'window.onPWAReady(');
+
               const newScript = document.createElement('script');
-              newScript.textContent = code;
+              newScript.textContent = `(function(){\n${code}\n})();`;
               document.body.appendChild(newScript);
           }
         });
