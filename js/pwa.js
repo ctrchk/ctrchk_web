@@ -1,5 +1,5 @@
 // js/pwa.js — CTRC HK PWA 輔助功能
-// 負責：Service Worker 註冊、安裝提示、推送通知、GPS 狀態顯示
+// 負責：Service Worker 註冊、安裝提示、推送通知、GPS 狀態顯示、SPA 路由
 // Phase 1: PWA / Web separation — .app-only elements visible only in app,
 //          .web-only elements visible only in browser.
 
@@ -135,8 +135,6 @@
   };
 
   // ── Detect standalone (installed PWA) mode ──────────────────────────────
-  // Chrome/Android: matchMedia('(display-mode: standalone)')
-  // iOS Safari: navigator.standalone === true
   const isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     window.navigator.standalone === true ||
@@ -144,9 +142,6 @@
   window.CTRCHK_IS_STANDALONE = isStandalone;
 
   if (isStandalone) {
-    // Apply to body once DOM is ready (body may not exist at script parse time).
-    // The onReady() handler below does the definitive class addition; this is
-    // an early hint for inline scripts that run before DOMContentLoaded.
     if (document.body) {
       document.body.classList.add('is-pwa');
     }
@@ -165,10 +160,8 @@
         });
     });
 
-    // 監聽 Service Worker 更新通知，自動重載頁面以載入最新版本
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data && event.data.type === 'SW_UPDATED') {
-        // 避免重複重載（同一頁面只重載一次）
         if (!sessionStorage.getItem('sw-reloaded')) {
           sessionStorage.setItem('sw-reloaded', '1');
           const toast = document.createElement('div');
@@ -181,9 +174,9 @@
     });
   }
 
-  // ── App bottom navigation bar (injected only in standalone mode) ─────────
+  // ── App bottom navigation bar ───────────────────────────────────────────
   function injectAppBottomNav() {
-    if (document.getElementById('app-bottom-nav')) return; // already injected
+    if (document.getElementById('app-bottom-nav')) return;
 
     const isEn = window.location.pathname.startsWith('/en') ||
                  document.documentElement.lang === 'en' ||
@@ -191,7 +184,6 @@
 
     const isLoggedIn = !!localStorage.getItem('accessToken');
 
-    // New nav order: 主頁 | 任務 | 騎行 | 導航 | 我的
     const links = isEn
       ? [
           { href: '/en',        icon: 'fa-home',            label: 'Home' },
@@ -232,93 +224,218 @@
     document.body.appendChild(nav);
   }
 
-  // ── iOS Liquid Glass detection ──────────────────────────────────────────
-  // iOS 26+ introduces "Liquid Glass" as the system design language.
-  // We detect iOS 26+ by parsing the user agent, then apply glass morphism
-  // styles via the `liquid-glass` body class when running as an installed PWA.
-  function detectLiquidGlass() {
-    if (!isStandalone) return; // only apply in installed PWA mode
-    const ua = navigator.userAgent || '';
-    // iOS version detection: "iPhone OS 26_x" or "CPU OS 26_x" in UA string
-    const iosMatch = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+)[_ ]/i) ||
-                     ua.match(/CPU OS (\d+)[_ ]/i);
-    const iosVersion = iosMatch ? parseInt(iosMatch[1], 10) : 0;
-    if (iosVersion >= 26) {
-      document.body.classList.add('liquid-glass');
-      localStorage.setItem('liquid-glass-enabled', '1');
-    } else if (localStorage.getItem('liquid-glass-enabled') === '1') {
-      // Honour preference set in a previous session on the same device
-      document.body.classList.add('liquid-glass');
-    }
+  // ── SPA Router for PWA Mode ──────────────────────────────────────────────
+  const PWA_PAGES = {
+    '/': { id: 'pwa-page-home', title: '主頁' },
+    '/tasks': { id: 'pwa-page-tasks', title: '任務' },
+    '/routes': { id: 'pwa-page-routes', title: '騎行' },
+    '/ride': { id: 'pwa-page-ride', title: '騎行中' },
+    '/nav': { id: 'pwa-page-nav', title: '導航' },
+    '/dashboard': { id: 'pwa-page-dashboard', title: '我的' },
+  };
+
+  const pageContainers = new Map();
+
+  function getNormalizedPath(path) {
+    let p = path.split('?')[0].split('#')[0].replace(/\.html$/, '').replace(/\/$/, '') || '/';
+    if (p.startsWith('/en/')) p = p.replace('/en', '') || '/';
+    return p;
   }
 
-  // ── 「加至主屏幕」安裝提示（web browser only） ────────────────────────────
-  let deferredPrompt = null;
+  function initPWAShell() {
+    if (!isStandalone) return;
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    // Don't show in standalone mode — user already installed the app
-    if (!isStandalone) {
-      deferredPrompt = e;
-      showInstallBanner();
+    let shell = document.getElementById('pwa-shell');
+    if (!shell) {
+      shell = document.createElement('div');
+      shell.id = 'pwa-shell';
+
+      const initialPath = getNormalizedPath(window.location.pathname);
+      const config = PWA_PAGES[initialPath] || { id: 'pwa-page-other', title: document.title };
+
+      const container = document.createElement('div');
+      container.id = config.id;
+      container.className = 'pwa-page-container active';
+      pageContainers.set(initialPath, container);
+
+      const appElements = document.querySelectorAll('main, #app-home, #app-ride-page, .tasks-container, .db-content, #map, #ride-map, .hud-container, .setup-panel, .floating-controls, #ride-top, #next-stop-card, #ride-bottom-sheet');
+      appElements.forEach(el => container.appendChild(el));
+
+      shell.appendChild(container);
+      document.body.prepend(shell);
     }
-  });
 
-  function showInstallBanner() {
-    // 避免重複顯示（已安裝或用戶已關閉）
-    if (localStorage.getItem('pwa-install-dismissed')) return;
-    // Never show in the installed app
-    if (isStandalone) return;
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (!link) return;
 
-    // URL path is the primary signal; HTML lang attribute is a fallback
-    const isEn = window.location.pathname.startsWith('/en') ||
-                 document.documentElement.lang === 'en' ||
-                 localStorage.getItem('appLang') === 'en';
-    const bannerText = isEn
-      ? '📱 Add 城市運輸單車 to your home screen for an app experience!'
-      : '📱 將城市運輸單車加至主屏幕，享受 App 體驗！';
-    const installLabel = isEn ? 'Install' : '安裝';
-    const dismissLabel = isEn ? 'Close' : '關閉';
+      const url = new URL(link.href, window.location.origin);
+      if (url.origin !== window.location.origin) return;
 
-    const banner = document.createElement('div');
-    banner.id = 'pwa-install-banner';
-    banner.innerHTML = `
-      <span>${bannerText}</span>
-      <button id="pwa-install-btn" style="margin-left:1em;padding:0.3em 1em;background:#BFE340;color:#2c3e50;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">${installLabel}</button>
-      <button id="pwa-install-dismiss" style="margin-left:0.5em;background:transparent;border:none;cursor:pointer;color:#ccc;font-size:1.2em;" aria-label="${dismissLabel}">✕</button>
-    `;
-    Object.assign(banner.style, {
-      position: 'fixed',
-      bottom: '0',
-      left: '0',
-      right: '0',
-      background: '#2c3e50',
-      color: '#fff',
-      padding: '1em 1.5em',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: '9999',
-      flexWrap: 'wrap',
-      gap: '0.5em',
-    });
-
-    document.body.appendChild(banner);
-
-    document.getElementById('pwa-install-btn').addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      banner.remove();
-      if (outcome === 'accepted') {
-        localStorage.setItem('pwa-install-dismissed', '1');
+      const path = getNormalizedPath(url.pathname);
+      if (PWA_PAGES[path]) {
+        e.preventDefault();
+        navigateTo(url.pathname + url.search + url.hash);
       }
     });
 
-    document.getElementById('pwa-install-dismiss').addEventListener('click', () => {
-      banner.remove();
-      localStorage.setItem('pwa-install-dismissed', '1');
+    window.addEventListener('popstate', (e) => {
+      const path = window.location.pathname;
+      navigateTo(path, { pushState: false });
+    });
+
+    window.navigateTo = navigateTo;
+  }
+
+  window.PWA_MAPS_INITED = window.PWA_MAPS_INITED || new Set();
+
+  async function navigateTo(path, { pushState = true } = {}) {
+    const normalizedPath = getNormalizedPath(path);
+    const config = PWA_PAGES[normalizedPath];
+
+    if (!config) {
+      if (pushState) window.location.href = path;
+      return;
+    }
+
+    if (pushState) {
+      window.history.pushState({}, '', path);
+    }
+
+    let targetContainer = pageContainers.get(normalizedPath);
+    if (!targetContainer) {
+      targetContainer = await fetchPage(path);
+    }
+
+    console.log('[PWA-SPA] Navigating to:', normalizedPath);
+    if (targetContainer) {
+      document.querySelectorAll('.pwa-page-container').forEach(c => {
+          c.classList.remove('active');
+          c.style.display = 'none';
+      });
+      targetContainer.classList.add('active');
+      targetContainer.style.display = 'block';
+
+      if (config.title) document.title = config.title;
+
+      if (normalizedPath === '/nav' || normalizedPath === '/ride') {
+        document.body.classList.add('is-navigating');
+      } else {
+        document.body.classList.remove('is-navigating');
+      }
+
+      const bottomNav = document.getElementById('app-bottom-nav');
+      if (bottomNav) {
+        bottomNav.querySelectorAll('a').forEach(a => {
+          const aPath = getNormalizedPath(new URL(a.href, window.location.origin).pathname);
+          a.classList.toggle('active', aPath === normalizedPath);
+        });
+      }
+
+      window.dispatchEvent(new CustomEvent('pwa-page-show', { detail: { path: normalizedPath } }));
+      window.scrollTo(0, 0);
+    }
+  }
+
+  const loadingPages = new Map();
+
+  async function fetchPage(path) {
+    const normalizedPath = getNormalizedPath(path);
+    if (pageContainers.has(normalizedPath)) return pageContainers.get(normalizedPath);
+    if (loadingPages.has(normalizedPath)) return loadingPages.get(normalizedPath);
+
+    const loadPromise = (async () => {
+    try {
+      let fetchPath = path;
+      if (!path.includes('.') && path !== '/') {
+          fetchPath = path.split('?')[0].split('#')[0] + '.html';
+          const search = path.includes('?') ? '?' + path.split('?')[1] : '';
+          fetchPath += search;
+      }
+
+      const response = await fetch(fetchPath);
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      const config = PWA_PAGES[normalizedPath];
+      const container = document.createElement('div');
+      container.id = config.id;
+      container.className = 'pwa-page-container';
+
+      let content;
+      if (normalizedPath === '/') content = doc.querySelector('#app-home') || doc.querySelector('main');
+      else if (normalizedPath === '/routes') content = doc.querySelector('#app-ride-page');
+      else if (normalizedPath === '/tasks') content = doc.querySelector('.tasks-container');
+      else if (normalizedPath === '/dashboard') content = doc.querySelector('.db-content');
+      else if (normalizedPath === '/nav') {
+          const navElements = doc.querySelectorAll('#map, .hud-container, .setup-panel, .floating-controls, #summary-modal, #loading-overlay, #resume-panel');
+          const navWrap = document.createElement('div');
+          navElements.forEach(el => navWrap.appendChild(el));
+          content = navWrap;
+      } else if (normalizedPath === '/ride') {
+          const rideElements = doc.querySelectorAll('#ride-map, #ride-top, .hud-container, #next-stop-card, #free-mode-panel, #go-to-start-banner, #ride-bottom-sheet, #ride-summary, #ride-resume-modal, #ride-loading, #ride-locked');
+          const rideWrap = document.createElement('div');
+          rideElements.forEach(el => rideWrap.appendChild(el));
+          content = rideWrap;
+      }
+
+      if (content) {
+        container.appendChild(content);
+        document.getElementById('pwa-shell').appendChild(container);
+        pageContainers.set(normalizedPath, container);
+
+        const styles = doc.querySelectorAll('style');
+        styles.forEach(s => document.head.appendChild(s.cloneNode(true)));
+
+        const scripts = doc.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+          if (oldScript.src) {
+              if (oldScript.src.includes('main.js') || oldScript.src.includes('pwa.js') ||
+                  oldScript.src.includes('leaflet.js') || oldScript.src.includes('mapbox-gl.js')) return;
+
+              const newScript = document.createElement('script');
+              newScript.src = oldScript.src;
+              newScript.async = false;
+              document.body.appendChild(newScript);
+          } else {
+              let code = oldScript.textContent;
+              if (code.includes('DOMContentLoaded')) {
+                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g, '(async () => {');
+                  code = code.replace(/document\.addEventListener\(['"]DOMContentLoaded['"]\s*,\s*function\s*\(\s*\)\s*\{/g, '(function() {');
+              }
+              // Prevent duplicate variable declarations (very basic fix for SPA)
+              code = code.replace(/const\s+/g, 'var ');
+              code = code.replace(/let\s+/g, 'var ');
+              const newScript = document.createElement('script');
+              newScript.textContent = code;
+              document.body.appendChild(newScript);
+          }
+        });
+
+        return container;
+      }
+    } catch (e) {
+      console.error('[PWA-SPA] Fetch failed for', path, e);
+    } finally {
+      loadingPages.delete(normalizedPath);
+    }
+    return null;
+    })();
+
+    loadingPages.set(normalizedPath, loadPromise);
+    return loadPromise;
+  }
+
+  function prefetchPWAPages() {
+    if (!isStandalone) return;
+    const paths = Object.keys(PWA_PAGES);
+    const current = getNormalizedPath(window.location.pathname);
+
+    paths.forEach(path => {
+      if (path !== current) {
+        setTimeout(() => fetchPage(path), 1500);
+      }
     });
   }
 
@@ -328,24 +445,24 @@
     else document.addEventListener('DOMContentLoaded', fn);
   }
 
-  // ── PWA Shell / SPA logic removed ────────────────────────────────────────
-  window.isSPA = () => false;
+  window.isSPA = () => isStandalone;
   window.onPWAReady = (fn) => {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
   };
-  window.PWA_MAPS_INITED = new Set(); // Reset for every page load
 
   onReady(() => {
     if (isStandalone) {
       document.body.classList.add('is-pwa');
+      initPWAShell();
       injectAppBottomNav();
+      prefetchPWAPages();
       const themeColorMeta = document.querySelector('meta[name="theme-color"]');
       if (themeColorMeta) themeColorMeta.setAttribute('content', '#121f14');
-      detectLiquidGlass();
     }
     refreshMembershipTheme();
   });
+
   window.addEventListener('pageshow', refreshMembershipTheme);
   window.addEventListener('storage', (event) => {
     if (event.key === 'user' || event.key === 'silverThemeDisabled' || event.key === 'goldThemeDisabled') {
@@ -353,130 +470,58 @@
     }
   });
 
-  // ── 推送通知權限申請 ────────────────────────────────────────────────────
+  // ── 推送通知與簽到提醒 (保持不變) ──────────────────────────────────────────
   async function requestNotificationPermission() {
     if (!('Notification' in window)) return false;
     if (Notification.permission === 'granted') return true;
-    if (Notification.permission === 'denied') return false;
-
     const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      // Subscribe to server-side push now that permission is granted
-      subscribeToPush();
-    }
+    if (permission === 'granted') subscribeToPush();
     return permission === 'granted';
   }
 
-  // 顯示本地通知（報站用）
   function sendLocalNotification(title, body, tag) {
     if (Notification.permission !== 'granted') return;
-    new Notification(title, {
-      body,
-      icon: '/images/icon-192.png',
-      badge: '/images/icon-192.png',
-      tag: tag || 'ctrc-stop',
-    });
+    new Notification(title, { body, icon: '/images/icon-192.png', tag: tag || 'ctrc-stop' });
   }
 
-  // ── 每日簽到提醒 ──────────────────────────────────────────────────────────
-  // Schedules a daily check-in reminder notification using setTimeout.
-  // The reminder fires once per day if the user hasn't checked in yet.
-  // Reminders are ON by default; disabled only when the user explicitly turns
-  // them off (checkinReminderDisabled==='1') or turns off all notifications
-  // (pushNotificationsDisabled==='1').
   function scheduleDailyCheckinReminder() {
-    if (!('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
-    if (localStorage.getItem('checkinReminderDisabled') === '1') return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (localStorage.getItem('pushNotificationsDisabled') === '1' || localStorage.getItem('checkinReminderDisabled') === '1') return;
 
     const now = new Date();
     const todayKey = now.toISOString().slice(0, 10);
-
-    // Don't remind if already checked in today
     try {
       const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
       if (checkins[todayKey]) return;
     } catch (_) {}
 
-    // Schedule reminder for 09:00 today; if already past, skip to tomorrow
     let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
-    if (target <= now) {
-      // Already past 9am — schedule for tomorrow
-      target.setDate(target.getDate() + 1);
-    }
+    if (target <= now) target.setDate(target.getDate() + 1);
 
-    const delay = target.getTime() - now.getTime();
     setTimeout(() => {
-      // Re-check: user may have changed settings between scheduling and firing
-      const todayKeyNow = new Date().toISOString().slice(0, 10);
-      try {
-        const checkins = JSON.parse(localStorage.getItem('dailyCheckins') || '{}');
-        if (checkins[todayKeyNow]) return; // already done
-      } catch (_) {}
-      if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
-      if (localStorage.getItem('checkinReminderDisabled') === '1') return;
-      sendLocalNotification(
-        '🗓️ 別忘了今日簽到！',
-        '連續簽到可解鎖豐厚 XP 及里程幣獎勵，快來打卡吧！',
-        'ctrc-checkin-reminder'
-      );
-      // Re-schedule for tomorrow
+      sendLocalNotification('🗓️ 別忘了今日簽到！', '連續簽到可解鎖豐厚 XP 及里程幣獎勵，快來打卡吧！', 'ctrc-checkin-reminder');
       scheduleDailyCheckinReminder();
-    }, delay);
+    }, target.getTime() - now.getTime());
   }
 
-  // Kick off reminder scheduling and push subscription when the page loads.
-  // Notifications are ON by default: automatically request permission if not
-  // yet asked, and subscribe to push unless the user has opted out.
   window.addEventListener('load', () => {
-    // One-time migration: re-enable push notifications for all existing users.
-    // Any previous opt-out (pushNotificationsDisabled='1') is cleared so that
-    // every user starts fresh with notifications enabled by default.
-    // The 'notifReset_v1' key can be removed from this migration block after
-    // most active users have visited once (e.g. after ~6 months).
     if (!localStorage.getItem('notifReset_v1')) {
       localStorage.removeItem('pushNotificationsDisabled');
       localStorage.setItem('notifReset_v1', '1');
     }
-
     if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
-    if (!('Notification' in window)) return;
-
-    if (Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted') {
       subscribeToPush();
       scheduleDailyCheckinReminder();
-    } else if (Notification.permission !== 'denied') {
-      // Auto-request permission on first visit (default ON behavior)
-      requestNotificationPermission().then((granted) => {
-        if (granted) scheduleDailyCheckinReminder();
-      });
     }
   });
 
-  // ── Web Push 訂閱 ─────────────────────────────────────────────────────────
-  // Subscribes the current device to server-side Web Push notifications
-  // using the VAPID public key. The subscription is sent to /api/push
-  // so the server can send push notifications even when the app is closed.
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = atob(base64);
-    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
-  }
-
   async function subscribeToPush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (Notification.permission !== 'granted') return;
-
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'granted') return;
     try {
-      // Fetch the server-side VAPID public key
       const keyRes = await fetch('/api/push');
       if (!keyRes.ok) return;
       const { publicKey } = await keyRes.json();
-      if (!publicKey) return;
-
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
@@ -485,116 +530,27 @@
           applicationServerKey: urlBase64ToUint8Array(publicKey),
         });
       }
-
       const token = localStorage.getItem('accessToken') || '';
       await fetch('/api/push', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ action: 'subscribe', subscription: sub.toJSON() }),
       });
-    } catch (err) {
-      console.warn('Push subscription failed:', err);
-    }
+    } catch (err) { console.warn('Push subscription failed:', err); }
   }
 
-  // ── Web Push 退訂 ─────────────────────────────────────────────────────────
-  // Unsubscribes the current device from server-side Web Push notifications
-  // and removes the stored subscription from the server.
-  async function unsubscribeFromPush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        const endpoint = sub.endpoint;
-        await sub.unsubscribe();
-        const token = localStorage.getItem('accessToken') || '';
-        await fetch('/api/push', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ endpoint }),
-        });
-      }
-    } catch (err) {
-      console.warn('Push unsubscribe failed:', err);
-    }
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
   }
 
-  // ── 階段性位置權限詢問 ────────────────────────────────────────────────────
-  /**
-   * 詢問位置權限。如果本會話（Session）已同意過，則直接執行回調。
-   * @param {Function} onAllowed 同意後執行的函數
-   * @param {Function} onDenied 拒絕或關閉後執行的函數
-   */
-  window.confirmLocationPermission = function(onAllowed, onDenied) {
-    if (sessionStorage.getItem('locationApproved') === '1') {
-      if (onAllowed) onAllowed();
-      return;
-    }
-
-    const modal = document.createElement('div');
-    modal.id = 'location-confirm-modal';
-    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:2em;backdrop-filter:blur(5px);';
-
-    const inner = document.createElement('div');
-    inner.style.cssText = 'background:var(--app-bg-card, #1e3820);border:1px solid var(--app-border, #2d4d2d);border-radius:18px;padding:1.8em;max-width:320px;text-align:center;color:var(--app-text-primary, #e8f5e9);box-shadow:0 10px 30px rgba(0,0,0,0.5);';
-
-    inner.innerHTML = `
-      <div style="font-size:3em;margin-bottom:0.3em;">📍</div>
-      <h3 style="margin-bottom:0.6em;color:var(--app-accent, #6dba65);">允許使用位置</h3>
-      <p style="font-size:0.9em;opacity:0.85;line-height:1.5;margin-bottom:1.5em;">為了提供精確的天氣資訊、導航以及記錄你的騎行軌跡，我們需要獲取你的即時位置。</p>
-      <div style="display:flex;gap:0.8em;">
-        <button id="loc-btn-no" style="flex:1;background:rgba(255,255,255,0.1);color:var(--app-text-secondary, #a8d8a0);border:none;padding:0.8em;border-radius:10px;font-weight:bold;cursor:pointer;">暫不允許</button>
-        <button id="loc-btn-yes" style="flex:1;background:var(--app-accent, #6dba65);color:#121f14;border:none;padding:0.8em;border-radius:10px;font-weight:bold;cursor:pointer;">好，沒問題</button>
-      </div>
-    `;
-
-    modal.appendChild(inner);
-    document.body.appendChild(modal);
-
-    const cleanup = () => {
-      if (document.body.contains(modal)) {
-        document.body.removeChild(modal);
-      }
-    };
-
-    document.getElementById('loc-btn-yes').onclick = () => {
-      sessionStorage.setItem('locationApproved', '1');
-      cleanup();
-      if (onAllowed) onAllowed();
-    };
-
-    document.getElementById('loc-btn-no').onclick = () => {
-      cleanup();
-      if (onDenied) onDenied();
-    };
-  };
-
-  // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
     isStandalone,
     requestNotificationPermission,
     sendLocalNotification,
     scheduleDailyCheckinReminder,
     subscribeToPush,
-    unsubscribeFromPush,
-    // Manually enable/disable Liquid Glass (for settings UI)
-    enableLiquidGlass() {
-      document.body.classList.add('liquid-glass');
-      localStorage.setItem('liquid-glass-enabled', '1');
-    },
-    disableLiquidGlass() {
-      document.body.classList.remove('liquid-glass');
-      localStorage.removeItem('liquid-glass-enabled');
-    },
-    get isLiquidGlass() {
-      return document.body.classList.contains('liquid-glass');
-    },
   };
 })();

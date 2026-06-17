@@ -1235,6 +1235,7 @@ function renderRoutes() {
                 <span class="app-route-id" style="background:${route.color||'#4caf50'}">${route.id}</span>
                 <span class="app-route-alias">${route.alias && route.alias.trim() ? route.alias : route.id}</span>
                 ${statusBadge}
+                ${!isLocked ? '<i class="fas fa-play-circle" style="color:var(--app-accent); font-size:1.4em; margin-left:auto;"></i>' : ''}
             </div>
             <div class="app-route-meta">
                 <span><i class="fas fa-map-marker-alt" style="font-size:0.9em;"></i> ${route.start || '—'}</span>

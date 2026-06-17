@@ -786,6 +786,7 @@
     </footer>
 
     <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
     <script src="/js/login.js"></script>
     <script>
     // ── Level config ──────────────────────────────────────────────────────────
@@ -1299,7 +1300,12 @@
             _applyRoleUI(userRole, user.mileage_rank || user.mileage_card);
             _applyStatusSummary(user);
             applyPermissionTheme();
-            await loadHistory();
+
+            // Parallel load history and active ride
+            await Promise.all([
+                loadHistory(),
+                checkActiveRideGlobal()
+            ]);
 
         } catch (e) {
             console.error('儀表板初始化失敗:', e);
@@ -1307,6 +1313,43 @@
     }
 
     window.onPWAReady(initDashboard);
+
+    async function checkActiveRideGlobal() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        try {
+            const res = await fetch('/api/user?action=active-ride', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data && data.state) {
+                const list = document.getElementById('db-history-list');
+                const resumeCard = document.createElement('div');
+                resumeCard.className = 'db-ride-item';
+                resumeCard.style.borderColor = '#BFE340';
+                resumeCard.style.background = 'rgba(191,227,64,0.08)';
+                resumeCard.style.marginBottom = '0.8em';
+
+                const typeLabel = data.state.type === 'navigation' ? '導航' : '路線';
+                const targetName = data.state.routeAlias || data.state.endLocationName || '未命名行程';
+
+                resumeCard.innerHTML = `
+                    <div class="db-ride-main">
+                        <div class="db-ride-name" style="color:#BFE340;"><i class="fas fa-history"></i> 正在進行的行程</div>
+                        <div class="db-ride-meta">正在進行 ${typeLabel}：${targetName}</div>
+                    </div>
+                    <button class="db-ride-xp" style="border:none; cursor:pointer; background:#BFE340; color:#121f14;">繼續</button>
+                `;
+                resumeCard.onclick = () => {
+                    const path = data.state.type === 'navigation' ? '/nav' : `/ride?id=${data.state.routeId}&dir=${data.state.dirIndex || 0}`;
+                    if (window.navigateTo) window.navigateTo(path);
+                    else window.location.href = path;
+                };
+                list.prepend(resumeCard);
+            }
+        } catch (e) { console.warn('Check active ride failed', e); }
+    }
 
     function _applyUserUI(user) {
         document.getElementById('db-user-name').textContent =
@@ -1581,6 +1624,5 @@
         loadDiscordStatus();
     });
     </script>
-    <script src="/js/pwa.js"></script>
 </body>
 </html>
