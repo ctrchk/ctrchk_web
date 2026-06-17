@@ -642,6 +642,30 @@
         this.map.on('load', () => {
           this.onMapLoad();
           document.getElementById('loading-overlay').classList.add('hidden');
+
+          // Handle Autostart from URL
+          const params = new URLSearchParams(location.search);
+          if (params.get('autostart') === '1') {
+              const to = params.get('to');
+              if (to) {
+                  document.getElementById('input-end').value = to;
+                  // Try to find coordinates for 'to' if it's a known station
+                  const station = this.stations.find(s => (s.code + s.name).includes(to.replace(/\s+/g, '')));
+                  if (station) {
+                      this.setDestination(station.center[0], station.center[1], to);
+                  } else {
+                      // Fallback: search Gov API
+                      this.performSearch(to, document.getElementById('results-end'), (loc) => {
+                          if (loc) {
+                              this.endLocation = loc;
+                              this.updateMarkers();
+                              this.checkReady();
+                              setTimeout(() => { if (!document.getElementById('btn-start-nav').disabled) this.startNavigation(); }, 1500);
+                          }
+                      }, document.getElementById('input-end'));
+                  }
+              }
+          }
         });
 
         this.setupUI();
@@ -1460,6 +1484,10 @@
 
         if (isReady) {
           this.planRoute();
+          const params = new URLSearchParams(location.search);
+          if (params.get('autostart') === '1' && !this.isNavigating) {
+              setTimeout(() => { if (!btn.disabled) this.startNavigation(); }, 1000);
+          }
         }
       },
 

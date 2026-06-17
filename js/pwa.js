@@ -333,6 +333,7 @@
     '/': { id: 'pwa-page-home', title: '主頁' },
     '/tasks': { id: 'pwa-page-tasks', title: '任務' },
     '/routes': { id: 'pwa-page-routes', title: '騎行' },
+    '/ride': { id: 'pwa-page-ride', title: '騎行中' },
     '/nav': { id: 'pwa-page-nav', title: '導航' },
     '/dashboard': { id: 'pwa-page-dashboard', title: '我的' },
   };
@@ -376,7 +377,7 @@
       pageContainers.set(initialPath, container);
 
       // Move existing children into a container
-      const appElements = document.querySelectorAll('main, #app-home, #app-ride-page, .tasks-container, .db-content, #map, .hud-container, .setup-panel, .floating-controls');
+      const appElements = document.querySelectorAll('main, #app-home, #app-ride-page, .tasks-container, .db-content, #map, .hud-container, .setup-panel, .floating-controls, #ride-map, #ride-top, #next-stop-card, #free-mode-panel, #go-to-start-banner, #ride-bottom-sheet, #ride-summary, #catalog-overlay, #levelup-overlay, #resume-modal, #ride-loading, #ride-locked');
       appElements.forEach(el => {
           if (el.parentNode === document.body || el.parentNode === shell) {
               container.appendChild(el);
@@ -499,8 +500,14 @@
       else if (normalizedPath === '/routes') content = doc.querySelector('#app-ride-page');
       else if (normalizedPath === '/tasks') content = doc.querySelector('.tasks-container');
       else if (normalizedPath === '/dashboard') content = doc.querySelector('.db-content');
+      else if (normalizedPath === '/ride') {
+          const rideElements = doc.querySelectorAll('#ride-map, #ride-top, #next-stop-card, #free-mode-panel, #go-to-start-banner, #ride-bottom-sheet, #ride-summary, #catalog-overlay, #levelup-overlay, #resume-modal, #ride-loading, #ride-locked');
+          const rideWrap = document.createElement('div');
+          rideElements.forEach(el => rideWrap.appendChild(el));
+          content = rideWrap;
+      }
       else if (normalizedPath === '/nav') {
-          const navElements = doc.querySelectorAll('#map, .hud-container, .setup-panel, .floating-controls, #summary-modal, #loading-overlay');
+          const navElements = doc.querySelectorAll('#map, .hud-container, .setup-panel, .floating-controls, #summary-modal, #loading-overlay, #resume-modal');
           const navWrap = document.createElement('div');
           navElements.forEach(el => navWrap.appendChild(el));
           content = navWrap;
