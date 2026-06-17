@@ -242,7 +242,21 @@ export default async function handler(req, res) {
     const userData = await authenticate(req, res);
     if (!userData) return;
     try {
-      const type = req.query.type || 'route';
+      if (!req.query.type) {
+        // Return latest active ride if no type specified
+        const { rows } = await query(
+          `SELECT state, ride_type FROM active_rides
+           WHERE user_id = $1 AND updated_at >= NOW() - INTERVAL '24 hours'
+           ORDER BY updated_at DESC`,
+          [userData.userId]
+        );
+        return res.status(200).json({
+          state: rows.length > 0 ? rows[0].state : null,
+          ride_type: rows.length > 0 ? rows[0].ride_type : null,
+          all: rows
+        });
+      }
+      const type = req.query.type;
       const { rows } = await query(
         `SELECT state FROM active_rides
          WHERE user_id = $1 AND ride_type = $2 AND updated_at >= NOW() - INTERVAL '24 hours'`,

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-53F09894GX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-53F09894GX');
+</script>
+
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#121f14">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="城市運輸單車">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <title>騎行紀錄 | 香港城市運輸單車 (CTRC HK)</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body.is-pwa {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+        }
+        .history-top-bar {
+            display: flex;
+            align-items: center;
+            padding: calc(env(safe-area-inset-top) + 0.8em) 1.2em 0.7em;
+            background: var(--app-bg-primary, #121f14);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .history-back-btn {
+            color: var(--app-text-primary);
+            font-size: 1.2em;
+            margin-right: 1em;
+            text-decoration: none;
+        }
+        .history-title {
+            font-size: 1.25em;
+            font-weight: bold;
+        }
+        .history-content {
+            padding: 1em;
+            padding-bottom: calc(5em + env(safe-area-inset-bottom));
+        }
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8em;
+        }
+        .history-item {
+            background: var(--app-bg-card, #1e3820);
+            border: 1px solid var(--app-border, #2d4d2d);
+            border-left: 4px solid var(--app-accent, #6dba65);
+            border-radius: 12px;
+            padding: 1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            color: inherit;
+        }
+        .history-main { flex: 1; min-width: 0; }
+        .history-name {
+            font-weight: bold;
+            font-size: 1em;
+            color: var(--app-text-primary);
+            margin-bottom: 0.3em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-meta {
+            font-size: 0.8em;
+            color: var(--app-text-secondary, #a8d8a0);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8em;
+        }
+        .history-xp {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            padding: 0.3em 0.7em;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85em;
+            flex-shrink: 0;
+        }
+        .history-empty {
+            text-align: center;
+            padding: 4em 1em;
+            opacity: 0.5;
+        }
+        .history-empty i { font-size: 3em; margin-bottom: 0.5em; }
+        .history-summary-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8em;
+            margin-bottom: 1.5em;
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #1a3a1a 0%, #1e3820 100%);
+            border: 1px solid var(--app-border);
+            border-radius: 14px;
+            padding: 1em;
+            text-align: center;
+        }
+        .summary-val { font-size: 1.4em; font-weight: 800; color: var(--app-accent); display: block; }
+        .summary-lbl { font-size: 0.75em; opacity: 0.7; }
+    </style>
+</head>
+<body class="is-pwa">
+    <div id="history-page-container">
+        <div class="history-top-bar">
+            <a href="/dashboard" class="history-back-btn" id="btn-history-back"><i class="fas fa-chevron-left"></i></a>
+            <span class="history-title">騎行紀錄</span>
+        </div>
+
+        <div class="history-content">
+            <div class="history-summary-cards">
+                <div class="summary-card">
+                    <span class="summary-val" id="total-rides-val">0</span>
+                    <span class="summary-lbl">總騎行次數</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-val" id="total-km-val">0.0</span>
+                    <span class="summary-lbl">累積里程 (km)</span>
+                </div>
+            </div>
+
+            <div class="history-list" id="history-list">
+                <div class="history-empty" id="history-loading">
+                    <i class="fas fa-spinner fa-spin"></i><br>正在載入紀錄...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+    (function() {
+        async function loadFullHistory() {
+            const list = document.getElementById('history-list');
+            const token = localStorage.getItem('accessToken');
+
+            if (!token) {
+                list.innerHTML = '<div class="history-empty">請先登入以查看紀錄。</div>';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/getHistory', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) throw new Error('Fetch failed');
+                const data = await res.json();
+                const history = Array.isArray(data) ? data : (data.history || []);
+
+                list.innerHTML = '';
+                if (history.length === 0) {
+                    list.innerHTML = '<div class="history-empty"><i class="fas fa-biking"></i><br>尚無騎行紀錄</div>';
+                    return;
+                }
+
+                let totalKm = 0;
+                const sourceIcon = { pwa: '📱', app: '📲', gpx: '📂' };
+
+                history.forEach(ride => {
+                    totalKm += (parseFloat(ride.distance_km) || 0);
+                    const dateStr = ride.ride_date ? ride.ride_date.slice(0, 10) : '';
+                    const icon = sourceIcon[ride.source] || '🌐';
+
+                    const item = document.createElement('a');
+                    item.href = '/ride_history_detail.html?id=' + ride.id;
+                    item.className = 'history-item animate-spring-pop';
+                    item.innerHTML = `
+                        <div class="history-main">
+                            <div class="history-name">${icon} ${ride.route_name || '未命名路線'}</div>
+                            <div class="history-meta">
+                                <span>📅 ${dateStr}</span>
+                                <span>🚴 ${parseFloat(ride.distance_km || 0).toFixed(1)} km</span>
+                                <span>⏱ ${ride.duration_minutes || 0} min</span>
+                            </div>
+                        </div>
+                        ${ride.xp_earned ? `<div class="history-xp">+${ride.xp_earned} XP</div>` : ''}
+                    `;
+                    list.appendChild(item);
+                });
+
+                document.getElementById('total-rides-val').textContent = history.length;
+                document.getElementById('total-km-val').textContent = totalKm.toFixed(1);
+
+            } catch (e) {
+                console.error('History Load Error:', e);
+                list.innerHTML = '<div class="history-empty">載入失敗，請稍後再試。</div>';
+            }
+        }
+
+        window.onPWAReady(loadFullHistory);
+
+        // Back button SPA support
+        document.getElementById('btn-history-back').onclick = (e) => {
+            if (window.navigateTo) {
+                e.preventDefault();
+                window.navigateTo('/dashboard');
+            }
+        };
+    })();
+    </script>
+</body>
+</html>

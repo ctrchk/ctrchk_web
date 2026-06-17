@@ -683,8 +683,16 @@
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const data = await res.json();
-          if (data && data.state) {
-            const state = data.state;
+
+          let state = data.state;
+          // If we are looking for navigation but got a route ride as the primary,
+          // check if there's a navigation ride in the "all" list
+          if (data.all && state && state.type !== 'navigation') {
+            const navRide = data.all.find(r => r.ride_type === 'navigation');
+            if (navRide) state = navRide.state;
+          }
+
+          if (state) {
             if (state.type === 'navigation') {
                 NavEngine.activeRideState = state;
                 const openBtn = document.getElementById('btn-open-resume');

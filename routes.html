@@ -1062,11 +1062,11 @@ function renderRoutes() {
             modal.style.display = 'flex';
 
             document.getElementById('btn-resume-yes').onclick = () => {
-                if (activeRideState.type === 'route') {
-                   window.location.href = `/ride?id=${activeRideState.routeId}&dir=${activeRideState.dirIndex || 0}`;
-                } else {
-                   window.location.href = '/nav';
-                }
+                const path = activeRideState.type === 'route'
+                    ? `/ride?id=${activeRideState.routeId}&dir=${activeRideState.dirIndex || 0}`
+                    : '/nav';
+                if (window.navigateTo) window.navigateTo(path);
+                else window.location.href = path;
             };
             document.getElementById('btn-resume-cancel').onclick = () => { modal.style.display = 'none'; };
             document.getElementById('btn-resume-delete').onclick = async () => {
@@ -1098,7 +1098,11 @@ function renderRoutes() {
     const freeModeCard = document.createElement('div');
     freeModeCard.className = 'app-route-card';
     freeModeCard.id = 'free-mode-card';
-    freeModeCard.onclick = () => { window.location.href = '/ride?mode=free'; };
+    freeModeCard.onclick = () => {
+        const path = '/ride?mode=free';
+        if (window.navigateTo) window.navigateTo(path);
+        else window.location.href = path;
+    };
     freeModeCard.innerHTML = `
         <div class="app-route-header">
             <span class="app-route-id" style="background:#BFE340; color:#1a252f;">FREE</span>
