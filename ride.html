@@ -563,6 +563,7 @@
   <div id="ride-loading">
     <div class="spinner"></div>
     <p>正在載入 3D 引擎...</p>
+    <button id="btn-skip-loading" style="margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; cursor: pointer;">跳過載入</button>
   </div>
 
   <div id="ride-locked">
@@ -2254,6 +2255,13 @@
 
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
+      const skipBtn = document.getElementById('btn-skip-loading');
+      if (skipBtn) {
+          skipBtn.onclick = () => {
+              document.getElementById('ride-loading').classList.add('hidden');
+          };
+      }
+
       const mode = params.get('mode');
       // Parallel fetch for speed
       const configPromise = fetchConfig();
