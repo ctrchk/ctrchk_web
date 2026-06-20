@@ -135,6 +135,12 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
         .then((res) => {
+          // 修復 Safari: "Response served by service worker has redirections"
+          // 如果請求是導航類（頁面跳轉），且回應是重定向，則不應緩存且直接返回
+          if (request.mode === 'navigate' && res.redirected) {
+            return res;
+          }
+
           if (res.ok) {
             const clone = res.clone();
             caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));

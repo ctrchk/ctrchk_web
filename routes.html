@@ -455,28 +455,39 @@
 .app-routes-list {
     flex: 1;
     overflow-y: auto;
-    padding: 0.5em 0.8em;
+    padding: 0.8em;
     display: flex;
     flex-direction: column;
-    gap: 0.5em;
+    gap: 1em;
     scrollbar-width: thin;
     scrollbar-color: #2d4d2d transparent;
-    padding-bottom: calc(4.5em + env(safe-area-inset-bottom));
+    padding-bottom: calc(5em + env(safe-area-inset-bottom));
 }
 .app-route-card {
-    background: var(--app-bg-card, #1e3820);
-    border-radius: 12px;
-    padding: 0.9em 1em;
-    border: 1.5px solid var(--app-border, #2d4d2d);
+    background: linear-gradient(145deg, var(--app-bg-card, #1e3820), #254227);
+    border-radius: 18px;
+    padding: 1.2em;
+    border: 1px solid var(--app-border, #2d4d2d);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
+    position: relative;
+    overflow: hidden;
 }
-.app-route-card:active,
+.app-route-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(45deg, transparent, rgba(109,186,101,0.05));
+    pointer-events: none;
+}
+.app-route-card:active {
+    transform: scale(0.98);
+}
 .app-route-card.selected {
     border-color: var(--app-accent, #6dba65);
-    background: var(--app-bg-card2, #243824);
-    box-shadow: 0 0 0 1px var(--app-accent, #6dba65);
+    background: #254a28;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px var(--app-accent, #6dba65);
 }
 .app-route-card.locked {
     opacity: 0.55;
@@ -632,6 +643,59 @@ body.app-light-theme .app-filter-chip.random-btn {
     <!-- ════════ APP-ONLY department selection screen ════════ -->
     <!-- ════════ APP-ONLY dept select sheet ════════ -->
     <div id="app-dept-overlay" onclick="hideDeptSheet()"></div>
+
+    <!-- Multiplayer Lobby Modal -->
+    <div id="app-multiplayer-lobby" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:2000; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:var(--app-bg-card, #1e3820); border:2px solid #BFE340; border-radius:24px; padding:24px; width:100%; max-width:440px; color:#fff; position:relative;">
+            <button onclick="closeMultiplayerLobby()" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#a8d8a0; font-size:1.5em; cursor:pointer;"><i class="fas fa-times"></i></button>
+
+            <h3 id="lobby-title" style="font-size:1.2em; font-weight:800; color:#BFE340; margin-bottom:12px; display:flex; align-items:center; gap:10px;"><i class="fas fa-users"></i> 多人騎行房</h3>
+
+            <div id="lobby-setup">
+                <p style="font-size:0.85em; opacity:0.8; margin-bottom:20px;">與其他車手（朋友或陌生人）同步開始騎行！</p>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button onclick="createRoom()" style="width:100%; background:#BFE340; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:1em; font-weight:800; cursor:pointer;">開啟新房間</button>
+
+                    <div style="margin: 10px 0; text-align: center; font-size: 0.8em; opacity: 0.5;">— 或者 —</div>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input id="join-code-input" type="text" placeholder="輸入 6 位房號" style="flex:1; background:rgba(255,255,255,0.1); border:1px solid #2d4d2d; border-radius:12px; padding:14px; color:#fff; text-align:center; font-weight:bold; letter-spacing:2px;">
+                        <button onclick="joinRoom()" style="background:#6dba65; color:#121f14; border:none; padding:14px 20px; border-radius:12px; font-weight:800; cursor:pointer;">加入</button>
+                    </div>
+
+                    <div id="friend-invite-section" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
+                        <div style="font-size:0.85em; font-weight:bold; color:#a8d8a0; margin-bottom:10px;"><i class="fas fa-user-plus"></i> 直接邀請朋友</div>
+                        <div id="lobby-friends-list" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto; padding-right:4px;">
+                            <div style="font-size:0.8em; opacity:0.5; text-align:center;">載入朋友列表中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="lobby-waiting" style="display:none;">
+                <div style="text-align:center; margin-bottom:20px; padding:20px; background:rgba(0,0,0,0.2); border-radius:16px;">
+                    <div style="font-size:0.8em; opacity:0.6; margin-bottom:4px;">房間代碼</div>
+                    <div id="room-code-display" style="font-size:2.5em; font-weight:900; letter-spacing:4px; color:#BFE340;">------</div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:0.8em; color:#a8d8a0; font-weight:bold; margin-bottom:8px;">隊伍成員</div>
+                    <div id="room-members-list" style="display:flex; flex-direction:column; gap:8px;">
+                        <!-- Members here -->
+                    </div>
+                </div>
+
+                <div id="host-controls" style="display:none;">
+                    <button id="btn-start-lobby-ride" onclick="startRoomRide()" style="width:100%; background:#04D93C; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:1.1em; font-weight:900; cursor:pointer;">全員出發！</button>
+                    <p style="font-size:0.7em; opacity:0.5; text-align:center; margin-top:10px;">房主按下後，所有成員將同步進入騎行頁面</p>
+                </div>
+                <div id="member-waiting-msg" style="text-align:center; font-size:0.9em; color:#a8d8a0;">
+                    <i class="fas fa-spinner fa-spin"></i> 等待房主開始...
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="app-dept-select">
         <div class="app-dept-header">
             <h2>🗺️ 選擇騎行部門</h2>
@@ -1242,24 +1306,92 @@ function renderRoutes() {
             </div>
         `;
 
-        // Direction selector when selected
-        if (isSelected && !isLocked && route.gpx && route.gpx.length > 0) {
-            const dirRow = document.createElement('div');
-            dirRow.className = 'app-dir-row';
-            route.gpx.forEach((gpxItem, idx) => {
-                const btn = document.createElement('button');
-                btn.className = 'app-dir-btn' + (idx === selectedDirIndex ? ' chosen' : '');
-                btn.textContent = gpxItem.label;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    selectedDirIndex = idx;
-                    document.getElementById('app-start-ride-btn').classList.add('visible');
-                    renderRoutes();
-                    showRouteOnMap(route, idx);
+        // Direction and Station selector when selected
+        if (isSelected && !isLocked) {
+            const controlsArea = document.createElement('div');
+            controlsArea.style.cssText = 'margin-top:1.2em; display:flex; flex-direction:column; gap:1em;';
+
+            // 1. Direction selector
+            if (route.gpx && route.gpx.length > 0) {
+                const dirTitle = document.createElement('div');
+                dirTitle.style.cssText = 'font-size:0.75em; color:#a8d8a0; font-weight:bold; margin-bottom:0.2em;';
+                dirTitle.textContent = '選擇方向：';
+                controlsArea.appendChild(dirTitle);
+
+                const dirRow = document.createElement('div');
+                dirRow.className = 'app-dir-row';
+                route.gpx.forEach((gpxItem, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'app-dir-btn' + (idx === selectedDirIndex ? ' chosen' : '');
+                    btn.textContent = gpxItem.label;
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        selectedDirIndex = idx;
+                        document.getElementById('app-start-ride-btn').classList.add('visible');
+                        renderRoutes();
+                        showRouteOnMap(route, idx);
+                    });
+                    dirRow.appendChild(btn);
                 });
-                dirRow.appendChild(btn);
-            });
-            card.appendChild(dirRow);
+                controlsArea.appendChild(dirRow);
+            }
+
+            // 2. Station selector
+            if (route.stops && route.stops.length > 1) {
+                const stationTitle = document.createElement('div');
+                stationTitle.style.cssText = 'font-size:0.75em; color:#a8d8a0; font-weight:bold; margin-bottom:0.2em;';
+                stationTitle.textContent = '選擇出發站點：';
+                controlsArea.appendChild(stationTitle);
+
+                const stopSelect = document.createElement('select');
+                stopSelect.id = 'start-stop-select-' + route.id;
+                stopSelect.style.cssText = 'width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #2d4d2d; border-radius:10px; padding:0.8em; font-size:0.85em; font-family:inherit;';
+                stopSelect.onclick = (e) => e.stopPropagation();
+
+                // Process stops based on selected direction filter
+                let displayStops = route.stops;
+                if (route.gpx && route.gpx[selectedDirIndex]) {
+                    const filter = route.gpx[selectedDirIndex].dir_filter;
+                    if (filter === 'up') {
+                        displayStops = route.stops.filter(s => s.direction !== '⬇️').slice().reverse();
+                    } else if (filter === 'down') {
+                        displayStops = route.stops.filter(s => s.direction !== '⬆️');
+                    }
+                }
+
+                stopSelect.innerHTML = displayStops.map((s, idx) => {
+                    if (idx === displayStops.length - 1) return ''; // Cannot start at the very last stop
+                    return `<option value="${idx}">${s.code ? s.code + ' ' : ''}${s.name}</option>`;
+                }).join('');
+
+                controlsArea.appendChild(stopSelect);
+            }
+
+            // 3. Multiplayer Lobby Button
+            const lobbyBtn = document.createElement('button');
+            lobbyBtn.style.cssText = 'width:100%; padding:0.8em; border-radius:12px; border:1px solid #BFE340; background:rgba(191,227,64,0.1); color:#BFE340; font-weight:bold; font-size:0.85em; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;';
+            lobbyBtn.innerHTML = '<i class="fas fa-users"></i> 多人騎行房';
+            lobbyBtn.onclick = (e) => {
+                e.stopPropagation();
+                showMultiplayerLobby(route);
+            };
+            controlsArea.appendChild(lobbyBtn);
+
+            // 4. "Ride with Friends" Option (Legacy)
+            const friendRow = document.createElement('div');
+            friendRow.style.cssText = 'display:flex; align-items:center; gap:0.6em; background:rgba(0,0,0,0.2); padding:0.8em; border-radius:12px; border:1px solid rgba(109,186,101,0.2);';
+            friendRow.onclick = (e) => e.stopPropagation();
+
+            const checkboxId = 'friend-mode-' + route.id;
+            friendRow.innerHTML = `
+                <input type="checkbox" id="${checkboxId}" style="width:20px; height:20px; accent-color:#6dba65; cursor:pointer;">
+                <label for="${checkboxId}" style="font-size:0.88em; font-weight:600; color:#e8f5e9; flex:1; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <i class="fas fa-user-friends" style="color:#6dba65;"></i> 顯示附近車友位置
+                </label>
+            `;
+            controlsArea.appendChild(friendRow);
+
+            card.appendChild(controlsArea);
         }
 
         if (!isLocked) {
@@ -1399,6 +1531,138 @@ function selectRoute(route) {
     if (cards.length) cards[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+let lobbyRoute = null;
+let lobbyInterval = null;
+let lobbyRoomId = null;
+let isHost = false;
+
+window.showMultiplayerLobby = function(route) {
+    if (!isLoggedIn) { alert('請先登入以使用多人模式'); return; }
+    lobbyRoute = route;
+    document.getElementById('lobby-title').innerHTML = `<i class="fas fa-users"></i> ${route.id} 多人騎行房`;
+    document.getElementById('app-multiplayer-lobby').style.display = 'flex';
+    document.getElementById('lobby-setup').style.display = 'block';
+    document.getElementById('lobby-waiting').style.display = 'none';
+    loadLobbyFriends();
+};
+
+async function loadLobbyFriends() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const container = document.getElementById('lobby-friends-list');
+    if (!user.id) return;
+    try {
+        const res = await fetch(`/api/user?action=friends&user_id=${user.id}`);
+        const friends = await res.json();
+        if (friends.length === 0) {
+            container.innerHTML = '<div style="font-size:0.8em; opacity:0.5; text-align:center;">暫無朋友可邀請</div>';
+            return;
+        }
+        container.innerHTML = friends.map(f => `
+            <div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,0.05); border-radius:10px;">
+                <span style="font-weight:bold; flex:1;">${f.username}</span>
+                <button onclick="inviteFriendToLobby(${f.id})" style="background:#BFE340; color:#121f14; border:none; padding:4px 10px; border-radius:6px; font-size:0.75em; font-weight:bold; cursor:pointer;">邀請</button>
+            </div>
+        `).join('');
+    } catch (e) { container.innerHTML = '載入失敗'; }
+}
+
+window.inviteFriendToLobby = async function(friendId) {
+    // In a real app, this would send a push notification or socket message.
+    // For this prototype, we'll just auto-create a room if not in one, and "tell" the user to share the code.
+    if (!lobbyRoomId) await createRoom();
+    alert('已發送虛擬邀請！請告知朋友房間代碼：' + document.getElementById('room-code-display').textContent);
+};
+
+window.closeMultiplayerLobby = function() {
+    document.getElementById('app-multiplayer-lobby').style.display = 'none';
+    if (lobbyInterval) clearInterval(lobbyInterval);
+    lobbyRoomId = null;
+};
+
+window.createRoom = async function() {
+    const token = localStorage.getItem('accessToken');
+    try {
+        const res = await fetch('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'create-room', routeId: lobbyRoute.id, dirIndex: selectedDirIndex })
+        });
+        const data = await res.json();
+        if (data.success) {
+            isHost = true;
+            lobbyRoomId = data.roomId;
+            document.getElementById('room-code-display').textContent = data.roomCode;
+            document.getElementById('lobby-setup').style.display = 'none';
+            document.getElementById('lobby-waiting').style.display = 'block';
+            document.getElementById('host-controls').style.display = 'block';
+            document.getElementById('member-waiting-msg').style.display = 'none';
+            startLobbyPolling();
+        }
+    } catch (e) { alert('創建房間失敗'); }
+};
+
+window.joinRoom = async function() {
+    const token = localStorage.getItem('accessToken');
+    const roomCode = document.getElementById('join-code-input').value.toUpperCase().trim();
+    if (!roomCode) return;
+
+    try {
+        const res = await fetch('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'join-room', roomCode })
+        });
+        const data = await res.json();
+        if (data.success) {
+            isHost = false;
+            lobbyRoomId = data.roomId;
+            document.getElementById('room-code-display').textContent = roomCode;
+            document.getElementById('lobby-setup').style.display = 'none';
+            document.getElementById('lobby-waiting').style.display = 'block';
+            document.getElementById('host-controls').style.display = 'none';
+            document.getElementById('member-waiting-msg').style.display = 'block';
+            startLobbyPolling();
+        } else { alert(data.message); }
+    } catch (e) { alert('加入房間失敗'); }
+};
+
+function startLobbyPolling() {
+    if (lobbyInterval) clearInterval(lobbyInterval);
+    lobbyInterval = setInterval(async () => {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const res = await fetch(`/api/user?action=room-status&roomId=${lobbyRoomId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.status === 'started') {
+                clearInterval(lobbyInterval);
+                window.location.href = `/ride?id=${data.routeId}&dir=${data.dirIndex}&friendMode=1`;
+                return;
+            }
+            const membersList = document.getElementById('room-members-list');
+            membersList.innerHTML = data.members.map(m => `
+                <div style="display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,0.05); border-radius:10px;">
+                    <div style="width:8px; height:8px; border-radius:50%; background:#6dba65;"></div>
+                    <span style="font-weight:bold;">${m.username}</span>
+                    ${m.is_ready ? '<span style="font-size:0.7em; background:#04D93C; color:#121f14; padding:2px 6px; border-radius:4px; margin-left:auto;">準備就緒</span>' : ''}
+                </div>
+            `).join('');
+        } catch (e) { clearInterval(lobbyInterval); }
+    }, 2000);
+}
+
+window.startRoomRide = async function() {
+    const token = localStorage.getItem('accessToken');
+    try {
+        await fetch('/api/user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'start-room-ride', roomId: lobbyRoomId })
+        });
+    } catch (e) { alert('開始騎行失敗'); }
+};
+
 // ── Start ride button ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('app-start-ride-btn');
@@ -1410,7 +1674,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = '/login';
                 return;
             }
-            window.location.href = `/ride?id=${selectedRouteId}&dir=${selectedDirIndex}`;
+
+            let url = `/ride?id=${selectedRouteId}&dir=${selectedDirIndex}`;
+
+            // Check for selected stop
+            const stopSelect = document.getElementById('start-stop-select-' + selectedRouteId);
+            if (stopSelect && stopSelect.value !== "0") {
+                url += `&startStopIdx=${stopSelect.value}`;
+            }
+
+            // Check for friend mode
+            const friendCheck = document.getElementById('friend-mode-' + selectedRouteId);
+            if (friendCheck && friendCheck.checked) {
+                url += '&friendMode=1';
+            }
+
+            window.location.href = url;
         });
     }
 
@@ -1517,6 +1796,17 @@ let DEPARTMENTS = [
         mapCenter: [22.382, 114.188],
         mapZoom: 13,
         available: false,
+    },
+    {
+        id: 'challenge',
+        name: '全港挑戰部',
+        region: '全香港',
+        description: '挑戰極限！完成長途路線以獲得巨額獎勵及專屬徽章',
+        routeCount: null,
+        mapCenter: [22.3193, 114.1694],
+        mapZoom: 11,
+        available: true,
+        unlock_cost: 0,
     },
 ];
 

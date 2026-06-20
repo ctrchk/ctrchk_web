@@ -926,6 +926,73 @@ export default async function handler(req, res) {
             savedFare,
           ]
         );
+
+        // --- 全港挑戰部 (HK Challenge) Rewards Logic ---
+        // Check if the current route is from the challenge department or if it's an ultra-long route
+        // For this demo, let's say any route in the 'challenge' department or route '999' counts.
+        let isChallengeRoute = false;
+        try {
+            const { rows: routeDeptRows } = await query(
+                'SELECT dept FROM routes WHERE route_number = $1 OR (dept || \'-\' || route_number) = $1 LIMIT 1',
+                [route_id]
+            );
+            if (routeDeptRows.length > 0 && routeDeptRows[0].dept === 'challenge') {
+                isChallengeRoute = true;
+            } else if (route_id === '999') {
+                isChallengeRoute = true;
+            }
+        } catch (e) {}
+
+        if (all_stops) {
+            // Check for HK Challenge Completion
+            // Logic: Either complete an ultra-long route (999) OR complete 5 routes in 'challenge' department
+            let qualifiedForChallenge = false;
+            if (route_id === '999') {
+                qualifiedForChallenge = true;
+            } else {
+                const { rows: challengeCountRows } = await query(
+                    `SELECT COUNT(DISTINCT ch.route_id) as count
+                     FROM cycling_history ch
+                     JOIN routes r ON (r.route_number = ch.route_id OR (r.dept || '-' || r.route_number) = ch.route_id)
+                     WHERE ch.user_id = $1 AND r.dept = 'challenge' AND ch.all_stops = TRUE`,
+                    [userData.userId]
+                );
+                if (parseInt(challengeCountRows[0].count) >= 5) {
+                    qualifiedForChallenge = true;
+                }
+            }
+
+            if (qualifiedForChallenge) {
+                // Check if achievement already granted
+                const { rows: achRows } = await query(
+                    'SELECT id FROM user_achievements WHERE user_id = $1 AND ach_key = $2',
+                    [userData.userId, 'hk_challenge']
+                );
+
+                if (achRows.length === 0) {
+                    // Grant Achievement and Huge Reward
+                    const CHALLENGE_XP_BONUS = 2000;
+                    const CHALLENGE_COIN_BONUS = 500;
+
+                    await query(
+                        'INSERT INTO user_achievements (user_id, ach_key) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [userData.userId, 'hk_challenge']
+                    );
+
+                    await query(
+                        'UPDATE user_game_profile SET xp = xp + $1, coins = coins + $2 WHERE user_id = $3',
+                        [CHALLENGE_XP_BONUS, CHALLENGE_COIN_BONUS, userData.userId]
+                    );
+
+                    // Add to gameResult for summary display
+                    gameResult.xp += CHALLENGE_XP_BONUS;
+                    gameResult.coins += CHALLENGE_COIN_BONUS;
+                    gameResult.xp_earned += CHALLENGE_XP_BONUS;
+                    gameResult.coins_earned += CHALLENGE_COIN_BONUS;
+                    gameResult.challenge_completed = true;
+                }
+            }
+        }
         await triggerDiscordBotSyncForUser(userData.userId);
         syncDiscordRolesForUser(userData.userId).catch(e =>
           console.warn('[getHistory] Discord role sync failed:', e.message)
