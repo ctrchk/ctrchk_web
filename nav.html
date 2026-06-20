@@ -595,7 +595,7 @@
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
-    // Mapbox Token
+    // Default Mapbox Token fallback
     mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
 
     /**
@@ -629,7 +629,20 @@
       PITCH_3D: 75,
       ZOOM_NAV: 18.5,
 
-      init() {
+      async fetchConfig() {
+        try {
+            const res = await fetch('/api/user?action=config');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.mapboxToken) {
+                    mapboxgl.accessToken = data.mapboxToken;
+                }
+            }
+        } catch (e) {}
+      },
+
+      async init() {
+        await this.fetchConfig();
         this.map = new mapboxgl.Map({
           container: 'map',
           style: 'mapbox://styles/mapbox/dark-v11',
@@ -1844,7 +1857,7 @@
       },
 
       async pauseNavigation() {
-        if (!confirm('確定暫停行程？您可以稍後在首頁頂部尋回並繼續。')) return;
+        if (!confirm('確定暫停行程？您可以稍後在路線頁面尋回並繼續。')) return;
 
         if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
         await this.syncActiveRide();

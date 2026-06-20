@@ -545,7 +545,8 @@ VALUES
   ('route_900_all',   '全站騎士',       'All Stops Rider',     '完成路線900的所有20個站點',          'Reach all 20 stops on Route 900',            '🗓️', 100, 40, 'stops_count', 20),
   -- 隱藏成就
   ('zone_changer',    '跨區達人',       'Zone Hopper',         '在一次騎行中完成所有3次區段切換',    'Cross all 3 zone boundaries in one ride',    '🔀', 60,  25, 'stops_count', NULL),
-  ('night_rider',     '夜間騎手',       'Night Rider',         '在晚上10時至凌晨6時完成一次騎行',   'Complete a ride between 10pm and 6am',       '🌙', 40,  15, 'rides_count', NULL)
+  ('night_rider',     '夜間騎手',       'Night Rider',         '在晚上10時至凌晨6時完成一次騎行',   'Complete a ride between 10pm and 6am',       '🌙', 40,  15, 'rides_count', NULL),
+  ('hk_challenge',    '全港挑戰王',     'HK Challenge Master',  '完成一條全港挑戰部的超長路線或多條指定路線', 'Complete an ultra-long route or specified routes in HK Challenge Dept', '👑', 2000, 500, 'route_complete', NULL)
 ON CONFLICT (ach_key) DO UPDATE SET
   title_zh       = EXCLUDED.title_zh,
   title_en       = EXCLUDED.title_en,
@@ -627,3 +628,30 @@ CREATE TABLE IF NOT EXISTS user_friends (
 CREATE INDEX IF NOT EXISTS idx_user_friends_user_id ON user_friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_friends_friend_id ON user_friends(friend_id);
 CREATE INDEX IF NOT EXISTS idx_user_friends_status ON user_friends(status);
+
+-- =========================================================
+-- 多人騎行房間系統
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS ride_rooms (
+    id SERIAL PRIMARY KEY,
+    room_code VARCHAR(10) UNIQUE NOT NULL,
+    host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    route_id VARCHAR(20),
+    dir_index INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'waiting', -- waiting | started | closed
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS room_members (
+    id SERIAL PRIMARY KEY,
+    room_id INTEGER NOT NULL REFERENCES ride_rooms(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    is_ready BOOLEAN DEFAULT FALSE,
+    joined_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(room_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ride_rooms_code ON ride_rooms(room_code);
+CREATE INDEX IF NOT EXISTS idx_room_members_user ON room_members(user_id);

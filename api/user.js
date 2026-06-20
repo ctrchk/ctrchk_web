@@ -57,6 +57,7 @@ function normalizeDeptId(input) {
   if (['tko', 'tko部', 'tk', 'poa', 'hah', 'tik', 'lhp'].includes(raw)) return 'tko';
   if (['hki', 'hk', 'island', '港島', 'east'].includes(raw)) return 'hki';
   if (['st', 'shatin', '沙田'].includes(raw)) return 'st';
+  if (['challenge', '全港挑戰', '挑戰'].includes(raw)) return 'challenge';
   return raw;
 }
 
@@ -256,6 +257,29 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
+    if (req.query.action === 'room-status') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { roomId } = req.query;
+            const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
+            const { rows: memberRows } = await query(
+                `SELECT u.username, m.is_ready
+                 FROM room_members m
+                 JOIN users u ON m.user_id = u.id
+                 WHERE m.room_id = $1`,
+                [roomId]
+            );
+            return res.status(200).json({
+                status: roomRows[0]?.status,
+                routeId: roomRows[0]?.route_id,
+                dirIndex: roomRows[0]?.dir_index,
+                members: memberRows
+            });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
     if (req.query.action === 'friends') {
       try {
         const user_id = parseInt(req.query.user_id, 10);
@@ -342,7 +366,10 @@ export default async function handler(req, res) {
     // action=config → return public config (replaces config.js)
     if (req.query.action === 'config' || req.query.action === 'google-client-id') {
       res.setHeader('Cache-Control', 'public, max-age=3600');
-      return res.status(200).json({ googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
+      return res.status(200).json({
+        googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+        mapboxToken: process.env.MAPBOX_TOKEN || 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw'
+      });
     }
 
     try {
@@ -448,7 +475,7 @@ export default async function handler(req, res) {
     const userData = await authenticate(req, res);
     if (!userData) return;
     try {
-      const { state } = req.body || {};
+      const { state, share_location } = req.body || {};
       if (!state) return res.status(400).json({ message: 'State is required' });
       const type = state.type || 'route';
       await query(
@@ -457,7 +484,29 @@ export default async function handler(req, res) {
          ON CONFLICT (user_id, ride_type) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
         [userData.userId, type, JSON.stringify(state)]
       );
-      return res.status(200).json({ success: true });
+
+      let friendsLocations = [];
+      if (share_location && state.routeId) {
+          // Fetch friends riding the SAME route
+          const { rows } = await query(
+              `SELECT ar.user_id, u.username,
+                      (ar.state->>'lastLat')::double precision as lat,
+                      (ar.state->>'lastLon')::double precision as lng
+               FROM active_rides ar
+               JOIN users u ON ar.user_id = u.id
+               JOIN user_friends uf ON (uf.user_id = $1 AND uf.friend_id = ar.user_id)
+                                    OR (uf.friend_id = $1 AND uf.user_id = ar.user_id)
+               WHERE ar.ride_type = 'route'
+                 AND ar.state->>'routeId' = $2
+                 AND ar.user_id != $1
+                 AND uf.status = 'accepted'
+                 AND ar.updated_at >= NOW() - INTERVAL '5 minutes'`,
+              [userData.userId, state.routeId]
+          );
+          friendsLocations = rows;
+      }
+
+      return res.status(200).json({ success: true, friends_locations: friendsLocations });
     } catch (error) {
       console.error('[active-ride POST] error:', error);
       return res.status(500).json({ message: 'Failed to sync active ride' });
@@ -478,6 +527,89 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    if (req.body.action === 'create-room') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { routeId, dirIndex } = req.body;
+            const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const { rows } = await query(
+                `INSERT INTO ride_rooms (room_code, host_id, route_id, dir_index)
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                [roomCode, userData.userId, routeId, dirIndex]
+            );
+            const roomId = rows[0].id;
+            await query(
+                `INSERT INTO room_members (room_id, user_id, is_ready) VALUES ($1, $2, TRUE)`,
+                [roomId, userData.userId]
+            );
+            return res.status(200).json({ success: true, roomCode, roomId });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
+
+    if (req.body.action === 'join-room') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { roomCode } = req.body;
+            const { rows } = await query(
+                `SELECT id, status, route_id, dir_index FROM ride_rooms WHERE room_code = $1 AND status = 'waiting'`,
+                [roomCode]
+            );
+            if (rows.length === 0) return res.status(404).json({ message: '找不到房間或房間已開始' });
+
+            const room = rows[0];
+            await query(
+                `INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+                [room.id, userData.userId]
+            );
+            return res.status(200).json({ success: true, roomId: room.id, routeId: room.route_id, dirIndex: room.dir_index });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
+
+    if (req.body.action === 'start-room-ride') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { roomId } = req.body;
+            const { rows } = await query(`SELECT host_id FROM ride_rooms WHERE id = $1`, [roomId]);
+            if (rows[0]?.host_id !== userData.userId) return res.status(403).json({ message: '只有房主可以開始騎行' });
+
+            await query(`UPDATE ride_rooms SET status = 'started' WHERE id = $1`, [roomId]);
+            return res.status(200).json({ success: true });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
+
+    if (req.query.action === 'room-status') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { roomId } = req.query;
+            const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
+            const { rows: memberRows } = await query(
+                `SELECT u.username, m.is_ready
+                 FROM room_members m
+                 JOIN users u ON m.user_id = u.id
+                 WHERE m.room_id = $1`,
+                [roomId]
+            );
+            return res.status(200).json({
+                status: roomRows[0]?.status,
+                routeId: roomRows[0]?.route_id,
+                dirIndex: roomRows[0]?.dir_index,
+                members: memberRows
+            });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
+
     if (req.body.action === 'add_friend') {
       try {
         const { user_id, friend_id } = req.body;
