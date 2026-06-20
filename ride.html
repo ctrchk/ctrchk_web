@@ -805,6 +805,7 @@
     const routeId = params.get('id') || '';
     const dirIndex = parseInt(params.get('dir') || '0', 10);
     const startStopIdx = parseInt(params.get('startStopIdx') || '0', 10);
+    const isFreeParam = params.get('mode') === 'free';
     const friendMode = params.get('friendMode') === '1';
 
     // Config Constants
@@ -1532,6 +1533,9 @@
       const pauseBtn = document.getElementById('btn-pause-ride');
       if (pauseBtn) pauseBtn.onclick = () => window.pauseRide();
 
+      const endBtn = document.getElementById('btn-end-ride');
+      if (endBtn) endBtn.onclick = () => window.handleEndRide();
+
       // Heartbeat
       if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = setInterval(() => syncActiveRide(), 1000);
@@ -2251,24 +2255,34 @@
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
       const mode = params.get('mode');
-      await fetchConfig();
-      await loadRouteCatalog();
+      // Parallel fetch for speed
+      const configPromise = fetchConfig();
+      const catalogPromise = loadRouteCatalog();
+      await configPromise;
+      await catalogPromise;
 
-      const endRideBtn = document.getElementById('btn-end-ride');
-      if (endRideBtn) {
-          endRideBtn.addEventListener('click', async () => {
-              if (!confirm('確定結束行程？')) return;
-              try {
+      window.handleEndRide = async () => {
+          const endRideBtn = document.getElementById('btn-end-ride');
+          if (!confirm('確定結束行程？')) return;
+          try {
+              if (endRideBtn) {
                   endRideBtn.disabled = true;
                   endRideBtn.textContent = '正在儲存...';
-                  await endRide();
-              } catch (err) {
-                  console.error('[Ride] Error in end-ride button handler:', err);
-                  alert('結束行程時發生錯誤：' + err.message);
+              }
+              await endRide();
+          } catch (err) {
+              console.error('[Ride] Error in end-ride button handler:', err);
+              alert('結束行程時發生錯誤：' + err.message);
+              if (endRideBtn) {
                   endRideBtn.disabled = false;
                   endRideBtn.textContent = '結束騎行';
               }
-          });
+          }
+      };
+
+      const endRideBtn = document.getElementById('btn-end-ride');
+      if (endRideBtn) {
+          endRideBtn.addEventListener('click', window.handleEndRide);
       }
 
       if (mode === 'free') {

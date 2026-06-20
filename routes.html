@@ -467,6 +467,7 @@
     background: linear-gradient(145deg, var(--app-bg-card, #1e3820), #254227);
     border-radius: 18px;
     padding: 1.2em;
+    min-height: 120px;
     border: 1px solid var(--app-border, #2d4d2d);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1046,9 +1047,17 @@ async function showRouteOnMap(route, dirIndex) {
 function routeBelongsToDept(route, deptId) {
     // Primary: use dept_id field if present
     if (route.dept_id) return route.dept_id === deptId;
-    // Fallback: tag-based classification for legacy routes without dept_id
+
     const dept = DEPARTMENTS.find(d => d.id === deptId);
     if (!dept) return false;
+
+    // Special logic for Challenge department: any route starting with '99' or in 'challenge' tags
+    if (deptId === 'challenge') {
+        if (String(route.id).startsWith('99')) return true;
+        if (route.tags && route.tags.includes('全港挑戰')) return true;
+    }
+
+    // Fallback: tag-based classification for legacy routes without dept_id
     const deptNameBase = dept.name.replace('部', '');
     return route.tags && route.tags.some(t => deptNameBase.includes(t) || t.includes(deptNameBase));
 }
