@@ -73,7 +73,8 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((res) => {
           // 緩存成功的 GET 回應（供離線使用）
-          if (request.method === 'GET' && res.ok) {
+          // 注意：不能緩存 redirected 響應
+          if (request.method === 'GET' && res.ok && !res.redirected) {
             const clone = res.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
           }
@@ -99,7 +100,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          if (res.ok) {
+          if (res.ok && !res.redirected) {
             const clone = res.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
           }
@@ -119,7 +120,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          if (res.ok) {
+          if (res.ok && !res.redirected) {
             const clone = res.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
           }
@@ -133,11 +134,16 @@ self.addEventListener('fetch', (event) => {
   // 其他靜態資源（HTML/CSS/JS）：Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cached) => {
+      // 如果緩存存在且不是導航請求，先返回緩存
+      if (cached && request.mode !== 'navigate') {
+          return cached;
+      }
+
       const networkFetch = fetch(request)
         .then((res) => {
           // 修復 Safari: "Response served by service worker has redirections"
-          // 如果請求是導航類（頁面跳轉），且回應是重定向，則不應緩存且直接返回
-          if (request.mode === 'navigate' && res.redirected) {
+          // 如果是導航請求且發生重定向，必須直接返回原始響應，絕不能從 Service Worker 服務重定向
+          if (res.redirected) {
             return res;
           }
 
@@ -149,7 +155,7 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
 
-      return cached || networkFetch;
+      return networkFetch || cached;
     })
   );
 });

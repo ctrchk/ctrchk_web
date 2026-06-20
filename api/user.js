@@ -57,7 +57,7 @@ function normalizeDeptId(input) {
   if (['tko', 'tko部', 'tk', 'poa', 'hah', 'tik', 'lhp'].includes(raw)) return 'tko';
   if (['hki', 'hk', 'island', '港島', 'east'].includes(raw)) return 'hki';
   if (['st', 'shatin', '沙田'].includes(raw)) return 'st';
-  if (['challenge', '全港挑戰', '挑戰'].includes(raw)) return 'challenge';
+  if (['challenge', '全港挑戰', '挑戰', '全港挑戰部'].includes(raw)) return 'challenge';
   return raw;
 }
 
@@ -307,9 +307,11 @@ export default async function handler(req, res) {
         if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
-          `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.id as request_id
+          `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.id as request_id,
+                  gp.level, gp.xp, gp.mileage_rank
            FROM user_friends uf
            JOIN users u ON u.id = uf.user_id
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
            WHERE uf.friend_id = $1 AND uf.status = 'pending'`,
           [user_id]
         );
