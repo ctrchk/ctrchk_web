@@ -26,6 +26,60 @@ async function ensureUsersUsernameColumn() {
   await _ensureUsersUsernameColumnPromise;
 }
 
+let _ensureRideTablesPromise = null;
+async function ensureRideTables() {
+  if (!_ensureRideTablesPromise) {
+    _ensureRideTablesPromise = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS user_friends (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          friend_id INTEGER REFERENCES users(id),
+          status VARCHAR(20) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(user_id, friend_id)
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS active_rides (
+          user_id INTEGER REFERENCES users(id),
+          ride_type VARCHAR(20),
+          state JSONB,
+          updated_at TIMESTAMP DEFAULT NOW(),
+          PRIMARY KEY (user_id, ride_type)
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS ride_rooms (
+          id SERIAL PRIMARY KEY,
+          room_code VARCHAR(10) UNIQUE,
+          host_id INTEGER REFERENCES users(id),
+          route_id VARCHAR(50),
+          dir_index INTEGER DEFAULT 0,
+          status VARCHAR(20) DEFAULT 'waiting',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS room_members (
+          id SERIAL PRIMARY KEY,
+          room_id INTEGER REFERENCES ride_rooms(id) ON DELETE CASCADE,
+          user_id INTEGER REFERENCES users(id),
+          is_ready BOOLEAN DEFAULT FALSE,
+          joined_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(room_id, user_id)
+        );
+      `);
+    })().catch(err => {
+      _ensureRideTablesPromise = null;
+      throw err;
+    });
+  }
+  await _ensureRideTablesPromise;
+}
+
 function getCyclistTierByLevel(level) {
   const lv = Number(level || 1);
   if (lv >= 76) return '頂尖車手';
@@ -243,13 +297,19 @@ export default async function handler(req, res) {
     const userData = await authenticate(req, res);
     if (!userData) return;
     try {
+      await ensureRideTables();
       const type = req.query.type || 'route';
       const { rows } = await query(
-        `SELECT state FROM active_rides
+        `SELECT state, updated_at FROM active_rides
          WHERE user_id = $1 AND ride_type = $2 AND updated_at >= NOW() - INTERVAL '24 hours'`,
         [userData.userId, type]
       );
-      return res.status(200).json({ state: rows.length > 0 ? rows[0].state : null });
+      if (rows.length > 0) {
+          const state = rows[0].state;
+          state.updated_at = rows[0].updated_at;
+          return res.status(200).json({ state });
+      }
+      return res.status(200).json({ state: null });
     } catch (error) {
       console.error('[active-ride GET] error:', error);
       return res.status(500).json({ message: 'Failed to fetch active ride' });
@@ -261,6 +321,7 @@ export default async function handler(req, res) {
       const userData = await authenticate(req, res);
       if (!userData) return;
       try {
+        await ensureRideTables();
         const { roomId } = req.query;
         if (!roomId) return res.status(400).json({ message: 'roomId required' });
         const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
@@ -286,6 +347,7 @@ export default async function handler(req, res) {
       const userData = await authenticate(req, res);
       if (!userData && !req.query.user_id) return;
       try {
+        await ensureRideTables();
         const user_id = parseInt(req.query.user_id || (userData ? userData.userId : null), 10);
         if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
@@ -483,6 +545,7 @@ export default async function handler(req, res) {
     const userData = await authenticate(req, res);
     if (!userData) return;
     try {
+      await ensureRideTables();
       const { state, share_location } = req.body || {};
       if (!state) return res.status(400).json({ message: 'State is required' });
       const type = state.type || 'route';
@@ -539,6 +602,7 @@ export default async function handler(req, res) {
         const userData = await authenticate(req, res);
         if (!userData) return;
         try {
+            await ensureRideTables();
             const { routeId, dirIndex } = req.body;
             const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
             const { rows } = await query(
@@ -561,6 +625,7 @@ export default async function handler(req, res) {
         const userData = await authenticate(req, res);
         if (!userData) return;
         try {
+            await ensureRideTables();
             const { roomCode } = req.body;
             const { rows } = await query(
                 `SELECT id, status, route_id, dir_index FROM ride_rooms WHERE room_code = $1 AND status = 'waiting'`,

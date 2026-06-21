@@ -711,8 +711,10 @@ export default async function handler(req, res) {
         });
       }
 
-      // 已移除過短騎行過濾 (由用戶要求保留所有紀錄)
+      // 騎行過濾：過短騎行 (少於 0.5km 且少於 3 分鐘) 不予計算獎勵，但保留記錄
       const distKmVal = parseFloat(distance_km) || 0;
+      const durationMinsVal = parseInt(duration_minutes, 10) || 0;
+      const isValidRide = distKmVal >= 0.5 || durationMinsVal >= 3;
 
       // 0. 計算已省車資 (Saved Fare)
       let savedFare = 0;
@@ -744,36 +746,43 @@ export default async function handler(req, res) {
       // 1. 取得路線 XP 獎勵
       let xpReward = 0;
       let maxXpForRoute = Infinity;
-      try {
-        const { rows: cfg } = await query(
-          'SELECT xp_reward FROM routes_config WHERE route_id = $1',
-          [route_id]
-        );
-        if (cfg.length > 0) {
-          maxXpForRoute = cfg[0].xp_reward;
-          xpReward = cfg[0].xp_reward;
-        } else {
-          // Fallback: ~20 XP per km. This roughly matches configured rewards
-          // (e.g. route 900 = 5.5 km → ~110 XP, configured at 150), giving a
-          // fair estimate for routes not yet in routes_config.
-          const XP_PER_KM = 20;
-          xpReward = Math.round((parseFloat(distance_km) || 0) * XP_PER_KM);
-          maxXpForRoute = xpReward;
-        }
-      } catch (e) { /* routes_config 可能尚未建立 */ }
+      const normalizedRideMode = normalizeRideMode(ride_mode);
 
-      // If client provides a per-stop computed XP, use it (capped at the route's configured max).
-      // This supports the per-stop (+10 XP) and district-change (+20 XP) bonus system.
-      if (typeof xp_earned_override === 'number' && xp_earned_override >= 0) {
-        xpReward = Math.min(Math.round(xp_earned_override), maxXpForRoute);
+      if (!isValidRide) {
+          xpReward = 0;
+      } else if (normalizedRideMode === 'free') {
+          // Free Mode: Reward based strictly on distance (20 XP per km)
+          xpReward = Math.round(distKmVal * 20);
+      } else {
+          // Route Mode: Reward based strictly on stops
+          try {
+            const { rows: cfg } = await query(
+              'SELECT xp_reward FROM routes_config WHERE route_id = $1',
+              [route_id]
+            );
+            if (cfg.length > 0) {
+              maxXpForRoute = cfg[0].xp_reward;
+              xpReward = cfg[0].xp_reward;
+            } else {
+              // Fallback for route mode: based on reached stops count (e.g. 10 XP per stop)
+              const reachedCount = Number.isFinite(stops_count) ? stops_count : (Array.isArray(stops_reached) ? stops_reached.length : 0);
+              xpReward = reachedCount * 10;
+              maxXpForRoute = xpReward + 50;
+            }
+          } catch (e) { xpReward = 20; }
+
+          // If client provides a per-stop computed XP, use it (capped at the route's configured max).
+          if (typeof xp_earned_override === 'number' && xp_earned_override >= 0) {
+            xpReward = Math.min(Math.round(xp_earned_override), maxXpForRoute);
+          }
       }
 
       // Apply ride mode multiplier:
       // tourism x1.5, commuter/DRT x1.0, free x0.8 (rounded to nearest integer)
-      const normalizedRideMode = normalizeRideMode(ride_mode);
       const multiplier = XP_MODE_MULTIPLIER[normalizedRideMode] ?? 1.0;
       xpReward = Math.max(0, Math.round(xpReward * multiplier));
-      const randomBonus = Math.floor(Math.random() * (RANDOM_BONUS_MAX - RANDOM_BONUS_MIN + 1)) + RANDOM_BONUS_MIN;
+
+      const randomBonus = isValidRide ? (Math.floor(Math.random() * (RANDOM_BONUS_MAX - RANDOM_BONUS_MIN + 1)) + RANDOM_BONUS_MIN) : 0;
       const randomBonusXp = randomBonus;
       const randomBonusCoins = randomBonus;
       xpReward += randomBonusXp;
@@ -846,13 +855,15 @@ export default async function handler(req, res) {
 
         // New mileage coin reward: round(km * 0.8)
         let mileageReward = 0;
-        if (typeof miles_reward_override === 'number') {
+        if (!isValidRide) {
+            mileageReward = 0;
+        } else if (typeof miles_reward_override === 'number') {
             mileageReward = Math.round(miles_reward_override);
         } else {
             mileageReward = Math.round(distKmVal * 0.8);
         }
 
-        if (bonusCoinsEarned > 0) {
+        if (bonusCoinsEarned > 0 && isValidRide) {
           coinsEarned += bonusCoinsEarned;
         }
         coinsEarned += mileageReward;

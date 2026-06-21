@@ -22,14 +22,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>騎行中 - 城市運輸單車</title>
 
-  <!-- Mapbox GL JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
-    /* ── Industrial HUD System 4.0 ── */
+    /* ── Industrial HUD System 4.2 (Leaflet Optimized) ── */
     :root {
       --hud-green: #2ecc71;
       --hud-red: #e74c3c;
@@ -44,6 +41,10 @@
 
     #ride-map { position: fixed; inset: 0; z-index: 0; background: #0d1a24; }
 
+    /* Custom Leaflet overrides */
+    .leaflet-v-layer { filter: brightness(0.6) contrast(1.2); }
+    .leaflet-control-zoom { display: none !important; }
+
     /* --- Industrial HUD Layout --- */
     .hud-container {
       position: fixed;
@@ -52,7 +53,6 @@
       z-index: 100;
       display: flex;
       flex-direction: column;
-      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
     }
 
     /* Top: Instructions Panel */
@@ -64,7 +64,7 @@
       border: 2px solid rgba(255,255,255,0.2);
       border-radius: 16px;
       padding: 16px 20px;
-      margin-top: 8px;
+      margin: calc(env(safe-area-inset-top) + 8px) 16px 0;
       display: flex;
       align-items: center;
       gap: 16px;
@@ -89,17 +89,52 @@
       -webkit-backdrop-filter: var(--hud-blur);
       border-top: 1px solid rgba(255,255,255,0.1);
       border-radius: 24px 24px 0 0;
-      padding: 20px 24px calc(env(safe-area-inset-bottom) + 20px);
-      margin: 0 -16px -16px;
+      padding: 20px 24px calc(env(safe-area-inset-bottom) + 12px);
+      margin: 0;
       box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 100%;
     }
     .hud-bottom-panel.hidden { transform: translateY(100%); }
+
+    /* Detailed Stops Overview */
+    .stops-overview {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+        scrollbar-width: none;
+    }
+    .stops-overview::-webkit-scrollbar { display: none; }
+    .stop-pill {
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.1);
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.6);
+        border: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .stop-pill.reached {
+        background: rgba(46, 204, 113, 0.2);
+        color: var(--hud-green);
+        border-color: var(--hud-green);
+    }
+    .stop-pill.next {
+        background: rgba(191, 227, 64, 0.2);
+        color: var(--app-accent);
+        border-color: var(--app-accent);
+        font-weight: bold;
+    }
 
     .stats-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       gap: 12px;
     }
     .stat-box {
@@ -155,14 +190,11 @@
       100% { transform: translateX(-50%) scale(1); }
     }
 
-    /* ── User Navigation Arrow ── */
-    .user-nav-arrow {
-      width: 0; height: 0;
-      border-left: 15px solid transparent;
-      border-right: 15px solid transparent;
-      border-bottom: 40px solid #6dba65;
-      filter: drop-shadow(0 0 10px rgba(109, 186, 101, 0.6));
-      transform-origin: center 75%;
+    /* ── User Arrow ── */
+    .user-arrow-icon {
+        width: 32px; height: 32px;
+        background: #6dba65; clip-path: polygon(50% 0%, 0% 100%, 50% 80%, 100% 100%);
+        border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
 
     /* ── Go-to-start banner ── */
@@ -183,20 +215,6 @@
       padding: 12px; font-size: 15px; margin-bottom: 12px;
     }
 
-    /* ── Loading ── */
-    #ride-loading {
-      position: fixed; inset: 0; z-index: 500;
-      background: #1a252f; color: #fff;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 1em;
-    }
-    .spinner {
-      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2);
-      border-top-color: #BFE340; border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
     /* ── Summary ── */
     #ride-summary {
       display: none; position: fixed; inset: 0; z-index: 600;
@@ -206,31 +224,9 @@
     }
     #ride-summary.show { display: flex; }
     #summary-xp-badge { background: #BFE340; color: #1a252f; font-size: 24px; font-weight: 900; padding: 12px 32px; border-radius: 16px; margin: 20px 0; }
-
-    /* ── Locked ── */
-    #ride-locked {
-      display: none; position: fixed; inset: 0; z-index: 500;
-      background: #1a252f; color: #fff;
-      flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 2em;
-    }
-    #ride-locked.show { display: flex; }
   </style>
 </head>
 <body class="is-pwa">
-
-  <div id="ride-loading">
-    <div class="spinner"></div>
-    <p>正在載入 3D 導航系統...</p>
-    <button id="btn-skip-loading" style="margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; cursor: pointer;">跳過載入</button>
-  </div>
-
-  <div id="ride-locked">
-    <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
-    <h2 style="margin-bottom: 10px;">路線尚未解鎖</h2>
-    <p style="opacity: 0.7; margin-bottom: 30px;">此為特別篇路線，需使用里程幣解鎖後才能騎行。</p>
-    <a href="/routes" style="background: var(--app-accent); color: #1a252f; padding: 12px 32px; border-radius: 12px; font-weight: 800; text-decoration: none;">返回列表</a>
-  </div>
 
   <div id="ride-map"></div>
 
@@ -254,6 +250,9 @@
 
     <!-- Bottom Stats and Controls -->
     <div class="hud-bottom-panel hidden" id="hud-bottom">
+      <div class="stops-overview" id="stops-overview">
+          <!-- Stop pills injected here -->
+      </div>
       <div class="stats-row">
         <div class="stat-box">
           <div class="stat-label">時間</div>
@@ -279,17 +278,6 @@
     </div>
   </div>
 
-  <!-- Specialized Free Mode HUD -->
-  <div id="free-mode-hud" style="display:none; position:fixed; top:calc(env(safe-area-inset-top) + 10px); left:16px; right:16px; z-index:200; pointer-events:none;">
-      <div style="background:var(--hud-bg); backdrop-filter:var(--hud-blur); border:1px solid rgba(191,227,64,0.3); border-radius:16px; padding:16px; pointer-events:auto; display:flex; align-items:center; gap:16px;">
-          <div style="flex:1;">
-              <div style="font-size:12px; opacity:0.8; color:#fff; font-weight:bold;">自由模式中</div>
-              <div id="free-mode-status" style="font-size:18px; font-weight:800; color:#BFE340;">正在探索城市</div>
-          </div>
-          <button onclick="confirmLeave()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 20px; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer;">退出</button>
-      </div>
-  </div>
-
   <div id="go-to-start-banner" style="display:none;">
     <div style="font-size: 32px; margin-bottom: 12px;">📍</div>
     <h3>前往起點</h3>
@@ -302,8 +290,6 @@
       <select id="gts-stop-select"></select>
       <button class="btn-action btn-exit" onclick="startFromSelectedStop()" style="width: 100%; padding: 12px;">從選定站出發</button>
     </div>
-
-    <button onclick="confirmLeave()" style="background:none; border:none; color:rgba(255,255,255,0.5); font-size:14px; margin-top:20px; text-decoration:underline; cursor:pointer;">取消並返回儀表板</button>
   </div>
 
   <div id="ride-summary">
@@ -323,6 +309,7 @@
     <button id="btn-summary-done" style="background: var(--hud-green); color: #fff; border: none; padding: 18px 64px; border-radius: 16px; font-size: 18px; font-weight: 800; cursor: pointer;" onclick="window.location.href='/dashboard'">確認並返回</button>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
   <script>
   (function () {
@@ -351,7 +338,6 @@
     let gpxCoords = [];
     let routeStops = [];
     let routeData = null;
-    let allRoutes = [];
     let friendMarkers = new Map();
 
     const STOP_DETECTION_RADIUS_M = 40;
@@ -373,79 +359,30 @@
     function formatDist(m) { return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`; }
 
     async function initMap(center) {
-        try {
-            const configResp = await fetch('/api/user?action=config');
-            const config = await configResp.json();
-            mapboxgl.accessToken = config.mapboxToken;
+        if (map) return;
+        map = L.map('ride-map', { zoomControl: false, attributionControl: false }).setView(center, 18);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
 
-            map = new mapboxgl.Map({
-                container: 'ride-map',
-                style: 'mapbox://styles/mapbox/dark-v11',
-                center: [center[1], center[0]],
-                zoom: 18.5,
-                pitch: 75,
-                bearing: 0,
-                antialias: true
-            });
-
-            map.on('load', () => {
-                const layers = map.getStyle().layers;
-                const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field'])?.id;
-                map.addLayer({
-                    'id': '3d-buildings',
-                    'source': 'composite',
-                    'source-layer': 'building',
-                    'filter': ['==', 'extrude', 'true'],
-                    'type': 'fill-extrusion',
-                    'minzoom': 15,
-                    'paint': {
-                        'fill-extrusion-color': '#aaa',
-                        'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-                        'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
-                        'fill-extrusion-opacity': 0.6
-                    }
-                }, labelLayerId);
-
-                if (routeData && gpxCoords.length > 0) {
-                    drawRoute(gpxCoords, routeData.color || '#BFE340');
-                }
-                document.getElementById('ride-loading').style.display = 'none';
-
-                // Initial marker if position already known
-                if (lastLat !== null) updateUserMarker([lastLon, lastLat], 0);
-            });
-
-            map.on('error', (e) => {
-                console.error('Mapbox error:', e);
-                document.getElementById('ride-loading').innerHTML = '<p style="color:#e74c3c;">地圖載入失敗，請檢查網絡連接或 Token。</p>';
-            });
-
-        } catch (e) {
-            console.error('initMap error:', e);
-            document.getElementById('ride-loading').innerHTML = '<p style="color:#e74c3c;">系統初始化失敗</p>';
+        if (routeData && gpxCoords.length > 0) {
+            L.polyline(gpxCoords, { color: routeData.color || '#BFE340', weight: 6, opacity: 0.8 }).addTo(map);
         }
     }
 
-    function drawRoute(coords, color) {
+    function updateUserMarker(lat, lon, heading) {
         if (!map) return;
-        const geojson = { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': coords } };
-        map.addSource('route', { 'type': 'geojson', 'data': geojson });
-        map.addLayer({ 'id': 'route-line-glow', 'type': 'line', 'source': 'route', 'paint': { 'line-color': color, 'line-width': 12, 'line-opacity': 0.3 } });
-        map.addLayer({ 'id': 'route-line', 'type': 'line', 'source': 'route', 'paint': { 'line-color': color, 'line-width': 6, 'line-opacity': 0.8 } });
-    }
-
-    function updateUserMarker(coords, heading) {
-        if (!map) return;
+        const icon = L.divIcon({
+            className: '',
+            html: `<div class="user-arrow-icon" style="transform: rotate(${heading || 0}deg);"></div>`,
+            iconSize: [32, 32], iconAnchor: [16, 16]
+        });
         if (!userMarker) {
-            const el = document.createElement('div');
-            el.className = 'user-nav-arrow';
-            userMarker = new mapboxgl.Marker({ element: el, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(coords).addTo(map);
+            userMarker = L.marker([lat, lon], { icon }).addTo(map);
         } else {
-            userMarker.setLngLat(coords);
-            userMarker.getElement().style.transform = `rotate(${heading || 0}deg)`;
+            userMarker.setLatLng([lat, lon]);
+            userMarker.setIcon(icon);
         }
         if (rideStarted) {
-            map.easeTo({ center: coords, bearing: heading || 0, pitch: 75, zoom: 19, duration: 1000 });
+            map.panTo([lat, lon], { animate: true, duration: 1 });
         }
     }
 
@@ -453,12 +390,9 @@
         if (!map) return;
         const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
         const speedKmh = speed != null ? (speed * 3.6) : 0;
-        const coords = [lon, lat];
-
-        document.getElementById('gps-status-text').textContent = `GPS 精確度: ±${Math.round(accuracy)} m`;
         document.getElementById('speed-val').innerHTML = speedKmh.toFixed(1) + '<span>km/h</span>';
 
-        updateUserMarker(coords, heading);
+        updateUserMarker(lat, lon, heading);
 
         if (rideStarted) {
             if (lastLat !== null) {
@@ -466,7 +400,9 @@
                 if (d >= 2 && d < 500 && accuracy <= 50) totalDistM += d;
             }
             if (gpxCoords.length > 1) {
-                const snapped = turf.nearestPointOnLine(turf.lineString(gpxCoords), turf.point(coords), { units: 'meters' });
+                const p = turf.point([lon, lat]);
+                const line = turf.lineString(gpxCoords.map(c => [c[1], c[0]]));
+                const snapped = turf.nearestPointOnLine(line, p, { units: 'meters' });
                 document.getElementById('off-route-warning').style.display = snapped.properties.dist > OFF_ROUTE_THRESHOLD_M ? 'block' : 'none';
             }
         }
@@ -478,18 +414,18 @@
             document.getElementById('gts-dist-val').textContent = formatDist(dist);
             if (dist <= STOP_DETECTION_RADIUS_M) beginRide();
         } else if (rideStarted && !isFreeMode) {
-            updateHUD(coords, speedKmh);
+            updateHUD(lat, lon, speedKmh);
             checkStops(lat, lon);
         }
     }
 
-    function updateHUD(coords, speed) {
+    function updateHUD(lat, lon, speed) {
         const next = routeStops.find(s => !reachedStops.has(s.order)) || routeStops[routeStops.length - 1];
-        const dist = haversineM(coords[1], coords[0], next.lat, next.lon);
+        const dist = haversineM(lat, lon, next.lat, next.lon);
         document.getElementById('next-dist').textContent = Math.round(dist);
         document.getElementById('next-road').textContent = routeId + ' ' + (routeData?.alias || '');
         document.getElementById('next-instruction').textContent = reachedStops.has(next.order) ? '即將到達終點' : `前往：${next.name}`;
-        document.getElementById('next-dist').textContent = Math.round(dist);
+        updateStopsOverview();
     }
 
     function checkStops(lat, lon) {
@@ -498,23 +434,36 @@
             reachedStops.add(next.order);
             sessionXp += (next.xp || 10);
             document.getElementById('stat-stops').textContent = `${reachedStops.size}/${routeStops.length}`;
+            updateStopsOverview();
         }
+    }
+
+    function updateStopsOverview() {
+        const container = document.getElementById('stops-overview');
+        if (!container) return;
+        const nextStop = routeStops.find(s => !reachedStops.has(s.order));
+        container.innerHTML = routeStops.map(s => {
+            let cls = 'stop-pill';
+            if (reachedStops.has(s.order)) cls += ' reached';
+            else if (nextStop && s.order === nextStop.order) cls += ' next';
+            return `<div class="${cls}">${reachedStops.has(s.order) ? '✓' : '•'} ${s.name}</div>`;
+        }).join('');
+        // Auto-scroll to next stop
+        const nextEl = container.querySelector('.stop-pill.next');
+        if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
     function beginRide() {
         if (rideStarted) return;
         rideStarted = true; goToStartPhase = false; startTime = Date.now();
         document.getElementById('go-to-start-banner').style.display = 'none';
-        if (!isFreeMode) {
-            document.getElementById('hud-top').classList.remove('hidden');
-        } else {
-            document.getElementById('free-mode-hud').style.display = 'block';
-        }
+        document.getElementById('hud-top').classList.toggle('hidden', isFreeMode);
         document.getElementById('hud-bottom').classList.remove('hidden');
         timerInterval = setInterval(() => {
             document.getElementById('stat-time').textContent = formatTime(Date.now() - startTime);
         }, 1000);
         heartbeatInterval = setInterval(syncActiveRide, 5000);
+        updateStopsOverview();
     }
 
     async function syncActiveRide() {
@@ -537,12 +486,15 @@
             if (Number(f.user_id) === Number(myId)) return;
             let m = friendMarkers.get(f.user_id);
             if (!m) {
-                const el = document.createElement('div');
-                el.style.cssText = 'background:#3498db; width:32px; height:32px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.3);';
-                el.textContent = f.username ? f.username[0].toUpperCase() : '?';
-                m = new mapboxgl.Marker(el).setLngLat([f.lng, f.lat]).addTo(map);
+                m = L.marker([f.lat, f.lng], {
+                    icon: L.divIcon({
+                        className: '',
+                        html: `<div style="background:#3498db; width:28px; height:28px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:bold;">${f.username ? f.username[0].toUpperCase() : '?'}</div>`,
+                        iconSize: [28, 28], iconAnchor: [14, 14]
+                    })
+                }).addTo(map);
                 friendMarkers.set(f.user_id, m);
-            } else { m.setLngLat([f.lng, f.lat]); }
+            } else { m.setLatLng([f.lat, f.lng]); }
         });
     }
 
@@ -561,6 +513,7 @@
             document.getElementById('go-to-start-banner').style.display = 'block';
             document.getElementById('gts-start-name').textContent = routeStops[0].name;
         }
+        updateStopsOverview();
     }
 
     async function endRide() {
@@ -576,24 +529,31 @@
     }
 
     window.confirmLeave = () => { if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) location.href = '/dashboard'; };
-    document.getElementById('btn-pause-ride').onclick = async () => { if (confirm('暫停行程？可稍後繼續。')) { await syncActiveRide(); location.href = '/dashboard'; } };
+    document.getElementById('btn-pause-ride').onclick = async () => {
+        if (confirm('暫停行程？可稍後繼續。\n\n系統將會為你同步至雲端並儲存為未完成路線，你可以隨時在主頁或路線頁面恢復行程。')) {
+            await syncActiveRide();
+            location.href = '/dashboard';
+        }
+    };
     document.getElementById('btn-end-ride').onclick = () => { if (confirm('結束並儲存？')) endRide(); };
-    document.getElementById('btn-skip-loading').onclick = () => document.getElementById('ride-loading').style.display = 'none';
 
     (async function init() {
         const [r1, r2] = await Promise.all([fetch('/routes.json'), fetch('/api/user?action=route-data')]);
         const d1 = await r1.json(), d2 = await r2.json();
-        allRoutes = d1.routes;
-        routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || allRoutes.find(r => String(r.id) === String(routeId));
+        routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || d1.routes.find(r => String(r.id) === String(routeId));
         if (mode === 'free') {
             await initMap([22.3143, 114.2697]);
             beginRide();
         } else if (routeData) {
-            routeStops = routeData.stops || [];
+            routeStops = (routeData.stops || []).map((s, i) => ({ ...s, order: i + 1 }));
+            if (startStopIdx > 0 && startStopIdx < routeStops.length) {
+                routeStops = routeStops.slice(startStopIdx).map((s, i) => ({ ...s, order: i + 1 }));
+            }
+
             if (routeData.gpx && routeData.gpx[dirIndex]) {
                 const gpxRes = await fetch('/gpx/' + routeData.gpx[dirIndex].file);
                 const gpxText = await gpxRes.text();
-                gpxCoords = [...(new DOMParser().parseFromString(gpxText, 'application/xml')).querySelectorAll('trkpt')].map(p => [parseFloat(p.getAttribute('lon')), parseFloat(p.getAttribute('lat'))]);
+                gpxCoords = [...(new DOMParser().parseFromString(gpxText, 'application/xml')).querySelectorAll('trkpt')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
             }
             await initMap(routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697]);
             buildStopsUI();

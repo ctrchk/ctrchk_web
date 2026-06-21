@@ -1125,13 +1125,15 @@ function renderRoutes() {
     // If an unfinished ride exists, show the Unfinished Card at the very top
     if (activeRideState) {
         const resumeCard = document.createElement('div');
-        resumeCard.className = 'app-route-card';
+        resumeCard.className = 'app-route-card animate-shimmer';
         resumeCard.style.borderColor = '#BFE340';
-        resumeCard.style.background = 'rgba(191,227,64,0.05)';
+        resumeCard.style.background = 'rgba(191,227,64,0.1)';
+        resumeCard.style.boxShadow = '0 0 15px rgba(191,227,64,0.2)';
         resumeCard.onclick = () => {
             const modal = document.getElementById('resume-modal');
             const info = document.getElementById('resume-info');
-            info.textContent = `您有一段往 ${activeRideState.routeAlias || (activeRideState.type === 'route' ? activeRideState.routeId : '目的地')} 的行程未完成。`;
+            const routeName = activeRideState.routeAlias || (activeRideState.type === 'route' ? activeRideState.routeId : '目的地');
+            info.innerHTML = `<span style="color:#BFE340; font-weight:bold;">${routeName}</span><br>您有一段未完成的行程，是否現在繼續？`;
             modal.style.display = 'flex';
 
             document.getElementById('btn-resume-yes').onclick = () => {
@@ -1157,11 +1159,11 @@ function renderRoutes() {
         resumeCard.innerHTML = `
             <div class="app-route-header">
                 <span class="app-route-id" style="background:#BFE340; color:#1a252f;"><i class="fas fa-history"></i></span>
-                <span class="app-route-alias">未完成行程</span>
-                <span class="app-route-xp" style="background:#BFE340; color:#1a252f;">點擊繼續</span>
+                <span class="app-route-alias" style="color:#BFE340;">未完成行程：${activeRideState.routeAlias || activeRideState.routeId || '未知路線'}</span>
+                <span class="app-route-xp" style="background:#BFE340; color:#1a252f;">繼續騎行</span>
             </div>
             <div class="app-route-meta">
-                <span><i class="fas fa-clock"></i> 上次更新：${new Date().toLocaleTimeString()}</span>
+                <span><i class="fas fa-clock"></i> 發現於 ${new Date(activeRideState.updated_at || Date.now()).toLocaleTimeString()}</span>
             </div>
         `;
         container.appendChild(resumeCard);
