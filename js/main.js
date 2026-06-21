@@ -101,7 +101,20 @@ function setAppTheme(theme) {
  * @returns {boolean}
  */
 function isLoggedIn() {
-    return !!localStorage.getItem('accessToken');
+    let token = localStorage.getItem('accessToken');
+    if (token) {
+        // Clean token if it contains unexpected quotes
+        if (token.includes('"') || token.includes("'")) {
+            token = token.replace(/^["']+|["']$/g, '').trim();
+            localStorage.setItem('accessToken', token);
+        }
+        if (token === 'null' || token === 'undefined' || token === '') {
+            localStorage.removeItem('accessToken');
+            return false;
+        }
+        return true;
+    }
+    return false;
 }
 
 /**

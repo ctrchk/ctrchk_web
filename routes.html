@@ -1631,6 +1631,7 @@ window.leaveWaitingRoom = function() {
         sessionStorage.removeItem('activeRoomRoute');
         sessionStorage.removeItem('activeRoomId');
         sessionStorage.removeItem('isHost');
+        sessionStorage.setItem('wrDismissed', '1');
     }
 };
 
@@ -1684,6 +1685,7 @@ function showWaitingRoom(code, routeName) {
     sessionStorage.setItem('activeRoomRoute', routeName);
     sessionStorage.setItem('isHost', isHost ? '1' : '0');
     sessionStorage.setItem('activeRoomId', lobbyRoomId);
+    sessionStorage.removeItem('wrDismissed');
 
     document.getElementById('app-multiplayer-lobby').style.display = 'none';
     document.getElementById('app-waiting-room').style.display = 'flex';
@@ -1698,6 +1700,16 @@ function showWaitingRoom(code, routeName) {
     startLobbyPolling();
 }
 
+function leaveWaitingRoomSilently() {
+    if (lobbyInterval) clearInterval(lobbyInterval);
+    document.getElementById('app-waiting-room').style.display = 'none';
+    lobbyRoomId = null;
+    sessionStorage.removeItem('activeRoomCode');
+    sessionStorage.removeItem('activeRoomRoute');
+    sessionStorage.removeItem('activeRoomId');
+    sessionStorage.removeItem('isHost');
+}
+
 function startLobbyPolling() {
     if (lobbyInterval) clearInterval(lobbyInterval);
     lobbyInterval = setInterval(async () => {
@@ -1705,8 +1717,12 @@ function startLobbyPolling() {
         if (!lobbyRoomId) return;
         try {
             const res = await fetch(`/api/user?action=room-status&roomId=${lobbyRoomId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${token.replace(/^["']+|["']$/g, '').trim()}` }
             });
+            if (res.status === 404) {
+                leaveWaitingRoomSilently();
+                return;
+            }
             const data = await res.json();
             if (data.status === 'started') {
                 clearInterval(lobbyInterval);
@@ -2085,7 +2101,9 @@ async function initAppRidePage() {
     const savedRoute = sessionStorage.getItem('activeRoomRoute');
     const savedIsHost = sessionStorage.getItem('isHost') === '1';
     const savedRoomId = sessionStorage.getItem('activeRoomId');
-    if (savedCode && savedRoomId) {
+    const isDismissed = sessionStorage.getItem('wrDismissed') === '1';
+
+    if (savedCode && savedRoomId && !isDismissed) {
         isHost = savedIsHost;
         lobbyRoomId = savedRoomId;
         showWaitingRoom(savedCode, savedRoute);

@@ -502,6 +502,13 @@
     function beginRide() {
         if (rideStarted) return;
         rideStarted = true; goToStartPhase = false; startTime = Date.now();
+
+        // Clear multiplayer room state upon starting
+        sessionStorage.removeItem('activeRoomCode');
+        sessionStorage.removeItem('activeRoomRoute');
+        sessionStorage.removeItem('activeRoomId');
+        sessionStorage.removeItem('isHost');
+
         requestWakeLock();
         document.getElementById('go-to-start-banner').style.display = 'none';
         document.getElementById('hud-top').classList.toggle('hidden', isFreeMode);
