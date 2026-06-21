@@ -193,11 +193,26 @@
             let polyline;
             if (ride.gpx_track) {
                 try {
-                    const geojson = JSON.parse(ride.gpx_track);
-                    polyline = L.geoJSON(geojson, {
-                        style: { color: '#04D93C', weight: 4, opacity: 0.8 }
-                    }).addTo(map);
-                    map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+                    let coords = [];
+                    if (typeof ride.gpx_track === 'string' && ride.gpx_track.startsWith('[')) {
+                        coords = JSON.parse(ride.gpx_track);
+                    } else if (Array.isArray(ride.gpx_track)) {
+                        coords = ride.gpx_track;
+                    } else {
+                        const geojson = typeof ride.gpx_track === 'string' ? JSON.parse(ride.gpx_track) : ride.gpx_track;
+                        polyline = L.geoJSON(geojson, {
+                            style: { color: '#04D93C', weight: 4, opacity: 0.8 }
+                        }).addTo(map);
+                        map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+                        return;
+                    }
+
+                    if (coords.length > 0) {
+                        polyline = L.polyline(coords, { color: '#04D93C', weight: 4, opacity: 0.8 }).addTo(map);
+                        map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+                    } else {
+                        useFallbackMap(map);
+                    }
                 } catch (e) {
                     console.warn('GPX track parsing failed', e);
                     useFallbackMap(map);

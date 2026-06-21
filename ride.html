@@ -218,12 +218,21 @@
     /* ── Summary ── */
     #ride-summary {
       display: none; position: fixed; inset: 0; z-index: 600;
-      background: rgba(26,37,47,0.98); color: #fff;
+      background: rgba(18,31,20,0.98); color: #fff;
       flex-direction: column; align-items: center; justify-content: center;
       padding: 2em; text-align: center;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
     #ride-summary.show { display: flex; }
-    #summary-xp-badge { background: #BFE340; color: #1a252f; font-size: 24px; font-weight: 900; padding: 12px 32px; border-radius: 16px; margin: 20px 0; }
+    #summary-xp-badge { background: #BFE340; color: #1a252f; font-size: 24px; font-weight: 900; padding: 12px 32px; border-radius: 16px; margin: 12px 0; box-shadow: 0 4px 15px rgba(191,227,64,0.4); }
+    .summary-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 360px; margin-bottom: 24px; }
+    .summary-card { background: rgba(255,255,255,0.06); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
+    .summary-card-lbl { font-size: 11px; opacity: 0.6; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .summary-card-val { font-size: 22px; font-weight: 900; color: #fff; }
+    .summary-card-val span { font-size: 12px; font-weight: normal; margin-left: 2px; color: var(--app-accent); }
+    .summary-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; }
+    .btn-download-track { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
   </style>
 </head>
 <body class="is-pwa">
@@ -293,20 +302,35 @@
   </div>
 
   <div id="ride-summary">
-    <div style="font-size: 64px; margin-bottom: 16px;">🎉</div>
-    <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 8px;">騎行完成！</h2>
+    <div style="font-size: 48px; margin-bottom: 8px;">🚴✨</div>
+    <h2 style="font-size: 26px; font-weight: 900; margin-bottom: 4px;">成就達成！</h2>
+    <p id="summary-route-name" style="opacity: 0.7; font-size: 14px; margin-bottom: 12px;">--</p>
+
     <div id="summary-xp-badge">+0 XP</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin-bottom: 32px;">
-      <div style="background: rgba(255,255,255,0.06); padding: 16px; border-radius: 12px;">
-        <div style="font-size: 12px; opacity: 0.6; margin-bottom: 4px;">總時間</div>
-        <div id="s-time" style="font-size: 20px; font-weight: 800;">--</div>
+
+    <div class="summary-stats-row">
+      <div class="summary-card">
+        <div class="summary-card-lbl">時間</div>
+        <div class="summary-card-val" id="s-time">--</div>
       </div>
-      <div style="background: rgba(255,255,255,0.06); padding: 16px; border-radius: 12px;">
-        <div style="font-size: 12px; opacity: 0.6; margin-bottom: 4px;">總距離</div>
-        <div id="s-dist" style="font-size: 20px; font-weight: 800;">--</div>
+      <div class="summary-card">
+        <div class="summary-card-lbl">里程</div>
+        <div class="summary-card-val" id="s-dist">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-lbl">平均速度</div>
+        <div class="summary-card-val" id="s-speed">0.0<span>km/h</span></div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-lbl">獲得里程幣</div>
+        <div class="summary-card-val" id="s-coins">0<span>🪙</span></div>
       </div>
     </div>
-    <button id="btn-summary-done" style="background: var(--hud-green); color: #fff; border: none; padding: 18px 64px; border-radius: 16px; font-size: 18px; font-weight: 800; cursor: pointer;" onclick="window.location.href='/dashboard'">確認並返回</button>
+
+    <div class="summary-actions">
+      <button class="btn-download-track" onclick="downloadTrackMap()"><i class="fas fa-file-image"></i> 下載透明軌跡圖</button>
+      <button id="btn-summary-done" style="background: var(--hud-green); color: #fff; border: none; padding: 18px; border-radius: 14px; font-size: 18px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(46,204,113,0.3);" onclick="window.location.href='/dashboard'">確認並返回儀表板</button>
+    </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -336,9 +360,12 @@
     let lastLat = null, lastLon = null;
     let sessionXp = 0;
     let gpxCoords = [];
+    let trackingCoords = [];
+    let breadcrumbLine = null;
     let routeStops = [];
     let routeData = null;
     let friendMarkers = new Map();
+    let wakeLock = null;
 
     const STOP_DETECTION_RADIUS_M = 40;
     const OFF_ROUTE_THRESHOLD_M = 50;
@@ -361,11 +388,15 @@
     async function initMap(center) {
         if (map) return;
         map = L.map('ride-map', { zoomControl: false, attributionControl: false }).setView(center, 18);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
+        const isLight = document.body.classList.contains('app-light-theme');
+        const tiles = isLight ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
 
         if (routeData && gpxCoords.length > 0) {
             L.polyline(gpxCoords, { color: routeData.color || '#BFE340', weight: 6, opacity: 0.8 }).addTo(map);
         }
+
+        breadcrumbLine = L.polyline([], { color: '#BFE340', weight: 4, dashArray: '5, 10', opacity: 0.9 }).addTo(map);
     }
 
     function updateUserMarker(lat, lon, heading) {
@@ -397,7 +428,13 @@
         if (rideStarted) {
             if (lastLat !== null) {
                 const d = haversineM(lastLat, lastLon, lat, lon);
-                if (d >= 2 && d < 500 && accuracy <= 50) totalDistM += d;
+                if (d >= 2 && d < 500 && accuracy <= 50) {
+                    totalDistM += d;
+                    trackingCoords.push([lat, lon]);
+                    if (breadcrumbLine) breadcrumbLine.addLatLng([lat, lon]);
+                }
+            } else {
+                trackingCoords.push([lat, lon]);
             }
             if (gpxCoords.length > 1) {
                 const p = turf.point([lon, lat]);
@@ -453,9 +490,19 @@
         if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => { console.log('Wake Lock was released'); });
+            }
+        } catch (err) { console.warn(`${err.name}, ${err.message}`); }
+    }
+
     function beginRide() {
         if (rideStarted) return;
         rideStarted = true; goToStartPhase = false; startTime = Date.now();
+        requestWakeLock();
         document.getElementById('go-to-start-banner').style.display = 'none';
         document.getElementById('hud-top').classList.toggle('hidden', isFreeMode);
         document.getElementById('hud-bottom').classList.remove('hidden');
@@ -519,14 +566,80 @@
     async function endRide() {
         clearInterval(timerInterval); clearInterval(heartbeatInterval);
         if (watchId) navigator.geolocation.clearWatch(watchId);
-        const durationMins = Math.round((Date.now() - startTime) / 60000), distKm = parseFloat((totalDistM / 1000).toFixed(2));
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+
+        const durationMins = Math.max(1, Math.round((Date.now() - startTime) / 60000));
+        const distKm = parseFloat((totalDistM / 1000).toFixed(2));
+        const avgSpeed = parseFloat((distKm / (durationMins / 60)).toFixed(1));
+
         const token = localStorage.getItem('accessToken');
-        const res = await fetch('/api/getHistory', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ route_id: routeId, ride_date: new Date().toISOString().slice(0, 10), distance_km: distKm, duration_minutes: durationMins, stops_reached: [...reachedStops], all_stops: reachedStops.size === routeStops.length, xp_earned_override: sessionXp }) });
+        const res = await fetch('/api/getHistory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+                route_id: routeId,
+                ride_date: new Date().toISOString().slice(0, 10),
+                distance_km: distKm,
+                duration_minutes: durationMins,
+                avg_speed_kmh: avgSpeed,
+                stops_reached: [...reachedStops],
+                all_stops: reachedStops.size === routeStops.length,
+                xp_earned_override: sessionXp,
+                gpx_track: trackingCoords,
+                ride_mode: isFreeMode ? 'free' : 'route'
+            })
+        });
+
         const result = await res.json();
-        document.getElementById('s-time').textContent = durationMins + 'm'; document.getElementById('s-dist').textContent = distKm + 'km';
+
+        // Update Settlement UI
+        document.getElementById('summary-route-name').textContent = isFreeMode ? '自由模式' : (routeData?.alias || routeId);
+        document.getElementById('s-time').textContent = durationMins + 'm';
+        document.getElementById('s-dist').textContent = distKm + 'km';
+        document.getElementById('s-speed').innerHTML = avgSpeed + '<span>km/h</span>';
+        document.getElementById('s-coins').innerHTML = (result.coins_earned || 0) + '<span>🪙</span>';
         document.getElementById('summary-xp-badge').textContent = `+${result.xp_earned || 0} XP`;
         document.getElementById('ride-summary').classList.add('show');
+
+        // Confetti effect
+        if (typeof confetti === 'function') {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#BFE340', '#2ecc71', '#ffffff'] });
+        }
     }
+
+    window.downloadTrackMap = () => {
+        if (!trackingCoords.length) { alert('無軌跡數據可供下載'); return; }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080; canvas.height = 1080;
+        const ctx = canvas.getContext('2d');
+
+        // Find bounds
+        let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+        trackingCoords.forEach(([lat, lon]) => {
+            minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+            minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+        });
+
+        const pad = 0.1;
+        const dLat = maxLat - minLat, dLon = maxLon - minLon;
+        const centerLat = (maxLat + minLat) / 2, centerLon = (maxLon + minLon) / 2;
+        const zoom = 0.8 / Math.max(dLat, dLon || 0.001);
+
+        ctx.strokeStyle = '#BFE340'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        trackingCoords.forEach(([lat, lon], i) => {
+            const x = 540 + (lon - centerLon) * zoom * 1000;
+            const y = 540 - (lat - centerLat) * zoom * 1000;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        const link = document.createElement('a');
+        link.download = `ctrc-track-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    };
 
     window.confirmLeave = () => { if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) location.href = '/dashboard'; };
     document.getElementById('btn-pause-ride').onclick = async () => {
