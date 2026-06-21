@@ -588,30 +588,6 @@ export default async function handler(req, res) {
         }
     }
 
-    if (req.query.action === 'room-status') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            const { roomId } = req.query;
-            const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
-            const { rows: memberRows } = await query(
-                `SELECT u.username, m.is_ready
-                 FROM room_members m
-                 JOIN users u ON m.user_id = u.id
-                 WHERE m.room_id = $1`,
-                [roomId]
-            );
-            return res.status(200).json({
-                status: roomRows[0]?.status,
-                routeId: roomRows[0]?.route_id,
-                dirIndex: roomRows[0]?.dir_index,
-                members: memberRows
-            });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
-
     if (req.body.action === 'add_friend') {
       try {
         const { user_id, friend_id } = req.body;

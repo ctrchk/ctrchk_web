@@ -21,8 +21,8 @@
   <link rel="apple-touch-icon" href="/images/icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>騎行中 - 城市運輸單車</title>
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
@@ -562,7 +562,7 @@
 
   <div id="ride-loading">
     <div class="spinner"></div>
-    <p>正在載入 3D 引擎...</p>
+    <p>正在載入引擎...</p>
     <button id="btn-skip-loading" style="margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; cursor: pointer;">跳過載入</button>
   </div>
 
@@ -766,14 +766,11 @@
   <script src="/js/pwa.js"></script>
   <script>
   /**
-   * CTRCHK 3D Ride Engine v3.0
-   * Integrated Mapbox 3D, Industrial HUD, Friend Sharing & Off-Route Warnings
+   * CTRCHK Ride Engine v4.0 (Leaflet)
+   * High-performance 2D experience, Industrial HUD, Friend Sharing & Off-Route Warnings
    */
   (function () {
     'use strict';
-
-    // Default token fallback
-    mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
 
     // ── Level config ─────────────────────────────
     const LEVEL_XP = [
@@ -848,10 +845,8 @@
 
     // Map Engine State
     let isFollowing = true;
-    let headingUp = true;
-    let isLaneLevel = false;
-    let navZoom = 18.5;
     let friendMarkers = new Map();
+    let routePolyline = null;
 
     // ── Helpers ───────────────────────────────────────────────────────────
     function haversineM(lat1, lon1, lat2, lon2) {
@@ -1049,43 +1044,26 @@
       document.getElementById('ride-loading').classList.add('hidden');
     }
 
-    // ── Map Engine ────────────────────────────────────────────────────────
+    // ── Map Engine (Leaflet) ────────────────────────────────────────────────
     function initMap(lat, lon) {
       if (map) return;
       const isLight = document.body.classList.contains('app-light-theme');
-      map = new mapboxgl.Map({
-        container: 'ride-map',
-        style: isLight ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11',
-        center: [lon, lat],
-        zoom: 14,
-        pitch: 0,
-        antialias: true,
+      map = L.map('ride-map', {
+        zoomControl: false,
         attributionControl: false
-      });
+      }).setView([lat, lon], 15);
 
-      map.on('load', () => {
-        add3DBuildings();
-        if (routeData) {
-            drawRoute(gpxCoords, routeData.color || '#BFE340');
-            plotStopsOnMap(routeStops);
-        }
-        document.getElementById('ride-loading').classList.add('hidden');
-      });
-    }
+      const tileUrl = isLight
+        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
-    function add3DBuildings() {
-      const layers = map.getStyle().layers;
-      const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field']).id;
-      map.addLayer({
-        'id': '3d-buildings', 'source': 'composite', 'source-layer': 'building',
-        'filter': ['==', 'extrude', 'true'], 'type': 'fill-extrusion', 'minzoom': 15,
-        'paint': {
-          'fill-extrusion-color': '#aaa',
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
-          'fill-extrusion-opacity': 0.6
-        }
-      }, labelLayerId);
+      L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
+
+      if (routeData) {
+        drawRoute(gpxCoords, routeData.color || '#BFE340');
+        plotStopsOnMap(routeStops);
+      }
+      document.getElementById('ride-loading').classList.add('hidden');
     }
 
     async function loadGpxData(file) {
@@ -1094,6 +1072,7 @@
         if (!res.ok) return [];
         const xml = await res.text();
         const doc = new DOMParser().parseFromString(xml, 'application/xml');
+        // Leaflet uses [lat, lon] internally, but Turf uses [lon, lat]
         return [...doc.querySelectorAll('trkpt')].map(p => [
           parseFloat(p.getAttribute('lon')), parseFloat(p.getAttribute('lat'))
         ]).filter(([a, b]) => !isNaN(a) && !isNaN(b));
@@ -1102,37 +1081,33 @@
 
     function drawRoute(coords, color) {
       if (!map || !coords.length) return;
-      if (map.getSource('route')) {
-        map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
-      } else {
-        map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } } });
-        map.addLayer({
-          id: 'route-line-asphalt', type: 'line', source: 'route',
-          paint: { 'line-color': '#1a1a1a', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 24], 'line-opacity': 0.9, 'line-cap': 'round' }
-        });
-        map.addLayer({
-          id: 'route-line-green', type: 'line', source: 'route',
-          paint: { 'line-color': color, 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 14], 'line-opacity': 0.8, 'line-cap': 'round' }
-        });
-        map.addLayer({
-          id: 'route-symbols', type: 'symbol', source: 'route', minzoom: 14,
-          layout: { 'symbol-placement': 'line', 'symbol-spacing': 50, 'text-field': '🚲', 'text-size': ['interpolate', ['linear'], ['zoom'], 14, 12, 18, 32], 'text-pitch-alignment': 'map', 'text-rotation-alignment': 'map', 'text-keep-upright': true },
-          paint: { 'text-color': '#ffffff', 'text-opacity': 0.8, 'text-halo-color': 'rgba(0,0,0,0.5)', 'text-halo-width': 1 }
-        });
-      }
-      const bounds = coords.reduce((acc, c) => acc.extend(c), new mapboxgl.LngLatBounds(coords[0], coords[0]));
-      map.fitBounds(bounds, { padding: 80 });
+      if (routePolyline) map.removeLayer(routePolyline);
+
+      // Turf coordinates are [lon, lat], Leaflet needs [lat, lon]
+      const leafletCoords = coords.map(c => [c[1], c[0]]);
+
+      // Asphalt base
+      L.polyline(leafletCoords, {
+        color: '#1a1a1a', weight: 12, opacity: 0.9, lineCap: 'round'
+      }).addTo(map);
+
+      // Green surface
+      routePolyline = L.polyline(leafletCoords, {
+        color: color, weight: 8, opacity: 0.8, lineCap: 'round'
+      }).addTo(map);
+
+      map.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
     }
 
     function plotStopsOnMap(stops) {
       stops.forEach(s => {
-        const el = document.createElement('div');
-        el.className = 'stop-marker';
-        el.style.cssText = `background:#2c3e50;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;box-shadow:0 1px 3px rgba(0,0,0,0.4);`;
-        el.textContent = s.order;
-        new mapboxgl.Marker({ element: el }).setLngLat([s.lon, s.lat])
-          .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<b>${s.code || ''} ${s.name}</b>`))
-          .addTo(map);
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="background:#2c3e50;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${s.order}</div>`,
+          iconSize: [24, 24], iconAnchor: [12, 12]
+        });
+        L.marker([s.lat, s.lon], { icon }).addTo(map)
+          .bindPopup(`<b>${s.code || ''} ${s.name}</b>`);
       });
     }
 
@@ -1291,7 +1266,7 @@
       if (!map) return;
       const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
       const speedKmh = speed != null ? (speed * 3.6) : 0;
-      const coords = [lon, lat];
+      const coords = [lon, lat]; // Turf format
 
       // Update HUD Status
       const gpsStatus = document.getElementById('gps-status-text');
@@ -1330,15 +1305,7 @@
 
       // Camera Follow
       if (isFollowing) {
-          const finalHeading = (heading === null || speedKmh < 3) ? getStableHeading(activeCoords) : heading;
-          map.easeTo({
-            center: activeCoords,
-            bearing: headingUp ? (finalHeading || 0) : 0,
-            pitch: rideStarted ? 75 : 0,
-            zoom: rideStarted ? (isLaneLevel ? navZoom + 1 : navZoom) : 15,
-            duration: 800,
-            easing: t => t * (2 - t)
-          });
+          map.setView([activeCoords[1], activeCoords[0]], map.getZoom());
       }
 
       // ── Go-to-start phase ─────────────────────────────────────────────
@@ -1383,26 +1350,22 @@
     }
 
     function updateUserMarker(coords, heading) {
+        // coords is [lon, lat]
+        const latlng = [coords[1], coords[0]];
         if (!userMarker) {
-            const el = document.createElement('div');
-            el.className = 'user-nav-arrow';
-            el.style.cssText = `width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 25px solid #6dba65; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));`;
-            userMarker = new mapboxgl.Marker({ element: el }).setLngLat(coords).addTo(map);
+            const icon = L.divIcon({
+                className: '',
+                html: `<div class="user-nav-arrow" style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 25px solid #6dba65; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); transition: transform 0.2s;"></div>`,
+                iconSize: [20, 25], iconAnchor: [10, 12]
+            });
+            userMarker = L.marker(latlng, { icon }).addTo(map);
         } else {
-            userMarker.setLngLat(coords);
-            userMarker.getElement().style.transform = `rotate(${heading || 0}deg)`;
+            userMarker.setLatLng(latlng);
+            const el = userMarker.getElement().querySelector('.user-nav-arrow');
+            if (el) el.style.transform = `rotate(${heading || 0}deg)`;
         }
     }
 
-    function getStableHeading(pos) {
-        if (!gpxCoords.length) return 0;
-        const line = turf.lineString(gpxCoords);
-        const pt = turf.point(pos);
-        const snapped = turf.nearestPointOnLine(line, pt);
-        const location = snapped.properties.location;
-        const ahead = turf.along(line, location + 0.005, { units: 'kilometers' });
-        return turf.bearing(pt, ahead);
-    }
 
     function updateRideHUD(pos, speed) {
         if (!routeStops.length) return;
@@ -1484,7 +1447,7 @@
         const activeIds = new Set(friends.map(f => f.user_id));
         for (const [id, marker] of friendMarkers.entries()) {
             if (!activeIds.has(id)) {
-                marker.remove();
+                map.removeLayer(marker);
                 friendMarkers.delete(id);
             }
         }
@@ -1496,19 +1459,17 @@
 
             let marker = friendMarkers.get(f.user_id);
             if (!marker) {
-                const el = document.createElement('div');
-                el.className = 'friend-marker';
-                el.style.cssText = `background:#3498db; width:36px; height:36px; border-radius:50%; border:3px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4); cursor:pointer; transition: transform 0.3s;`;
-                el.textContent = f.username ? f.username.substring(0, 1).toUpperCase() : '?';
-
-                marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-                    .setLngLat([parseFloat(f.lng), parseFloat(f.lat)])
-                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<div style="color:#000; font-weight:bold; padding:4px;">\${f.username || '朋友'}</div>`))
-                    .addTo(map);
+                const icon = L.divIcon({
+                    className: '',
+                    html: `<div class="friend-marker" style="background:#3498db; width:36px; height:36px; border-radius:50%; border:3px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4); cursor:pointer; transition: transform 0.3s;">${f.username ? f.username.substring(0, 1).toUpperCase() : '?'}</div>`,
+                    iconSize: [36, 36], iconAnchor: [18, 18]
+                });
+                marker = L.marker([parseFloat(f.lat), parseFloat(f.lng)], { icon }).addTo(map)
+                    .bindPopup(`<div style="color:#000; font-weight:bold; padding:4px;">${f.username || '朋友'}</div>`);
 
                 friendMarkers.set(f.user_id, marker);
             } else {
-                marker.setLngLat([parseFloat(f.lng), parseFloat(f.lat)]);
+                marker.setLatLng([parseFloat(f.lat), parseFloat(f.lng)]);
             }
         });
     }
@@ -2241,17 +2202,6 @@
       beginRide({ isResuming: true });
     }
 
-    async function fetchConfig() {
-        try {
-            const res = await fetch('/api/user?action=config');
-            if (res.ok) {
-                const data = await res.json();
-                if (data.mapboxToken) {
-                    mapboxgl.accessToken = data.mapboxToken;
-                }
-            }
-        } catch (e) {}
-    }
 
     // ── Main init ─────────────────────────────────────────────────────────
     async function init() {
@@ -2264,9 +2214,7 @@
 
       const mode = params.get('mode');
       // Parallel fetch for speed
-      const configPromise = fetchConfig();
       const catalogPromise = loadRouteCatalog();
-      await configPromise;
       await catalogPromise;
 
       window.handleEndRide = async () => {
@@ -2381,6 +2329,12 @@
       }
     });
     history.pushState(null, '', location.href);
+
+    window.addEventListener('pwa-page-show', () => {
+      if (map) {
+        setTimeout(() => map.invalidateSize(), 150);
+      }
+    });
   })();
   </script>
 </body>
