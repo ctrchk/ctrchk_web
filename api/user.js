@@ -126,19 +126,32 @@ function parseSafeJsonArray(value) {
   }
 }
 
-async function authenticate(req, res) {
+async function authenticate(req, res, required = true) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ message: 'Authorization header missing or invalid' });
+    if (required) {
+      res.status(401).json({ message: 'Authorization header missing or invalid' });
+    }
     return null;
   }
-  const token = authHeader.split(' ')[1];
+  let token = authHeader.split(' ')[1];
+  if (!token || token === 'null' || token === 'undefined') {
+    if (required) {
+      res.status(401).json({ message: 'Token missing or invalid' });
+    }
+    return null;
+  }
+  // Remove possible quotes from client-side localStorage.getItem mishap
+  token = token.replace(/^["'](.+(?=["']$))["']$/, '$1');
+
   const JWT_SECRET = process.env.JWT_SECRET;
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     return decoded;
   } catch (err) {
-    res.status(401).json({ message: 'Invalid or expired token' });
+    if (required) {
+      res.status(401).json({ message: 'Invalid or expired token' });
+    }
     return null;
   }
 }
@@ -344,12 +357,15 @@ export default async function handler(req, res) {
       }
     }
     if (req.query.action === 'friends') {
-      const userData = await authenticate(req, res);
-      if (!userData && !req.query.user_id) return;
+      // Allow if token is valid OR if user_id is provided (public view)
+      const userData = await authenticate(req, res, false);
+      if (!userData && !req.query.user_id) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
       try {
         await ensureRideTables();
         const user_id = parseInt(req.query.user_id || (userData ? userData.userId : null), 10);
-        if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
+        if (!user_id) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
           `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.status,
@@ -368,11 +384,13 @@ export default async function handler(req, res) {
     }
 
     if (req.query.action === 'friend_requests') {
-      const userData = await authenticate(req, res);
-      if (!userData && !req.query.user_id) return;
+      const userData = await authenticate(req, res, false);
+      if (!userData && !req.query.user_id) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
       try {
         const user_id = parseInt(req.query.user_id || (userData ? userData.userId : null), 10);
-        if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
+        if (!user_id) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
           `SELECT u.id, u.username, u.full_name, u.avatar_url, uf.id as request_id,

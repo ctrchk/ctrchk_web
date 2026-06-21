@@ -104,7 +104,13 @@ async function authenticate(req, res) {
     res.status(401).json({ message: 'Authorization header missing or invalid' });
     return null;
   }
-  const token = authHeader.split(' ')[1];
+  let token = authHeader.split(' ')[1];
+  if (!token || token === 'null' || token === 'undefined') {
+    res.status(401).json({ message: 'Token missing or invalid' });
+    return null;
+  }
+  token = token.replace(/^["'](.+(?=["']$))["']$/, '$1');
+
   const JWT_SECRET = process.env.JWT_SECRET;
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
@@ -711,10 +717,13 @@ export default async function handler(req, res) {
         });
       }
 
-      // 騎行過濾：過短騎行 (少於 0.5km 且少於 3 分鐘) 不予計算獎勵，但保留記錄
+      // 騎行過濾：過短騎行 (少於 0.2km) 不予紀錄
       const distKmVal = parseFloat(distance_km) || 0;
       const durationMinsVal = parseInt(duration_minutes, 10) || 0;
-      const isValidRide = distKmVal >= 0.5 || durationMinsVal >= 3;
+      if (distKmVal < 0.2) {
+        return res.status(200).json({ success: true, voided: true, message: '行程過短 (少於 0.2km)，不予紀錄' });
+      }
+      const isValidRide = distKmVal >= 1.0 || durationMinsVal >= 3;
 
       // 0. 計算已省車資 (Saved Fare)
       let savedFare = 0;
@@ -748,10 +757,9 @@ export default async function handler(req, res) {
       let maxXpForRoute = Infinity;
       const normalizedRideMode = normalizeRideMode(ride_mode);
 
-      if (!isValidRide) {
-          xpReward = 0;
-      } else if (normalizedRideMode === 'free') {
+      if (normalizedRideMode === 'free') {
           // Free Mode: Reward based strictly on distance (20 XP per km)
+          // Award XP proportionally for any distance >= 0.2km
           xpReward = Math.round(distKmVal * 20);
       } else {
           // Route Mode: Reward based strictly on stops
@@ -853,14 +861,18 @@ export default async function handler(req, res) {
           ? Math.min(bonus_coins, MAX_BONUS_COINS_PER_RIDE)  // cap to prevent abuse
           : 0;
 
-        // New mileage coin reward: round(km * 0.8)
+        // New mileage coin reward:
+        // Free Mode: 10km = 5 Coins (0.5 coins per km)
+        // Only award coins if dist >= 1km
         let mileageReward = 0;
-        if (!isValidRide) {
+        if (distKmVal < 1.0) {
             mileageReward = 0;
+        } else if (normalizedRideMode === 'free') {
+            mileageReward = distKmVal * 0.5;
         } else if (typeof miles_reward_override === 'number') {
-            mileageReward = Math.round(miles_reward_override);
+            mileageReward = miles_reward_override;
         } else {
-            mileageReward = Math.round(distKmVal * 0.8);
+            mileageReward = distKmVal * 0.8;
         }
 
         if (bonusCoinsEarned > 0 && isValidRide) {

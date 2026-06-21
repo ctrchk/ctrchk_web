@@ -536,6 +536,10 @@
       </div>
     </div>
 
+    <button id="btn-download-track-nav" style="width: 100%; max-width: 400px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px;">
+        <i class="fas fa-file-image"></i> 下載透明軌跡圖
+    </button>
+
     <div style="width: 100%; max-width: 400px; margin-bottom: 32px;">
       <div style="display: flex; justify-content: space-between; font-size: 14px; opacity: 0.8; margin-bottom: 8px;">
         <span id="sum-xp-level">Lv.1</span>
@@ -616,6 +620,7 @@
       headingUp: true,
       isLaneLevel: false,
       navZoom: 18.5,
+      wakeLock: null,
 
       currentLocation: null,
       startLocation: null,
@@ -1099,7 +1104,35 @@
         container.classList.add('show');
       },
 
+      downloadTrackMap() {
+        if (!this.trackingCoords.length) { alert('無軌跡數據可供下載'); return; }
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080; canvas.height = 1080;
+        const ctx = canvas.getContext('2d');
+        let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+        this.trackingCoords.forEach(([lon, lat]) => { // Note: NavEngine stores trackingCoords as [lon, lat] from turf/mapbox
+            minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+            minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+        });
+        const dLat = maxLat - minLat, dLon = maxLon - minLon;
+        const centerLat = (maxLat + minLat) / 2, centerLon = (maxLon + minLon) / 2;
+        const zoom = 0.8 / Math.max(dLat, dLon || 0.001);
+        ctx.strokeStyle = '#BFE340'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        this.trackingCoords.forEach(([lon, lat], i) => {
+            const x = 540 + (lon - centerLon) * zoom * 1000;
+            const y = 540 - (lat - centerLat) * zoom * 1000;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        const link = document.createElement('a');
+        link.download = `ctrc-nav-track-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      },
+
       setupUI() {
+        document.getElementById('btn-download-track-nav').onclick = () => this.downloadTrackMap();
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const rank = (user.permission_rank || user.mileage_rank || 'bronze').toLowerCase();
 
@@ -1800,9 +1833,19 @@
 
       // --- Hooks & Logic ---
 
+      async requestWakeLock() {
+        try {
+          if ('wakeLock' in navigator) {
+            this.wakeLock = await navigator.wakeLock.request('screen');
+            console.log('[Nav] Wake Lock active');
+          }
+        } catch (err) { console.warn('[Nav] Wake Lock failed', err); }
+      },
+
       startNavigation(options = {}) {
         console.log('[Nav] Starting navigation');
         this.isNavigating = true;
+        this.requestWakeLock();
         if (!options.isResuming) {
           this.navStartTime = Date.now();
           this.trackingCoords = [];
@@ -1969,8 +2012,12 @@
         this.resetNavigationState();
       },
 
-      resetNavigationState() {
+      async resetNavigationState() {
         if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        if (this.wakeLock) {
+          await this.wakeLock.release();
+          this.wakeLock = null;
+        }
         this.isNavigating = false;
         this.isLaneLevel = false;
         document.body.classList.remove('is-navigating');

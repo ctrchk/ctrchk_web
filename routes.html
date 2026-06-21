@@ -371,8 +371,13 @@
 }
 .app-filter-chip.active {
     background: var(--app-accent, #6dba65);
-    color: #121f14;
+    color: #121f14 !important;
     border-color: var(--app-accent, #6dba65);
+}
+body.app-light-theme .app-filter-chip.active {
+    background: var(--app-accent, #2e7d32) !important;
+    color: #ffffff !important;
+    border-color: var(--app-accent, #2e7d32) !important;
 }
 .app-filter-chip.random-btn {
     background: #2d4a3a;

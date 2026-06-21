@@ -832,6 +832,18 @@ body.is-pwa #app-ride-page { display: flex !important; }
 }
 
 /* Light theme — applied when body has .app-light-theme class */
+body.app-light-theme {
+    color: #1b3a1f !important;
+}
+body.app-light-theme div:not(.nav-instruction):not(.nav-dist-val):not(.nav-next-road):not(.stat-value):not(.stat-label),
+body.app-light-theme p,
+body.app-light-theme span:not(.nav-dist-unit):not(.stat-value span),
+body.app-light-theme h1,
+body.app-light-theme h2,
+body.app-light-theme h3,
+body.app-light-theme label {
+    color: #1b3a1f !important;
+}
 body.app-light-theme .filter-button {
     background-color: var(--app-bg-card, #ffffff);
     color: var(--app-text-primary, #1b3a1f);
@@ -845,10 +857,15 @@ body.app-light-theme .filter-button.active {
 }
 /* Light mode: buttons must contrast against light background */
 body.app-light-theme .cta-button,
-body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item) {
-    background-color: var(--app-accent, #2e7d32);
+body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item),
+body.app-light-theme .app-start-ride-btn {
+    background-color: var(--app-accent, #2e7d32) !important;
     color: #ffffff !important;
-    border-color: var(--app-accent, #2e7d32);
+    border-color: var(--app-accent, #2e7d32) !important;
+}
+body.app-light-theme .cta-button *,
+body.app-light-theme button:not(.lang-switcher-btn) * {
+    color: #ffffff !important;
 }
 body.app-light-theme .cta-button:hover,
 body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
