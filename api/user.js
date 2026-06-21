@@ -50,28 +50,6 @@ async function ensureRideTables() {
           PRIMARY KEY (user_id, ride_type)
         );
       `);
-      await query(`
-        CREATE TABLE IF NOT EXISTS ride_rooms (
-          id SERIAL PRIMARY KEY,
-          room_code VARCHAR(10) UNIQUE,
-          host_id INTEGER REFERENCES users(id),
-          route_id VARCHAR(50),
-          dir_index INTEGER DEFAULT 0,
-          status VARCHAR(20) DEFAULT 'waiting',
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW()
-        );
-      `);
-      await query(`
-        CREATE TABLE IF NOT EXISTS room_members (
-          id SERIAL PRIMARY KEY,
-          room_id INTEGER REFERENCES ride_rooms(id) ON DELETE CASCADE,
-          user_id INTEGER REFERENCES users(id),
-          is_ready BOOLEAN DEFAULT FALSE,
-          joined_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(room_id, user_id)
-        );
-      `);
       await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS xp_multiplier NUMERIC DEFAULT 1.0;`);
       await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS multiplier_expiry TIMESTAMP;`);
       await query(`
@@ -105,16 +83,6 @@ async function ensureRideTables() {
           coin_reward INTEGER,
           badge_id INTEGER REFERENCES badges(id),
           is_active BOOLEAN DEFAULT TRUE
-        );
-      `);
-      await query(`
-        CREATE TABLE IF NOT EXISTS ride_invitations (
-          id SERIAL PRIMARY KEY,
-          from_user_id INTEGER REFERENCES users(id),
-          to_user_id INTEGER REFERENCES users(id),
-          room_code VARCHAR(10),
-          status VARCHAR(20) DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT NOW()
         );
       `);
     })().catch(err => {
@@ -385,50 +353,6 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    if (req.query.action === 'pending-invites') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            const { rows } = await query(
-                `SELECT ri.id, u.username as from_user, ri.room_code, ri.created_at
-                 FROM ride_invitations ri
-                 JOIN users u ON ri.from_user_id = u.id
-                 WHERE ri.to_user_id = $1 AND ri.status = 'pending'
-                   AND ri.created_at >= NOW() - INTERVAL '10 minutes'
-                 ORDER BY ri.created_at DESC`,
-                [userData.userId]
-            );
-            return res.status(200).json(rows);
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
-    if (req.query.action === 'room-status') {
-      const userData = await authenticate(req, res);
-      if (!userData) return;
-      try {
-        await ensureRideTables();
-        const { roomId } = req.query;
-        if (!roomId) return res.status(400).json({ message: 'roomId required' });
-        const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
-        if (roomRows.length === 0) return res.status(404).json({ message: 'Room not found' });
-        const { rows: memberRows } = await query(
-          `SELECT u.username, m.is_ready
-                 FROM room_members m
-                 JOIN users u ON m.user_id = u.id
-                 WHERE m.room_id = $1`,
-          [roomId]
-        );
-        return res.status(200).json({
-          status: roomRows[0]?.status,
-          routeId: roomRows[0]?.route_id,
-          dirIndex: roomRows[0]?.dir_index,
-          members: memberRows
-        });
-      } catch (e) {
-        return res.status(500).json({ message: e.message });
-      }
-    }
     if (req.query.action === 'friends') {
       // Allow if token is valid OR if user_id is provided (public view)
       const userData = await authenticate(req, res, false);
@@ -704,104 +628,6 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    if (req.body.action === 'create-room') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            await ensureRideTables();
-            const { routeId, dirIndex } = req.body;
-            const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const { rows } = await query(
-                `INSERT INTO ride_rooms (room_code, host_id, route_id, dir_index)
-                 VALUES ($1, $2, $3, $4) RETURNING id`,
-                [roomCode, userData.userId, routeId, dirIndex]
-            );
-            const roomId = rows[0].id;
-            await query(
-                `INSERT INTO room_members (room_id, user_id, is_ready) VALUES ($1, $2, TRUE)`,
-                [roomId, userData.userId]
-            );
-            return res.status(200).json({ success: true, roomCode, roomId });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
-
-    if (req.body.action === 'invite-friend') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            const { friendId, roomCode } = req.body;
-            await query(
-                `INSERT INTO ride_invitations (from_user_id, to_user_id, room_code)
-                 VALUES ($1, $2, $3)`,
-                [userData.userId, friendId, roomCode]
-            );
-            return res.status(200).json({ success: true });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
-
-    if (req.body.action === 'join-room') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            await ensureRideTables();
-            const { roomCode } = req.body;
-            const { rows } = await query(
-                `SELECT id, status, route_id, dir_index FROM ride_rooms WHERE room_code = $1 AND status = 'waiting'`,
-                [roomCode]
-            );
-            if (rows.length === 0) return res.status(404).json({ message: '找不到房間或房間已開始' });
-
-            const room = rows[0];
-            await query(
-                `INSERT INTO room_members (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-                [room.id, userData.userId]
-            );
-            return res.status(200).json({ success: true, roomId: room.id, routeId: room.route_id, dirIndex: room.dir_index });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
-
-    if (req.body.action === 'start-room-ride') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            const { roomId } = req.body;
-            const { rows: roomRows } = await query(`SELECT host_id FROM ride_rooms WHERE id = $1`, [roomId]);
-            if (roomRows[0]?.host_id !== userData.userId) return res.status(403).json({ message: '只有房主可以開始騎行' });
-
-            // Check if all other members are ready
-            const { rows: members } = await query(`SELECT user_id, is_ready FROM room_members WHERE room_id = $1 AND user_id != $2`, [roomId, userData.userId]);
-            if (members.some(m => !m.is_ready)) {
-                return res.status(400).json({ message: '還有成員未準備就緒' });
-            }
-
-            await query(`UPDATE ride_rooms SET status = 'started' WHERE id = $1`, [roomId]);
-            return res.status(200).json({ success: true });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
-
-    if (req.body.action === 'toggle-ready') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            const { roomId } = req.body;
-            await query(
-                `UPDATE room_members SET is_ready = NOT is_ready
-                 WHERE room_id = $1 AND user_id = $2`,
-                [roomId, userData.userId]
-            );
-            return res.status(200).json({ success: true });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
-    }
 
     if (req.body.action === 'add_friend') {
       try {
