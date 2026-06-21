@@ -960,50 +960,51 @@ export default async function handler(req, res) {
           ]
         );
 
-        // --- 全港挑戰部 (HK Challenge) Rewards Logic (Redesigned) ---
-        // 30km: 4000 XP, 250 Coins
-        // 60km: 10000 XP, 1000 Coins
-        // 100km: 25000 XP, 5000 Coins, x1.5 Multiplier (1 Year)
+        // --- 全港挑戰部 (HK Challenge) Dynamic Rewards Logic ---
+        try {
+            const { rows: challenges } = await query(
+                `SELECT * FROM hk_challenges WHERE route_id = $1 OR $1 LIKE route_id || '%'`,
+                [route_id]
+            );
 
-        const challenges = [
-            { id: 'hk_30k', dist: 30, xp: 4000, coins: 250 },
-            { id: 'hk_60k', dist: 60, xp: 10000, coins: 1000 },
-            { id: 'hk_100k', dist: 100, xp: 25000, coins: 5000, multiplier: 1.5 }
-        ];
+            for (const challenge of challenges) {
+                // Check if user already earned this challenge's badge
+                if (challenge.badge_id) {
+                    const { rows: existing } = await query(
+                        'SELECT id FROM user_badges WHERE user_id = $1 AND badge_id = $2',
+                        [userData.userId, challenge.badge_id]
+                    );
+                    if (existing.length > 0) continue; // Already completed
+                }
 
-        for (const challenge of challenges) {
-            if (distKmVal >= challenge.dist) {
-                // Check if already completed
-                const { rows: existing } = await query(
-                    'SELECT id FROM user_badges WHERE user_id = $1 AND badge_id = (SELECT id FROM badges WHERE tier = $2 LIMIT 1)',
-                    [userData.userId, challenge.id]
+                // Apply rewards
+                if (challenge.badge_id) {
+                    await query('INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userData.userId, challenge.badge_id]);
+                }
+
+                const multiplier = parseFloat(challenge.multiplier || 1.0);
+                const durationDays = parseInt(challenge.multiplier_duration_days || 0);
+
+                await query(
+                    `UPDATE user_game_profile SET
+                       xp = xp + $1,
+                       coins = coins + $2,
+                       xp_multiplier = CASE WHEN $3 > 1.0 THEN $3 ELSE xp_multiplier END,
+                       multiplier_expiry = CASE WHEN $3 > 1.0 THEN NOW() + ($4 || ' days')::interval ELSE multiplier_expiry END,
+                       updated_at = NOW()
+                     WHERE user_id = $5`,
+                    [challenge.xp_reward, challenge.coin_reward, multiplier, durationDays, userData.userId]
                 );
 
-                if (existing.length === 0) {
-                    const { rows: badgeRows } = await query('SELECT id FROM badges WHERE tier = $1 LIMIT 1', [challenge.id]);
-                    if (badgeRows.length > 0) {
-                        const badgeId = badgeRows[0].id;
-                        await query('INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userData.userId, badgeId]);
-
-                        let multiplierUpdate = '';
-                        if (challenge.multiplier) {
-                            multiplierUpdate = `, xp_multiplier = ${challenge.multiplier}, multiplier_expiry = NOW() + INTERVAL '1 year'`;
-                        }
-
-                        await query(
-                            `UPDATE user_game_profile SET xp = xp + $1, coins = coins + $2 ${multiplierUpdate} WHERE user_id = $3`,
-                            [challenge.xp, challenge.coins, userData.userId]
-                        );
-
-                        gameResult.xp_earned += challenge.xp;
-                        gameResult.coins_earned += challenge.coins;
-                        gameResult.challenge_completed = challenge.id;
-                        gameResult.challenge_reward_xp = challenge.xp;
-                        gameResult.challenge_reward_coins = challenge.coins;
-                        if (challenge.multiplier) gameResult.xp_multiplier_activated = true;
-                    }
-                }
+                gameResult.xp_earned += challenge.xp_reward;
+                gameResult.coins_earned += challenge.coin_reward;
+                gameResult.challenge_completed = challenge.tier;
+                gameResult.challenge_reward_xp = challenge.xp_reward;
+                gameResult.challenge_reward_coins = challenge.coin_reward;
+                if (multiplier > 1.0) gameResult.xp_multiplier_activated = true;
             }
+        } catch (e) {
+            console.warn('[getHistory] Challenge rewards error:', e.message);
         }
         await triggerDiscordBotSyncForUser(userData.userId);
         syncDiscordRolesForUser(userData.userId).catch(e =>
@@ -1015,7 +1016,7 @@ export default async function handler(req, res) {
           xp: newXp,
           xp_earned: xpReward,
           ride_mode: normalizedRideMode,
-          xp_multiplier: multiplier,
+          xp_multiplier: userMultiplier,
           coins: newCoins,
           level_up: levelUp,
           coins_earned: adjustedCoinsEarned,
