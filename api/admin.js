@@ -147,7 +147,10 @@ async function ensureAdminRouteSchema() {
 function verifyAdmin(req, roleRequired = 'admin') {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return { error: 'Unauthorized: Missing token', status: 401 };
-  const token = authHeader.split(' ')[1];
+  let token = authHeader.split(' ')[1];
+  if (!token || token === 'null' || token === 'undefined' || token === '""' || token === "''") return { error: 'Unauthorized: Token invalid', status: 401 };
+  token = token.replace(/^["']+|["']$/g, '').trim();
+
   const secret = process.env.JWT_SECRET;
   if (!secret) return { error: 'Server configuration error', status: 500 };
   try {

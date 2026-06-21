@@ -602,7 +602,11 @@
         const roleClass = { admin: 'role-admin', senior: 'role-senior', junior: 'role-junior' };
         const role = user.user_role || user.role || 'junior';
         const roleBadge = document.getElementById('info-role');
-        roleBadge.innerHTML = `<span class="role-badge ${roleClass[role] || 'role-junior'}">${roleMap[role] || role}</span>`;
+        let multiplierHtml = '';
+        if (user.xp_multiplier && parseFloat(user.xp_multiplier) > 1.0) {
+            multiplierHtml = `<span style="margin-left:8px; font-size:0.8em; background:#BFE340; color:#121f14; padding:2px 8px; border-radius:4px; font-weight:900;">x${user.xp_multiplier} XP</span>`;
+        }
+        roleBadge.innerHTML = `<span class="role-badge ${roleClass[role] || 'role-junior'}">${roleMap[role] || role}</span>` + multiplierHtml;
 
         const verifiedEl = document.getElementById('info-verified');
         verifiedEl.innerHTML = user.email_verified

@@ -226,7 +226,8 @@ export default async function handler(req, res) {
         { rows: routes },
         { rows: stations },
         { rows: departments },
-        { rows: bigDataStats }
+        { rows: bigDataStats },
+        { rows: hkChallenges }
       ] = await Promise.all([
         query(
           `SELECT dept, route_number, alias, bg_color, estimated_minutes, unlock_type, unlock_value, tags, gpx, length_text, stops, rewards, route_fare
@@ -247,7 +248,8 @@ export default async function handler(req, res) {
            FROM cycling_history
            WHERE route_id IS NOT NULL AND duration_minutes > 0
            GROUP BY route_id`
-        )
+        ),
+        query(`SELECT * FROM hk_challenges WHERE is_active = TRUE`)
       ]);
 
       const stationMap = new Map();
@@ -264,6 +266,9 @@ export default async function handler(req, res) {
       const statsMap = new Map();
       bigDataStats.forEach(s => statsMap.set(s.route_id, s));
 
+      const challengeMap = new Map();
+      hkChallenges.forEach(c => challengeMap.set(c.route_id, c));
+
       const resolvedRoutes = routes.map(r => {
         const fullId = `${r.dept}-${r.route_number}`;
         const stats = statsMap.get(fullId) || statsMap.get(r.route_number);
@@ -278,6 +283,11 @@ export default async function handler(req, res) {
           tags = r.tags;
         } else if (r.tags) {
           try { tags = JSON.parse(r.tags); } catch (_) { tags = []; }
+        }
+
+        const isChallenge = challengeMap.has(r.route_number) || challengeMap.has(`${r.dept}-${r.route_number}`);
+        if (isChallenge && !tags.includes('全港挑戰')) {
+            tags.push('全港挑戰');
         }
 
         const rawStops = Array.isArray(r.stops) ? r.stops : parseSafeJsonArray(r.stops);
@@ -536,6 +546,7 @@ export default async function handler(req, res) {
                              gp.level, gp.xp, gp.coins, gp.mileage_rank, gp.mileage_km_365,
                              gp.commute_streak, gp.commute_streak_last_date, gp.commute_streak_pending,
                              gp.commute_streak_pending_date, gp.total_saved_fare,
+                             gp.xp_multiplier, gp.multiplier_expiry,
                              COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                              COALESCE((SELECT SUM(ch.distance_km)
                                        FROM cycling_history ch
