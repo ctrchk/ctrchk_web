@@ -378,6 +378,15 @@
                     </div>
                 </div>
 
+                <!-- 我的徽章牆 -->
+                <div class="profile-card" id="badge-wall-card">
+                    <h3><i class="fas fa-medal"></i> 榮譽徽章庫</h3>
+                    <div id="user-badge-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(80px, 1fr)); gap:15px; margin-top:15px;">
+                        <!-- Badges -->
+                        <div style="grid-column: 1/-1; text-align:center; padding:20px; opacity:0.5; font-size:0.85em;">暫無徽章</div>
+                    </div>
+                </div>
+
                 <!-- 升級提示（只對 junior 顯示） -->
                 <div id="upgrade-notice" class="upgrade-notice" style="display:none;">
                     <i class="fas fa-star" style="color: var(--app-accent, #6dba65);"></i>
@@ -657,8 +666,37 @@
                 if (freshData.auth_provider) {
                     applyAuthProvider(freshData.auth_provider);
                 }
+
+                // Render Badges
+                if (freshData.badges) {
+                    const bl = document.getElementById('user-badge-list');
+                    if (freshData.badges.length > 0) {
+                        bl.innerHTML = freshData.badges.map(b => `
+                            <div style="text-align:center;">
+                                <div style="width:64px; height:64px; margin:0 auto 6px; border-radius:50%; background:radial-gradient(#2ecc71, #1a3820); display:flex; align-items:center; justify-content:center; border:2px solid #BFE340; box-shadow:0 0 10px rgba(191,227,64,0.3); cursor:pointer;" onclick="viewBadge3D('${b.model_url_glb}', '${b.name}')">
+                                    <i class="fas fa-medal" style="color:#BFE340; font-size:1.8em;"></i>
+                                </div>
+                                <div style="font-size:0.65em; font-weight:bold; color:#BFE340;">${b.name}</div>
+                            </div>
+                        `).join('');
+                    }
+                }
             }).catch(() => {});
         }
+
+        window.viewBadge3D = (url, name) => {
+            if (!url) return;
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;';
+            overlay.innerHTML = `
+                <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"><\/script>
+                <button onclick="this.parentElement.remove()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:#fff; font-size:2em;"><i class="fas fa-times"></i></button>
+                <h3 style="color:#BFE340; margin-bottom:20px;">${name}</h3>
+                <model-viewer src="${url}" style="width:100%; height:60vh;" auto-rotate camera-controls shadow-intensity="1"></model-viewer>
+                <p style="margin-top:20px; color:#fff; opacity:0.7; font-size:0.9em;">點擊並拖動以查看徽章細節</p>
+            `;
+            document.body.appendChild(overlay);
+        };
 
         // 表單提交
         document.getElementById('profile-form').addEventListener('submit', async function(e) {
