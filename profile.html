@@ -675,14 +675,17 @@
                 if (freshData.badges) {
                     const bl = document.getElementById('user-badge-list');
                     if (freshData.badges.length > 0) {
-                        bl.innerHTML = freshData.badges.map(b => `
-                            <div style="text-align:center;">
-                                <div style="width:64px; height:64px; margin:0 auto 6px; border-radius:50%; background:radial-gradient(#2ecc71, #1a3820); display:flex; align-items:center; justify-content:center; border:2px solid #BFE340; box-shadow:0 0 10px rgba(191,227,64,0.3); cursor:pointer;" onclick="viewBadge3D('${b.model_url_glb}', '${b.name}')">
-                                    <i class="fas fa-medal" style="color:#BFE340; font-size:1.8em;"></i>
+                        bl.innerHTML = freshData.badges.map(b => {
+                            const hasModel = !!(b.model_url_glb || b.model_url_usdz);
+                            return `
+                            <div style="text-align:center; opacity: ${hasModel ? 1 : 0.6};">
+                                <div style="width:64px; height:64px; margin:0 auto 6px; border-radius:50%; background: ${hasModel ? 'radial-gradient(#2ecc71, #1a3820)' : 'rgba(255,255,255,0.05)'}; display:flex; align-items:center; justify-content:center; border:2px solid ${hasModel ? '#BFE340' : '#444'}; box-shadow: ${hasModel ? '0 0 10px rgba(191,227,64,0.3)' : 'none'}; cursor:${hasModel ? 'pointer' : 'default'};"
+                                     ${hasModel ? `onclick="viewBadge3D('${b.model_url_glb}', '${b.name}')"` : ''}>
+                                    <i class="fas fa-medal" style="color:${hasModel ? '#BFE340' : '#666'}; font-size:1.8em;"></i>
                                 </div>
-                                <div style="font-size:0.65em; font-weight:bold; color:#BFE340;">${b.name}</div>
+                                <div style="font-size:0.65em; font-weight:bold; color:${hasModel ? '#BFE340' : '#888'};">${b.name}</div>
                             </div>
-                        `).join('');
+                        `;}).join('');
                     }
                 }
             }).catch(() => {});

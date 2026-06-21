@@ -1,6 +1,44 @@
 // /api/blog.js
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
+import webpush from 'web-push';
+
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@ctrchk.hk';
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
+
+async function notifyAdmins(postTitle) {
+  try {
+    const { rows: subs } = await query(
+      `SELECT ps.endpoint, ps.p256dh, ps.auth
+       FROM push_subscriptions ps
+       JOIN users u ON u.id = ps.user_id
+       WHERE u.user_role = 'senior_admin'`
+    );
+
+    if (subs.length === 0) return;
+
+    const payload = JSON.stringify({
+      title: '📝 新網誌投稿',
+      body: `有人投稿了新文章：「${postTitle}」，請儘快審核。`,
+      url: '/admin.html?tab=blog',
+      tag: 'blog-submission',
+    });
+
+    await Promise.allSettled(subs.map(sub =>
+      webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload
+      )
+    ));
+  } catch (err) {
+    console.error('Failed to notify admins:', err);
+  }
+}
 
 function requireAuth(req, res) {
   const authHeader = req.headers.authorization;
@@ -142,6 +180,11 @@ export default async function handler(req, res) {
          RETURNING id, title, published`,
         [user.userId, title, summary || null, content, image_url || null, published]
       );
+
+      if (!published) {
+        await notifyAdmins(title);
+      }
+
       return res.status(201).json({
         post: rows[0],
         message: is_admin ? '文章已發布' : '文章已提交，請等待管理員審核。'
