@@ -337,8 +337,6 @@
       if (themeColorMeta) themeColorMeta.setAttribute('content', '#121f14');
       // Apply iOS Liquid Glass if applicable
       detectLiquidGlass();
-      // Start invitation polling
-      startInvitationPolling();
     }
     // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();
@@ -574,59 +572,8 @@
   };
 
   // ── 公開 API ─────────────────────────────────────────────────────────────
-  // ── Invitation Notifications ──────────────────────────────────────────
-  let invitationPollInterval = null;
-  function startInvitationPolling() {
-      if (invitationPollInterval) return;
-
-      invitationPollInterval = setInterval(async () => {
-          const token = localStorage.getItem('accessToken');
-          if (!token) return;
-          try {
-              const res = await fetch('/api/user?action=pending-invites', {
-                  headers: { 'Authorization': `Bearer ${token.replace(/^["']+|["']$/g, '').trim()}` }
-              });
-              if (!res.ok) return;
-              const invites = await res.json();
-              invites.forEach(invite => {
-                  const storageKey = `invite_notified_${invite.id}`;
-                  if (localStorage.getItem(storageKey)) return;
-
-                  if ('Notification' in window && Notification.permission === 'granted') {
-                      new Notification('🚴 多人騎行邀請', {
-                          body: `${invite.from_user} 邀請你一起騎行！房號：${invite.room_code}`,
-                          tag: `invite_${invite.id}`
-                      });
-                  }
-
-                  // Simple top-bar alert for PWA
-                  const alert = document.createElement('div');
-                  alert.style.cssText = 'position:fixed; top:calc(env(safe-area-inset-top) + 10px); left:10px; right:10px; background:#BFE340; color:#121f14; padding:15px; border-radius:12px; z-index:9999; font-weight:bold; box-shadow:0 8px 32px rgba(0,0,0,0.5); display:flex; align-items:center; gap:12px; animation: slideDown 0.4s ease;';
-                  alert.innerHTML = `
-                      <i class="fas fa-bicycle" style="font-size:1.5em;"></i>
-                      <div style="flex:1;">
-                          <div style="font-size:0.8em; opacity:0.7;">騎行邀請</div>
-                          <div>${invite.from_user} 邀你一起出發</div>
-                      </div>
-                      <button id="btn-join-invite-${invite.id}" style="background:#121f14; color:#BFE340; border:none; padding:8px 16px; border-radius:8px; font-weight:900;">加入</button>
-                      <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#121f14; opacity:0.5; padding:4px;"><i class="fas fa-times"></i></button>
-                  `;
-                  document.body.appendChild(alert);
-
-                  document.getElementById(`btn-join-invite-${invite.id}`).onclick = () => {
-                      alert.remove();
-                      window.location.href = `/routes?join=${invite.room_code}`;
-                  };
-
-                  localStorage.setItem(storageKey, '1');
-              });
-          } catch (e) {}
-      }, 10000);
-  }
-
   window.CTRCHK_PWA = {
     isStandalone,
-    startInvitationPolling,
     requestNotificationPermission,
     sendLocalNotification,
     scheduleDailyCheckinReminder,
