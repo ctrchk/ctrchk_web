@@ -3,8 +3,6 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import fs from 'fs';
-import path from 'path';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 import { Octokit } from "@octokit/rest";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -135,46 +133,12 @@ async function ensureAdminRouteSchema() {
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS length_text VARCHAR(32)`);
   await query(`ALTER TABLE routes ADD COLUMN IF NOT EXISTS route_fare NUMERIC DEFAULT 0`);
   await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS total_saved_fare NUMERIC DEFAULT 0`);
-  await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS xp_multiplier NUMERIC(3,2) DEFAULT 1.00`);
-  await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS multiplier_expiry TIMESTAMP`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS region VARCHAR(100)`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS description TEXT`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_center_lat DOUBLE PRECISION`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_center_lng DOUBLE PRECISION`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_zoom INTEGER`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS available BOOLEAN DEFAULT TRUE`);
-
-  // Challenges and Badges
-  await query(`CREATE TABLE IF NOT EXISTS badges (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    model_url_glb TEXT,
-    model_url_usdz TEXT,
-    tier VARCHAR(50),
-    created_at TIMESTAMP DEFAULT NOW()
-  )`);
-  await query(`CREATE TABLE IF NOT EXISTS hk_challenges (
-    id SERIAL PRIMARY KEY,
-    tier VARCHAR(50) NOT NULL,
-    route_id VARCHAR(50) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    xp_reward INTEGER DEFAULT 0,
-    coin_reward INTEGER DEFAULT 0,
-    multiplier NUMERIC(3,2) DEFAULT 1.00,
-    multiplier_duration_days INTEGER DEFAULT 0,
-    badge_id INTEGER REFERENCES badges(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-  )`);
-  await query(`CREATE TABLE IF NOT EXISTS user_badges (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    badge_id INTEGER NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
-    earned_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(user_id, badge_id)
-  )`);
-  await query(`ALTER TABLE hk_challenges ADD COLUMN IF NOT EXISTS multiplier NUMERIC(3,2) DEFAULT 1.00`);
-  await query(`ALTER TABLE hk_challenges ADD COLUMN IF NOT EXISTS multiplier_duration_days INTEGER DEFAULT 0`);
 }
 
 /**
@@ -263,17 +227,6 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
-    if (action === 'list-models') {
-      try {
-        const glbDir = path.join(process.cwd(), 'model', 'glb');
-        const usdzDir = path.join(process.cwd(), 'model', 'usdz');
-        const glbs = fs.existsSync(glbDir) ? fs.readdirSync(glbDir).filter(f => f.endsWith('.glb')) : [];
-        const usdzs = fs.existsSync(usdzDir) ? fs.readdirSync(usdzDir).filter(f => f.endsWith('.usdz')) : [];
-        return res.status(200).json({ glbs, usdzs });
-      } catch (e) {
-        return res.status(500).json({ message: e.message });
-      }
-    }
     if (action === 'badges') {
         const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
         return res.status(200).json(rows);
@@ -335,15 +288,15 @@ export default async function handler(req, res) {
     if (action === 'upsert-hk-challenge') {
         if (b.id) {
             await query(
-                `UPDATE hk_challenges SET tier=$1, route_id=$2, name=$3, xp_reward=$4, coin_reward=$5, badge_id=$6, multiplier=$7, multiplier_duration_days=$8
-                 WHERE id=$9`,
-                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id, b.multiplier || 1.00, b.multiplier_duration_days || 0, b.id]
+                `UPDATE hk_challenges SET tier=$1, route_id=$2, name=$3, xp_reward=$4, coin_reward=$5, badge_id=$6
+                 WHERE id=$7`,
+                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id, b.id]
             );
         } else {
             await query(
-                `INSERT INTO hk_challenges (tier, route_id, name, xp_reward, coin_reward, badge_id, multiplier, multiplier_duration_days)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id, b.multiplier || 1.00, b.multiplier_duration_days || 0]
+                `INSERT INTO hk_challenges (tier, route_id, name, xp_reward, coin_reward, badge_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id]
             );
         }
         return res.status(200).json({ success: true });

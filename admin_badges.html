@@ -51,16 +51,12 @@
                     <textarea id="badge-desc" rows="2"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>GLB 模型 (GitHub /model/glb)</label>
-                    <select id="badge-glb">
-                        <option value="">請選擇 GLB 檔案</option>
-                    </select>
+                    <label>GLB 模型 URL (3D)</label>
+                    <input type="text" id="badge-glb" placeholder="https://...">
                 </div>
                 <div class="form-group">
-                    <label>USDZ 模型 (GitHub /model/usdz)</label>
-                    <select id="badge-usdz">
-                        <option value="">請選擇 USDZ 檔案</option>
-                    </select>
+                    <label>USDZ 模型 URL (iOS AR)</label>
+                    <input type="text" id="badge-usdz" placeholder="https://...">
                 </div>
                 <button type="submit" class="btn-primary">儲存徽章</button>
             </form>
@@ -98,7 +94,7 @@
                         <input type="text" id="ch-name" required>
                     </div>
                 </div>
-                <div class="badge-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr;">
+                <div class="badge-grid" style="grid-template-columns: 1fr 1fr 1fr;">
                     <div class="form-group">
                         <label>XP 獎勵</label>
                         <input type="number" id="ch-xp" value="4000">
@@ -106,14 +102,6 @@
                     <div class="form-group">
                         <label>里程幣獎勵</label>
                         <input type="number" id="ch-coins" value="250">
-                    </div>
-                    <div class="form-group">
-                        <label>XP 倍率 (如 1.5)</label>
-                        <input type="number" id="ch-multiplier" step="0.1" value="1.0">
-                    </div>
-                    <div class="form-group">
-                        <label>倍率天數 (1年=365)</label>
-                        <input type="number" id="ch-multiplier-days" value="0">
                     </div>
                     <div class="form-group">
                         <label>連結徽章 ID</label>
@@ -152,7 +140,7 @@
                 <div style="padding:15px; background:rgba(0,0,0,0.2); border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <strong>[${c.tier}] ${c.name}</strong> (Route: ${c.route_id})
-                        <div style="font-size:0.8em; opacity:0.7;">XP: ${c.xp_reward} | Coins: ${c.coin_reward} | Multiplier: ${c.multiplier}x (${c.multiplier_duration_days}d) | Badge ID: ${c.badge_id || 'None'}</div>
+                        <div style="font-size:0.8em; opacity:0.7;">XP: ${c.xp_reward} | Coins: ${c.coin_reward} | Badge ID: ${c.badge_id || 'None'}</div>
                     </div>
                     <button onclick="editChallenge(${JSON.stringify(c).replace(/"/g, '&quot;')})" style="background:none; border:none; color:#BFE340; cursor:pointer;"><i class="fas fa-edit"></i></button>
                 </div>
@@ -166,8 +154,6 @@
             document.getElementById('ch-name').value = c.name;
             document.getElementById('ch-xp').value = c.xp_reward;
             document.getElementById('ch-coins').value = c.coin_reward;
-            document.getElementById('ch-multiplier').value = c.multiplier || 1.0;
-            document.getElementById('ch-multiplier-days').value = c.multiplier_duration_days || 0;
             document.getElementById('ch-badge-id').value = c.badge_id || '';
         };
 
@@ -182,8 +168,6 @@
                 name: document.getElementById('ch-name').value,
                 xp_reward: document.getElementById('ch-xp').value,
                 coin_reward: document.getElementById('ch-coins').value,
-                multiplier: document.getElementById('ch-multiplier').value,
-                multiplier_duration_days: document.getElementById('ch-multiplier-days').value,
                 badge_id: document.getElementById('ch-badge-id').value
             };
             const res = await fetch('/api/admin', {
@@ -193,26 +177,6 @@
             });
             if (res.ok) { alert('挑戰已儲存'); loadChallenges(); }
         };
-
-        async function loadModels() {
-            const token = localStorage.getItem('accessToken');
-            const res = await fetch('/api/admin?action=list-models', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const { glbs, usdzs } = await res.json();
-
-            const glbSelect = document.getElementById('badge-glb');
-            const usdzSelect = document.getElementById('badge-usdz');
-
-            glbs.forEach(f => {
-                const opt = new Option(f, `/model/glb/${f}`);
-                glbSelect.add(opt);
-            });
-            usdzs.forEach(f => {
-                const opt = new Option(f, `/model/usdz/${f}`);
-                usdzSelect.add(opt);
-            });
-        }
 
         document.getElementById('badge-form').onsubmit = async (e) => {
             e.preventDefault();
@@ -234,7 +198,6 @@
             else { alert('新增失敗'); }
         };
 
-        loadModels();
         loadBadges();
         loadChallenges();
     </script>

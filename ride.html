@@ -45,7 +45,7 @@
     .leaflet-v-layer { filter: brightness(0.6) contrast(1.2); }
     .leaflet-control-zoom { display: none !important; }
 
-    /* --- Industrial HUD Layout --- */
+    /* --- Industrial HUD Layout 5.0 --- */
     .hud-container {
       position: fixed;
       inset: 0;
@@ -55,7 +55,68 @@
       flex-direction: column;
     }
 
-    /* Top: Instructions Panel */
+    /* Top: Main Stats Panel (Industrial Design) */
+    .hud-top-industrial {
+      pointer-events: auto;
+      padding: calc(env(safe-area-inset-top) + 10px) 20px 20px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(18, 31, 20, 0.85);
+      backdrop-filter: var(--hud-blur);
+      -webkit-backdrop-filter: var(--hud-blur);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .hud-top-industrial.collapsed {
+        transform: translateY(-80%);
+    }
+    .hud-top-industrial.hidden { display: none; }
+
+    .hud-status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        color: #fff;
+    }
+    .status-item { text-align: center; flex: 1; border-right: 1px solid rgba(255,255,255,0.1); }
+    .status-item:last-of-type { border-right: none; }
+    .status-val { font-size: 20px; font-weight: 900; color: #BFE340; display: block; }
+    .status-lbl { font-size: 11px; opacity: 0.6; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+    .btn-toggle-hud {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .big-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .big-stat-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+    }
+    .big-stat-val { font-size: 32px; font-weight: 900; color: #BFE340; display: block; margin-bottom: 4px; }
+    .big-stat-lbl { font-size: 13px; color: #fff; opacity: 0.6; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+    .hud-section-title {
+        font-size: 14px;
+        color: #BFE340;
+        font-weight: bold;
+        margin-bottom: 12px;
+    }
+
+    /* Top Overlay: Turn-by-Turn Instruction */
     .hud-top {
       pointer-events: auto;
       background: var(--hud-highway-green);
@@ -64,14 +125,14 @@
       border: 2px solid rgba(255,255,255,0.2);
       border-radius: 16px;
       padding: 16px 20px;
-      margin: calc(env(safe-area-inset-top) + 8px) 16px 0;
+      margin: 8px 16px 0;
       display: flex;
       align-items: center;
       gap: 16px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.4);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .hud-top.hidden { transform: translateY(-150%); }
+    .hud-top.hidden { display: none; }
 
     .nav-next-icon { font-size: 32px; color: #fff; min-width: 40px; text-align: center; }
     .nav-instruction-wrap { flex: 1; min-width: 0; }
@@ -241,9 +302,63 @@
 
   <div id="off-route-warning">⚠️ 偏離路線</div>
 
+  <!-- Custom Pause/Resume Modal -->
+  <div id="custom-pause-modal" style="display:none; position:fixed; inset:0; background:rgba(18,31,20,0.85); backdrop-filter:blur(10px); z-index:3000; align-items:center; justify-content:center; padding:24px;">
+    <div style="background:#1e3820; border:1px solid #BFE340; border-radius:28px; padding:32px; width:100%; max-width:400px; color:#fff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+        <div style="font-size:56px; margin-bottom:20px;">🚲</div>
+        <h3 style="font-size:24px; font-weight:900; color:#BFE340; margin-bottom:12px;">發現未完成行程</h3>
+        <p id="pause-modal-msg" style="font-size:15px; opacity:0.8; line-height:1.6; margin-bottom:32px;">系統偵測到一段未完成的騎行記錄，是否要繼續？</p>
+
+        <div style="display:flex; flex-direction:column; gap:14px;">
+            <button id="btn-pause-resume" style="width:100%; background:#BFE340; color:#121f14; border:none; padding:18px; border-radius:16px; font-size:18px; font-weight:900; cursor:pointer; box-shadow:0 8px 20px rgba(191,227,64,0.3);">繼續騎行</button>
+            <div style="display:flex; gap:12px;">
+                <button id="btn-pause-close" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:14px; border-radius:14px; font-size:14px; font-weight:bold; cursor:pointer;">暫時關閉</button>
+                <button id="btn-pause-delete" style="background:#e74c3c; color:#fff; border:none; padding:14px 20px; border-radius:14px; font-size:14px; font-weight:bold; cursor:pointer;">刪除記錄</button>
+            </div>
+        </div>
+    </div>
+  </div>
+
   <div class="hud-container">
-    <!-- Top Instruction -->
-    <div class="hud-top hidden" id="hud-top">
+    <!-- Industrial Top HUD -->
+    <div class="hud-top-industrial hidden" id="hud-main-top">
+        <div style="text-align:center; margin-bottom: 15px; opacity: 0.6; font-size: 12px;" id="gps-status-msg">正在連接 GPS...</div>
+
+        <div class="hud-status-row">
+            <div class="status-item">
+                <span class="status-val" id="stat-time-top">00:00</span>
+                <span class="status-lbl">⌛ 時間</span>
+            </div>
+            <div class="status-item">
+                <span class="status-val" id="stat-dist-top">0 m</span>
+                <span class="status-lbl">🚴 距離</span>
+            </div>
+            <div class="status-item">
+                <span class="status-val" id="stat-stops-top">0/0</span>
+                <span class="status-lbl">🏣 站點</span>
+            </div>
+            <button class="btn-toggle-hud" onclick="toggleHudExpand()">收起 ▼</button>
+        </div>
+
+        <div class="big-stats-grid">
+            <div class="big-stat-card">
+                <span class="big-stat-val" id="stat-xp">0</span>
+                <span class="big-stat-lbl">⭐ XP</span>
+            </div>
+            <div class="big-stat-card">
+                <span class="big-stat-val" id="stat-speed-top">0.0</span>
+                <span class="big-stat-lbl">💨 速度 (km/h)</span>
+            </div>
+        </div>
+
+        <div class="hud-section-title">站點進度</div>
+        <div class="stops-overview" id="stops-overview">
+            <!-- Stop pills injected here -->
+        </div>
+    </div>
+
+    <!-- Turn-by-Turn Overlay -->
+    <div class="hud-top hidden" id="hud-nav-instruction">
       <div class="nav-next-icon" id="next-icon"><i class="fas fa-arrow-up"></i></div>
       <div class="nav-instruction-wrap">
         <div class="nav-next-road" id="next-road">--</div>
@@ -257,29 +372,8 @@
 
     <div style="flex: 1;"></div>
 
-    <!-- Bottom Stats and Controls -->
-    <div class="hud-bottom-panel hidden" id="hud-bottom">
-      <div class="stops-overview" id="stops-overview">
-          <!-- Stop pills injected here -->
-      </div>
-      <div class="stats-row">
-        <div class="stat-box">
-          <div class="stat-label">時間</div>
-          <div class="stat-value" id="stat-time">00:00</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">速度</div>
-          <div class="stat-value" id="speed-val">0.0<span>km/h</span></div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">里程</div>
-          <div class="stat-value" id="dist-val">0.0<span>km</span></div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">站點</div>
-          <div class="stat-value" id="stat-stops">0/0</div>
-        </div>
-      </div>
+    <!-- Mini Bottom Controls -->
+    <div class="hud-bottom-panel hidden" id="hud-bottom" style="background:transparent; backdrop-filter:none; border:none; box-shadow:none;">
       <div class="controls-row">
         <button class="btn-action btn-pause" id="btn-pause-ride"><i class="fas fa-pause"></i> 暫停</button>
         <button class="btn-action btn-end" id="btn-end-ride"><i class="fas fa-stop"></i> 結束</button>
@@ -362,6 +456,7 @@
     let gpxCoords = [];
     let trackingCoords = [];
     let breadcrumbLine = null;
+    let fullRouteStops = [];
     let routeStops = [];
     let routeData = null;
     let friendMarkers = new Map();
@@ -421,7 +516,15 @@
         if (!map) return;
         const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
         const speedKmh = speed != null ? (speed * 3.6) : 0;
-        document.getElementById('speed-val').innerHTML = speedKmh.toFixed(1) + '<span>km/h</span>';
+
+        const speedText = speedKmh.toFixed(1);
+        const speedTop = document.getElementById('stat-speed-top');
+        if (speedTop) speedTop.textContent = speedText;
+
+        if (accuracy < 50) {
+            const gpsMsg = document.getElementById('gps-status-msg');
+            if (gpsMsg) gpsMsg.style.display = 'none';
+        }
 
         updateUserMarker(lat, lon, heading);
 
@@ -436,18 +539,39 @@
             } else {
                 trackingCoords.push([lat, lon]);
             }
+
+            // Off-route Warning logic
             if (gpxCoords.length > 1) {
-                const p = turf.point([lon, lat]);
-                const line = turf.lineString(gpxCoords.map(c => [c[1], c[0]]));
-                const snapped = turf.nearestPointOnLine(line, p, { units: 'meters' });
-                document.getElementById('off-route-warning').style.display = snapped.properties.dist > OFF_ROUTE_THRESHOLD_M ? 'block' : 'none';
+                try {
+                    const p = turf.point([lon, lat]);
+                    const line = turf.lineString(gpxCoords.map(c => [c[1], c[0]]));
+                    const snapped = turf.nearestPointOnLine(line, p, { units: 'meters' });
+                    const distToRoute = snapped.properties.dist;
+
+                    const warningEl = document.getElementById('off-route-warning');
+                    if (distToRoute > OFF_ROUTE_THRESHOLD_M) {
+                        warningEl.style.display = 'block';
+                    } else {
+                        warningEl.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.warn('Off-route check failed:', e);
+                }
             }
         }
         lastLat = lat; lastLon = lon;
-        document.getElementById('dist-val').innerHTML = (totalDistM / 1000).toFixed(1) + '<span>km</span>';
+
+        const distKm = (totalDistM / 1000);
+        const distText = totalDistM >= 1000 ? distKm.toFixed(2) + ' km' : Math.round(totalDistM) + ' m';
+        const distTop = document.getElementById('stat-dist-top');
+        if (distTop) distTop.textContent = distText;
+
+        const xpEl = document.getElementById('stat-xp');
+        if (xpEl) xpEl.textContent = Math.round(sessionXp);
 
         if (goToStartPhase && routeStops.length > 0) {
-            const dist = haversineM(lat, lon, routeStops[startStopIdx].lat, routeStops[startStopIdx].lon);
+            // After potential slicing in init, the target start stop is always routeStops[0]
+            const dist = haversineM(lat, lon, routeStops[0].lat, routeStops[0].lon);
             document.getElementById('gts-dist-val').textContent = formatDist(dist);
             if (dist <= STOP_DETECTION_RADIUS_M) beginRide();
         } else if (rideStarted && !isFreeMode) {
@@ -470,7 +594,9 @@
         if (next && haversineM(lat, lon, next.lat, next.lon) <= STOP_DETECTION_RADIUS_M) {
             reachedStops.add(next.order);
             sessionXp += (next.xp || 10);
-            document.getElementById('stat-stops').textContent = `${reachedStops.size}/${routeStops.length}`;
+            const stopText = `${reachedStops.size}/${routeStops.length}`;
+            const stopTop = document.getElementById('stat-stops-top');
+            if (stopTop) stopTop.textContent = stopText;
             updateStopsOverview();
         }
     }
@@ -511,10 +637,24 @@
 
         requestWakeLock();
         document.getElementById('go-to-start-banner').style.display = 'none';
-        document.getElementById('hud-top').classList.toggle('hidden', isFreeMode);
+
+        document.getElementById('hud-main-top').classList.remove('hidden');
+        document.getElementById('hud-nav-instruction').classList.toggle('hidden', isFreeMode);
         document.getElementById('hud-bottom').classList.remove('hidden');
+
+        if (isFreeMode) {
+            const progressTitle = document.querySelector('.hud-section-title');
+            if (progressTitle) progressTitle.style.display = 'none';
+            const stopsOverview = document.getElementById('stops-overview');
+            if (stopsOverview) stopsOverview.style.display = 'none';
+            const stopsItem = document.querySelector('.status-item:last-of-type');
+            if (stopsItem) stopsItem.style.visibility = 'hidden';
+        }
+
         timerInterval = setInterval(() => {
-            document.getElementById('stat-time').textContent = formatTime(Date.now() - startTime);
+            const timeStr = formatTime(Date.now() - startTime);
+            const timeTop = document.getElementById('stat-time-top');
+            if (timeTop) timeTop.textContent = timeStr;
         }, 1000);
         heartbeatInterval = setInterval(syncActiveRide, 5000);
         updateStopsOverview();
@@ -535,35 +675,85 @@
 
     function updateFriendMarkers(friends) {
         if (!map) return;
+
+        // Remove markers for friends who are no longer active
+        const activeIds = new Set(friends.map(f => f.user_id));
+        for (const [id, marker] of friendMarkers.entries()) {
+            if (!activeIds.has(id)) {
+                map.removeLayer(marker);
+                friendMarkers.delete(id);
+            }
+        }
+
         friends.forEach(f => {
             const myId = JSON.parse(localStorage.getItem('user') || '{}').id;
             if (Number(f.user_id) === Number(myId)) return;
+
             let m = friendMarkers.get(f.user_id);
+            const iconHtml = `
+                <div style="position:relative;">
+                    <div style="background:#3498db; width:36px; height:36px; border-radius:50%; border:3px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.4);">
+                        ${f.username ? f.username[0].toUpperCase() : '?'}
+                    </div>
+                    <div style="position:absolute; bottom:-15px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); color:#fff; font-size:10px; padding:2px 6px; border-radius:10px; white-space:nowrap; border:1px solid rgba(255,255,255,0.2);">
+                        ${f.username || '朋友'}
+                    </div>
+                </div>
+            `;
+
+            const icon = L.divIcon({
+                className: '',
+                html: iconHtml,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
             if (!m) {
-                m = L.marker([f.lat, f.lng], {
-                    icon: L.divIcon({
-                        className: '',
-                        html: `<div style="background:#3498db; width:28px; height:28px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:bold;">${f.username ? f.username[0].toUpperCase() : '?'}</div>`,
-                        iconSize: [28, 28], iconAnchor: [14, 14]
-                    })
-                }).addTo(map);
+                m = L.marker([f.lat, f.lng], { icon }).addTo(map);
                 friendMarkers.set(f.user_id, m);
-            } else { m.setLatLng([f.lat, f.lng]); }
+            } else {
+                m.setLatLng([f.lat, f.lng]);
+                m.setIcon(icon);
+            }
         });
     }
 
     window.skipGoToStart = beginRide;
     window.startFromSelectedStop = () => {
         const idx = parseInt(document.getElementById('gts-stop-select').value);
-        routeStops = routeStops.slice(idx).map((s, i) => ({ ...s, order: i + 1 }));
-        buildStopsUI(); beginRide();
+        routeStops = fullRouteStops.slice(idx).map((s, i) => ({ ...s, order: i + 1 }));
+
+        // Reset reachedStops if starting fresh from a mid-station
+        reachedStops = new Set();
+
+        buildStopsUI(false); // don't show banner again
+        beginRide();
     };
 
-    function buildStopsUI() {
-        document.getElementById('stat-stops').textContent = `0/${routeStops.length}`;
+    window.toggleHudExpand = () => {
+        const hud = document.getElementById('hud-main-top');
+        const btn = hud.querySelector('.btn-toggle-hud');
+        if (hud.classList.contains('collapsed')) {
+            hud.classList.remove('collapsed');
+            btn.textContent = '收起 ▼';
+        } else {
+            hud.classList.add('collapsed');
+            btn.textContent = '展開 ▲';
+        }
+    };
+
+    function buildStopsUI(showBanner = true) {
+        const stopTop = document.getElementById('stat-stops-top');
+        if (stopTop) stopTop.textContent = `0/${routeStops.length}`;
         const sel = document.getElementById('gts-stop-select');
-        sel.innerHTML = routeStops.slice(0, -1).map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
-        if (routeStops.length > 0 && !isFreeMode) {
+        // The dropdown should show all stops from the ORIGINAL route
+        sel.innerHTML = fullRouteStops.slice(0, -1).map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+
+        // Find the current index of the first stop of routeStops within fullRouteStops
+        const currentStartIdx = fullRouteStops.findIndex(s => s.name === routeStops[0].name);
+        sel.value = currentStartIdx >= 0 ? currentStartIdx : 0;
+
+        if (routeStops.length > 0 && !isFreeMode && showBanner) {
             document.getElementById('go-to-start-banner').style.display = 'block';
             document.getElementById('gts-start-name').textContent = routeStops[0].name;
         }
@@ -649,11 +839,31 @@
     };
 
     window.confirmLeave = () => { if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) location.href = '/dashboard'; };
-    document.getElementById('btn-pause-ride').onclick = async () => {
-        if (confirm('暫停行程？可稍後繼續。\n\n系統將會為你同步至雲端並儲存為未完成路線，你可以隨時在主頁或路線頁面恢復行程。')) {
+
+    function showPauseModal() {
+        const modal = document.getElementById('custom-pause-modal');
+        const msg = document.getElementById('pause-modal-msg');
+        msg.innerHTML = `暫停行程？可稍後繼續。<br><br>系統將會為你同步至雲端並儲存為未完成路線，你可以隨時在主頁或路線頁面恢復行程。`;
+
+        const btnResume = document.getElementById('btn-pause-resume');
+        btnResume.textContent = "繼續騎行";
+        btnResume.onclick = () => { modal.style.display = 'none'; };
+
+        const btnClose = document.getElementById('btn-pause-close');
+        btnClose.textContent = "暫時關閉";
+        btnClose.onclick = async () => {
             await syncActiveRide();
             location.href = '/dashboard';
-        }
+        };
+
+        const btnDelete = document.getElementById('btn-pause-delete');
+        btnDelete.style.display = 'none'; // Only show delete for resumes
+
+        modal.style.display = 'flex';
+    }
+
+    document.getElementById('btn-pause-ride').onclick = () => {
+        showPauseModal();
     };
     document.getElementById('btn-end-ride').onclick = () => { if (confirm('結束並儲存？')) endRide(); };
 
@@ -665,7 +875,9 @@
             await initMap([22.3143, 114.2697]);
             beginRide();
         } else if (routeData) {
-            routeStops = (routeData.stops || []).map((s, i) => ({ ...s, order: i + 1 }));
+            fullRouteStops = (routeData.stops || []).map((s, i) => ({ ...s, order: i + 1 }));
+            routeStops = [...fullRouteStops];
+
             if (startStopIdx > 0 && startStopIdx < routeStops.length) {
                 routeStops = routeStops.slice(startStopIdx).map((s, i) => ({ ...s, order: i + 1 }));
             }

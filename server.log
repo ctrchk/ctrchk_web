@@ -1,51 +1,18 @@
-127.0.0.1 - - [21/Jun/2026 04:34:39] "GET /ride.html?id=900 HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:34:40] "GET /routes.json HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:34:40] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:34:40] "GET /api/user?action=route-data HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /routes.html HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /js/pwa.js HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /routes.json HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /header.html HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:33] "GET /images/icon-192.png HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:34] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:36:34] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:34] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:34] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:36:34] "GET /dashboard HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:34] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:34] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:36:34] "GET /routes HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:34] "GET /routes.html HTTP/1.1" 304 -
-127.0.0.1 - - [21/Jun/2026 04:36:35] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:36:35] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:36] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [21/Jun/2026 04:36:37] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:36:37] "GET /ride?mode=free HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:38] "GET /ride.html?id=900 HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:36:38] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:36:38] "GET /api/user?action=route-data HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:36:39] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [21/Jun/2026 04:36:40] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /routes.html HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /js/pwa.js HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /header.html HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /routes.json HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /images/icon-192.png HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:37:51] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /dashboard HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:37:51] "GET /routes HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:37:52] "GET /routes.html HTTP/1.1" 304 -
-127.0.0.1 - - [21/Jun/2026 04:37:52] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:37:52] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
-127.0.0.1 - - [21/Jun/2026 04:37:54] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [21/Jun/2026 04:37:54] code 404, message File not found
-127.0.0.1 - - [21/Jun/2026 04:37:54] "GET /ride?mode=free HTTP/1.1" 404 -
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 1329, in <module>
+    test(
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 1276, in test
+    with ServerClass(addr, HandlerClass) as httpd:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 457, in __init__
+    self.server_bind()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 1323, in server_bind
+    return super().server_bind()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 140, in server_bind
+    socketserver.TCPServer.server_bind(self)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 478, in server_bind
+    self.socket.bind(self.server_address)
+OSError: [Errno 98] Address already in use
