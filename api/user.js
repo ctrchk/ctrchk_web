@@ -98,19 +98,15 @@ async function ensureRideTables() {
       await query(`
         CREATE TABLE IF NOT EXISTS hk_challenges (
           id SERIAL PRIMARY KEY,
-          tier VARCHAR(50) NOT NULL,
-          route_id VARCHAR(50) NOT NULL,
-          name VARCHAR(255) NOT NULL,
-          xp_reward INTEGER DEFAULT 0,
-          coin_reward INTEGER DEFAULT 0,
-          multiplier NUMERIC(3,2) DEFAULT 1.00,
-          multiplier_duration_days INTEGER DEFAULT 0,
-          badge_id INTEGER REFERENCES badges(id) ON DELETE SET NULL,
-          created_at TIMESTAMP DEFAULT NOW()
+          tier VARCHAR(20),
+          route_id VARCHAR(50),
+          name VARCHAR(255),
+          xp_reward INTEGER,
+          coin_reward INTEGER,
+          badge_id INTEGER REFERENCES badges(id),
+          is_active BOOLEAN DEFAULT TRUE
         );
       `);
-      await query(`ALTER TABLE hk_challenges ADD COLUMN IF NOT EXISTS multiplier NUMERIC(3,2) DEFAULT 1.00`);
-      await query(`ALTER TABLE hk_challenges ADD COLUMN IF NOT EXISTS multiplier_duration_days INTEGER DEFAULT 0`);
       await query(`
         CREATE TABLE IF NOT EXISTS ride_invitations (
           id SERIAL PRIMARY KEY,
@@ -549,7 +545,8 @@ export default async function handler(req, res) {
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
                              gp.level, gp.xp, gp.coins, gp.mileage_rank, gp.mileage_km_365,
                              gp.commute_streak, gp.commute_streak_last_date, gp.commute_streak_pending,
-                             gp.commute_streak_pending_date, gp.total_saved_fare, gp.xp_multiplier, gp.multiplier_expiry,
+                             gp.commute_streak_pending_date, gp.total_saved_fare,
+                             gp.xp_multiplier, gp.multiplier_expiry,
                              COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                              COALESCE((SELECT SUM(ch.distance_km)
                                        FROM cycling_history ch
