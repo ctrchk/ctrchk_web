@@ -787,8 +787,18 @@ export default async function handler(req, res) {
 
       // Apply ride mode multiplier:
       // tourism x1.5, commuter/DRT x1.0, free x0.8 (rounded to nearest integer)
-      const multiplier = XP_MODE_MULTIPLIER[normalizedRideMode] ?? 1.0;
-      xpReward = Math.max(0, Math.round(xpReward * multiplier));
+      // 0.1 Check for active user multiplier
+      let userMultiplier = 1.0;
+      try {
+          const { rows: profileRows } = await query(
+              'SELECT xp_multiplier FROM user_game_profile WHERE user_id = $1 AND (multiplier_expiry IS NULL OR multiplier_expiry > NOW())',
+              [userData.userId]
+          );
+          if (profileRows.length > 0) userMultiplier = parseFloat(profileRows[0].xp_multiplier || 1.0);
+      } catch (e) {}
+
+      const modeMultiplier = XP_MODE_MULTIPLIER[normalizedRideMode] ?? 1.0;
+      xpReward = Math.max(0, Math.round(xpReward * modeMultiplier * userMultiplier));
 
       const randomBonus = isValidRide ? (Math.floor(Math.random() * (RANDOM_BONUS_MAX - RANDOM_BONUS_MIN + 1)) + RANDOM_BONUS_MIN) : 0;
       const randomBonusXp = randomBonus;
@@ -950,69 +960,48 @@ export default async function handler(req, res) {
           ]
         );
 
-        // --- 全港挑戰部 (HK Challenge) Rewards Logic ---
-        // Check if the current route is from the challenge department or if it's an ultra-long route
-        // For this demo, let's say any route in the 'challenge' department or route '999' counts.
-        let isChallengeRoute = false;
-        try {
-            const { rows: routeDeptRows } = await query(
-                'SELECT dept FROM routes WHERE route_number = $1 OR (dept || \'-\' || route_number) = $1 LIMIT 1',
-                [route_id]
-            );
-            if (routeDeptRows.length > 0 && routeDeptRows[0].dept === 'challenge') {
-                isChallengeRoute = true;
-            } else if (route_id === '999') {
-                isChallengeRoute = true;
-            }
-        } catch (e) {}
+        // --- 全港挑戰部 (HK Challenge) Rewards Logic (Redesigned) ---
+        // 30km: 4000 XP, 250 Coins
+        // 60km: 10000 XP, 1000 Coins
+        // 100km: 25000 XP, 5000 Coins, x1.5 Multiplier (1 Year)
 
-        if (all_stops) {
-            // Check for HK Challenge Completion
-            // Logic: Either complete an ultra-long route (999) OR complete 5 routes in 'challenge' department
-            let qualifiedForChallenge = false;
-            if (route_id === '999') {
-                qualifiedForChallenge = true;
-            } else {
-                const { rows: challengeCountRows } = await query(
-                    `SELECT COUNT(DISTINCT ch.route_id) as count
-                     FROM cycling_history ch
-                     JOIN routes r ON (r.route_number = ch.route_id OR (r.dept || '-' || r.route_number) = ch.route_id)
-                     WHERE ch.user_id = $1 AND r.dept = 'challenge' AND ch.all_stops = TRUE`,
-                    [userData.userId]
-                );
-                if (parseInt(challengeCountRows[0].count) >= 5) {
-                    qualifiedForChallenge = true;
-                }
-            }
+        const challenges = [
+            { id: 'hk_30k', dist: 30, xp: 4000, coins: 250 },
+            { id: 'hk_60k', dist: 60, xp: 10000, coins: 1000 },
+            { id: 'hk_100k', dist: 100, xp: 25000, coins: 5000, multiplier: 1.5 }
+        ];
 
-            if (qualifiedForChallenge) {
-                // Check if achievement already granted
-                const { rows: achRows } = await query(
-                    'SELECT id FROM user_achievements WHERE user_id = $1 AND ach_key = $2',
-                    [userData.userId, 'hk_challenge']
+        for (const challenge of challenges) {
+            if (distKmVal >= challenge.dist) {
+                // Check if already completed
+                const { rows: existing } = await query(
+                    'SELECT id FROM user_badges WHERE user_id = $1 AND badge_id = (SELECT id FROM badges WHERE tier = $2 LIMIT 1)',
+                    [userData.userId, challenge.id]
                 );
 
-                if (achRows.length === 0) {
-                    // Grant Achievement and Huge Reward
-                    const CHALLENGE_XP_BONUS = 2000;
-                    const CHALLENGE_COIN_BONUS = 500;
+                if (existing.length === 0) {
+                    const { rows: badgeRows } = await query('SELECT id FROM badges WHERE tier = $1 LIMIT 1', [challenge.id]);
+                    if (badgeRows.length > 0) {
+                        const badgeId = badgeRows[0].id;
+                        await query('INSERT INTO user_badges (user_id, badge_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userData.userId, badgeId]);
 
-                    await query(
-                        'INSERT INTO user_achievements (user_id, ach_key) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                        [userData.userId, 'hk_challenge']
-                    );
+                        let multiplierUpdate = '';
+                        if (challenge.multiplier) {
+                            multiplierUpdate = `, xp_multiplier = ${challenge.multiplier}, multiplier_expiry = NOW() + INTERVAL '1 year'`;
+                        }
 
-                    await query(
-                        'UPDATE user_game_profile SET xp = xp + $1, coins = coins + $2 WHERE user_id = $3',
-                        [CHALLENGE_XP_BONUS, CHALLENGE_COIN_BONUS, userData.userId]
-                    );
+                        await query(
+                            `UPDATE user_game_profile SET xp = xp + $1, coins = coins + $2 ${multiplierUpdate} WHERE user_id = $3`,
+                            [challenge.xp, challenge.coins, userData.userId]
+                        );
 
-                    // Add to gameResult for summary display
-                    gameResult.xp += CHALLENGE_XP_BONUS;
-                    gameResult.coins += CHALLENGE_COIN_BONUS;
-                    gameResult.xp_earned += CHALLENGE_XP_BONUS;
-                    gameResult.coins_earned += CHALLENGE_COIN_BONUS;
-                    gameResult.challenge_completed = true;
+                        gameResult.xp_earned += challenge.xp;
+                        gameResult.coins_earned += challenge.coins;
+                        gameResult.challenge_completed = challenge.id;
+                        gameResult.challenge_reward_xp = challenge.xp;
+                        gameResult.challenge_reward_coins = challenge.coins;
+                        if (challenge.multiplier) gameResult.xp_multiplier_activated = true;
+                    }
                 }
             }
         }

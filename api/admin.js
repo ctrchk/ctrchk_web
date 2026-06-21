@@ -224,6 +224,14 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
+    if (action === 'badges') {
+        const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
+        return res.status(200).json(rows);
+    }
+    if (action === 'get-hk-challenges') {
+        const { rows } = await query(`SELECT * FROM hk_challenges ORDER BY tier`);
+        return res.status(200).json(rows);
+    }
     if (action === 'get-stations') {
       try {
         await ensureAdminRouteSchema();
@@ -266,6 +274,30 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const b = req.body;
+    if (action === 'create-badge') {
+        await query(
+            `INSERT INTO badges (name, description, model_url_glb, model_url_usdz, tier)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [b.name, b.description, b.model_url_glb, b.model_url_usdz, b.tier]
+        );
+        return res.status(200).json({ success: true });
+    }
+    if (action === 'upsert-hk-challenge') {
+        if (b.id) {
+            await query(
+                `UPDATE hk_challenges SET tier=$1, route_id=$2, name=$3, xp_reward=$4, coin_reward=$5, badge_id=$6
+                 WHERE id=$7`,
+                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id, b.id]
+            );
+        } else {
+            await query(
+                `INSERT INTO hk_challenges (tier, route_id, name, xp_reward, coin_reward, badge_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id]
+            );
+        }
+        return res.status(200).json({ success: true });
+    }
     if (action === 'upsert_dept') {
         await query(`INSERT INTO department_config (dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (dept_id) DO UPDATE SET name=EXCLUDED.name, region=EXCLUDED.region, description=EXCLUDED.description, map_center_lat=EXCLUDED.map_center_lat, map_center_lng=EXCLUDED.map_center_lng, map_zoom=EXCLUDED.map_zoom, available=EXCLUDED.available`, [String(b.dept_id).trim().toLowerCase(), b.name, b.region, b.description, b.map_center_lat, b.map_center_lng, b.map_zoom, b.available !== false]);
         return res.status(200).json({ success: true });

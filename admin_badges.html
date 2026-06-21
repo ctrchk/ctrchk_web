@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>徽章與挑戰管理 - CTRCHK Admin</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <style>
+        body { background: #0d1a12; color: #e8f5e9; }
+        .admin-container { max-width: 1000px; margin: 2em auto; padding: 20px; }
+        .card { background: #1e3820; border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid #2d4d2d; }
+        h2 { color: #BFE340; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 0.9em; opacity: 0.8; margin-bottom: 8px; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d4d2d; background: #121f14; color: #fff; }
+        .btn-primary { background: #BFE340; color: #121f14; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; }
+
+        .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .badge-card { background: #121f14; border-radius: 12px; overflow: hidden; border: 1px solid #2d4d2d; }
+        model-viewer { width: 100%; height: 200px; background: radial-gradient(#1e3820, #0d1a12); }
+        .badge-info { padding: 15px; }
+        .badge-tier { font-size: 0.7em; background: #BFE340; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <a href="/admin" style="color: #a8d8a0; text-decoration: none; display: inline-block; margin-bottom: 20px;"><i class="fas fa-arrow-left"></i> 返回管理後台</a>
+
+        <div class="card">
+            <h2><i class="fas fa-medal"></i> 新增 3D 徽章</h2>
+            <form id="badge-form">
+                <div class="badge-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label>徽章名稱</label>
+                        <input type="text" id="badge-name" required placeholder="例如：全港挑戰 100km 宗師">
+                    </div>
+                    <div class="form-group">
+                        <label>對應級別 (Tier)</label>
+                        <select id="badge-tier">
+                            <option value="custom">普通徽章</option>
+                            <option value="hk_30k">HK Challenge 30km</option>
+                            <option value="hk_60k">HK Challenge 60km</option>
+                            <option value="hk_100k">HK Challenge 100km</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea id="badge-desc" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>GLB 模型 URL (3D)</label>
+                    <input type="text" id="badge-glb" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>USDZ 模型 URL (iOS AR)</label>
+                    <input type="text" id="badge-usdz" placeholder="https://...">
+                </div>
+                <button type="submit" class="btn-primary">儲存徽章</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-list"></i> 現有徽章庫</h2>
+            <div id="badge-list" class="badge-grid">
+                <!-- Badges here -->
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-trophy"></i> 全港挑戰管理</h2>
+            <div id="challenge-list" style="margin-bottom:20px;">
+                <!-- Challenges -->
+            </div>
+            <form id="challenge-form" style="border-top:1px solid #2d4d2d; padding-top:20px;">
+                <input type="hidden" id="ch-id">
+                <div class="badge-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div class="form-group">
+                        <label>Tier</label>
+                        <select id="ch-tier">
+                            <option value="hk_30k">30km</option>
+                            <option value="hk_60k">60km</option>
+                            <option value="hk_100k">100km</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>路線 ID (如 999)</label>
+                        <input type="text" id="ch-route-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label>挑戰名稱</label>
+                        <input type="text" id="ch-name" required>
+                    </div>
+                </div>
+                <div class="badge-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div class="form-group">
+                        <label>XP 獎勵</label>
+                        <input type="number" id="ch-xp" value="4000">
+                    </div>
+                    <div class="form-group">
+                        <label>里程幣獎勵</label>
+                        <input type="number" id="ch-coins" value="250">
+                    </div>
+                    <div class="form-group">
+                        <label>連結徽章 ID</label>
+                        <input type="number" id="ch-badge-id">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">儲存挑戰設定</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function loadBadges() {
+            const res = await fetch('/api/admin?action=badges');
+            const badges = await res.json();
+            const list = document.getElementById('badge-list');
+            list.innerHTML = badges.map(b => `
+                <div class="badge-card">
+                    <model-viewer src="${b.model_url_glb}" ios-src="${b.model_url_usdz}" alt="${b.name}" auto-rotate camera-controls shadow-intensity="1"></model-viewer>
+                    <div class="badge-info">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-weight:bold;">ID: ${b.id} | ${b.name}</span>
+                            <span class="badge-tier">${b.tier}</span>
+                        </div>
+                        <p style="font-size:0.8em; opacity:0.6; margin:0;">${b.description || '無描述'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadChallenges() {
+            const res = await fetch('/api/admin?action=get-hk-challenges');
+            const challenges = await res.json();
+            const list = document.getElementById('challenge-list');
+            list.innerHTML = challenges.map(c => `
+                <div style="padding:15px; background:rgba(0,0,0,0.2); border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>[${c.tier}] ${c.name}</strong> (Route: ${c.route_id})
+                        <div style="font-size:0.8em; opacity:0.7;">XP: ${c.xp_reward} | Coins: ${c.coin_reward} | Badge ID: ${c.badge_id || 'None'}</div>
+                    </div>
+                    <button onclick="editChallenge(${JSON.stringify(c).replace(/"/g, '&quot;')})" style="background:none; border:none; color:#BFE340; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                </div>
+            `).join('');
+        }
+
+        window.editChallenge = (c) => {
+            document.getElementById('ch-id').value = c.id;
+            document.getElementById('ch-tier').value = c.tier;
+            document.getElementById('ch-route-id').value = c.route_id;
+            document.getElementById('ch-name').value = c.name;
+            document.getElementById('ch-xp').value = c.xp_reward;
+            document.getElementById('ch-coins').value = c.coin_reward;
+            document.getElementById('ch-badge-id').value = c.badge_id || '';
+        };
+
+        document.getElementById('challenge-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('accessToken');
+            const data = {
+                action: 'upsert-hk-challenge',
+                id: document.getElementById('ch-id').value,
+                tier: document.getElementById('ch-tier').value,
+                route_id: document.getElementById('ch-route-id').value,
+                name: document.getElementById('ch-name').value,
+                xp_reward: document.getElementById('ch-xp').value,
+                coin_reward: document.getElementById('ch-coins').value,
+                badge_id: document.getElementById('ch-badge-id').value
+            };
+            const res = await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) { alert('挑戰已儲存'); loadChallenges(); }
+        };
+
+        document.getElementById('badge-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem('accessToken');
+            const data = {
+                action: 'create-badge',
+                name: document.getElementById('badge-name').value,
+                tier: document.getElementById('badge-tier').value,
+                description: document.getElementById('badge-desc').value,
+                model_url_glb: document.getElementById('badge-glb').value,
+                model_url_usdz: document.getElementById('badge-usdz').value
+            };
+            const res = await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) { alert('徽章已新增'); loadBadges(); }
+            else { alert('新增失敗'); }
+        };
+
+        loadBadges();
+        loadChallenges();
+    </script>
+</body>
+</html>

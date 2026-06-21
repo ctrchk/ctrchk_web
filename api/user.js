@@ -72,6 +72,51 @@ async function ensureRideTables() {
           UNIQUE(room_id, user_id)
         );
       `);
+      await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS xp_multiplier NUMERIC DEFAULT 1.0;`);
+      await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS multiplier_expiry TIMESTAMP;`);
+      await query(`
+        CREATE TABLE IF NOT EXISTS badges (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          model_url_glb TEXT,
+          model_url_usdz TEXT,
+          image_url TEXT,
+          tier VARCHAR(50),
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS user_badges (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          badge_id INTEGER REFERENCES badges(id),
+          awarded_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(user_id, badge_id)
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS hk_challenges (
+          id SERIAL PRIMARY KEY,
+          tier VARCHAR(20),
+          route_id VARCHAR(50),
+          name VARCHAR(255),
+          xp_reward INTEGER,
+          coin_reward INTEGER,
+          badge_id INTEGER REFERENCES badges(id),
+          is_active BOOLEAN DEFAULT TRUE
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS ride_invitations (
+          id SERIAL PRIMARY KEY,
+          from_user_id INTEGER REFERENCES users(id),
+          to_user_id INTEGER REFERENCES users(id),
+          room_code VARCHAR(10),
+          status VARCHAR(20) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -135,14 +180,14 @@ async function authenticate(req, res, required = true) {
     return null;
   }
   let token = authHeader.split(' ')[1];
-  if (!token || token === 'null' || token === 'undefined') {
+  if (!token || token === 'null' || token === 'undefined' || token === '""' || token === "''") {
     if (required) {
       res.status(401).json({ message: 'Token missing or invalid' });
     }
     return null;
   }
-  // Remove possible quotes from client-side localStorage.getItem mishap
-  token = token.replace(/^["'](.+(?=["']$))["']$/, '$1');
+  // Deep clean token: remove quotes and whitespace
+  token = token.replace(/^["']+|["']$/g, '').trim();
 
   const JWT_SECRET = process.env.JWT_SECRET;
   try {
@@ -330,6 +375,24 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
+    if (req.query.action === 'pending-invites') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { rows } = await query(
+                `SELECT ri.id, u.username as from_user, ri.room_code, ri.created_at
+                 FROM ride_invitations ri
+                 JOIN users u ON ri.from_user_id = u.id
+                 WHERE ri.to_user_id = $1 AND ri.status = 'pending'
+                   AND ri.created_at >= NOW() - INTERVAL '10 minutes'
+                 ORDER BY ri.created_at DESC`,
+                [userData.userId]
+            );
+            return res.status(200).json(rows);
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
     if (req.query.action === 'room-status') {
       const userData = await authenticate(req, res);
       if (!userData) return;
@@ -551,6 +614,20 @@ export default async function handler(req, res) {
         user.unlocked_departments = [];
       }
 
+      // Fetch user badges
+      try {
+          const { rows: badgeRows } = await query(
+              `SELECT b.id, b.name, b.description, b.model_url_glb, b.model_url_usdz, b.image_url, b.tier, ub.awarded_at
+               FROM user_badges ub
+               JOIN badges b ON ub.badge_id = b.id
+               WHERE ub.user_id = $1`,
+              [user.id]
+          );
+          user.badges = badgeRows;
+      } catch (e) {
+          user.badges = [];
+      }
+
       return res.status(200).json(user);
     } catch (error) {
       console.error('Get user error:', error);
@@ -639,6 +716,22 @@ export default async function handler(req, res) {
         }
     }
 
+    if (req.body.action === 'invite-friend') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { friendId, roomCode } = req.body;
+            await query(
+                `INSERT INTO ride_invitations (from_user_id, to_user_id, room_code)
+                 VALUES ($1, $2, $3)`,
+                [userData.userId, friendId, roomCode]
+            );
+            return res.status(200).json({ success: true });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
+
     if (req.body.action === 'join-room') {
         const userData = await authenticate(req, res);
         if (!userData) return;
@@ -667,10 +760,32 @@ export default async function handler(req, res) {
         if (!userData) return;
         try {
             const { roomId } = req.body;
-            const { rows } = await query(`SELECT host_id FROM ride_rooms WHERE id = $1`, [roomId]);
-            if (rows[0]?.host_id !== userData.userId) return res.status(403).json({ message: '只有房主可以開始騎行' });
+            const { rows: roomRows } = await query(`SELECT host_id FROM ride_rooms WHERE id = $1`, [roomId]);
+            if (roomRows[0]?.host_id !== userData.userId) return res.status(403).json({ message: '只有房主可以開始騎行' });
+
+            // Check if all other members are ready
+            const { rows: members } = await query(`SELECT user_id, is_ready FROM room_members WHERE room_id = $1 AND user_id != $2`, [roomId, userData.userId]);
+            if (members.some(m => !m.is_ready)) {
+                return res.status(400).json({ message: '還有成員未準備就緒' });
+            }
 
             await query(`UPDATE ride_rooms SET status = 'started' WHERE id = $1`, [roomId]);
+            return res.status(200).json({ success: true });
+        } catch (e) {
+            return res.status(500).json({ message: e.message });
+        }
+    }
+
+    if (req.body.action === 'toggle-ready') {
+        const userData = await authenticate(req, res);
+        if (!userData) return;
+        try {
+            const { roomId } = req.body;
+            await query(
+                `UPDATE room_members SET is_ready = NOT is_ready
+                 WHERE room_id = $1 AND user_id = $2`,
+                [roomId, userData.userId]
+            );
             return res.status(200).json({ success: true });
         } catch (e) {
             return res.status(500).json({ message: e.message });
