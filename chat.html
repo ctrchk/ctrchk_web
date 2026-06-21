@@ -1334,10 +1334,11 @@
             friendsList.innerHTML = '<div style="text-align:center;font-size:0.8em;opacity:0.6;">載入中...</div>';
 
             try {
-                console.log('[Chat] Loading friends for user:', ME.id);
+                const userId = ME.id || ME.userId;
+                console.log('[Chat] Loading friends for user:', userId);
                 const [friends, requests] = await Promise.all([
-                    apiGet(`/api/user?action=friends&user_id=${ME.id}`),
-                    apiGet(`/api/user?action=friend_requests&user_id=${ME.id}`)
+                    apiGet(`/api/user?action=friends&user_id=${userId}`),
+                    apiGet(`/api/user?action=friend_requests&user_id=${userId}`)
                 ]);
                 console.log('[Chat] Friends loaded:', friends);
                 console.log('[Chat] Requests loaded:', requests);
@@ -1384,17 +1385,19 @@
 
         window.acceptFriend = async function(friendId) {
             try {
-                await apiPost('/api/user', { action: 'accept_friend', user_id: ME.id, friend_id: friendId });
+                const userId = ME.id || ME.userId;
+                await apiPost('/api/user', { action: 'accept_friend', user_id: userId, friend_id: friendId });
                 loadFriendsData();
                 loadConversations();
             } catch (e) {
-                alert('接受好友失敗');
+                alert('接受好友失敗: ' + e.message);
             }
         };
 
         window.addFriend = async function(friendId) {
             try {
-                await apiPost('/api/user', { action: 'add_friend', user_id: ME.id, friend_id: friendId });
+                const userId = ME.id || ME.userId;
+                await apiPost('/api/user', { action: 'add_friend', user_id: userId, friend_id: friendId });
                 alert('好友請求已發送');
             } catch (e) {
                 alert('發送請求失敗: ' + e.message);

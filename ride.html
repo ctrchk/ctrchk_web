@@ -19,20 +19,23 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="城市運輸單車">
   <link rel="apple-touch-icon" href="/images/icon-192.png">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>騎行中 - 城市運輸單車</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
+
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
-    /* ── Industrial HUD System ── */
+    /* ── Industrial HUD System 4.0 ── */
     :root {
       --hud-green: #2ecc71;
       --hud-red: #e74c3c;
       --hud-highway-green: rgba(27, 94, 32, 0.95);
-      --hud-bg: rgba(18, 31, 20, 0.85);
-      --hud-blur: blur(12px);
+      --hud-bg: rgba(18, 31, 20, 0.9);
+      --hud-blur: blur(16px);
       --app-accent: #BFE340;
     }
 
@@ -52,7 +55,7 @@
       padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
     }
 
-    /* Top: Instructions */
+    /* Top: Instructions Panel */
     .hud-top {
       pointer-events: auto;
       background: var(--hud-highway-green);
@@ -78,60 +81,57 @@
     .nav-dist-val { font-size: 26px; font-weight: 900; color: #fff; line-height: 1; }
     .nav-dist-unit { font-size: 11px; color: var(--app-accent); opacity: 0.8; }
 
-    /* Left: Stats Panel */
-    .hud-middle-row {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      margin: 16px 0;
-    }
-    .hud-left {
+    /* Bottom: Combined Stats and Controls Panel */
+    .hud-bottom-panel {
       pointer-events: auto;
       background: var(--hud-bg);
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 16px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      min-width: 90px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 24px calc(env(safe-area-inset-bottom) + 20px);
+      margin: 0 -16px -16px;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .hud-left.hidden { transform: translateX(-150%); }
+    .hud-bottom-panel.hidden { transform: translateY(100%); }
 
-    .stat-item { text-align: center; }
-    .stat-val { font-size: 24px; font-weight: 900; color: var(--app-accent); line-height: 1; }
-    .stat-unit { font-size: 10px; opacity: 0.6; text-transform: uppercase; margin-top: 4px; color: #fff; }
-
-    /* Bottom: Controls */
-    .hud-bottom {
-      pointer-events: auto;
+    .stats-row {
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
       gap: 12px;
-      margin-bottom: 12px;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .hud-bottom.hidden { transform: translateY(150%); }
+    .stat-box {
+      flex: 1;
+      text-align: center;
+    }
+    .stat-label { font-size: 11px; color: #a8d8a0; opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+    .stat-value { font-size: 24px; font-weight: 900; color: #fff; line-height: 1; }
+    .stat-value span { font-size: 14px; font-weight: normal; margin-left: 2px; color: var(--app-accent); }
 
-    .btn-industrial {
+    .controls-row {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-action {
+      flex: 1;
       border: none;
-      padding: 16px 48px;
-      border-radius: 999px;
-      font-size: 18px;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 16px;
       font-weight: 800;
       cursor: pointer;
-      transition: transform 0.1s, opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.1s, background 0.2s;
     }
-    .btn-industrial:active { transform: scale(0.95); }
-    .btn-industrial.red { background: var(--hud-red); color: #fff; box-shadow: 0 8px 24px rgba(231, 76, 60, 0.4); }
-    .btn-industrial.yellow { background: #f1c232; color: #000; box-shadow: 0 8px 24px rgba(241, 194, 50, 0.4); }
-    .btn-industrial.grey { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-action:active { transform: scale(0.96); }
+    .btn-pause { background: #f1c232; color: #000; }
+    .btn-end { background: var(--hud-red); color: #fff; }
+    .btn-exit { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
 
     /* ── Off-Route Warning ── */
     #off-route-warning {
@@ -155,151 +155,41 @@
       100% { transform: translateX(-50%) scale(1); }
     }
 
-    /* ── Existing Elements Adaptation ── */
+    /* ── User Navigation Arrow ── */
+    .user-nav-arrow {
+      width: 0; height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 40px solid #6dba65;
+      filter: drop-shadow(0 0 10px rgba(109, 186, 101, 0.6));
+      transform-origin: center 75%;
+    }
+
+    /* ── Go-to-start banner ── */
     #go-to-start-banner {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
-      background: linear-gradient(135deg, #1a252f, #223040);
-      color: #fff; border-radius: 18px 18px 0 0;
-      padding: 1.2em 1.4em calc(env(safe-area-inset-bottom) + 1.2em);
-      text-align: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-    }
-    #ride-bottom-sheet.hidden-below { transform: translateY(100%); }
-
-    /* Stats page toggle */
-    #btn-open-stats {
-      position: fixed;
-      right: 16px;
-      top: calc(env(safe-area-inset-top) + 100px);
-      width: 44px; height: 44px; border-radius: 50%;
       background: var(--hud-bg); backdrop-filter: var(--hud-blur);
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      z-index: 50; cursor: pointer;
+      -webkit-backdrop-filter: var(--hud-blur);
+      color: #fff; border-radius: 24px 24px 0 0;
+      padding: 24px 24px calc(env(safe-area-inset-bottom) + 24px);
+      text-align: center; box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
     }
+    #go-to-start-banner h3 { font-size: 20px; font-weight: 800; color: var(--app-accent); margin-bottom: 8px; }
+    #gts-dist-val { font-size: 32px; font-weight: 900; margin: 12px 0; display: block; }
 
-    /* Handle / collapsed area */
-    #rbs-handle {
-      padding: 0.55em 1.2em 0.5em;
-      cursor: pointer;
-      user-select: none;
-    }
-    .rbs-handle-bar {
-      width: 36px; height: 4px; border-radius: 2px;
-      background: rgba(255,255,255,0.25);
-      margin: 0 auto 0.55em;
-    }
-    .rbs-stats-row {
-      display: flex; align-items: center; gap: 0.3em; color: #fff;
-    }
-    .rbs-stat { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
-    .rbs-stat .val { font-size: 1.05em; font-weight: bold; color: #BFE340; white-space: nowrap; }
-    .rbs-stat .lbl { font-size: 0.64em; opacity: 0.6; margin-top: 0.1em; }
-    .rbs-divider { width: 1px; height: 2em; background: rgba(255,255,255,0.15); flex-shrink: 0; }
-    #rbs-toggle-btn {
-      margin-left: auto; flex-shrink: 0;
-      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.75); border-radius: 14px;
-      padding: 0.28em 0.8em; font-size: 0.75em; cursor: pointer;
-    }
-    #gps-status-text { font-size: 0.67em; opacity: 0.5; text-align: center; margin-top: 0.25em; }
-
-    /* Expanded panel */
-    #rbs-expanded {
-      max-height: 0; overflow: hidden;
-      transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
-    }
-    #ride-bottom-sheet.expanded #rbs-expanded {
-      max-height: 65vh; overflow-y: auto;
-    }
-    .rbs-expanded-inner { padding: 0.5em 1.2em 1em; }
-
-    /* Stats grid inside expanded panel */
-    #ride-stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.6em;
-      margin-bottom: 1em;
-    }
-    .ride-stat-card {
-      background: rgba(255,255,255,0.07);
-      border-radius: 12px;
-      padding: 0.8em 0.6em;
-      text-align: center;
-    }
-    .ride-stat-card.wide { grid-column: span 2; }
-    .ride-stat-card .val { font-size: 1.35em; font-weight: bold; color: #BFE340; }
-    .ride-stat-card .lbl { font-size: 0.66em; opacity: 0.65; margin-top: 0.22em; }
-
-    /* Stops progress inside expanded panel */
-    .stats-page-stops-label {
-      font-size: 0.78em; color: #a8d8a0; margin-bottom: 0.5em; font-weight: 600;
-      letter-spacing: 0.06em;
-    }
-    #stops-progress {
-      display: flex; gap: 0.3em; overflow-x: auto; margin-bottom: 0.9em;
-      padding-bottom: 0.2em; scrollbar-width: none;
-    }
-    #stops-progress::-webkit-scrollbar { display: none; }
-    .stop-pill {
-      flex-shrink: 0; display: flex; align-items: center; gap: 0.3em;
-      background: rgba(255,255,255,0.1); border-radius: 20px;
-      padding: 0.3em 0.7em; font-size: 0.78em; white-space: nowrap;
-      transition: background 0.3s, color 0.3s;
-    }
-    .stop-pill.reached { background: #04D93C; color: #1a252f; font-weight: bold; }
-    .stop-pill.next { background: #BFE340; color: #1a252f; font-weight: bold; box-shadow: 0 0 8px rgba(191,227,64,0.5); }
-
-    /* End-ride button */
-    #btn-end-ride {
-      width: 100%; padding: 0.9em; border: none; border-radius: 10px;
-      background: #e74c3c; color: #fff; font-size: 1em; font-weight: bold;
-      cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s;
-      margin-bottom: 0.5em;
-    }
-    #btn-end-ride:active { background: #c0392b; }
-
-    /* ── Go-to-start stop selector ── */
-    #gts-custom-start {
-      margin-top: 0.8em; padding-top: 0.8em;
-      border-top: 1px solid rgba(255,255,255,0.12);
-    }
-    #gts-custom-start label {
-      display: block; font-size: 0.78em; opacity: 0.7; margin-bottom: 0.45em;
-    }
     #gts-stop-select {
-      width: 100%; background: #223040; color: #fff;
-      border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
-      padding: 0.5em 0.8em; font-size: 0.85em; margin-bottom: 0.5em;
-      appearance: none; -webkit-appearance: none;
+      width: 100%; background: rgba(255,255,255,0.1); color: #fff;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
+      padding: 12px; font-size: 15px; margin-bottom: 12px;
     }
-    #btn-start-from-stop {
-      width: 100%; background: #BFE340; color: #1a252f;
-      border: none; border-radius: 8px;
-      padding: 0.55em; font-size: 0.88em; font-weight: bold; cursor: pointer;
-    }
-    #btn-start-from-stop:active { background: #a8cc2a; }
 
-    /* ── Locked screen ── */
-    #ride-locked {
-      display: none; position: fixed; inset: 0; z-index: 500;
-      background: #1a252f; color: #fff;
-      flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 2em;
-    }
-    #ride-locked.show { display: flex; }
-    #ride-locked .lock-icon { font-size: 4em; margin-bottom: 0.5em; }
-    #ride-locked h2 { margin-bottom: 0.5em; }
-    #ride-locked p { opacity: 0.7; margin-bottom: 1.5em; }
-    #ride-locked a { background: #BFE340; color: #1a252f; padding: 0.8em 2em; border-radius: 8px; text-decoration: none; font-weight: bold; }
-
-    /* ── Loading screen ── */
+    /* ── Loading ── */
     #ride-loading {
       position: fixed; inset: 0; z-index: 500;
       background: #1a252f; color: #fff;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 1em;
     }
-    #ride-loading.hidden { display: none; }
     .spinner {
       width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2);
       border-top-color: #BFE340; border-radius: 50%;
@@ -307,282 +197,51 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── End ride summary overlay ── */
+    /* ── Summary ── */
     #ride-summary {
       display: none; position: fixed; inset: 0; z-index: 600;
-      background: rgba(26,37,47,0.97); color: #fff;
+      background: rgba(26,37,47,0.98); color: #fff;
       flex-direction: column; align-items: center; justify-content: center;
-      padding: 2em; text-align: center; overflow-y: auto;
+      padding: 2em; text-align: center;
     }
     #ride-summary.show { display: flex; }
-    #summary-emoji { font-size: 3.5em; margin-bottom: 0.3em; }
-    #summary-title { font-size: 1.8em; font-weight: bold; margin-bottom: 1em; }
-    #summary-xp-badge {
-      background: #BFE340; color: #1a252f;
-      font-size: 2em; font-weight: bold;
-      padding: 0.3em 1em; border-radius: 12px; margin-bottom: 1em;
-      animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
-    }
-    @keyframes pop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    #summary-stats {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 0.8em; width: 100%; max-width: 340px; margin-bottom: 1.5em;
-    }
-    .summary-stat {
-      background: rgba(255,255,255,0.08); border-radius: 10px;
-      padding: 0.8em; text-align: center;
-    }
-    .summary-stat .val { font-size: 1.4em; font-weight: bold; }
-    .summary-stat .lbl { font-size: 0.72em; opacity: 0.65; margin-top: 0.2em; }
-    /* XP progress bar inside summary */
-    #summary-xp-bar-wrap {
-      width: 100%; max-width: 340px; margin-bottom: 0.5em;
-    }
-    #summary-xp-bar-label { font-size: 0.8em; opacity: 0.7; margin-bottom: 0.4em; display: flex; justify-content: space-between; }
-    #summary-xp-bar-bg {
-      background: rgba(255,255,255,0.15); border-radius: 6px; height: 10px; overflow: hidden;
-    }
-    #summary-xp-bar-fill {
-      background: #BFE340; height: 100%; border-radius: 6px;
-      transition: width 1.2s ease; width: 0%;
-    }
-    #btn-summary-done {
-      background: #04D93C; color: #1a252f; border: none;
-      padding: 0.9em 2.5em; border-radius: 10px; font-size: 1.05em; font-weight: bold;
-      cursor: pointer; margin-top: 0.5em; letter-spacing: 0.03em;
-    }
+    #summary-xp-badge { background: #BFE340; color: #1a252f; font-size: 24px; font-weight: 900; padding: 12px 32px; border-radius: 16px; margin: 20px 0; }
 
-    /* ── Route Catalog Styles (Shared with routes.html) ── */
-    #catalog-overlay {
-      display: none; position: fixed; inset: 0; z-index: 800;
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-      flex-direction: column; padding: calc(env(safe-area-inset-top) + 1em) 1.2em;
-      overflow-y: auto; color: #e8f5e9;
+    /* ── Locked ── */
+    #ride-locked {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: #1a252f; color: #fff;
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 2em;
     }
-    #catalog-overlay.show { display: flex; }
-    .catalog-header {
-      background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
-      padding: 1.2em; border-radius: 20px 20px 0 0; border: 1px solid #BFE340; border-bottom: none;
-    }
-    .catalog-content {
-      background: #1e3820; padding: 1.2em; border-radius: 0 0 20px 20px;
-      border: 1px solid #BFE340; border-top: none; margin-bottom: 2em;
-    }
-    .catalog-progress-wrap {
-      background: rgba(0,0,0,0.2); height: 12px; border-radius: 6px;
-      overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin: 0.8em 0;
-    }
-    #catalog-bar-fill {
-      width: 0%; height: 100%; background: linear-gradient(90deg, #6dba65, #BFE340);
-      transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .catalog-reward-box {
-      background: rgba(191,227,64,0.1); border-left: 4px solid #BFE340;
-      padding: 1em; border-radius: 4px; margin: 1em 0;
-    }
-    .catalog-region-card {
-      background: rgba(255,255,255,0.03); padding: 1em; border-radius: 14px; margin-bottom: 0.8em;
-    }
-
-    /* ── Global Animations ── */
-    .animate-spring-pop { animation: springPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-    .animate-float { animation: float 3s ease-in-out infinite; }
-    .animate-shimmer {
-      position: relative; overflow: hidden;
-    }
-    .animate-shimmer::after {
-      content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-      background: linear-gradient(to bottom right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
-      transform: rotate(45deg); animation: shimmer 3s infinite;
-    }
-    .btn-click-effect:active { transform: scale(0.95); transition: transform 0.1s; }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    @keyframes shimmer {
-      0% { transform: translateX(-150%) rotate(45deg); }
-      100% { transform: translateX(150%) rotate(45deg); }
-    }
-
-    /* ── Level-up overlay ── */
-    #levelup-overlay {
-      display: none; position: fixed; inset: 0; z-index: 700;
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(8px);
-      align-items: center; justify-content: center; flex-direction: column;
-      text-align: center; padding: 2em; overflow: hidden;
-      animation: fadeIn 0.4s ease forwards;
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    #levelup-overlay.show { display: flex; }
-
-    #levelup-inner {
-      background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-      border: 2px solid #D4AF37;
-      border-radius: 24px;
-      padding: 2.5em 2em;
-      width: min(90vw, 400px);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(212,175,55,0.2);
-      position: relative; z-index: 1;
-      transform: scale(0.8);
-      opacity: 0;
-    }
-    #levelup-overlay.show #levelup-inner {
-      animation: springPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    }
-    @keyframes springPop {
-      0% { transform: scale(0.8); opacity: 0; }
-      70% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    .levelup-header { margin-bottom: 1.2em; }
-    .levelup-header h2 {
-      color: #D4AF37; font-size: 1.8em; margin: 0.2em 0;
-      text-transform: uppercase; letter-spacing: 2px; font-weight: 900;
-    }
-    .gold-glow {
-      font-size: 3em; color: #D4AF37;
-      filter: drop-shadow(0 0 10px rgba(212,175,55,0.6));
-      margin-bottom: 0.2em;
-    }
-
-    #levelup-badge {
-      background: linear-gradient(135deg, #D4AF37 0%, #F9E29C 100%);
-      color: #000;
-      font-size: 2.2em; font-weight: 900;
-      padding: 0.3em 0.8em; border-radius: 12px; margin-bottom: 0.4em;
-      display: inline-block;
-      box-shadow: 0 4px 15px rgba(212,175,55,0.4);
-    }
-    #levelup-title {
-      color: #D4AF37; font-size: 1.2em; font-weight: bold;
-      margin-bottom: 1.5em; text-transform: uppercase;
-    }
-
-    .levelup-stats-row {
-      display: flex; justify-content: space-around;
-      margin-bottom: 1.8em; gap: 1em;
-    }
-    .levelup-stat-box {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(212,175,55,0.3);
-      border-radius: 16px; padding: 1em; flex: 1;
-    }
-    .levelup-stat-val {
-      display: block; font-size: 1.6em; font-weight: bold; color: #fff;
-      margin-bottom: 0.2em;
-    }
-    .levelup-stat-lbl { font-size: 0.7em; color: rgba(255,255,255,0.5); text-transform: uppercase; }
-
-    #levelup-unlocked {
-      color: #A8D8A0; font-size: 0.85em; margin-bottom: 1.5em;
-      background: rgba(168,216,160,0.1); padding: 0.6em; border-radius: 8px;
-    }
-
-    #btn-levelup-close {
-      background: #D4AF37; color: #000; border: none;
-      padding: 1em 2.5em; border-radius: 50px; font-size: 1em; font-weight: bold;
-      cursor: pointer; transition: transform 0.2s, background 0.2s;
-      box-shadow: 0 4px 15px rgba(212,175,55,0.3);
-      width: 100%;
-    }
-    #btn-levelup-close:active { transform: scale(0.96); background: #b8972f; }
-    /* XP count-up animation in summary */
-    #summary-xp-badge {
-      transition: transform 0.15s;
-    }
-    #summary-xp-badge.count-tick {
-      transform: scale(1.05);
-    }
-    /* ── Light theme overrides ────────────────────────────────────── */
-    body.app-light-theme { background: var(--app-bg-primary, #f5faf5) !important; }
-    body.app-light-theme #ride-map { background: #e8f5e9; }
-    body.app-light-theme #ride-bottom-sheet,
-    body.app-light-theme #go-to-start-banner {
-        background: rgba(245,250,245,0.96);
-        color: var(--app-text-primary, #1b3a1f);
-    }
-    body.app-light-theme #go-to-start-banner h3 { color: var(--app-accent, #2e7d32); }
-    body.app-light-theme .rbs-stats-row { color: var(--app-text-primary, #1b3a1f); }
-    body.app-light-theme .rbs-stat .val { color: var(--app-accent, #2e7d32); }
-    body.app-light-theme .rbs-handle-bar { background: rgba(0,0,0,0.15); }
-    body.app-light-theme .rbs-divider { background: rgba(0,0,0,0.1); }
-    body.app-light-theme #rbs-toggle-btn {
-        background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); color: var(--app-text-secondary, #2e7d32);
-    }
-    body.app-light-theme #next-stop-card {
-        background: rgba(245,250,245,0.95);
-        color: var(--app-text-primary, #1b3a1f);
-    }
-    body.app-light-theme #next-stop-dist { color: var(--app-accent, #2e7d32); }
-    body.app-light-theme #ride-timer-display { background: rgba(0,0,0,0.08); color: var(--app-text-primary, #1b3a1f); }
-    @media (prefers-color-scheme: light) {
-        body:not(.app-theme-explicit) { background: var(--app-bg-primary, #f5faf5) !important; }
-        body:not(.app-theme-explicit) #ride-map { background: #e8f5e9; }
-        body:not(.app-theme-explicit) #ride-bottom-sheet,
-        body:not(.app-theme-explicit) #go-to-start-banner { background: rgba(245,250,245,0.96); color: var(--app-text-primary, #1b3a1f); }
-        body:not(.app-theme-explicit) #go-to-start-banner h3 { color: var(--app-accent, #2e7d32); }
-        body:not(.app-theme-explicit) .rbs-stat .val { color: var(--app-accent, #2e7d32); }
-        body:not(.app-theme-explicit) .rbs-handle-bar { background: rgba(0,0,0,0.15); }
-        body:not(.app-theme-explicit) .rbs-divider { background: rgba(0,0,0,0.1); }
-        body:not(.app-theme-explicit) #rbs-toggle-btn { background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.12); color: var(--app-text-secondary, #2e7d32); }
-        body:not(.app-theme-explicit) #next-stop-card { background: rgba(245,250,245,0.95); color: var(--app-text-primary, #1b3a1f); }
-        body:not(.app-theme-explicit) #next-stop-dist { color: var(--app-accent, #2e7d32); }
-        body:not(.app-theme-explicit) #ride-timer-display { background: rgba(0,0,0,0.08); color: var(--app-text-primary, #1b3a1f); }
-    }
+    #ride-locked.show { display: flex; }
   </style>
 </head>
 <body class="is-pwa">
-<script>
-(function () {
-  var s = localStorage.getItem('appTheme');
-  if (s === 'dark') document.body.classList.add('app-theme-explicit');
-  else if (s === 'light') document.body.classList.add('app-theme-explicit', 'app-light-theme');
-})();
-</script>
-
-  <!-- Resume Modal -->
-  <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:var(--hud-bg); border:1px solid #6dba65; border-radius:24px; padding:24px; width:100%; max-width:400px; color:#fff; text-align:center;">
-      <div style="font-size:48px; margin-bottom:16px;">🚲</div>
-      <h3 style="font-size:20px; font-weight:800; margin-bottom:8px;">發現未完成行程</h3>
-      <p id="resume-info" style="font-size:14px; opacity:0.8; margin-bottom:24px;">您有一段未完成的騎行記錄。</p>
-      <div style="display:flex; flex-direction:column; gap:12px;">
-        <button id="btn-resume-yes" style="width:100%; background:#6dba65; color:#121f14; border:none; padding:16px; border-radius:14px; font-size:18px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(109,186,101,0.3);">繼續騎行</button>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <button id="btn-resume-cancel" style="flex:1; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:12px; border-radius:10px; font-size:14px; cursor:pointer;">暫時關閉</button>
-          <button id="btn-resume-delete" style="background:#e74c3c; color:#fff; border:none; padding:12px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">刪除記錄</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div id="ride-loading">
     <div class="spinner"></div>
-    <p>正在載入引擎...</p>
+    <p>正在載入 3D 導航系統...</p>
     <button id="btn-skip-loading" style="margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; cursor: pointer;">跳過載入</button>
   </div>
 
   <div id="ride-locked">
-    <div class="lock-icon">🔒</div>
-    <h2>路線尚未購買</h2>
-    <p id="ride-locked-msg">此為特別篇路線，需使用里程幣解鎖</p>
-    <a href="/routes">返回路線列表</a>
+    <div style="font-size: 64px; margin-bottom: 20px;">🔒</div>
+    <h2 style="margin-bottom: 10px;">路線尚未解鎖</h2>
+    <p style="opacity: 0.7; margin-bottom: 30px;">此為特別篇路線，需使用里程幣解鎖後才能騎行。</p>
+    <a href="/routes" style="background: var(--app-accent); color: #1a252f; padding: 12px 32px; border-radius: 12px; font-weight: 800; text-decoration: none;">返回列表</a>
   </div>
 
   <div id="ride-map"></div>
 
   <div id="off-route-warning">⚠️ 偏離路線</div>
 
-  <!-- Industrial HUD -->
   <div class="hud-container">
+    <!-- Top Instruction -->
     <div class="hud-top hidden" id="hud-top">
       <div class="nav-next-icon" id="next-icon"><i class="fas fa-arrow-up"></i></div>
       <div class="nav-instruction-wrap">
-        <div class="nav-next-road" id="next-road">目前路段</div>
+        <div class="nav-next-road" id="next-road">--</div>
         <div class="nav-instruction" id="next-instruction">沿單車徑前行</div>
       </div>
       <div class="nav-dist-wrap">
@@ -591,1750 +250,358 @@
       </div>
     </div>
 
-    <div class="hud-middle-row">
-      <div class="hud-left hidden" id="hud-left">
-        <div class="stat-item">
-          <div class="stat-val" id="speed-val">0.0</div>
-          <div class="stat-unit">km/h</div>
+    <div style="flex: 1;"></div>
+
+    <!-- Bottom Stats and Controls -->
+    <div class="hud-bottom-panel hidden" id="hud-bottom">
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-label">時間</div>
+          <div class="stat-value" id="stat-time">00:00</div>
         </div>
-        <div class="stat-item">
-          <div class="stat-val" id="eta-val">--</div>
-          <div class="stat-unit">ETA</div>
+        <div class="stat-box">
+          <div class="stat-label">速度</div>
+          <div class="stat-value" id="speed-val">0.0<span>km/h</span></div>
         </div>
-        <div class="stat-item">
-          <div class="stat-val" id="dist-val">--</div>
-          <div class="stat-unit">公里</div>
+        <div class="stat-box">
+          <div class="stat-label">里程</div>
+          <div class="stat-value" id="dist-val">0.0<span>km</span></div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">站點</div>
+          <div class="stat-value" id="stat-stops">0/0</div>
         </div>
       </div>
-    </div>
-
-    <div class="hud-bottom hidden" id="hud-bottom">
-       <button class="btn-industrial yellow" id="btn-pause-ride">暫停</button>
-       <button class="btn-industrial red" id="btn-end-ride">結束騎行</button>
+      <div class="controls-row">
+        <button class="btn-action btn-pause" id="btn-pause-ride"><i class="fas fa-pause"></i> 暫停</button>
+        <button class="btn-action btn-end" id="btn-end-ride"><i class="fas fa-stop"></i> 結束</button>
+      </div>
     </div>
   </div>
 
   <!-- Specialized Free Mode HUD -->
   <div id="free-mode-hud" style="display:none; position:fixed; top:calc(env(safe-area-inset-top) + 10px); left:16px; right:16px; z-index:200; pointer-events:none;">
-      <div style="background:var(--hud-bg); backdrop-filter:var(--hud-blur); border:1px solid rgba(191,227,64,0.3); border-radius:16px; padding:12px; pointer-events:auto; display:flex; align-items:center; gap:12px;">
+      <div style="background:var(--hud-bg); backdrop-filter:var(--hud-blur); border:1px solid rgba(191,227,64,0.3); border-radius:16px; padding:16px; pointer-events:auto; display:flex; align-items:center; gap:16px;">
           <div style="flex:1;">
-              <div style="font-size:12px; opacity:0.8; color:#fff;">自由模式中</div>
-              <div id="free-mode-status" style="font-size:16px; font-weight:800; color:#BFE340;">正在探索城市</div>
+              <div style="font-size:12px; opacity:0.8; color:#fff; font-weight:bold;">自由模式中</div>
+              <div id="free-mode-status" style="font-size:18px; font-weight:800; color:#BFE340;">正在探索城市</div>
           </div>
-          <button onclick="confirmLeave()" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:8px 16px; border-radius:8px; font-size:14px; font-weight:bold;">退出</button>
+          <button onclick="confirmLeave()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:10px 20px; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer;">退出</button>
       </div>
   </div>
-
-  <div id="btn-open-stats" onclick="toggleBottomSheet()" style="display:none;"><i class="fas fa-chart-line"></i></div>
 
   <div id="go-to-start-banner" style="display:none;">
-    <div class="gts-icon">📍</div>
+    <div style="font-size: 32px; margin-bottom: 12px;">📍</div>
     <h3>前往起點</h3>
-    <p id="gts-start-name">請前往路線起點，抵達後將自動開始計時</p>
-    <div id="gts-dist-row">
-      <span id="gts-dist-label">距起點</span>
-      <span id="gts-dist-val">-- m</span>
+    <p id="gts-start-name" style="opacity: 0.8; font-size: 15px; margin-bottom: 8px;">--</p>
+    <span id="gts-dist-val">-- m</span>
+    <button class="btn-action btn-pause" onclick="skipGoToStart()" style="margin-bottom: 16px; width: 100%; background: var(--app-accent);">從目前位置直接開始 →</button>
+
+    <div style="text-align: left; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; margin-top: 16px;">
+      <label style="font-size: 12px; opacity: 0.6; display: block; margin-bottom: 8px; font-weight: bold;">更改出發站點：</label>
+      <select id="gts-stop-select"></select>
+      <button class="btn-action btn-exit" onclick="startFromSelectedStop()" style="width: 100%; padding: 12px;">從選定站出發</button>
     </div>
-    <button class="btn-industrial yellow" id="btn-skip-gts" onclick="skipGoToStart()" style="padding: 10px 24px; font-size: 14px; margin-bottom: 12px;">從當前位置出發 →</button>
-    <div id="gts-custom-start">
-      <label style="display:block; font-size:12px; opacity:0.7; margin-bottom:8px;">或選擇出發站點：</label>
-      <select id="gts-stop-select" style="width:100%; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px; border-radius:8px; margin-bottom:10px;"></select>
-      <button class="btn-industrial yellow" id="btn-start-from-stop" onclick="startFromSelectedStop()" style="width:100%; padding:10px; font-size:14px;">從選定站點出發</button>
-    </div>
-    <button onclick="confirmLeave()" style="background:none; border:none; color:rgba(255,255,255,0.5); font-size:12px; margin-top:16px; text-decoration:underline;">取消並返回</button>
+
+    <button onclick="confirmLeave()" style="background:none; border:none; color:rgba(255,255,255,0.5); font-size:14px; margin-top:20px; text-decoration:underline; cursor:pointer;">取消並返回儀表板</button>
   </div>
 
-  <!-- Floating bottom sheet (expanded stats) -->
-  <div id="ride-bottom-sheet" class="hidden-below" style="z-index:300;">
-    <div id="rbs-handle" onclick="toggleBottomSheet()">
-      <div class="rbs-handle-bar"></div>
-      <div id="gps-status-text" style="color:#fff; font-size:10px; opacity:0.6; text-align:center; margin-bottom:8px;">正在連接 GPS...</div>
-      <div class="rbs-stats-row">
-        <div class="rbs-stat">
-          <span class="val" id="stat-time">00:00</span>
-          <span class="lbl">⏱ 時間</span>
-        </div>
-        <div class="rbs-divider"></div>
-        <div class="rbs-stat">
-          <span class="val" id="stat-dist-bottom">0 m</span>
-          <span class="lbl">🚴 距離</span>
-        </div>
-        <div class="rbs-divider"></div>
-        <div class="rbs-stat">
-          <span class="val" id="stat-stops">0/0</span>
-          <span class="lbl">🚏 站點</span>
-        </div>
-        <button id="rbs-toggle-btn" class="btn-click-effect">更多 ▲</button>
-      </div>
-    </div>
-    <div id="rbs-expanded">
-      <div class="rbs-expanded-inner">
-        <div id="ride-stats-grid">
-          <div class="ride-stat-card animate-spring-pop">
-            <div class="val" id="stat-xp">0</div>
-            <div class="lbl">⭐ XP</div>
-          </div>
-          <div class="ride-stat-card">
-            <div class="val" id="stat-speed-bottom">0.0</div>
-            <div class="lbl">💨 速度 (km/h)</div>
-          </div>
-        </div>
-        <div class="stats-page-stops-label">站點進度</div>
-        <div id="stops-progress"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- End ride summary -->
   <div id="ride-summary">
-    <div id="summary-emoji" class="animate-float">🎉</div>
-    <div id="summary-title" class="animate-spring-pop">騎行完成！</div>
-    <div id="summary-xp-badge" class="animate-spring-pop">+0 XP</div>
-    <div id="summary-bonus-coins" style="display:none;font-size:0.9em;color:#BFE340;margin-top:0.3em;font-weight:bold;"></div>
-    <div id="summary-stats">
-      <div class="summary-stat"><div class="val" id="s-time">--</div><div class="lbl">⏱ 時間</div></div>
-      <div class="summary-stat"><div class="val" id="s-dist">--</div><div class="lbl">🚴 距離</div></div>
-      <div class="summary-stat"><div class="val" id="s-stops">--</div><div class="lbl">🚏 站點</div></div>
-      <div class="summary-stat"><div class="val" id="s-speed">--</div><div class="lbl">💨 均速</div></div>
-    </div>
-    <button id="btn-save-track" class="btn-click-effect" style="margin-bottom:1em; background:rgba(255,255,255,0.1); color:#fff; border:1px solid #555; padding:0.5em 1em; border-radius:8px; font-size:0.85em; cursor:pointer;">
-      <i class="fas fa-download"></i> 保存透明背景軌跡圖
-    </button>
-    <div id="summary-xp-bar-wrap">
-      <div id="summary-xp-bar-label">
-        <span id="s-xp-cur">XP 0</span><span id="s-xp-next">→ 下一級 80 XP</span>
+    <div style="font-size: 64px; margin-bottom: 16px;">🎉</div>
+    <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 8px;">騎行完成！</h2>
+    <div id="summary-xp-badge">+0 XP</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 340px; margin-bottom: 32px;">
+      <div style="background: rgba(255,255,255,0.06); padding: 16px; border-radius: 12px;">
+        <div style="font-size: 12px; opacity: 0.6; margin-bottom: 4px;">總時間</div>
+        <div id="s-time" style="font-size: 20px; font-weight: 800;">--</div>
       </div>
-      <div id="summary-xp-bar-bg"><div id="summary-xp-bar-fill"></div></div>
-    </div>
-    <button id="btn-summary-done" class="btn-click-effect" onclick="window.location.href='/dashboard'">確認並返回儀表板</button>
-  </div>
-
-  <!-- Route Catalog Overlay -->
-  <div id="catalog-overlay">
-    <div class="catalog-header">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="color:#BFE340; font-size:1.4em; margin:0;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
-        <button onclick="closeCatalog()" style="background:none; border:none; color:#a8d8a0; font-size:1.6em;"><i class="fas fa-times"></i></button>
-      </div>
-      <div class="catalog-progress-wrap">
-        <div id="catalog-bar-fill"></div>
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#a8d8a0; font-weight:bold;">
-        <span id="catalog-text-progress">已征服 0 / 0 條路線</span>
-        <span id="catalog-text-pct">0%</span>
+      <div style="background: rgba(255,255,255,0.06); padding: 16px; border-radius: 12px;">
+        <div style="font-size: 12px; opacity: 0.6; margin-bottom: 4px;">總距離</div>
+        <div id="s-dist" style="font-size: 20px; font-weight: 800;">--</div>
       </div>
     </div>
-    <div class="catalog-content">
-      <div class="catalog-reward-box">
-        <strong style="color:#BFE340; display:block; margin-bottom:0.4em;">🎁 集齊全集獎勵：</strong>
-        <div style="font-size:0.9em; line-height:1.6;">
-          • <span style="color:#D4AF37; font-weight:bold;">10,000 XP</span> (提升至高等級)<br>
-          • <span style="color:#D4AF37; font-weight:bold;">1,000 里程幣</span> (解鎖功能)<br>
-          • 解鎖 <span style="color:#BFE340; font-weight:bold;">「特別限定路線」</span> 騎行權限
-        </div>
-      </div>
-      <div id="catalog-regions-list"></div>
-      <button onclick="closeCatalog()" style="width:100%; padding:1em; border:none; border-radius:12px; background:#BFE340; color:#121f14; font-weight:bold; cursor:pointer; margin-top:1em;">關閉圖籍</button>
-    </div>
-  </div>
-
-  <!-- Level-up overlay -->
-  <div id="levelup-overlay">
-    <div id="levelup-inner">
-      <div class="levelup-header">
-        <i class="fas fa-crown gold-glow"></i>
-        <h2>等級提升</h2>
-      </div>
-      <div id="levelup-badge">Lv.1</div>
-      <div id="levelup-title">入門車手</div>
-      <div class="levelup-stats-row">
-        <div class="levelup-stat-box">
-          <span class="levelup-stat-val" id="levelup-xp-val">0</span>
-          <span class="levelup-stat-lbl">XP 獲得</span>
-        </div>
-        <div class="levelup-stat-box">
-          <span class="levelup-stat-val" id="levelup-coins-val">0</span>
-          <span class="levelup-stat-lbl">里程幣</span>
-        </div>
-      </div>
-      <div id="levelup-unlocked"></div>
-      <button id="btn-levelup-close" onclick="closeLevelUp()">確認</button>
-    </div>
+    <button id="btn-summary-done" style="background: var(--hud-green); color: #fff; border: none; padding: 18px 64px; border-radius: 16px; font-size: 18px; font-weight: 800; cursor: pointer;" onclick="window.location.href='/dashboard'">確認並返回</button>
   </div>
 
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
-  <script src="/js/pwa.js"></script>
   <script>
-  /**
-   * CTRCHK Ride Engine v4.0 (Leaflet)
-   * High-performance 2D experience, Industrial HUD, Friend Sharing & Off-Route Warnings
-   */
   (function () {
     'use strict';
 
-    // ── Level config ─────────────────────────────
-    const LEVEL_XP = [
-      0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
-      4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
-      28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
-      98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
-      267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
-      Infinity
-    ];
-    function getLevelTitle(lv) {
-      if (window.getCyclistTier) return window.getCyclistTier(lv);
-      const l = parseInt(lv || 1, 10);
-      if (l >= 76) return '頂尖車手';
-      if (l >= 51) return '精英車手';
-      if (l >= 31) return '資深車手';
-      if (l >= 16) return '進階車手';
-      if (l >= 6) return '初階車手';
-      return '入門車手';
-    }
-    const ROUTE_UNLOCK = {
-      '900':1,'900A':1,'966T':1,'914':8,'966A':8,'966':8,'900S':1,'914B':1,'910':5,'901P':15,
-      '914H':22,'920':22,'966B':22,'920X':30,'923':30,'966C':30,'928':38,'929':38,'961':38,'961P':38,
-      '932':45,'935':45,'939':45,'939M':45,'962':45,'962A':45,'955':50,'955A':50,'955H':50,'960':50,
-      '962P':50,'962X':50,'X935':50,'S90':50,'S91':50,
-    };
-
-    // ── State ─────────────────────────────────────────────────────────────
     const params = new URLSearchParams(location.search);
     const routeId = params.get('id') || '';
     const dirIndex = parseInt(params.get('dir') || '0', 10);
     const startStopIdx = parseInt(params.get('startStopIdx') || '0', 10);
-    const isFreeParam = params.get('mode') === 'free';
+    const mode = params.get('mode');
     const friendMode = params.get('friendMode') === '1';
 
-    // Config Constants
-    const STOP_DETECTION_RADIUS_M = 40;
-    const OFF_ROUTE_THRESHOLD_M = 50;
-    const MAX_GPS_JUMP_M = 500;
-    const MIN_DIST_M = 3;
-    const DISTRICT_CHANGE_XP = 20;
-    const FAST_FINISH_BONUS_COINS = 5;
-
-    // Per-route overrides
-    let ROUTE_COMPLETION_XP = 200;
-    let FAST_FINISH_MINUTES = 45;
-    let ROUTE_COMPLETION_COINS = 0;
-
-    let routeData = null;
-    let allRoutes = [];
-    let routeStops = [];
-    let gpxCoords = []; // Array of [lng, lat] from GPX
     let map = null;
     let userMarker = null;
     let watchId = null;
     let rideStarted = false;
     let goToStartPhase = true;
-    let isFreeMode = false;
+    let isFreeMode = (mode === 'free');
     let startTime = null;
     let timerInterval = null;
-    let wakeLock = null;
+    let heartbeatInterval = null;
     let reachedStops = new Set();
     let totalDistM = 0;
     let lastLat = null, lastLon = null;
-    let lastSpeedKmh = 0;
-    let pendingSummary = null;
     let sessionXp = 0;
-    let lastReachedDistrict = null;
-    let gtsTargetStopIdx = 0;
-    let sessionCompletionCoins = 0;
-    let sessionFastFinishCoins = 0;
-
-    // Map Engine State
-    let isFollowing = true;
+    let gpxCoords = [];
+    let routeStops = [];
+    let routeData = null;
+    let allRoutes = [];
     let friendMarkers = new Map();
-    let routePolyline = null;
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    const STOP_DETECTION_RADIUS_M = 40;
+    const OFF_ROUTE_THRESHOLD_M = 50;
+
     function haversineM(lat1, lon1, lat2, lon2) {
       const R = 6371000;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) ** 2;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     function formatTime(ms) {
-      const s = Math.floor(ms / 1000);
-      const m = Math.floor(s / 60);
-      const h = Math.floor(m / 60);
-      if (h > 0) return `${h}:${String(m % 60).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
-      return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+      const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
+      return h > 0 ? `${h}:${String(m % 60).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
     }
 
-    function formatDist(m) {
-      return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
-    }
+    function formatDist(m) { return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`; }
 
-    function normalizeLabel(v) {
-      return String(v || '').replace(/\s+/g, '').toLowerCase();
-    }
+    async function initMap(center) {
+        try {
+            const configResp = await fetch('/api/user?action=config');
+            const config = await configResp.json();
+            mapboxgl.accessToken = config.mapboxToken;
 
-    function isNearTerminalName(text, terminalName) {
-      const a = normalizeLabel(text);
-      const b = normalizeLabel(terminalName);
-      return !!a && !!b && (a.includes(b) || b.includes(a));
-    }
+            map = new mapboxgl.Map({
+                container: 'ride-map',
+                style: 'mapbox://styles/mapbox/dark-v11',
+                center: [center[1], center[0]],
+                zoom: 18.5,
+                pitch: 75,
+                bearing: 0,
+                antialias: true
+            });
 
-    function renderFreeModeTerminalOptions() {
-      const listEl = document.getElementById('free-terminal-options');
-      if (!listEl) return;
-      const names = new Set();
-      allTerminals.forEach(t => { if (t?.name) names.add(String(t.name).trim()); });
-      allRoutes.forEach(r => {
-        if (r?.start) names.add(String(r.start).trim());
-        if (r?.end) names.add(String(r.end).trim());
-      });
-      listEl.innerHTML = [...names].sort((a, b) => a.localeCompare(b, 'zh-Hant')).map(name => `<option value="${name.replace(/"/g, '&quot;')}"></option>`).join('');
-    }
+            map.on('load', () => {
+                const layers = map.getStyle().layers;
+                const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field'])?.id;
+                map.addLayer({
+                    'id': '3d-buildings',
+                    'source': 'composite',
+                    'source-layer': 'building',
+                    'filter': ['==', 'extrude', 'true'],
+                    'type': 'fill-extrusion',
+                    'minzoom': 15,
+                    'paint': {
+                        'fill-extrusion-color': '#aaa',
+                        'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+                        'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+                        'fill-extrusion-opacity': 0.6
+                    }
+                }, labelLayerId);
 
-    function routeStartsNearTerminal(route, terminalName) {
-      if (!route || !terminalName) return false;
-      const firstStop = Array.isArray(route.stops) && route.stops.length ? route.stops[0] : null;
-      if (firstStop?.name && isNearTerminalName(firstStop.name, terminalName)) return true;
-      if (route.start && isNearTerminalName(route.start, terminalName)) return true;
-      return false;
-    }
+                if (routeData && gpxCoords.length > 0) {
+                    drawRoute(gpxCoords, routeData.color || '#BFE340');
+                }
+                document.getElementById('ride-loading').style.display = 'none';
 
-    function updateFreeNearbyRoutes(lat, lon) {
-      const panel = document.getElementById('free-nearby-routes');
-      const hint = document.getElementById('free-nearby-hint');
-      if (!panel || !hint || !allRoutes.length) return;
+                // Initial marker if position already known
+                if (lastLat !== null) updateUserMarker([lastLon, lastLat], 0);
+            });
 
-      const now = Date.now();
-      if (now - lastFreeNearbyUpdateAt < 1500) return;
-      lastFreeNearbyUpdateAt = now;
+            map.on('error', (e) => {
+                console.error('Mapbox error:', e);
+                document.getElementById('ride-loading').innerHTML = '<p style="color:#e74c3c;">地圖載入失敗，請檢查網絡連接或 Token。</p>';
+            });
 
-      const nearbyTerminals = allTerminals
-        .map(t => ({ ...t, dist: haversineM(lat, lon, Number(t.lat), Number(t.lng)) }))
-        .filter(t => Number.isFinite(t.dist) && t.dist <= 450)
-        .sort((a, b) => a.dist - b.dist)
-        .slice(0, 2);
-
-      if (!nearbyTerminals.length) {
-        hint.textContent = '靠近總站時可快速開始該總站路線';
-        panel.innerHTML = '<span style="font-size:0.72em; opacity:0.75;">尚未偵測到附近總站</span>';
-        return;
-      }
-
-      const nearest = nearbyTerminals[0];
-      hint.textContent = `附近總站：${nearest.name}（${Math.round(nearest.dist)}m）`;
-      const candidates = allRoutes
-        .filter(r => routeStartsNearTerminal(r, nearest.name))
-        .slice(0, 4);
-      if (!candidates.length) {
-        panel.innerHTML = '<span style="font-size:0.72em; opacity:0.75;">附近總站暫無可用路線</span>';
-        return;
-      }
-      panel.innerHTML = candidates.map(r => {
-        const id = String(r.id || '').replace(/"/g, '&quot;');
-        const alias = String(r.alias || '').replace(/"/g, '&quot;');
-        return `<button style="border:1px solid #35553b; background:#1a2b1e; color:#d7ead8; border-radius:999px; padding:0.35em 0.65em; font-size:0.75em; cursor:pointer;" onclick="location.href='/ride?id=${id}'">開始 ${id} ${alias}</button>`;
-      }).join('');
-    }
-
-    function getRideModeFromRoute(route) {
-      const nature = String(route?.nature || '').toLowerCase();
-      if (nature.includes('旅遊') || nature.includes('tour')) return 'tourism';
-      if (
-        nature.includes('通勤') ||
-        nature.includes('commut') ||
-        nature.includes('drt') ||
-        nature.includes('混合') ||
-        nature.includes('mixed')
-      ) return 'commuter';
-      return 'tourism';
-    }
-
-    function getUserLevel() {
-      try {
-        const raw = localStorage.getItem('user');
-        if (!raw) return 1;
-        const u = JSON.parse(raw);
-        return Math.max(1, parseInt(u.level || u.game_level || 1, 10));
-      } catch (e) { return 1; }
-    }
-
-    // ── Per-stop XP calculation ────────────────────────────────────────────
-    // Returns { stopXp, districtBonusXp, bonusLabel }
-    // Note: a stop's xp field is 0 when the stop is explicitly non-scoring (e.g. TIK 01 on route 900,
-    // which is a downbound-only stop and therefore excluded from XP per the route specification).
-    function calcStopXp(stop) {
-      const stopXp = typeof stop.xp === 'number' ? stop.xp : DEFAULT_STOP_XP;
-      let districtBonusXp = 0;
-      let bonusLabel = '';
-
-      // District-change bonus when crossing into a new district zone
-      if (stop.district && lastReachedDistrict && stop.district !== lastReachedDistrict) {
-        districtBonusXp = DISTRICT_CHANGE_XP;
-        bonusLabel = `⬆️ 跨區獎勵 +${DISTRICT_CHANGE_XP} XP`;
-      }
-      return { stopXp, districtBonusXp, bonusLabel };
-    }
-
-    // Show a brief XP toast near the top of the screen
-    function showXpToast(text) {
-      const existing = document.getElementById('xp-toast');
-      if (existing) existing.remove();
-      const toast = document.createElement('div');
-      toast.id = 'xp-toast';
-      toast.style.cssText = `
-        position:fixed;top:calc(env(safe-area-inset-top) + 8em);left:50%;
-        transform:translateX(-50%);z-index:300;
-        background:rgba(4,217,60,0.92);color:#1a252f;
-        border-radius:20px;padding:0.4em 1.1em;font-size:0.9em;font-weight:bold;
-        pointer-events:none;transition:opacity 0.5s;white-space:nowrap;
-      `;
-      toast.textContent = text;
-      document.body.appendChild(toast);
-      setTimeout(() => { toast.style.opacity = '0'; }, 1800);
-      setTimeout(() => { toast.remove(); }, 2400);
-    }
-
-    // Update the running XP display in the HUD
-    function updateSessionXpDisplay() {
-      const el = document.getElementById('stat-xp');
-      if (el) el.textContent = sessionXp;
-    }
-
-    // ── Floating bottom sheet UI ─────────────────────────────────────────
-    let bottomSheetExpanded = false;
-
-    window.toggleBottomSheet = function () {
-      bottomSheetExpanded = !bottomSheetExpanded;
-      const sheet = document.getElementById('ride-bottom-sheet');
-      const btn = document.getElementById('rbs-toggle-btn');
-      sheet.classList.toggle('expanded', bottomSheetExpanded);
-      if (btn) btn.textContent = bottomSheetExpanded ? '收起 ▼' : '更多 ▲';
-    };
-
-    function showRideHUD(visible) {
-      const sheet = document.getElementById('ride-bottom-sheet');
-      const hudTop = document.getElementById('hud-top');
-      const hudLeft = document.getElementById('hud-left');
-      const hudBottom = document.getElementById('hud-bottom');
-
-      if (visible) {
-        sheet.classList.remove('hidden-below');
-        if (hudTop) hudTop.classList.remove('hidden');
-        if (hudLeft) hudLeft.classList.remove('hidden');
-        if (hudBottom) hudBottom.classList.remove('hidden');
-      } else {
-        sheet.classList.add('hidden-below');
-        sheet.classList.remove('expanded');
-        bottomSheetExpanded = false;
-        const btn = document.getElementById('rbs-toggle-btn');
-        if (btn) btn.textContent = '更多 ▲';
-        if (hudTop) hudTop.classList.add('hidden');
-        if (hudLeft) hudLeft.classList.add('hidden');
-        if (hudBottom) hudBottom.classList.add('hidden');
-      }
-    }
-
-    // ── Locked screen ─────────────────────────────────────────────────────
-    function showLocked(cost) {
-      document.getElementById('ride-locked-msg').textContent =
-        `此為特別篇路線，需使用 ${cost} 里程幣解鎖`;
-      document.getElementById('ride-locked').classList.add('show');
-      document.getElementById('ride-loading').classList.add('hidden');
-    }
-
-    // ── Map Engine (Leaflet) ────────────────────────────────────────────────
-    function initMap(lat, lon) {
-      if (map) return;
-      const isLight = document.body.classList.contains('app-light-theme');
-      map = L.map('ride-map', {
-        zoomControl: false,
-        attributionControl: false
-      }).setView([lat, lon], 15);
-
-      const tileUrl = isLight
-        ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-      L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
-
-      if (routeData) {
-        drawRoute(gpxCoords, routeData.color || '#BFE340');
-        plotStopsOnMap(routeStops);
-      }
-      document.getElementById('ride-loading').classList.add('hidden');
-    }
-
-    async function loadGpxData(file) {
-      try {
-        const res = await fetch('/gpx/' + file);
-        if (!res.ok) return [];
-        const xml = await res.text();
-        const doc = new DOMParser().parseFromString(xml, 'application/xml');
-        // Leaflet uses [lat, lon] internally, but Turf uses [lon, lat]
-        return [...doc.querySelectorAll('trkpt')].map(p => [
-          parseFloat(p.getAttribute('lon')), parseFloat(p.getAttribute('lat'))
-        ]).filter(([a, b]) => !isNaN(a) && !isNaN(b));
-      } catch (e) { return []; }
+        } catch (e) {
+            console.error('initMap error:', e);
+            document.getElementById('ride-loading').innerHTML = '<p style="color:#e74c3c;">系統初始化失敗</p>';
+        }
     }
 
     function drawRoute(coords, color) {
-      if (!map || !coords.length) return;
-      if (routePolyline) map.removeLayer(routePolyline);
-
-      // Turf coordinates are [lon, lat], Leaflet needs [lat, lon]
-      const leafletCoords = coords.map(c => [c[1], c[0]]);
-
-      // Asphalt base
-      L.polyline(leafletCoords, {
-        color: '#1a1a1a', weight: 12, opacity: 0.9, lineCap: 'round'
-      }).addTo(map);
-
-      // Green surface
-      routePolyline = L.polyline(leafletCoords, {
-        color: color, weight: 8, opacity: 0.8, lineCap: 'round'
-      }).addTo(map);
-
-      map.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
-    }
-
-    function plotStopsOnMap(stops) {
-      stops.forEach(s => {
-        const icon = L.divIcon({
-          className: '',
-          html: `<div style="background:#2c3e50;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid #BFE340;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${s.order}</div>`,
-          iconSize: [24, 24], iconAnchor: [12, 12]
-        });
-        L.marker([s.lat, s.lon], { icon }).addTo(map)
-          .bindPopup(`<b>${s.code || ''} ${s.name}</b>`);
-      });
-    }
-
-    // ── Stop UI ───────────────────────────────────────────────────────────
-    function buildStopsUI(stops) {
-      const container = document.getElementById('stops-progress');
-      container.innerHTML = '';
-      stops.forEach(s => {
-        const pill = document.createElement('span');
-        pill.className = 'stop-pill';
-        pill.id = 'pill-' + s.order;
-        const label = s.code ? `${s.code} ${s.name}` : `${s.order}. ${s.name}`;
-        pill.textContent = label;
-        container.appendChild(pill);
-      });
-      // Populate go-to-start stop selector
-      const sel = document.getElementById('gts-stop-select');
-      if (sel) {
-        // Filter out stops that cannot be a starting point:
-        // 1. The very last stop (destination)
-        // 2. Stops marked as 'end_only'
-        sel.innerHTML = stops.map((s, i) => {
-          if (i === stops.length - 1) return null;
-          if (s.type === 'end_only') return null;
-          const label = s.code ? `${s.code}：${s.name}` : `站 ${s.order}：${s.name}`;
-          return `<option value="${i}">${label}</option>`;
-        }).filter(Boolean).join('');
-        sel.onchange = function () {
-          const idx = parseInt(this.value, 10);
-          if (!isNaN(idx) && idx >= 0 && idx < stops.length) {
-            gtsTargetStopIdx = idx;
-            const stop = stops[idx];
-            const label = stop.code ? `${stop.code}：${stop.name}` : `站 ${stop.order}：${stop.name}`;
-            const nameEl = document.getElementById('gts-start-name');
-            if (nameEl) nameEl.textContent = `出發站：${label}`;
-            const distLabelEl = document.getElementById('gts-dist-label');
-            if (distLabelEl) distLabelEl.textContent = idx === 0 ? '距起點' : '距選定站';
-          }
-        };
-      }
-      updateNextStopUI();
-    }
-
-    function updateNextStopUI() {
-      const next = routeStops.find(s => !reachedStops.has(s.order));
-      document.querySelectorAll('.stop-pill').forEach(el => el.classList.remove('next'));
-      if (next) {
-        const pill = document.getElementById('pill-' + next.order);
-        if (pill) pill.classList.add('next');
-        const label = next.code ? `${next.code}：${next.name}` : `站 ${next.order}：${next.name}`;
-        document.getElementById('next-stop-name').textContent = label;
-      } else {
-        document.getElementById('next-stop-name').textContent = '所有站點已到達！';
-        document.getElementById('next-stop-dist').textContent = '✅';
-      }
-      document.getElementById('stat-stops').textContent =
-        `${reachedStops.size}/${routeStops.length}`;
-    }
-
-    function markStopReached(stop) {
-      const { stopXp, districtBonusXp, bonusLabel } = calcStopXp(stop);
-      sessionXp += stopXp + districtBonusXp;
-      if (stop.district) lastReachedDistrict = stop.district;
-      updateSessionXpDisplay();
-
-      if (districtBonusXp > 0) showXpToast(`${bonusLabel}　✅ 站點 +${stopXp} XP`);
-      else if (stopXp > 0) showXpToast(`+${stopXp} XP`);
-
-      reachedStops.add(stop.order);
-      const pill = document.getElementById('pill-' + stop.order);
-      if (pill) {
-        pill.classList.remove('next');
-        pill.classList.add('reached');
-        pill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-      updateNextStopUI();
-    }
-
-    // ── GPS ───────────────────────────────────────────────────────────────
-    const GPS_OPTIONS = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
-
-    function startGPS() {
-      if (typeof window.confirmLocationPermission === 'function') {
-        window.confirmLocationPermission(() => _startGPSActual(), () => {
-          document.getElementById('gps-status-text').textContent = '需要位置權限才能使用此功能';
-        });
-      } else {
-        _startGPSActual();
-      }
-    }
-
-    function _startGPSActual() {
-      if (!('geolocation' in navigator)) {
-        document.getElementById('gps-status-text').textContent = '此裝置不支援 GPS';
-        return;
-      }
-      document.getElementById('gps-status-text').textContent = '正在開啟 GPS...';
-      // First call getCurrentPosition to trigger permission dialog immediately,
-      // then start watchPosition for continuous tracking.
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          // Permission granted — start continuous watch
-          onPosition(pos);
-          if (watchId === null) {
-            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, GPS_OPTIONS);
-          }
-        },
-        (err) => {
-          // Still start watch even if getCurrentPosition failed (covers retry)
-          onGpsError(err);
-          if (watchId === null) {
-            watchId = navigator.geolocation.watchPosition(onPosition, onGpsError, GPS_OPTIONS);
-          }
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    }
-
-    function startFreeModeSequence() {
-        const overlay = document.createElement('div');
-        overlay.id = 'countdown-overlay';
-        overlay.style.cssText = 'position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; color:#BFE340; font-size:120px; font-weight:bold;';
-        document.body.appendChild(overlay);
-
-        let count = 3;
-        overlay.textContent = count;
-
-        const timer = setInterval(() => {
-            count--;
-            if (count > 0) {
-                overlay.textContent = count;
-            } else if (count === 0) {
-                overlay.textContent = 'GO!';
-            } else {
-                clearInterval(timer);
-                document.body.removeChild(overlay);
-                startFreeMode();
-            }
-        }, 1000);
-    }
-
-    function startFreeMode() {
-        isFreeMode = true;
-        goToStartPhase = false;
-
-        const freeHud = document.getElementById('free-mode-hud');
-        if (freeHud) freeHud.style.display = 'block';
-
-        const gtsBanner = document.getElementById('go-to-start-banner');
-        if (gtsBanner) gtsBanner.style.display = 'none';
-
-        beginRide();
-    }
-
-    function onPosition(pos) {
-      if (!map) return;
-      const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
-      const speedKmh = speed != null ? (speed * 3.6) : 0;
-      const coords = [lon, lat]; // Turf format
-
-      // Update HUD Status
-      const gpsStatus = document.getElementById('gps-status-text');
-      if (gpsStatus) gpsStatus.textContent = `GPS 精確度: ±${Math.round(accuracy)} m`;
-      document.getElementById('speed-val').textContent = speedKmh.toFixed(1);
-      const statSpeedBottom = document.getElementById('stat-speed-bottom');
-      if (statSpeedBottom) statSpeedBottom.textContent = speedKmh.toFixed(1);
-
-      // Update User Marker
-      updateUserMarker(coords, heading);
-
-      // Snapping & Distance
-      let activeCoords = coords;
-      if (rideStarted && gpxCoords.length > 1) {
-          const point = turf.point(coords);
-          const line = turf.lineString(gpxCoords);
-          const snapped = turf.nearestPointOnLine(line, point, { units: 'meters' });
-
-          // Off-route warning
-          const distToRoute = snapped.properties.dist;
-          document.getElementById('off-route-warning').style.display = distToRoute > OFF_ROUTE_THRESHOLD_M ? 'block' : 'none';
-
-          if (distToRoute < 30) {
-            activeCoords = snapped.geometry.coordinates;
-          }
-
-          // Accumulate distance
-          if (lastLat !== null) {
-            const d = haversineM(lastLat, lastLon, lat, lon);
-            if (d >= MIN_DIST_M && d < MAX_GPS_JUMP_M && accuracy <= 50) totalDistM += d;
-          }
-      }
-      lastLat = lat; lastLon = lon;
-      const statDistBottom = document.getElementById('stat-dist-bottom');
-      if (statDistBottom) statDistBottom.textContent = formatDist(totalDistM);
-
-      // Camera Follow
-      if (isFollowing) {
-          map.setView([activeCoords[1], activeCoords[0]], map.getZoom());
-      }
-
-      // ── Go-to-start phase ─────────────────────────────────────────────
-      if (goToStartPhase && routeStops.length > 0) {
-        const startStop = routeStops[gtsTargetStopIdx];
-        const distToStart = haversineM(lat, lon, startStop.lat, startStop.lon);
-        const gtsDistEl = document.getElementById('gts-dist-val');
-        if (gtsDistEl) gtsDistEl.textContent = formatDist(distToStart);
-
-        if (distToStart <= STOP_DETECTION_RADIUS_M) {
-          if (gtsTargetStopIdx > 0) {
-            routeStops = routeStops.slice(gtsTargetStopIdx).map((s, i) => ({ ...s, order: i + 1 }));
-            buildStopsUI(routeStops);
-          }
-          beginRide();
-        }
-        return;
-      }
-
-      // ── Normal ride phase ──────────────────────────────────────────────
-      if (isFreeMode) {
-          document.getElementById('free-mode-status').textContent = `已騎行 ${formatDist(totalDistM)}`;
-          return;
-      }
-
-      // HUD Instruction Update
-      updateRideHUD(activeCoords, speedKmh);
-
-      // Stop detection
-      const next = routeStops.find(s => !reachedStops.has(s.order));
-      if (next) {
-        const dist = haversineM(lat, lon, next.lat, next.lon);
-        document.getElementById('next-dist').textContent = Math.round(dist);
-
-        if (dist <= STOP_DETECTION_RADIUS_M) {
-          markStopReached(next);
-          if (window.CTRCHK_PWA) {
-            window.CTRCHK_PWA.sendLocalNotification('🚏 到達站點', `${next.code || ''} ${next.name}`, 'ctrc-stop-' + next.order);
-          }
-        }
-      }
+        if (!map) return;
+        const geojson = { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': coords } };
+        map.addSource('route', { 'type': 'geojson', 'data': geojson });
+        map.addLayer({ 'id': 'route-line-glow', 'type': 'line', 'source': 'route', 'paint': { 'line-color': color, 'line-width': 12, 'line-opacity': 0.3 } });
+        map.addLayer({ 'id': 'route-line', 'type': 'line', 'source': 'route', 'paint': { 'line-color': color, 'line-width': 6, 'line-opacity': 0.8 } });
     }
 
     function updateUserMarker(coords, heading) {
-        // coords is [lon, lat]
-        const latlng = [coords[1], coords[0]];
+        if (!map) return;
         if (!userMarker) {
-            const icon = L.divIcon({
-                className: '',
-                html: `<div class="user-nav-arrow" style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 25px solid #6dba65; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); transition: transform 0.2s;"></div>`,
-                iconSize: [20, 25], iconAnchor: [10, 12]
-            });
-            userMarker = L.marker(latlng, { icon }).addTo(map);
+            const el = document.createElement('div');
+            el.className = 'user-nav-arrow';
+            userMarker = new mapboxgl.Marker({ element: el, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(coords).addTo(map);
         } else {
-            userMarker.setLatLng(latlng);
-            const el = userMarker.getElement().querySelector('.user-nav-arrow');
-            if (el) el.style.transform = `rotate(${heading || 0}deg)`;
+            userMarker.setLngLat(coords);
+            userMarker.getElement().style.transform = `rotate(${heading || 0}deg)`;
+        }
+        if (rideStarted) {
+            map.easeTo({ center: coords, bearing: heading || 0, pitch: 75, zoom: 19, duration: 1000 });
         }
     }
 
+    function onPosition(pos) {
+        if (!map) return;
+        const { latitude: lat, longitude: lon, accuracy, speed, heading } = pos.coords;
+        const speedKmh = speed != null ? (speed * 3.6) : 0;
+        const coords = [lon, lat];
 
-    function updateRideHUD(pos, speed) {
-        if (!routeStops.length) return;
-        const next = routeStops.find(s => !reachedStops.has(s.order)) || routeStops[routeStops.length - 1];
-        const distToNext = haversineM(pos[1], pos[0], next.lat, next.lon);
+        document.getElementById('gps-status-text').textContent = `GPS 精確度: ±${Math.round(accuracy)} m`;
+        document.getElementById('speed-val').innerHTML = speedKmh.toFixed(1) + '<span>km/h</span>';
 
-        document.getElementById('next-dist').textContent = Math.round(distToNext);
-        document.getElementById('next-road').textContent = routeId + ' ' + (routeData ? routeData.alias : '');
-        document.getElementById('next-instruction').textContent = reachedStops.has(next.order) ? '即將到達終點' : `前往：${next.name}`;
-        document.getElementById('dist-val').textContent = (totalDistM / 1000).toFixed(1);
+        updateUserMarker(coords, heading);
 
-        const activeSpeed = speed > 5 ? speed : 15;
-        const etaMins = Math.ceil((distToNext / 1000) / activeSpeed * 60);
-        document.getElementById('eta-val').textContent = etaMins + 'm';
-    }
-
-    async function requestWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                // If there's an existing wake lock, don't request a new one
-                if (wakeLock && !wakeLock.released) return;
-
-                wakeLock = await navigator.wakeLock.request('screen');
-                console.log('[Ride] Screen Wake Lock is active');
-                wakeLock.addEventListener('release', () => {
-                    console.log('[Ride] Screen Wake Lock was released');
-                });
+        if (rideStarted) {
+            if (lastLat !== null) {
+                const d = haversineM(lastLat, lastLon, lat, lon);
+                if (d >= 2 && d < 500 && accuracy <= 50) totalDistM += d;
             }
-        } catch (err) {
-            console.error(`${err.name}, ${err.message}`);
+            if (gpxCoords.length > 1) {
+                const snapped = turf.nearestPointOnLine(turf.lineString(gpxCoords), turf.point(coords), { units: 'meters' });
+                document.getElementById('off-route-warning').style.display = snapped.properties.dist > OFF_ROUTE_THRESHOLD_M ? 'block' : 'none';
+            }
+        }
+        lastLat = lat; lastLon = lon;
+        document.getElementById('dist-val').innerHTML = (totalDistM / 1000).toFixed(1) + '<span>km</span>';
+
+        if (goToStartPhase && routeStops.length > 0) {
+            const dist = haversineM(lat, lon, routeStops[startStopIdx].lat, routeStops[startStopIdx].lon);
+            document.getElementById('gts-dist-val').textContent = formatDist(dist);
+            if (dist <= STOP_DETECTION_RADIUS_M) beginRide();
+        } else if (rideStarted && !isFreeMode) {
+            updateHUD(coords, speedKmh);
+            checkStops(lat, lon);
         }
     }
 
-    function releaseWakeLock() {
-        if (wakeLock !== null) {
-            wakeLock.release();
-            wakeLock = null;
+    function updateHUD(coords, speed) {
+        const next = routeStops.find(s => !reachedStops.has(s.order)) || routeStops[routeStops.length - 1];
+        const dist = haversineM(coords[1], coords[0], next.lat, next.lon);
+        document.getElementById('next-dist').textContent = Math.round(dist);
+        document.getElementById('next-road').textContent = routeId + ' ' + (routeData?.alias || '');
+        document.getElementById('next-instruction').textContent = reachedStops.has(next.order) ? '即將到達終點' : `前往：${next.name}`;
+        document.getElementById('next-dist').textContent = Math.round(dist);
+    }
+
+    function checkStops(lat, lon) {
+        const next = routeStops.find(s => !reachedStops.has(s.order));
+        if (next && haversineM(lat, lon, next.lat, next.lon) <= STOP_DETECTION_RADIUS_M) {
+            reachedStops.add(next.order);
+            sessionXp += (next.xp || 10);
+            document.getElementById('stat-stops').textContent = `${reachedStops.size}/${routeStops.length}`;
         }
+    }
+
+    function beginRide() {
+        if (rideStarted) return;
+        rideStarted = true; goToStartPhase = false; startTime = Date.now();
+        document.getElementById('go-to-start-banner').style.display = 'none';
+        if (!isFreeMode) {
+            document.getElementById('hud-top').classList.remove('hidden');
+        } else {
+            document.getElementById('free-mode-hud').style.display = 'block';
+        }
+        document.getElementById('hud-bottom').classList.remove('hidden');
+        timerInterval = setInterval(() => {
+            document.getElementById('stat-time').textContent = formatTime(Date.now() - startTime);
+        }, 1000);
+        heartbeatInterval = setInterval(syncActiveRide, 5000);
     }
 
     async function syncActiveRide() {
-      if (!rideStarted) return;
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      const state = {
-        type: 'route',
-        routeId: routeId,
-        dirIndex: dirIndex,
-        totalDistM: totalDistM,
-        reachedStops: [...reachedStops],
-        startTime: startTime,
-        sessionXp: sessionXp,
-        isFreeMode: isFreeMode,
-        lastLat: lastLat,
-        lastLon: lastLon,
-        routeAlias: routeData ? routeData.alias : (isFreeMode ? '自由騎行' : routeId)
-      };
-
-      try {
-        const res = await fetch('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ action: 'active-ride', state, share_location: friendMode })
-        });
-        if (res.ok && friendMode) {
-            const data = await res.json();
-            if (data.friends_locations) updateFriendMarkers(data.friends_locations);
-        }
-      } catch (e) {
-        console.warn('[Ride] Heartbeat sync failed', e);
-      }
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        const state = { type: 'route', routeId, dirIndex, totalDistM, reachedStops: [...reachedStops], startTime, sessionXp, lastLat, lastLon, routeAlias: routeData?.alias || routeId };
+        try {
+            const res = await fetch('/api/user', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'active-ride', state, share_location: friendMode }) });
+            if (res.ok && friendMode) {
+                const data = await res.json();
+                updateFriendMarkers(data.friends_locations || []);
+            }
+        } catch (e) {}
     }
 
     function updateFriendMarkers(friends) {
         if (!map) return;
-
-        // Remove markers for friends who are no longer active
-        const activeIds = new Set(friends.map(f => f.user_id));
-        for (const [id, marker] of friendMarkers.entries()) {
-            if (!activeIds.has(id)) {
-                map.removeLayer(marker);
-                friendMarkers.delete(id);
-            }
-        }
-
         friends.forEach(f => {
             const myId = JSON.parse(localStorage.getItem('user') || '{}').id;
             if (Number(f.user_id) === Number(myId)) return;
-            if (f.lat === undefined || f.lng === undefined || f.lat === null || f.lng === null) return;
-
-            let marker = friendMarkers.get(f.user_id);
-            if (!marker) {
-                const icon = L.divIcon({
-                    className: '',
-                    html: `<div class="friend-marker" style="background:#3498db; width:36px; height:36px; border-radius:50%; border:3px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.4); cursor:pointer; transition: transform 0.3s;">${f.username ? f.username.substring(0, 1).toUpperCase() : '?'}</div>`,
-                    iconSize: [36, 36], iconAnchor: [18, 18]
-                });
-                marker = L.marker([parseFloat(f.lat), parseFloat(f.lng)], { icon }).addTo(map)
-                    .bindPopup(`<div style="color:#000; font-weight:bold; padding:4px;">${f.username || '朋友'}</div>`);
-
-                friendMarkers.set(f.user_id, marker);
-            } else {
-                marker.setLatLng([parseFloat(f.lat), parseFloat(f.lng)]);
-            }
+            let m = friendMarkers.get(f.user_id);
+            if (!m) {
+                const el = document.createElement('div');
+                el.style.cssText = 'background:#3498db; width:32px; height:32px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.3);';
+                el.textContent = f.username ? f.username[0].toUpperCase() : '?';
+                m = new mapboxgl.Marker(el).setLngLat([f.lng, f.lat]).addTo(map);
+                friendMarkers.set(f.user_id, m);
+            } else { m.setLngLat([f.lng, f.lat]); }
         });
     }
 
-    window.pauseRide = async function() {
-      if (!confirm('確定暫停行程？您可以稍後在路線頁面尋回並繼續。')) return;
-      if (timerInterval) clearInterval(timerInterval);
-      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-      await syncActiveRide();
-      rideStarted = false; // Prevent confirmLeave from triggering confirm again
-      location.href = '/dashboard';
-    };
-
-    // Called when user enters the start zone (or skips)
-    function beginRide(options = {}) {
-      if (rideStarted) return;
-      goToStartPhase = false;
-      rideStarted = true;
-      startTime = Date.now();
-      startTimer();
-      requestWakeLock();
-
-      const pauseBtn = document.getElementById('btn-pause-ride');
-      if (pauseBtn) pauseBtn.onclick = () => window.pauseRide();
-
-      const endBtn = document.getElementById('btn-end-ride');
-      if (endBtn) endBtn.onclick = () => window.handleEndRide();
-
-      // Heartbeat
-      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = setInterval(() => syncActiveRide(), 1000);
-
-      const gtsBanner = document.getElementById('go-to-start-banner');
-      if (gtsBanner) gtsBanner.style.display = 'none';
-
-      showRideHUD(true);
-
-      document.getElementById('stat-time').textContent = '00:00';
-      document.getElementById('stat-dist-bottom').textContent = '0 m';
-
-      if (isFreeMode) {
-        // Hide navigation-specific HUD top when in free mode
-        const hudTop = document.getElementById('hud-top');
-        if (hudTop) hudTop.classList.add('hidden');
-
-        document.getElementById('stat-stops').textContent = '0';
-        const stopsLbl = document.querySelector('.rbs-stat:nth-child(5) .lbl');
-        if (stopsLbl) stopsLbl.textContent = '🚩 站點';
-      }
-
-      // Mark first stop reached if user is at start
-      if (!isFreeMode) {
-          const firstStop = routeStops[0];
-          if (firstStop && lastLat !== null) {
-            const d = haversineM(lastLat, lastLon, firstStop.lat, firstStop.lon);
-            if (d <= STOP_DETECTION_RADIUS_M) markStopReached(firstStop);
-          }
-      }
-    }
-
-    window.skipGoToStart = function () {
-      beginRide();
-    };
-
-    // Start ride from a user-selected stop (skips preceding stops)
-    window.startFromSelectedStop = function () {
-      const sel = document.getElementById('gts-stop-select');
-      const idx = sel ? parseInt(sel.value, 10) : 0;
-      if (!isNaN(idx) && idx >= 0 && idx < routeStops.length && idx > 0) {
+    window.skipGoToStart = beginRide;
+    window.startFromSelectedStop = () => {
+        const idx = parseInt(document.getElementById('gts-stop-select').value);
         routeStops = routeStops.slice(idx).map((s, i) => ({ ...s, order: i + 1 }));
-        buildStopsUI(routeStops);
-      }
-      beginRide();
+        buildStopsUI(); beginRide();
     };
 
-    function onGpsError(err) {
-      document.getElementById('gps-status-text').textContent = 'GPS 錯誤：' + err.message;
+    function buildStopsUI() {
+        document.getElementById('stat-stops').textContent = `0/${routeStops.length}`;
+        const sel = document.getElementById('gts-stop-select');
+        sel.innerHTML = routeStops.slice(0, -1).map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+        if (routeStops.length > 0 && !isFreeMode) {
+            document.getElementById('go-to-start-banner').style.display = 'block';
+            document.getElementById('gts-start-name').textContent = routeStops[0].name;
+        }
     }
 
-    // ── Timer ─────────────────────────────────────────────────────────────
-    function startTimer() {
-      timerInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const fmt = formatTime(elapsed);
-        document.getElementById('ride-timer-display').textContent = fmt;
-        document.getElementById('stat-time').textContent = fmt;
-      }, 1000);
-    }
-
-    // ── End Ride ──────────────────────────────────────────────────────────
     async function endRide() {
-      console.log('[Ride] endRide called. isFreeMode:', isFreeMode);
-      // Stop GPS and timer
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-      }
-      if (timerInterval) clearInterval(timerInterval);
-      releaseWakeLock();
+        clearInterval(timerInterval); clearInterval(heartbeatInterval);
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        const durationMins = Math.round((Date.now() - startTime) / 60000), distKm = parseFloat((totalDistM / 1000).toFixed(2));
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch('/api/getHistory', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ route_id: routeId, ride_date: new Date().toISOString().slice(0, 10), distance_km: distKm, duration_minutes: durationMins, stops_reached: [...reachedStops], all_stops: reachedStops.size === routeStops.length, xp_earned_override: sessionXp }) });
+        const result = await res.json();
+        document.getElementById('s-time').textContent = durationMins + 'm'; document.getElementById('s-dist').textContent = distKm + 'km';
+        document.getElementById('summary-xp-badge').textContent = `+${result.xp_earned || 0} XP`;
+        document.getElementById('ride-summary').classList.add('show');
+    }
 
-      const endTime = Date.now();
-      const durationMs = rideStarted ? endTime - startTime : 0;
-      const durationMins = Math.round(durationMs / 60000);
-      const distKm = parseFloat((totalDistM / 1000).toFixed(2));
-      const avgSpeed = durationMins > 0 ? parseFloat((distKm / (durationMins / 60)).toFixed(1)) : 0;
+    window.confirmLeave = () => { if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) location.href = '/dashboard'; };
+    document.getElementById('btn-pause-ride').onclick = async () => { if (confirm('暫停行程？可稍後繼續。')) { await syncActiveRide(); location.href = '/dashboard'; } };
+    document.getElementById('btn-end-ride').onclick = () => { if (confirm('結束並儲存？')) endRide(); };
+    document.getElementById('btn-skip-loading').onclick = () => document.getElementById('ride-loading').style.display = 'none';
 
-      let allStopsReached = false;
-      let bonusCoins = 0;
-      let finalRouteId = routeId;
-      let finalRouteName = routeData ? routeData.alias : routeId;
-      sessionCompletionCoins = 0;
-      sessionFastFinishCoins = 0;
-
-      if (isFreeMode) {
-        console.log('[Ride] Processing Free Mode end. Reached stops:', reachedStops.size);
-          // Free mode logic: check similarity to existing routes
-          let bestMatch = null;
-          let maxSimilarity = 0;
-
-          allRoutes.forEach(r => {
-              if (!r.stops || r.stops.length < 3) return;
-              let matchCount = 0;
-              r.stops.forEach(s => {
-                  if (reachedStops.has(s.id || s.code || (s.name + s.lat))) matchCount++;
-              });
-              const similarity = matchCount / r.stops.length;
-              if (similarity > maxSimilarity) {
-                  maxSimilarity = similarity;
-                  bestMatch = r;
-              }
-          });
-
-          if (maxSimilarity >= 0.5) {
-              // High similarity match
-              finalRouteId = bestMatch.id;
-              finalRouteName = `(匹配) ${bestMatch.alias}`;
-              const proportionalBonus = Math.round(200 * maxSimilarity); // Base completion 200
-              sessionXp += proportionalBonus;
-              sessionCompletionCoins = Math.round(10 * maxSimilarity);
-              bonusCoins = sessionCompletionCoins;
-              allStopsReached = (maxSimilarity >= 0.95);
-              console.log('[Ride] Free mode similarity match found:', finalRouteId, 'Similarity:', maxSimilarity);
-          } else {
-              // No good match: reward by mileage
-              finalRouteId = 'FREE_RIDE';
-              finalRouteName = '自由騎行';
-              // xp already awarded per stop
-              bonusCoins = 0;
-          }
-      } else {
-          // Route completion bonus XP: awarded when all stops are reached
-          allStopsReached = routeStops.length > 0 &&
-            routeStops.every(s => reachedStops.has(s.order));
-          if (allStopsReached) {
-            sessionXp += ROUTE_COMPLETION_XP;
-            updateSessionXpDisplay();
-          }
-
-          // Fast-finish bonus coins (per-route time limit)
-          sessionFastFinishCoins = (allStopsReached && durationMins > 0 && durationMins <= FAST_FINISH_MINUTES)
-            ? FAST_FINISH_BONUS_COINS : 0;
-          // Per-route completion coins (e.g. 7E/7W = 5 on finishing all stops)
-          sessionCompletionCoins = allStopsReached ? ROUTE_COMPLETION_COINS : 0;
-          bonusCoins = sessionFastFinishCoins + sessionCompletionCoins;
-          console.log('[Ride] Standard mode end. allStopsReached:', allStopsReached);
-      }
-
-      // 過短行程（少於2個車站且少於0.5公里且少於3分鐘）不計算進歷史
-      // 放寬條件：GPS精度差時距離可能不準，加入時間因素避免誤判
-      const rideTooShort = reachedStops.size < 2 && distKm < 0.5 && durationMins < 3;
-      console.log('[Ride] rideTooShort:', rideTooShort, 'Dist:', distKm, 'Mins:', durationMins);
-
-      // Submit to API
-      let apiResult = { xp_earned: 0, level: 1, xp: 0, coins: 0, level_up: false, coins_earned: 0, bonus_coins_earned: 0 };
-      const token = localStorage.getItem('accessToken');
-      if (!rideTooShort && token) {
-        try {
-          const body = {
-            route_id: finalRouteId,
-            route_name: finalRouteName,
-            ride_date: new Date().toISOString().slice(0, 10),
-            start_time: new Date(startTime).toISOString(),
-            end_time: new Date(endTime).toISOString(),
-            distance_km: distKm || null,
-            duration_minutes: durationMins || null,
-            avg_speed_kmh: avgSpeed || null,
-            stops_reached: [...reachedStops],
-            stops_count: reachedStops.size,
-            all_stops: allStopsReached,
-            districts_count: 1, // fallback
-            source: 'pwa',
-            ride_mode: isFreeMode ? 'free' : getRideModeFromRoute(routeData),
-            xp_earned_override: sessionXp,
-            bonus_coins: bonusCoins,
-            miles_reward_override: distKm * 0.8,
-            total_stops: isFreeMode ? reachedStops.size : routeStops.length,
-          };
-          const res = await fetch('/api/getHistory', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(body),
-          });
-          console.log('[Ride] API Response status:', res.status);
-          if (res.ok) {
-            apiResult = await res.json();
-            console.log('[Ride] API Success. level_up:', apiResult.level_up);
-            // Update localStorage user level
-            try {
-              const raw = localStorage.getItem('user');
-              if (raw) {
-                const u = JSON.parse(raw);
-                u.level = apiResult.level;
-                u.xp = apiResult.xp;
-                u.coins = apiResult.coins;
-                if (typeof apiResult.mileage_km_365 === 'number') {
-                  u.mileage_km_365 = apiResult.mileage_km_365;
-                  u.mileage_rolling_km = apiResult.mileage_km_365;
-                }
-                if (apiResult.mileage_rank) {
-                  u.mileage_rank = apiResult.mileage_rank;
-                  u.mileage_card = apiResult.mileage_rank === 'gold' ? '金卡' : (apiResult.mileage_rank === 'silver' ? '銀卡' : '銅卡');
-                }
-                u.total_rides = Number(u.total_rides || 0) + (apiResult.skipped || apiResult.voided ? 0 : 1);
-                localStorage.setItem('user', JSON.stringify(u));
-              }
-            } catch (e) {}
-          }
-        } catch (e) {
-          console.warn('[Ride] API submit failed:', e);
-          // Save to unsynced queue if API fails
-          try {
-              const unsynced = JSON.parse(localStorage.getItem('unsyncedRides') || '[]');
-              unsynced.push(body);
-              localStorage.setItem('unsyncedRides', JSON.stringify(unsynced));
-          } catch(ee) {}
+    (async function init() {
+        const [r1, r2] = await Promise.all([fetch('/routes.json'), fetch('/api/user?action=route-data')]);
+        const d1 = await r1.json(), d2 = await r2.json();
+        allRoutes = d1.routes;
+        routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || allRoutes.find(r => String(r.id) === String(routeId));
+        if (mode === 'free') {
+            await initMap([22.3143, 114.2697]);
+            beginRide();
+        } else if (routeData) {
+            routeStops = routeData.stops || [];
+            if (routeData.gpx && routeData.gpx[dirIndex]) {
+                const gpxRes = await fetch('/gpx/' + routeData.gpx[dirIndex].file);
+                const gpxText = await gpxRes.text();
+                gpxCoords = [...(new DOMParser().parseFromString(gpxText, 'application/xml')).querySelectorAll('trkpt')].map(p => [parseFloat(p.getAttribute('lon')), parseFloat(p.getAttribute('lat'))]);
+            }
+            await initMap(routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697]);
+            buildStopsUI();
+        } else { location.href = '/routes'; }
+        if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(onPosition, e => { console.warn(e); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
         }
-      }
-
-      // Save compact ride record to localStorage for tasks/achievements tracking
-      // (only if ride is long enough)
-      if (!rideTooShort) {
-      try {
-        const history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
-        const districtsCount = 1; // fallback
-        history.push({
-          route_id: finalRouteId,
-          date: new Date(startTime).toISOString().slice(0, 10),
-          start_time: new Date(startTime).toISOString(),
-          duration_minutes: durationMins,
-          distance_km: distKm,
-          stops_count: reachedStops.size,
-          stops_reached: [...reachedStops],
-          all_stops: allStopsReached,
-          districts_count: districtsCount,
-          coords: [], // simplified for now
-        });
-        // Keep at most 200 recent rides
-        if (history.length > 200) history.splice(0, history.length - 200); // keep last 200
-        localStorage.setItem('rideHistory', JSON.stringify(history));
-      } catch(e) {}
-      } // end rideTooShort check
-
-      // Build summary
-      pendingSummary = { durationMins, distKm, avgSpeed, apiResult, rideTooShort };
-      console.log('[Ride] End processing complete. Transitioning to summary/levelup.');
-
-      // Show level-up first if applicable
-      if (apiResult.level_up) {
-        showLevelUp(apiResult.level, apiResult.coins_earned);
-      } else {
-        showSummary(pendingSummary);
-      }
-    }
-
-    function animateValue(id, start, end, duration) {
-      const obj = document.getElementById(id);
-      if (!obj) return;
-      let startTimestamp = null;
-      const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // ease-out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = Math.floor(eased * (end - start) + start);
-        obj.textContent = current.toLocaleString();
-        if (progress < 1) {
-          window.requestAnimationFrame(step);
-        }
-      };
-      window.requestAnimationFrame(step);
-    }
-
-    function showLevelUp(newLevel, coins) {
-      const xpGained = sessionXp; // Use sessionXp as XP gained
-      document.getElementById('levelup-badge').textContent = `Lv.${newLevel}`;
-      document.getElementById('levelup-title').textContent = getLevelTitle(newLevel);
-
-      // Reset values to 0 before animation
-      document.getElementById('levelup-xp-val').textContent = '0';
-      document.getElementById('levelup-coins-val').textContent = '0';
-
-      // Show newly unlocked routes (if any)
-      const unlockedEl = document.getElementById('levelup-unlocked');
-      const newlyUnlocked = Object.entries(ROUTE_UNLOCK)
-        .filter(([, lvl]) => lvl === newLevel)
-        .map(([id]) => id);
-      if (newlyUnlocked.length > 0) {
-        unlockedEl.textContent = `🔓 解鎖新路線：${newlyUnlocked.join('、')}`;
-        unlockedEl.style.display = '';
-      } else {
-        unlockedEl.style.display = 'none';
-      }
-
-      // 1. Physical Haptic Feedback
-      if ('vibrate' in navigator) {
-        navigator.vibrate([100, 50, 100]);
-      }
-
-      // 2. Trigger CSS animation by adding class/display
-      document.getElementById('levelup-overlay').classList.add('show');
-
-      // 3. Visual Explosion (Confetti)
-      if (typeof confetti === 'function') {
-        const duration = 3000;
-        const animationEnd = Date.now() + duration;
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
-
-        const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-        const interval = setInterval(function() {
-          const timeLeft = animationEnd - Date.now();
-          if (timeLeft <= 0) return clearInterval(interval);
-
-          const particleCount = 50 * (timeLeft / duration);
-          confetti(Object.assign({}, defaults, {
-            particleCount,
-            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-            colors: ['#D4AF37', '#F9E29C', '#ffffff']
-          }));
-          confetti(Object.assign({}, defaults, {
-            particleCount,
-            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-            colors: ['#D4AF37', '#F9E29C', '#ffffff']
-          }));
-        }, 250);
-
-        // Instant burst from corners
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { x: 0, y: 1 },
-          colors: ['#D4AF37', '#F9E29C']
-        });
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { x: 1, y: 1 },
-          colors: ['#D4AF37', '#F9E29C']
-        });
-      }
-
-      // 4. Number Counter (Odometer Effect)
-      setTimeout(() => {
-        animateValue('levelup-xp-val', 0, xpGained, 1500);
-        animateValue('levelup-coins-val', 0, coins, 1500);
-      }, 500);
-    }
-
-    window.closeLevelUp = function () {
-      const overlay = document.getElementById('levelup-overlay');
-      overlay.classList.remove('show');
-      // Clean up any remaining confetti/star elements
-      overlay.querySelectorAll('.confetti-piece, span[style*="starFloat"]').forEach(el => el.remove());
-      if (pendingSummary) showSummary(pendingSummary);
-    };
-
-    window.openCatalog = function() {
-        updateCatalogUI();
-        document.getElementById('catalog-overlay').classList.add('show');
-    };
-
-    window.closeCatalog = function() {
-        document.getElementById('catalog-overlay').classList.remove('show');
-    };
-
-    function updateCatalogUI() {
-        const total = allRoutes.filter(r => !r.is_special).length;
-        const conquered = allRoutes.filter(r => !r.is_special && reachedStops.has(r.id)).length; // Simplified for ride page
-
-        // Use server-side conquered ids if available
-        let serverConquered = [];
-        try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
-            serverConquered = u.conquered_route_ids || [];
-        } catch(e) {}
-
-        const finalConqueredCount = allRoutes.filter(r => !r.is_special && (serverConquered.includes(r.id) || (r.id === routeId && reachedStops.size >= routeStops.length))).length;
-        const pct = total > 0 ? Math.round((finalConqueredCount / total) * 100) : 0;
-
-        document.getElementById('catalog-bar-fill').style.width = pct + '%';
-        document.getElementById('catalog-text-progress').textContent = `已征服 ${finalConqueredCount} / ${total} 條路線`;
-        document.getElementById('catalog-text-pct').textContent = pct + '%';
-
-        const regions = [
-            { id: 'tko', name: '將軍澳部', tag: '將軍澳' },
-            { id: 'hki', name: '港島海濱部', tag: '港島' }
-        ];
-
-        const list = document.getElementById('catalog-regions-list');
-        list.innerHTML = '';
-        regions.forEach(reg => {
-            const rTotal = allRoutes.filter(r => !r.is_special && (r.dept_id === reg.id || (r.tags && r.tags.includes(reg.tag)))).length;
-            if (rTotal === 0) return;
-            const rConq = allRoutes.filter(r => !r.is_special && (r.dept_id === reg.id || (r.tags && r.tags.includes(reg.tag))) && serverConquered.includes(r.id)).length;
-            const rPct = Math.round((rConq / rTotal) * 100);
-
-            const div = document.createElement('div');
-            div.className = 'catalog-region-card';
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5em; font-size:0.9em;">
-                    <strong>${reg.name}</strong>
-                    <span style="color:#BFE340;">${rConq}/${rTotal}</span>
-                </div>
-                <div style="height:6px; background:rgba(0,0,0,0.3); border-radius:3px; overflow:hidden;">
-                    <div style="width:${rPct}%; height:100%; background:#BFE340;"></div>
-                </div>
-            `;
-            list.appendChild(div);
-        });
-    }
-
-    function generateTransparentTrackMap(coords) {
-        if (!coords || coords.length < 2) return null;
-        const canvas = document.createElement('canvas');
-        canvas.width = 1000;
-        canvas.height = 1000;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const lats = coords.map(c => c[1]);
-        const lons = coords.map(c => c[0]);
-        const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-        const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-        const latRange = maxLat - minLat || 0.0001;
-        const lonRange = maxLon - minLon || 0.0001;
-        const padding = 50;
-        const drawW = canvas.width - padding * 2;
-        const drawH = canvas.height - padding * 2;
-        const scale = Math.min(drawW / lonRange, drawH / latRange);
-
-        ctx.strokeStyle = '#00F3FF';
-        ctx.lineWidth = 12;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        coords.forEach((c, i) => {
-            const x = padding + (c[0] - minLon) * scale;
-            const y = canvas.height - (padding + (c[1] - minLat) * scale);
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-        return canvas.toDataURL('image/png');
-    }
-
-    function showSummary(data) {
-      const { durationMins, distKm, avgSpeed, apiResult, rideTooShort } = data;
-
-      if (rideTooShort) {
-        document.getElementById('summary-xp-badge').textContent = '行程未記錄';
-        const bonusCoinsEl = document.getElementById('summary-bonus-coins');
-        bonusCoinsEl.textContent = '⚠️ 行程過短（少於2站且少於0.5公里且少於3分鐘），未計入歷史記錄';
-        bonusCoinsEl.style.display = '';
-      } else {
-        // Animate XP count-up
-        const xpEarned = apiResult.xp_earned || 0;
-        const xpBadge = document.getElementById('summary-xp-badge');
-        animateCountUp(xpBadge, 0, xpEarned, 800, v => `+${v} XP`);
-
-        // Show bonus coins if earned
-        const bonusCoinsEl = document.getElementById('summary-bonus-coins');
-        const bc = apiResult.bonus_coins_earned || 0;
-        if (bc > 0) {
-          // Distinguish completion coins vs fast-finish bonus
-          const parts = [];
-          if (sessionCompletionCoins > 0) parts.push(`🏆 完成路線 +${sessionCompletionCoins} 里程幣`);
-          if (sessionFastFinishCoins > 0) parts.push(`⚡ ${FAST_FINISH_MINUTES}分鐘內完成 +${sessionFastFinishCoins} 里程幣`);
-        if (apiResult.challenge_completed) parts.push(`👑 全港挑戰獎勵 +500 里程幣`);
-          bonusCoinsEl.textContent = parts.length ? parts.join('　') : `+${bc} 里程幣獎勵`;
-          bonusCoinsEl.style.display = '';
-
-        if (apiResult.challenge_completed) {
-            const challengeTitle = document.createElement('div');
-            challengeTitle.style.cssText = 'color:#D4AF37; font-weight:bold; margin-top:0.5em; font-size:1.1em;';
-            challengeTitle.innerHTML = '👑 獲得成就：全港挑戰王 (+2,000 XP)';
-            bonusCoinsEl.appendChild(challengeTitle);
-        }
-        } else {
-          bonusCoinsEl.style.display = 'none';
-        }
-      }
-
-      document.getElementById('s-time').textContent =
-        durationMins > 0 ? `${durationMins} 分鐘` : '--';
-      document.getElementById('s-dist').textContent =
-        distKm > 0 ? `${distKm} km` : '--';
-      document.getElementById('s-stops').textContent =
-        `${reachedStops.size} / ${isFreeMode ? reachedStops.size : routeStops.length}`;
-      document.getElementById('s-speed').textContent =
-        avgSpeed > 0 ? `${avgSpeed} km/h` : '--';
-
-      // XP bar
-      const lvl = apiResult.level || 1;
-      const xpCur = LEVEL_XP[Math.min(lvl - 1, LEVEL_XP.length - 2)] || 0;
-      const xpNext = LEVEL_XP[Math.min(lvl, LEVEL_XP.length - 1)];
-      const totalXp = apiResult.xp || 0;
-      const pct = (!xpNext || xpNext === Infinity) ? 100 :
-        Math.min(100, Math.max(0, (totalXp - xpCur) / Math.max(1, xpNext - xpCur) * 100));
-      document.getElementById('s-xp-cur').textContent = `Lv.${lvl}  ${totalXp} XP`;
-      document.getElementById('s-xp-next').textContent =
-        (!xpNext || xpNext === Infinity) ? '最高等級' : `下一級 ${xpNext} XP`;
-      document.getElementById('ride-summary').classList.add('show');
-      setTimeout(() => {
-        document.getElementById('summary-xp-bar-fill').style.width = pct + '%';
-      }, 300);
-
-      const saveTrackBtn = document.getElementById('btn-save-track');
-      if (saveTrackBtn) {
-          saveTrackBtn.onclick = () => {
-              const history = JSON.parse(localStorage.getItem('rideHistory') || '[]');
-              const lastRide = history[history.length - 1];
-              if (lastRide && lastRide.coords) {
-                  const dataUrl = generateTransparentTrackMap(lastRide.coords);
-                  if (dataUrl) {
-                      const link = document.createElement('a');
-                      link.href = dataUrl;
-                      link.download = `ride-track-${lastRide.date}.png`;
-                      link.click();
-                  }
-              } else {
-                  alert('無可用軌跡數據。');
-              }
-          };
-      }
-    }
-
-    // Animate a numeric count-up in an element
-    function animateCountUp(el, from, to, durationMs, formatter) {
-      if (to === 0) { el.textContent = formatter(0); return; }
-      const start = performance.now();
-      function step(now) {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / durationMs, 1);
-        // Ease out
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = Math.round(from + (to - from) * eased);
-        el.textContent = formatter(current);
-        // Tick pulse
-        el.classList.toggle('count-tick', progress < 0.95);
-        if (progress < 1) requestAnimationFrame(step);
-        else el.classList.remove('count-tick');
-      }
-      requestAnimationFrame(step);
-    }
-
-    // ── Confirm leave ─────────────────────────────────────────────────────
-    window.confirmLeave = function () {
-      // Allow back if ride hasn't started yet (go-to-start phase) or ride summary is showing
-      if (!rideStarted || document.getElementById('ride-summary').classList.contains('show')) {
-        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-        if (timerInterval) clearInterval(timerInterval);
-        releaseWakeLock();
-        // If we are in free mode but didn't actually "start" (countdown), we might still be here
-        window.location.href = '/dashboard';
-        return;
-      }
-      if (confirm('確定要放棄此次騎行嗎？騎行資料將不會儲存。')) {
-        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-        if (timerInterval) clearInterval(timerInterval);
-        releaseWakeLock();
-        window.location.href = '/dashboard';
-      }
-    };
-
-    // ── Notification permission ───────────────────────────────────────────
-    async function requestNotifIfNeeded() {
-      if (!('Notification' in window) || Notification.permission !== 'default') return;
-      // Request after first user interaction (button click)
-      try { await Notification.requestPermission(); } catch (e) {}
-    }
-
-    async function loadRouteCatalog() {
-      let base = null;
-      try {
-        const cachedRoutes = localStorage.getItem('CTRCHK_ROUTES_CACHE');
-        if (cachedRoutes) {
-          base = JSON.parse(cachedRoutes);
-        } else {
-          const res = await fetch('/routes.json');
-          if (res.ok) {
-            base = await res.json();
-            localStorage.setItem('CTRCHK_ROUTES_CACHE', JSON.stringify(base));
-          }
-        }
-      } catch (_) {}
-      allRoutes = Array.isArray(base?.routes) ? base.routes : [];
-
-      try {
-        let overrideData = null;
-        const cachedOverrides = localStorage.getItem('CTRCHK_OVERRIDES_CACHE');
-        if (cachedOverrides) {
-          overrideData = JSON.parse(cachedOverrides);
-        } else {
-          const overrideResp = await fetch('/api/user?action=route-data');
-          if (overrideResp.ok) {
-            overrideData = await overrideResp.json();
-            localStorage.setItem('CTRCHK_OVERRIDES_CACHE', JSON.stringify(overrideData));
-          }
-        }
-        const overrideRoutes = Array.isArray(overrideData?.routes) ? overrideData.routes : [];
-        if (overrideRoutes.length && allRoutes.length) {
-          const overrideMap = new Map(overrideRoutes.map(r => [String(r.route_id), r]));
-          allRoutes = allRoutes.map((r) => {
-            const o = overrideMap.get(String(r.id || ''));
-            if (!o) return r;
-            return Object.assign({}, r, {
-              alias: o.alias || r.alias,
-              color: o.bg_color || r.color,
-              time: o.estimated_minutes || r.time,
-              length: o.length_text || r.length,
-              tags: Array.isArray(o.tags) && o.tags.length ? o.tags : r.tags,
-              gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : r.gpx,
-              stops: Array.isArray(o.stops) && o.stops.length ? o.stops : r.stops,
-              unlock_level: o.unlock_type === 'level' && o.unlock_value != null ? o.unlock_value : r.unlock_level,
-              unlock_cost: o.unlock_type === 'coins' && o.unlock_value != null ? o.unlock_value : r.unlock_cost,
-              is_special: o.unlock_type === 'coins',
-              completion_xp: typeof o.completion_xp === 'number' ? o.completion_xp : r.completion_xp,
-              fast_finish_minutes: typeof o.fast_finish_minutes === 'number' ? o.fast_finish_minutes : r.fast_finish_minutes,
-              completion_coins: typeof o.completion_coins === 'number' ? o.completion_coins : r.completion_coins,
-            });
-          });
-        }
-        allTerminals = Array.isArray(overrideData?.terminals) ? overrideData.terminals : [];
-      } catch (_) {
-        allTerminals = [];
-      }
-    }
-
-    function initFreeModeControls() {
-      const panel = document.getElementById('free-mode-panel');
-      const btn = document.getElementById('btn-free-start-nav');
-      const input = document.getElementById('free-destination-input');
-      if (!panel || !btn || !input) return;
-
-      panel.style.display = '';
-      renderFreeModeTerminalOptions();
-
-      btn.onclick = () => {
-        const to = String(input.value || '').trim();
-        if (!to) {
-          alert('請先輸入終點');
-          return;
-        }
-        location.href = `/nav?from=${encodeURIComponent('📍 使用目前位置')}&to=${encodeURIComponent(to)}&autostart=1`;
-      };
-    }
-
-    async function checkActiveRide() {
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
-
-      try {
-        const res = await fetch('/api/user?action=active-ride&type=route', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data && data.state && data.state.routeId === routeId) {
-            const modal = document.getElementById('resume-modal');
-            const info = document.getElementById('resume-info');
-            info.textContent = `您有一段往 ${data.state.routeAlias || routeId} 的行程未完成。`;
-            modal.style.display = 'flex';
-
-            document.getElementById('btn-resume-yes').onclick = () => {
-                resumeRide(data.state);
-            };
-            document.getElementById('btn-resume-cancel').onclick = () => {
-                modal.style.display = 'none';
-            };
-            document.getElementById('btn-resume-delete').onclick = async () => {
-                if (!confirm('確定刪除此記錄？此動作無法復原。')) return;
-                await fetch('/api/user?action=active-ride&type=route', {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                modal.style.display = 'none';
-            };
-            return true;
-        }
-      } catch (e) {
-        console.warn('[Ride] Failed to check active ride', e);
-      }
-      return false;
-    }
-
-    function resumeRide(state) {
-      console.log('[Ride] Resuming ride', state);
-      isFreeMode = state.isFreeMode;
-      totalDistM = state.totalDistM || 0;
-      reachedStops = new Set(state.reachedStops || []);
-      startTime = state.startTime;
-      sessionXp = state.sessionXp || 0;
-      lastLat = state.lastLat;
-      lastLon = state.lastLon;
-
-      if (isFreeMode) {
-         document.getElementById('ride-route-label').textContent = '自由騎行模式';
-         document.getElementById('btn-free-mode').style.display = 'none';
-         initFreeModeControls();
-      }
-
-      document.getElementById('resume-modal').style.display = 'none';
-
-      // Mark restored stops in UI
-      reachedStops.forEach(order => {
-         const pill = document.getElementById('pill-' + order);
-         if (pill) pill.classList.add('reached');
-      });
-      updateNextStopUI();
-      updateSessionXpDisplay();
-
-      beginRide({ isResuming: true });
-    }
-
-
-    // ── Main init ─────────────────────────────────────────────────────────
-    async function init() {
-      const skipBtn = document.getElementById('btn-skip-loading');
-      if (skipBtn) {
-          skipBtn.onclick = () => {
-              document.getElementById('ride-loading').classList.add('hidden');
-          };
-      }
-
-      const mode = params.get('mode');
-      // Parallel fetch for speed
-      const catalogPromise = loadRouteCatalog();
-      await catalogPromise;
-
-      window.handleEndRide = async () => {
-          const endRideBtn = document.getElementById('btn-end-ride');
-          if (!confirm('確定結束行程？')) return;
-          try {
-              if (endRideBtn) {
-                  endRideBtn.disabled = true;
-                  endRideBtn.textContent = '正在儲存...';
-              }
-              await endRide();
-          } catch (err) {
-              console.error('[Ride] Error in end-ride button handler:', err);
-              alert('結束行程時發生錯誤：' + err.message);
-              if (endRideBtn) {
-                  endRideBtn.disabled = false;
-                  endRideBtn.textContent = '結束騎行';
-              }
-          }
-      };
-
-      const endRideBtn = document.getElementById('btn-end-ride');
-      if (endRideBtn) {
-          endRideBtn.addEventListener('click', window.handleEndRide);
-      }
-
-      if (mode === 'free') {
-          isFreeMode = true;
-          document.getElementById('ride-loading').classList.add('hidden');
-          initMap(22.3143, 114.2697);
-          startFreeModeSequence();
-          startGPS();
-          return;
-      }
-
-      if (!routeId) { location.href = '/routes'; return; }
-
-      routeData = allRoutes.find(r => r.id === routeId);
-      if (routeData) {
-        ROUTE_COMPLETION_XP = routeData.completion_xp || 200;
-        FAST_FINISH_MINUTES = routeData.fast_finish_minutes || 45;
-        ROUTE_COMPLETION_COINS = routeData.completion_coins || 0;
-      }
-
-      const cost = routeData ? routeData.unlock_cost : 0;
-      const unlockedRoutes = JSON.parse(localStorage.getItem('unlockedRoutes') || '[]');
-      if (routeData?.is_special && cost > 0 && !unlockedRoutes.includes(routeId)) {
-        showLocked(cost);
-        return;
-      }
-
-      routeStops = routeData ? (routeData.stops || []) : [];
-      routeStops = routeStops.filter(s => s.type !== 'temporary_cancel');
-
-      if (routeStops.length > 0 && routeData && routeData.gpx && routeData.gpx.length > 1) {
-        const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];
-        if (gpxEntry.dir_filter === 'up') {
-          routeStops = routeStops.filter(s => s.direction !== '⬇️').reverse().map((s, i) => ({ ...s, order: i + 1 }));
-        } else if (gpxEntry.dir_filter === 'down') {
-          routeStops = routeStops.filter(s => s.direction !== '⬆️');
-        }
-      }
-
-      const center = routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697];
-
-      if (routeData && routeData.gpx && routeData.gpx.length > 0) {
-          const gpxEntry = routeData.gpx[dirIndex] || routeData.gpx[0];
-          gpxCoords = await loadGpxData(gpxEntry.file);
-      }
-
-      initMap(center[0], center[1]);
-      buildStopsUI(routeStops);
-
-      const resumed = await checkActiveRide();
-      if (resumed) return;
-
-      if (routeStops.length > 0) {
-        gtsTargetStopIdx = Math.min(startStopIdx, routeStops.length - 1);
-        goToStartPhase = true;
-        document.getElementById('go-to-start-banner').style.display = 'block';
-        showRideHUD(false);
-
-        // Update label to reflect target stop
-        if (gtsTargetStopIdx > 0) {
-            const target = routeStops[gtsTargetStopIdx];
-            document.getElementById('gts-start-name').textContent = `出發站：${target.code ? target.code + ' ' : ''}${target.name}`;
-            document.getElementById('gts-dist-label').textContent = '距選定站';
-        }
-      } else {
-        goToStartPhase = false;
-      }
-
-      document.getElementById('ride-loading').classList.add('hidden');
-      requestNotifIfNeeded();
-      startGPS();
-      requestWakeLock();
-    }
-
-    document.addEventListener('DOMContentLoaded', init);
-
-    // Handle visibility change to re-acquire wake lock
-    document.addEventListener('visibilitychange', async () => {
-        if (document.visibilityState === 'visible' && !document.getElementById('ride-summary').classList.contains('show')) {
-            await requestWakeLock();
-        }
-    });
-
-    // Prevent accidental back navigation
-    window.addEventListener('popstate', (e) => {
-      if (rideStarted && !document.getElementById('ride-summary').classList.contains('show')) {
-        history.pushState(null, '', location.href);
-      }
-    });
-    history.pushState(null, '', location.href);
-
-    window.addEventListener('pwa-page-show', () => {
-      if (map) {
-        setTimeout(() => map.invalidateSize(), 150);
-      }
-    });
+    })();
   })();
   </script>
 </body>
