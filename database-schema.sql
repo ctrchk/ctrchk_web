@@ -175,6 +175,40 @@ CREATE TABLE IF NOT EXISTS user_reward_log (
 
 CREATE INDEX IF NOT EXISTS idx_user_reward_log_user_id ON user_reward_log(user_id);
 
+-- Badges table
+CREATE TABLE IF NOT EXISTS badges (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    model_url_glb TEXT,
+    model_url_usdz TEXT,
+    tier VARCHAR(50),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- HK Challenges table
+CREATE TABLE IF NOT EXISTS hk_challenges (
+    id SERIAL PRIMARY KEY,
+    tier VARCHAR(50) NOT NULL, -- hk_30k, hk_60k, hk_100k
+    route_id VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    xp_reward INTEGER DEFAULT 0,
+    coin_reward INTEGER DEFAULT 0,
+    multiplier NUMERIC(3,2) DEFAULT 1.00,
+    multiplier_duration_days INTEGER DEFAULT 0,
+    badge_id INTEGER REFERENCES badges(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- User Badges table
+CREATE TABLE IF NOT EXISTS user_badges (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    badge_id INTEGER NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
+    earned_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, badge_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_user_daily_checkins_user_id ON user_daily_checkins(user_id);
 
 -- =========================================================
