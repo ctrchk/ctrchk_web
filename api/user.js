@@ -258,31 +258,35 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     if (req.query.action === 'room-status') {
-        const userData = await authenticate(req, res);
-        if (!userData) return;
-        try {
-            const { roomId } = req.query;
-            const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
-            const { rows: memberRows } = await query(
-                `SELECT u.username, m.is_ready
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        const { roomId } = req.query;
+        if (!roomId) return res.status(400).json({ message: 'roomId required' });
+        const { rows: roomRows } = await query(`SELECT status, route_id, dir_index FROM ride_rooms WHERE id = $1`, [roomId]);
+        if (roomRows.length === 0) return res.status(404).json({ message: 'Room not found' });
+        const { rows: memberRows } = await query(
+          `SELECT u.username, m.is_ready
                  FROM room_members m
                  JOIN users u ON m.user_id = u.id
                  WHERE m.room_id = $1`,
-                [roomId]
-            );
-            return res.status(200).json({
-                status: roomRows[0]?.status,
-                routeId: roomRows[0]?.route_id,
-                dirIndex: roomRows[0]?.dir_index,
-                members: memberRows
-            });
-        } catch (e) {
-            return res.status(500).json({ message: e.message });
-        }
+          [roomId]
+        );
+        return res.status(200).json({
+          status: roomRows[0]?.status,
+          routeId: roomRows[0]?.route_id,
+          dirIndex: roomRows[0]?.dir_index,
+          members: memberRows
+        });
+      } catch (e) {
+        return res.status(500).json({ message: e.message });
+      }
     }
     if (req.query.action === 'friends') {
+      const userData = await authenticate(req, res);
+      if (!userData && !req.query.user_id) return;
       try {
-        const user_id = parseInt(req.query.user_id, 10);
+        const user_id = parseInt(req.query.user_id || (userData ? userData.userId : null), 10);
         if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(
@@ -302,8 +306,10 @@ export default async function handler(req, res) {
     }
 
     if (req.query.action === 'friend_requests') {
+      const userData = await authenticate(req, res);
+      if (!userData && !req.query.user_id) return;
       try {
-        const user_id = parseInt(req.query.user_id, 10);
+        const user_id = parseInt(req.query.user_id || (userData ? userData.userId : null), 10);
         if (isNaN(user_id)) return res.status(400).json({ message: 'user_id required' });
 
         const { rows } = await query(

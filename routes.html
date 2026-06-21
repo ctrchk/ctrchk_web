@@ -489,7 +489,7 @@
     border-color: var(--app-accent, #6dba65);
     background: #254a28;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px var(--app-accent, #6dba65);
-    min-height: 420px;
+    min-height: 480px;
     padding-bottom: 2em;
 }
 .app-route-card.locked {
@@ -1384,7 +1384,11 @@ function renderRoutes() {
             lobbyBtn.innerHTML = '<i class="fas fa-users"></i> 多人騎行房';
             lobbyBtn.onclick = (e) => {
                 e.stopPropagation();
-                showMultiplayerLobby(route);
+                if (typeof window.showMultiplayerLobby === 'function') {
+                    window.showMultiplayerLobby(route);
+                } else {
+                    console.error('showMultiplayerLobby not defined');
+                }
             };
             controlsArea.appendChild(lobbyBtn);
 
@@ -1549,8 +1553,13 @@ let isHost = false;
 
 window.showMultiplayerLobby = function(route) {
     if (!isLoggedIn) { alert('請先登入以使用多人模式'); return; }
+    if (!route) {
+        console.error('[Multiplayer] Route is undefined');
+        alert('載入路線失敗，請重試。');
+        return;
+    }
     lobbyRoute = route;
-    document.getElementById('lobby-title').innerHTML = `<i class="fas fa-users"></i> ${route.id} 多人騎行房`;
+    document.getElementById('lobby-title').innerHTML = `<i class="fas fa-users"></i> ${route.id || route.route_id} 多人騎行房`;
     document.getElementById('app-multiplayer-lobby').style.display = 'flex';
     document.getElementById('lobby-setup').style.display = 'block';
     document.getElementById('lobby-waiting').style.display = 'none';
@@ -1560,10 +1569,14 @@ window.showMultiplayerLobby = function(route) {
 async function loadLobbyFriends() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const container = document.getElementById('lobby-friends-list');
-    if (!user.id) return;
+    const token = localStorage.getItem('accessToken');
+    if (!user.id || !token) return;
     try {
-        const res = await fetch(`/api/user?action=friends&user_id=${user.id}`);
+        const res = await fetch(`/api/user?action=friends&user_id=${user.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const friends = await res.json();
+        if (!res.ok) throw new Error(friends.message || '載入失敗');
         if (friends.length === 0) {
             container.innerHTML = '<div style="font-size:0.8em; opacity:0.5; text-align:center;">暫無朋友可邀請</div>';
             return;
@@ -1592,11 +1605,16 @@ window.closeMultiplayerLobby = function() {
 
 window.createRoom = async function() {
     const token = localStorage.getItem('accessToken');
+    if (!lobbyRoute) { alert('請先選擇路線'); return; }
     try {
         const res = await fetch('/api/user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ action: 'create-room', routeId: lobbyRoute.id, dirIndex: selectedDirIndex })
+            body: JSON.stringify({
+                action: 'create-room',
+                routeId: lobbyRoute.id || lobbyRoute.route_id,
+                dirIndex: selectedDirIndex
+            })
         });
         const data = await res.json();
         if (data.success) {
