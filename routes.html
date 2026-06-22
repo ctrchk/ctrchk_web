@@ -757,20 +757,49 @@ body.app-light-theme .app-filter-chip.random-btn {
 
         <!-- Multiplayer Lobby Modal -->
         <div id="multiplayer-lobby-modal" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.85); backdrop-filter:blur(5px); padding:2em 1.5em; overflow-y:auto;">
-            <div class="catalog-modal-content" style="border-color:#3498db;" onclick="event.stopPropagation()">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1em;">
-                    <h3 style="color:#3498db;"><i class="fas fa-users"></i> 多人騎行大廳</h3>
-                    <button onclick="hideMultiplayerLobby()" style="background:none; border:none; color:#a8d8a0; font-size:1.5em;"><i class="fas fa-times"></i></button>
+            <div class="catalog-modal-content" style="border-color:#3498db; max-width:600px;" onclick="event.stopPropagation()">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5em;">
+                    <h3 style="color:#3498db; margin:0;"><i class="fas fa-users"></i> 多人騎行大廳</h3>
+                    <button onclick="hideMultiplayerLobby()" style="background:none; border:none; color:#a8d8a0; font-size:1.5em; cursor:pointer;"><i class="fas fa-times"></i></button>
                 </div>
 
-                <div style="display:flex; gap:0.8em; margin-bottom:1.5em;">
-                    <button onclick="showCreateRoomForm()" style="flex:1; padding:0.8em; border:none; border-radius:10px; background:#3498db; color:#fff; font-weight:bold; cursor:pointer;"><i class="fas fa-plus"></i> 開設房間</button>
-                    <button onclick="loadRooms()" style="padding:0.8em; border:none; border-radius:10px; background:rgba(255,255,255,0.1); color:#fff; cursor:pointer;"><i class="fas fa-sync-alt"></i></button>
+                <div style="display:flex; gap:1em; margin-bottom:2em;">
+                    <button onclick="showCreateRoomForm()" style="flex:1; padding:1em; border:none; border-radius:14px; background:linear-gradient(135deg, #3498db, #2980b9); color:#fff; font-weight:800; cursor:pointer; box-shadow:0 4px 15px rgba(52,152,219,0.3);"><i class="fas fa-plus-circle"></i> 開設騎行房間</button>
+                    <button onclick="loadRooms()" style="padding:1em; border:none; border-radius:14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; cursor:pointer;"><i class="fas fa-sync-alt"></i></button>
                 </div>
 
-                <div id="room-list" style="display:flex; flex-direction:column; gap:1em; max-height:400px; overflow-y:auto;">
+                <div id="room-list" style="display:grid; grid-template-columns:1fr; gap:1.2em; max-height:60vh; overflow-y:auto; padding-right:5px; scrollbar-width:thin;">
                     <!-- Rooms injected here -->
-                    <div style="text-align:center; padding:2em; opacity:0.6;">正在尋找公開房間...</div>
+                    <div style="text-align:center; padding:3em; opacity:0.6;">
+                        <i class="fas fa-search fa-2x" style="display:block; margin-bottom:0.5em;"></i>
+                        正在尋找公開房間...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Wait Modal (New) -->
+        <div id="room-wait-modal" style="display:none; position:fixed; inset:0; z-index:2002; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); padding:2em 1.5em; align-items:center; justify-content:center;">
+            <div class="catalog-modal-content" style="border-color:#3498db; width:100%; max-width:450px;">
+                <div style="text-align:center; margin-bottom:1.5em;">
+                    <div style="font-size:3em; margin-bottom:0.3em;">🚲</div>
+                    <h3 id="wait-room-title" style="color:#3498db; margin:0;">準備出發</h3>
+                    <p id="wait-room-code" style="font-family:monospace; background:rgba(255,255,255,0.1); padding:0.4em 1em; border-radius:8px; display:inline-block; margin-top:0.8em; font-size:1.2em; letter-spacing:2px;"></p>
+                </div>
+
+                <div style="background:rgba(0,0,0,0.2); border-radius:16px; padding:1.2em; margin-bottom:1.5em;">
+                    <div style="font-size:0.85em; color:#a8d8a0; font-weight:bold; margin-bottom:1em; display:flex; justify-content:space-between;">
+                        <span>房內成員</span>
+                        <span id="wait-member-count">1 / 4</span>
+                    </div>
+                    <div id="wait-member-list" style="display:flex; flex-direction:column; gap:0.8em;">
+                        <!-- Members here -->
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:1em;">
+                    <button onclick="leaveRoom()" style="flex:1; padding:1em; border:none; border-radius:14px; background:rgba(255,255,255,0.05); color:#fff; cursor:pointer; font-weight:bold;">退出</button>
+                    <button id="btn-start-room" onclick="finalStartRoom()" style="flex:2; padding:1em; border:none; border-radius:14px; background:#BFE340; color:#121f14; font-weight:800; cursor:pointer; display:none;">全員出發！</button>
                 </div>
             </div>
         </div>
@@ -2159,30 +2188,49 @@ async function initAppRidePage() {
     };
     window.hideMultiplayerLobby = () => { document.getElementById('multiplayer-lobby-modal').style.display = 'none'; };
 
+    let currentRoomCode = null;
+    let roomRefreshInterval = null;
+
     window.loadRooms = async () => {
         const list = document.getElementById('room-list');
-        list.innerHTML = '<div style="text-align:center; padding:2em; opacity:0.6;"><i class="fas fa-spinner fa-spin"></i> 正在尋找房間...</div>';
+        list.innerHTML = '<div style="text-align:center; padding:3em; opacity:0.6;"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
         try {
             const res = await fetch('/api/user?action=list-rooms');
             const rooms = await res.json();
 
             if (!rooms || rooms.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:2em; opacity:0.6;">目前沒有公開房間，快來開設一個吧！</div>';
+                list.innerHTML = `
+                    <div style="text-align:center; padding:3em; opacity:0.6; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.1);">
+                        <i class="fas fa-ghost fa-2x" style="margin-bottom:0.5em; display:block;"></i>
+                        目前沒有公開房間，快來開設一個吧！
+                    </div>`;
                 return;
             }
 
             list.innerHTML = rooms.map(room => `
-                <div style="background:rgba(255,255,255,0.05); border:1px solid #2d4d2d; padding:1em; border-radius:14px; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-weight:bold; color:#3498db;">${room.host_name} 的房間 ${room.has_password ? '🔒' : ''}</div>
-                        <div style="font-size:0.8em; opacity:0.7;">路線：${room.route_alias || room.route_id} (${room.member_count} 人)</div>
+                <div class="app-route-card" style="padding:1.2em; border-color:rgba(52,152,219,0.3); background:rgba(52,152,219,0.05); min-height:auto;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div style="font-weight:900; color:#3498db; font-size:1.1em; margin-bottom:4px;">
+                                ${room.host_name} 的騎行房 ${room.has_password ? '<i class="fas fa-lock" style="font-size:0.8em; margin-left:4px;"></i>' : ''}
+                            </div>
+                            <div style="font-size:0.85em; opacity:0.8; color:#a8d8a0;">
+                                <i class="fas fa-route"></i> 路線：${room.route_alias || room.route_id}
+                            </div>
+                            <div style="font-size:0.75em; opacity:0.6; margin-top:8px;">
+                                <i class="fas fa-users"></i> 目前人數：${room.member_count} / 8
+                            </div>
+                        </div>
+                        <button onclick="joinRoom('${room.room_code}', ${room.has_password})"
+                                style="background:#3498db; color:#fff; border:none; padding:0.8em 1.5em; border-radius:12px; font-weight:800; cursor:pointer; box-shadow:0 4px 10px rgba(52,152,219,0.2);">
+                            加入
+                        </button>
                     </div>
-                    <button onclick="joinRoom('${room.room_code}', ${room.has_password})" style="background:#3498db; color:#fff; border:none; padding:0.5em 1em; border-radius:8px; font-weight:bold; cursor:pointer;">加入</button>
                 </div>
             `).join('');
         } catch (e) {
-            list.innerHTML = '<div style="text-align:center; padding:2em; color:#e74c3c;">載入失敗</div>';
+            list.innerHTML = '<div style="text-align:center; padding:2em; color:#e74c3c;"><i class="fas fa-exclamation-triangle"></i> 載入失敗，請稍後再試</div>';
         }
     };
 
@@ -2207,10 +2255,11 @@ async function initAppRidePage() {
             });
             const data = await res.json();
             if (res.ok) {
-                window.location.href = `/ride?id=${routeId}&room=${data.room_code}`;
-            } else {
-                alert(data.message || '開設失敗');
-            }
+                currentRoomCode = data.room_code;
+                cancelCreateRoom();
+                hideMultiplayerLobby();
+                showRoomWait(data.room_code, routeId, true);
+            } else { alert(data.message || '開設失敗'); }
         } catch (e) { alert('網絡錯誤'); }
     };
 
@@ -2230,11 +2279,69 @@ async function initAppRidePage() {
             });
             const data = await res.json();
             if (res.ok) {
-                window.location.href = `/ride?id=${data.route_id}&room=${roomCode}`;
-            } else {
-                alert(data.message || '加入失敗');
-            }
+                currentRoomCode = roomCode;
+                hideMultiplayerLobby();
+                showRoomWait(roomCode, data.route_id, false);
+            } else { alert(data.message || '加入失敗'); }
         } catch (e) { alert('網絡錯誤'); }
+    };
+
+    window.showRoomWait = (roomCode, routeId, isHost) => {
+        document.getElementById('room-wait-modal').style.display = 'flex';
+        document.getElementById('wait-room-code').textContent = roomCode;
+        document.getElementById('btn-start-room').style.display = isHost ? 'block' : 'none';
+        refreshRoomStatus(roomCode);
+        roomRefreshInterval = setInterval(() => refreshRoomStatus(roomCode), 3000);
+    };
+
+    async function refreshRoomStatus(roomCode) {
+        try {
+            const res = await fetch(`/api/user?action=room-status&room_code=${roomCode}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            const data = await res.json();
+            if (!res.ok) { leaveRoom(); return; }
+
+            if (data.status === 'started') {
+                clearInterval(roomRefreshInterval);
+                window.location.href = `/ride?id=${data.route_id}&room=${roomCode}`;
+                return;
+            }
+
+            document.getElementById('wait-member-count').textContent = `${data.members.length} / 8`;
+            document.getElementById('wait-member-list').innerHTML = data.members.map(m => `
+                <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.05); padding:10px; border-radius:12px;">
+                    <div style="width:32px; height:32px; background:#3498db; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                        ${m.username[0].toUpperCase()}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:0.9em; font-weight:bold;">${m.username} ${m.is_host ? '<span style="font-size:0.7em; background:#f1c40f; color:#000; padding:1px 4px; border-radius:4px; margin-left:4px;">房主</span>' : ''}</div>
+                        <div style="font-size:0.7em; opacity:0.6;">Lv.${m.level} ${m.cyclist_tier}</div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {}
+    }
+
+    window.leaveRoom = () => {
+        clearInterval(roomRefreshInterval);
+        document.getElementById('room-wait-modal').style.display = 'none';
+        currentRoomCode = null;
+    };
+
+    window.finalStartRoom = async () => {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const res = await fetch('/api/user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ action: 'start-room', room_code: currentRoomCode })
+            });
+            if (res.ok) {
+                const routeId = document.getElementById('room-route-select').value;
+                window.location.href = `/ride?id=${routeId}&room=${currentRoomCode}`;
+            }
+        } catch (e) {}
     };
 
     // Check URL for dept param — restore previous page state
