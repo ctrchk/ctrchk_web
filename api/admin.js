@@ -227,6 +227,24 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
+    if (action === 'get-model-files') {
+      try {
+        const glbPath = path.join(process.cwd(), 'model', 'glb');
+        const usdzPath = path.join(process.cwd(), 'model', 'usdz');
+
+        const [glbFiles, usdzFiles] = await Promise.all([
+          readdir(glbPath).catch(() => []),
+          readdir(usdzPath).catch(() => [])
+        ]);
+
+        return res.status(200).json({
+          glb: glbFiles.filter(f => f.toLowerCase().endsWith('.glb')),
+          usdz: usdzFiles.filter(f => f.toLowerCase().endsWith('.usdz'))
+        });
+      } catch (e) {
+        return res.status(500).json({ message: 'Failed to read model files' });
+      }
+    }
     if (action === 'badges') {
         const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
         return res.status(200).json(rows);
@@ -286,19 +304,43 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
     }
     if (action === 'upsert-hk-challenge') {
-        if (b.id) {
+        const { id, tier, route_id, name, xp_reward, coin_reward, badge_id, alias, bg_color, start_station_id, end_station_id, stops, gpx } = b;
+
+        // 1. Update/Insert hk_challenges
+        if (id) {
             await query(
                 `UPDATE hk_challenges SET tier=$1, route_id=$2, name=$3, xp_reward=$4, coin_reward=$5, badge_id=$6
                  WHERE id=$7`,
-                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id, b.id]
+                [tier, route_id, name, xp_reward, coin_reward, badge_id, id]
             );
         } else {
             await query(
                 `INSERT INTO hk_challenges (tier, route_id, name, xp_reward, coin_reward, badge_id)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [b.tier, b.route_id, b.name, b.xp_reward, b.coin_reward, b.badge_id]
+                [tier, route_id, name, xp_reward, coin_reward, badge_id]
             );
         }
+
+        // 2. Update/Insert associated route in 'challenge' department
+        if (route_id) {
+            const stopsJson = typeof stops === 'string' ? stops : JSON.stringify(stops || []);
+            const gpxJson = typeof gpx === 'string' ? gpx : JSON.stringify(gpx || []);
+
+            await query(
+                `INSERT INTO routes (dept, route_number, start_station_id, end_station_id, type, alias, bg_color, stops, gpx, updated_at)
+                 VALUES ('challenge', $1, $2, $3, 'One-way', $4, $5, $6::jsonb, $7::jsonb, NOW())
+                 ON CONFLICT (dept, route_number) DO UPDATE SET
+                    start_station_id = EXCLUDED.start_station_id,
+                    end_station_id = EXCLUDED.end_station_id,
+                    alias = EXCLUDED.alias,
+                    bg_color = EXCLUDED.bg_color,
+                    stops = EXCLUDED.stops,
+                    gpx = EXCLUDED.gpx,
+                    updated_at = NOW()`,
+                [route_id, start_station_id || null, end_station_id || null, alias || name, bg_color || '#FFD700', stopsJson, gpxJson]
+            );
+        }
+
         return res.status(200).json({ success: true });
     }
     if (action === 'upsert_dept') {

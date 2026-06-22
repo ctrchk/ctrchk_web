@@ -51,12 +51,16 @@
                     <textarea id="badge-desc" rows="2"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>GLB 模型 URL (3D)</label>
-                    <input type="text" id="badge-glb" placeholder="https://...">
+                    <label>GLB 模型 (從 /model/glb 選擇)</label>
+                    <select id="badge-glb">
+                        <option value="">請選擇 GLB 檔案</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label>USDZ 模型 URL (iOS AR)</label>
-                    <input type="text" id="badge-usdz" placeholder="https://...">
+                    <label>USDZ 模型 (從 /model/usdz 選擇)</label>
+                    <select id="badge-usdz">
+                        <option value="">請選擇 USDZ 檔案</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn-primary">儲存徽章</button>
             </form>
@@ -108,14 +112,54 @@
                         <input type="number" id="ch-badge-id">
                     </div>
                 </div>
-                <button type="submit" class="btn-primary">儲存挑戰設定</button>
+                <div class="badge-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label>路線別稱</label>
+                        <input type="text" id="ch-alias" placeholder="例：環全港極限挑戰">
+                    </div>
+                    <div class="form-group">
+                        <label>路線顏色 (#HEX)</label>
+                        <input type="text" id="ch-color" placeholder="#FFD700">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>起點 / 終點站 ID</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="ch-start" placeholder="起點 ID">
+                        <input type="text" id="ch-end" placeholder="終點 ID">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>中途站 JSON (具體設計)</label>
+                    <textarea id="ch-stops" rows="4" placeholder='[{"station_id":"TKO01","nature":"start"},{"station_id":"TKO02","nature":"both"}]'></textarea>
+                </div>
+                <div class="form-group">
+                    <label>GPX JSON (路徑檔案)</label>
+                    <textarea id="ch-gpx" rows="3" placeholder='[{"label":"挑戰路線","file":"challenge.gpx"}]'></textarea>
+                </div>
+                <button type="submit" class="btn-primary">儲存挑戰及路線設定</button>
             </form>
         </div>
     </div>
 
     <script>
+        async function loadModelFiles() {
+            const res = await fetch('/api/admin?action=get-model-files', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            const data = await res.json();
+
+            const glbSelect = document.getElementById('badge-glb');
+            glbSelect.innerHTML += data.glb.map(f => `<option value="/model/glb/${f}">${f}</option>`).join('');
+
+            const usdzSelect = document.getElementById('badge-usdz');
+            usdzSelect.innerHTML += data.usdz.map(f => `<option value="/model/usdz/${f}">${f}</option>`).join('');
+        }
+
         async function loadBadges() {
-            const res = await fetch('/api/admin?action=badges');
+            const res = await fetch('/api/admin?action=badges', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
             const badges = await res.json();
             const list = document.getElementById('badge-list');
             list.innerHTML = badges.map(b => `
@@ -147,7 +191,7 @@
             `).join('');
         }
 
-        window.editChallenge = (c) => {
+        window.editChallenge = async (c) => {
             document.getElementById('ch-id').value = c.id;
             document.getElementById('ch-tier').value = c.tier;
             document.getElementById('ch-route-id').value = c.route_id;
@@ -155,6 +199,31 @@
             document.getElementById('ch-xp').value = c.xp_reward;
             document.getElementById('ch-coins').value = c.coin_reward;
             document.getElementById('ch-badge-id').value = c.badge_id || '';
+
+            // Fetch route details to fill design fields
+            try {
+                const res = await fetch('/api/admin?action=get-managed-routes', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+                });
+                const data = await res.json();
+                const route = data.routes.find(r => r.route_number === c.route_id && r.dept === 'challenge');
+                if (route) {
+                    document.getElementById('ch-alias').value = route.alias || '';
+                    document.getElementById('ch-color').value = route.bg_color || '';
+                    document.getElementById('ch-start').value = route.start_station_id || '';
+                    document.getElementById('ch-end').value = route.end_station_id || '';
+                    document.getElementById('ch-stops').value = JSON.stringify(route.stops);
+                    document.getElementById('ch-gpx').value = JSON.stringify(route.gpx);
+                } else {
+                    // Reset if not found
+                    document.getElementById('ch-alias').value = '';
+                    document.getElementById('ch-color').value = '';
+                    document.getElementById('ch-start').value = '';
+                    document.getElementById('ch-end').value = '';
+                    document.getElementById('ch-stops').value = '';
+                    document.getElementById('ch-gpx').value = '';
+                }
+            } catch(e) {}
         };
 
         document.getElementById('challenge-form').onsubmit = async (e) => {
@@ -168,14 +237,22 @@
                 name: document.getElementById('ch-name').value,
                 xp_reward: document.getElementById('ch-xp').value,
                 coin_reward: document.getElementById('ch-coins').value,
-                badge_id: document.getElementById('ch-badge-id').value
+                badge_id: document.getElementById('ch-badge-id').value,
+                // Route design data
+                alias: document.getElementById('ch-alias').value,
+                bg_color: document.getElementById('ch-color').value,
+                start_station_id: document.getElementById('ch-start').value,
+                end_station_id: document.getElementById('ch-end').value,
+                stops: document.getElementById('ch-stops').value,
+                gpx: document.getElementById('ch-gpx').value
             };
             const res = await fetch('/api/admin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
             });
-            if (res.ok) { alert('挑戰已儲存'); loadChallenges(); }
+            if (res.ok) { alert('挑戰及路線已儲存'); loadChallenges(); }
+            else { alert('儲存失敗'); }
         };
 
         document.getElementById('badge-form').onsubmit = async (e) => {
@@ -198,6 +275,7 @@
             else { alert('新增失敗'); }
         };
 
+        loadModelFiles();
         loadBadges();
         loadChallenges();
     </script>

@@ -969,11 +969,13 @@ export default async function handler(req, res) {
         // 60km: 10000 XP, 1000 Coins
         // 100km: 25000 XP, 5000 Coins, x1.5 Multiplier (1 Year)
 
-        const challenges = [
+        // HK Challenge rewards are only for route-based rides, and route 960 is excluded.
+        const is960 = route_id === '960' || route_id === 'tko-960';
+        const challenges = (normalizedRideMode !== 'free' && !is960) ? [
             { id: 'hk_30k', dist: 30, xp: 4000, coins: 250 },
             { id: 'hk_60k', dist: 60, xp: 10000, coins: 1000 },
             { id: 'hk_100k', dist: 100, xp: 25000, coins: 5000, multiplier: 1.5 }
-        ];
+        ] : [];
 
         for (const challenge of challenges) {
             if (distKmVal >= challenge.dist) {

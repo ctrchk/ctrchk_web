@@ -439,6 +439,7 @@
     const startStopIdx = parseInt(params.get('startStopIdx') || '0', 10);
     const mode = params.get('mode');
     const friendMode = params.get('friendMode') === '1';
+    const roomCode = params.get('room') || null;
 
     let map = null;
     let userMarker = null;
@@ -625,15 +626,22 @@
         } catch (err) { console.warn(`${err.name}, ${err.message}`); }
     }
 
-    function beginRide() {
+    async function beginRide() {
         if (rideStarted) return;
-        rideStarted = true; goToStartPhase = false; startTime = Date.now();
 
-        // Clear multiplayer room state upon starting
-        sessionStorage.removeItem('activeRoomCode');
-        sessionStorage.removeItem('activeRoomRoute');
-        sessionStorage.removeItem('activeRoomId');
-        sessionStorage.removeItem('isHost');
+        // If in multiplayer room, tell server ride has started
+        if (roomCode) {
+            const token = localStorage.getItem('accessToken');
+            try {
+                await fetch('/api/user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ action: 'start-room', room_code: roomCode })
+                });
+            } catch (e) {}
+        }
+
+        rideStarted = true; goToStartPhase = false; startTime = Date.now();
 
         requestWakeLock();
         document.getElementById('go-to-start-banner').style.display = 'none';
@@ -663,10 +671,30 @@
     async function syncActiveRide() {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
-        const state = { type: 'route', routeId, dirIndex, totalDistM, reachedStops: [...reachedStops], startTime, sessionXp, lastLat, lastLon, routeAlias: routeData?.alias || routeId };
+        const state = {
+            type: 'route',
+            routeId,
+            dirIndex,
+            totalDistM,
+            reachedStops: [...reachedStops],
+            startTime,
+            sessionXp,
+            lastLat,
+            lastLon,
+            routeAlias: routeData?.alias || routeId,
+            roomCode: roomCode
+        };
         try {
-            const res = await fetch('/api/user', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'active-ride', state, share_location: friendMode }) });
-            if (res.ok && friendMode) {
+            const res = await fetch('/api/user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    action: 'active-ride',
+                    state,
+                    share_location: friendMode || !!roomCode
+                })
+            });
+            if (res.ok && (friendMode || roomCode)) {
                 const data = await res.json();
                 updateFriendMarkers(data.friends_locations || []);
             }
