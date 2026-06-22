@@ -6,6 +6,8 @@ import bcrypt from 'bcryptjs';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 import { Octokit } from "@octokit/rest";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { readdir } from 'fs/promises';
+import path from 'path';
 
 // Initialize AI tools
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -227,19 +229,26 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
+    if (action === 'get-challenge-stations') {
+        const { rows } = await query(`SELECT * FROM hk_challenge_stations ORDER BY id`);
+        return res.status(200).json(rows);
+    }
     if (action === 'get-model-files') {
       try {
-        const glbPath = path.join(process.cwd(), 'model', 'glb');
-        const usdzPath = path.join(process.cwd(), 'model', 'usdz');
+        const glbPath = path.join(process.cwd(), 'public', 'model', 'glb');
+        const usdzPath = path.join(process.cwd(), 'public', 'model', 'usdz');
+        const gpxPath = path.join(process.cwd(), 'public', 'gpx');
 
-        const [glbFiles, usdzFiles] = await Promise.all([
+        const [glbFiles, usdzFiles, gpxFiles] = await Promise.all([
           readdir(glbPath).catch(() => []),
-          readdir(usdzPath).catch(() => [])
+          readdir(usdzPath).catch(() => []),
+          readdir(gpxPath).catch(() => [])
         ]);
 
         return res.status(200).json({
           glb: glbFiles.filter(f => f.toLowerCase().endsWith('.glb')),
-          usdz: usdzFiles.filter(f => f.toLowerCase().endsWith('.usdz'))
+          usdz: usdzFiles.filter(f => f.toLowerCase().endsWith('.usdz')),
+          gpx: gpxFiles.filter(f => f.toLowerCase().endsWith('.gpx'))
         });
       } catch (e) {
         return res.status(500).json({ message: 'Failed to read model files' });
@@ -299,8 +308,24 @@ export default async function handler(req, res) {
         await query(
             `INSERT INTO badges (name, description, model_url_glb, model_url_usdz, tier)
              VALUES ($1, $2, $3, $4, $5)`,
-            [b.name, b.description, b.model_url_glb, b.model_url_usdz, b.tier]
+            [b.name, b.description, b.model_url_glb || null, b.model_url_usdz || null, b.tier]
         );
+        return res.status(200).json({ success: true });
+    }
+    if (action === 'upsert-challenge-station') {
+        await query(
+            `INSERT INTO hk_challenge_stations (id, name_zh, name_en, lat, lon, road_name, is_terminal)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id) DO UPDATE SET
+                name_zh = EXCLUDED.name_zh, name_en = EXCLUDED.name_en,
+                lat = EXCLUDED.lat, lon = EXCLUDED.lon,
+                road_name = EXCLUDED.road_name, is_terminal = EXCLUDED.is_terminal`,
+            [b.id, b.name_zh, b.name_en, b.lat, b.lon, b.road_name, !!b.is_terminal]
+        );
+        return res.status(200).json({ success: true });
+    }
+    if (action === 'delete-challenge-station') {
+        await query(`DELETE FROM hk_challenge_stations WHERE id = $1`, [b.id]);
         return res.status(200).json({ success: true });
     }
     if (action === 'upsert-hk-challenge') {

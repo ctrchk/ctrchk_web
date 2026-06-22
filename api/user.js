@@ -86,6 +86,18 @@ async function ensureRideTables() {
         );
       `);
       await query(`
+        CREATE TABLE IF NOT EXISTS hk_challenge_stations (
+          id VARCHAR(20) PRIMARY KEY,
+          name_zh VARCHAR(255) NOT NULL,
+          name_en VARCHAR(255),
+          lat DOUBLE PRECISION NOT NULL,
+          lon DOUBLE PRECISION NOT NULL,
+          road_name VARCHAR(255),
+          is_terminal BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      await query(`
         CREATE TABLE IF NOT EXISTS ride_rooms (
           id SERIAL PRIMARY KEY,
           room_code VARCHAR(10) UNIQUE NOT NULL,
