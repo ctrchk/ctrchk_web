@@ -936,7 +936,9 @@
         if (!token) return;
         try {
             // Fetch all badges
-            const bResp = await fetch('/api/admin?action=badges');
+            const bResp = await fetch('/api/admin?action=badges', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             if (bResp.ok) {
                 ALL_BADGES = await bResp.json();
                 _badgesLoaded = true;
