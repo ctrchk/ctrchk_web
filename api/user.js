@@ -30,6 +30,7 @@ let _ensureRideTablesPromise = null;
 async function ensureRideTables() {
   if (!_ensureRideTablesPromise) {
     _ensureRideTablesPromise = (async () => {
+      // 1. Initial table creation
       await query(`
         CREATE TABLE IF NOT EXISTS user_friends (
           id SERIAL PRIMARY KEY,
@@ -104,13 +105,16 @@ async function ensureRideTables() {
           host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
           route_id VARCHAR(50),
           dir_index INTEGER DEFAULT 0,
-          password VARCHAR(255),
-          status VARCHAR(20) DEFAULT 'waiting',
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
       `);
-      await query(`ALTER TABLE ride_rooms ALTER COLUMN route_id TYPE VARCHAR(50);`);
+
+      // 2. Incremental schema updates (robust)
+      try { await query(`ALTER TABLE ride_rooms ADD COLUMN password VARCHAR(255);`); } catch(e) {}
+      try { await query(`ALTER TABLE ride_rooms ADD COLUMN status VARCHAR(20) DEFAULT 'waiting';`); } catch(e) {}
+      try { await query(`ALTER TABLE ride_rooms ALTER COLUMN route_id TYPE VARCHAR(50);`); } catch(e) {}
+
       await query(`
         CREATE TABLE IF NOT EXISTS room_members (
           id SERIAL PRIMARY KEY,

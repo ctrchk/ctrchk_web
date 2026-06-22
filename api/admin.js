@@ -205,14 +205,35 @@ export default async function handler(req, res) {
   const action = req.query.action || req.body?.action;
 
   // Public GET actions (no auth or standard auth)
-  if (req.method === 'GET' && ['badges', 'get-hk-challenges'].includes(action)) {
-    if (action === 'badges') {
-      const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
-      return res.status(200).json(rows);
-    }
-    if (action === 'get-hk-challenges') {
-      const { rows } = await query(`SELECT * FROM hk_challenges ORDER BY tier`);
-      return res.status(200).json(rows);
+  if (req.method === 'GET' && ['badges', 'get-hk-challenges', 'get-model-files'].includes(action)) {
+    try {
+        if (action === 'badges') {
+          const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
+          return res.status(200).json(rows);
+        }
+        if (action === 'get-hk-challenges') {
+          const { rows } = await query(`SELECT * FROM hk_challenges ORDER BY tier`);
+          return res.status(200).json(rows);
+        }
+        if (action === 'get-model-files') {
+            const glbPath = path.join(process.cwd(), 'model', 'glb');
+            const usdzPath = path.join(process.cwd(), 'model', 'usdz');
+            const gpxPath = path.join(process.cwd(), 'gpx');
+
+            const [glbFiles, usdzFiles, gpxFiles] = await Promise.all([
+              readdir(glbPath).catch(() => []),
+              readdir(usdzPath).catch(() => []),
+              readdir(gpxPath).catch(() => [])
+            ]);
+
+            return res.status(200).json({
+              glb: glbFiles.filter(f => f.toLowerCase().endsWith('.glb')),
+              usdz: usdzFiles.filter(f => f.toLowerCase().endsWith('.usdz')),
+              gpx: gpxFiles.filter(f => f.toLowerCase().endsWith('.gpx'))
+            });
+        }
+    } catch (e) {
+        return res.status(500).json({ message: 'Error: ' + e.message });
     }
   }
 
@@ -244,27 +265,6 @@ export default async function handler(req, res) {
     if (action === 'get-challenge-stations') {
         const { rows } = await query(`SELECT * FROM hk_challenge_stations ORDER BY id`);
         return res.status(200).json(rows);
-    }
-    if (action === 'get-model-files') {
-      try {
-        const glbPath = path.join(process.cwd(), 'model', 'glb');
-        const usdzPath = path.join(process.cwd(), 'model', 'usdz');
-        const gpxPath = path.join(process.cwd(), 'gpx');
-
-        const [glbFiles, usdzFiles, gpxFiles] = await Promise.all([
-          readdir(glbPath).catch(() => []),
-          readdir(usdzPath).catch(() => []),
-          readdir(gpxPath).catch(() => [])
-        ]);
-
-        return res.status(200).json({
-          glb: glbFiles.filter(f => f.toLowerCase().endsWith('.glb')),
-          usdz: usdzFiles.filter(f => f.toLowerCase().endsWith('.usdz')),
-          gpx: gpxFiles.filter(f => f.toLowerCase().endsWith('.gpx'))
-        });
-      } catch (e) {
-        return res.status(500).json({ message: 'Failed to read model files' });
-      }
     }
     if (action === 'get-stations') {
       try {
