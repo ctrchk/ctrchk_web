@@ -102,14 +102,15 @@ async function ensureRideTables() {
           id SERIAL PRIMARY KEY,
           room_code VARCHAR(10) UNIQUE NOT NULL,
           host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          route_id VARCHAR(20),
+          route_id VARCHAR(50),
           dir_index INTEGER DEFAULT 0,
           password VARCHAR(255),
-          status VARCHAR(20) DEFAULT 'waiting', -- waiting | started | closed
+          status VARCHAR(20) DEFAULT 'waiting',
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
       `);
+      await query(`ALTER TABLE ride_rooms ALTER COLUMN route_id TYPE VARCHAR(50);`);
       await query(`
         CREATE TABLE IF NOT EXISTS room_members (
           id SERIAL PRIMARY KEY,
@@ -479,13 +480,13 @@ export default async function handler(req, res) {
                   (rr.password IS NOT NULL AND rr.password != '') as has_password
            FROM ride_rooms rr
            JOIN users u ON rr.host_id = u.id
-           WHERE rr.status = 'waiting' AND rr.updated_at >= NOW() - INTERVAL '2 hours'
+           WHERE rr.status = 'waiting' AND rr.updated_at >= NOW() - INTERVAL '6 hours'
            ORDER BY rr.created_at DESC`
         );
         return res.status(200).json(rows);
       } catch (error) {
         console.error('List rooms error:', error);
-        return res.status(500).json({ message: 'Failed to list rooms' });
+        return res.status(500).json({ message: 'Failed to list rooms: ' + error.message });
       }
     }
 
@@ -729,8 +730,8 @@ export default async function handler(req, res) {
         const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
         const { rows: roomRows } = await query(
-          `INSERT INTO ride_rooms (room_code, host_id, route_id, password, status)
-           VALUES ($1, $2, $3, $4, 'waiting') RETURNING id`,
+          `INSERT INTO ride_rooms (room_code, host_id, route_id, password, status, updated_at)
+           VALUES ($1, $2, $3, $4, 'waiting', NOW()) RETURNING id`,
           [roomCode, userData.userId, route_id, password || null]
         );
         const roomId = roomRows[0].id;
@@ -744,7 +745,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, room_code: roomCode });
       } catch (error) {
         console.error('Create room error:', error);
-        return res.status(500).json({ message: 'Failed to create room' });
+        return res.status(500).json({ message: 'Failed to create room: ' + error.message });
       }
     }
 
