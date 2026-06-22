@@ -26,6 +26,30 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
+    /* ── Badge Earned Overlay ── */
+    #badge-earned-overlay {
+        display: none; position: fixed; inset: 0; z-index: 800;
+        background: rgba(0,0,0,0.88);
+        align-items: center; justify-content: center; flex-direction: column;
+        text-align: center; padding: 2em; overflow: hidden;
+    }
+    #badge-earned-overlay.show { display: flex; animation: tlFadeIn 0.35s ease; }
+    @keyframes tlFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    #badge-earned-inner {
+        animation: tlSlideUp 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+        position: relative; z-index: 1;
+    }
+    @keyframes tlSlideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    #badge-earned-overlay h2 { color: #BFE340; font-size: 2em; margin-bottom: 0.3em; }
+    #badge-earned-viewer { width: 100%; height: 250px; margin-bottom: 1em; }
+    #badge-earned-name { color: #BFE340; font-size: 1.8em; font-weight: 900; margin-bottom: 0.2em; }
+    #badge-earned-desc { color: #fff; opacity: 0.8; font-size: 1em; margin-bottom: 1.5em; max-width: 300px; }
+    #badge-earned-btn {
+        background: #BFE340; color: #1a252f; border: none;
+        padding: 0.8em 2em; border-radius: 14px; font-size: 1em; font-weight: bold;
+        cursor: pointer; box-shadow: 0 4px 12px rgba(191,227,64,0.3);
+    }
+
     /* ── Industrial HUD System 4.2 (Leaflet Optimized) ── */
     :root {
       --hud-green: #2ecc71;
@@ -300,6 +324,19 @@
 
   <div id="ride-map"></div>
 
+  <!-- Badge Earned Overlay -->
+  <div id="badge-earned-overlay">
+      <div id="badge-earned-inner">
+          <h2 id="badge-earned-title">獲得新徽章！</h2>
+          <div id="badge-earned-container" style="width:300px; height:300px; margin:0 auto;">
+              <!-- model-viewer will be injected -->
+          </div>
+          <div id="badge-earned-name">徽章名稱</div>
+          <div id="badge-earned-desc">徽章描述內容</div>
+          <button id="badge-earned-btn" onclick="closeBadgeEarned()">太棒了！</button>
+      </div>
+  </div>
+
   <div id="off-route-warning">⚠️ 偏離路線</div>
 
   <!-- Custom Pause/Resume Modal -->
@@ -374,6 +411,12 @@
 
     <!-- Mini Bottom Controls -->
     <div class="hud-bottom-panel hidden" id="hud-bottom" style="background:transparent; backdrop-filter:none; border:none; box-shadow:none;">
+      <!-- Room Members Panel -->
+      <div id="room-members-panel" style="display:none; margin-bottom:12px; background:rgba(18, 31, 20, 0.85); backdrop-filter:blur(10px); border-radius:16px; padding:12px; border:1px solid rgba(255,255,255,0.1);">
+          <div style="font-size:10px; color:#BFE340; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">房內成員位置</div>
+          <div id="room-member-list-hud" style="display:flex; gap:10px; overflow-x:auto; scrollbar-width:none;"></div>
+      </div>
+
       <div class="controls-row">
         <button class="btn-action btn-pause" id="btn-pause-ride"><i class="fas fa-pause"></i> 暫停</button>
         <button class="btn-action btn-end" id="btn-end-ride"><i class="fas fa-stop"></i> 結束</button>
@@ -429,6 +472,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   <script>
   (function () {
     'use strict';
@@ -462,6 +506,7 @@
     let routeData = null;
     let friendMarkers = new Map();
     let wakeLock = null;
+    let earnedBadges = new Set(); // IDs of badges earned in this session
 
     const STOP_DETECTION_RADIUS_M = 40;
     const OFF_ROUTE_THRESHOLD_M = 50;
@@ -704,7 +749,6 @@
     function updateFriendMarkers(friends) {
         if (!map) return;
 
-        // Remove markers for friends who are no longer active
         const activeIds = new Set(friends.map(f => f.user_id));
         for (const [id, marker] of friendMarkers.entries()) {
             if (!activeIds.has(id)) {
@@ -713,9 +757,25 @@
             }
         }
 
+        const hudList = document.getElementById('room-member-list-hud');
+        if (hudList) hudList.innerHTML = '';
+
         friends.forEach(f => {
             const myId = JSON.parse(localStorage.getItem('user') || '{}').id;
-            if (Number(f.user_id) === Number(myId)) return;
+            const isMe = Number(f.user_id) === Number(myId);
+
+            // HUD listing
+            if (hudList) {
+                const item = document.createElement('div');
+                item.style.cssText = 'flex-shrink:0; display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.05); padding:4px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);';
+                item.innerHTML = `
+                    <div style="width:8px; height:8px; border-radius:50%; background:${isMe ? '#BFE340' : '#3498db'};"></div>
+                    <span style="font-size:11px; color:#fff; font-weight:bold;">${f.username}${isMe ? ' (你)' : ''}</span>
+                `;
+                hudList.appendChild(item);
+            }
+
+            if (isMe) return;
 
             let m = friendMarkers.get(f.user_id);
             const iconHtml = `
@@ -744,6 +804,9 @@
                 m.setIcon(icon);
             }
         });
+
+        const panel = document.getElementById('room-members-panel');
+        if (panel) panel.style.display = (roomCode || friends.length > 0) ? 'block' : 'none';
     }
 
     window.skipGoToStart = beginRide;
@@ -817,6 +880,11 @@
 
         const result = await res.json();
 
+        // Check for new badges
+        if (result.challenge_completed) {
+            showBadgeEarned(result.challenge_completed);
+        }
+
         // Update Settlement UI
         document.getElementById('summary-route-name').textContent = isFreeMode ? '自由模式' : (routeData?.alias || routeId);
         document.getElementById('s-time').textContent = durationMins + 'm';
@@ -867,6 +935,35 @@
     };
 
     window.confirmLeave = () => { if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) location.href = '/dashboard'; };
+
+    async function showBadgeEarned(tierOrId) {
+        try {
+            const res = await fetch('/api/admin?action=badges');
+            const badges = await res.json();
+            const b = badges.find(x => x.tier === tierOrId || x.id == tierOrId);
+            if (!b) return;
+
+            document.getElementById('badge-earned-name').textContent = b.name;
+            document.getElementById('badge-earned-desc').textContent = b.description || '';
+            document.getElementById('badge-earned-container').innerHTML = `
+                <model-viewer
+                    src="${b.model_url_glb}"
+                    ios-src="${b.model_url_usdz}"
+                    alt="${b.name}"
+                    auto-rotate
+                    camera-controls
+                    shadow-intensity="1"
+                    style="width:100%; height:100%;">
+                </model-viewer>`;
+
+            document.getElementById('badge-earned-overlay').classList.add('show');
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#BFE340', '#3498db', '#ffffff'] });
+        } catch(e) {}
+    }
+
+    window.closeBadgeEarned = () => {
+        document.getElementById('badge-earned-overlay').classList.remove('show');
+    };
 
     function showPauseModal() {
         const modal = document.getElementById('custom-pause-modal');

@@ -196,14 +196,20 @@ async function authenticate(req, res, required = true) {
   }
   // Deep clean token: remove quotes and whitespace
   token = token.replace(/^["']+|["']$/g, '').trim();
+  if (token === 'null' || token === 'undefined') {
+    if (required) res.status(401).json({ message: 'Token is literal null or undefined' });
+    return null;
+  }
 
   const JWT_SECRET = process.env.JWT_SECRET;
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    // Ensure userId exists in decoded
+    if (!decoded.userId && decoded.id) decoded.userId = decoded.id;
     return decoded;
   } catch (err) {
     if (required) {
-      res.status(401).json({ message: 'Invalid or expired token' });
+      res.status(401).json({ message: 'Invalid or expired token: ' + err.message });
     }
     return null;
   }
@@ -491,6 +497,42 @@ export default async function handler(req, res) {
       } catch (error) {
         console.error('List rooms error:', error);
         return res.status(500).json({ message: 'Failed to list rooms: ' + error.message });
+      }
+    }
+
+    if (req.query.action === 'room-status') {
+      try {
+        await ensureRideTables();
+        const { room_code } = req.query;
+        const { rows: roomRows } = await query(
+          `SELECT rr.id, rr.status, rr.route_id FROM ride_rooms rr WHERE rr.room_code = $1`,
+          [room_code]
+        );
+        if (roomRows.length === 0) return res.status(404).json({ message: 'Room not found' });
+        const room = roomRows[0];
+
+        const { rows: members } = await query(
+          `SELECT u.username, gp.level, rm.user_id = rr.host_id as is_host
+           FROM room_members rm
+           JOIN users u ON rm.user_id = u.id
+           JOIN ride_rooms rr ON rr.id = rm.room_id
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+           WHERE rr.room_code = $1`,
+          [room_code]
+        );
+
+        const memberData = members.map(m => ({
+            ...m,
+            cyclist_tier: getCyclistTierByLevel(m.level || 1)
+        }));
+
+        return res.status(200).json({
+            status: room.status,
+            route_id: room.route_id,
+            members: memberData
+        });
+      } catch (error) {
+        return res.status(500).json({ message: error.message });
       }
     }
 
