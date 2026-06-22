@@ -85,6 +85,29 @@ async function ensureRideTables() {
           is_active BOOLEAN DEFAULT TRUE
         );
       `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS ride_rooms (
+          id SERIAL PRIMARY KEY,
+          room_code VARCHAR(10) UNIQUE NOT NULL,
+          host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          route_id VARCHAR(20),
+          dir_index INTEGER DEFAULT 0,
+          password VARCHAR(255),
+          status VARCHAR(20) DEFAULT 'waiting', -- waiting | started | closed
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS room_members (
+          id SERIAL PRIMARY KEY,
+          room_id INTEGER NOT NULL REFERENCES ride_rooms(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          is_ready BOOLEAN DEFAULT FALSE,
+          joined_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(room_id, user_id)
+        );
+      `);
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -253,7 +276,7 @@ export default async function handler(req, res) {
           try { tags = JSON.parse(r.tags); } catch (_) { tags = []; }
         }
 
-        const isChallenge = challengeMap.has(r.route_number) || challengeMap.has(`${r.dept}-${r.route_number}`);
+        const isChallenge = (challengeMap.has(r.route_number) || challengeMap.has(`${r.dept}-${r.route_number}`)) && r.route_number !== '960';
         if (isChallenge && !tags.includes('全港挑戰')) {
             tags.push('全港挑戰');
         }
@@ -434,6 +457,26 @@ export default async function handler(req, res) {
       }
     }
 
+    if (req.query.action === 'list-rooms') {
+      try {
+        await ensureRideTables();
+        const { rows } = await query(
+          `SELECT rr.room_code, u.username as host_name, rr.route_id,
+                  (SELECT alias FROM routes WHERE route_number = rr.route_id LIMIT 1) as route_alias,
+                  (SELECT COUNT(*) FROM room_members WHERE room_id = rr.id) as member_count,
+                  (rr.password IS NOT NULL AND rr.password != '') as has_password
+           FROM ride_rooms rr
+           JOIN users u ON rr.host_id = u.id
+           WHERE rr.status = 'waiting' AND rr.updated_at >= NOW() - INTERVAL '2 hours'
+           ORDER BY rr.created_at DESC`
+        );
+        return res.status(200).json(rows);
+      } catch (error) {
+        console.error('List rooms error:', error);
+        return res.status(500).json({ message: 'Failed to list rooms' });
+      }
+    }
+
     if (req.query.action === 'gpx-list') {
       try {
         const gpxDir = path.join(process.cwd(), 'gpx');
@@ -587,8 +630,26 @@ export default async function handler(req, res) {
       );
 
       let friendsLocations = [];
-      if (share_location && state.routeId) {
-          // Fetch friends riding the SAME route
+      const roomCode = state.roomCode || null;
+
+      if (roomCode) {
+          // Fetch room members locations
+          const { rows } = await query(
+              `SELECT ar.user_id, u.username,
+                      (ar.state->>'lastLat')::double precision as lat,
+                      (ar.state->>'lastLon')::double precision as lng
+               FROM active_rides ar
+               JOIN users u ON ar.user_id = u.id
+               JOIN room_members rm ON rm.user_id = ar.user_id
+               JOIN ride_rooms rr ON rr.id = rm.room_id
+               WHERE rr.room_code = $1
+                 AND ar.user_id != $2
+                 AND ar.updated_at >= NOW() - INTERVAL '5 minutes'`,
+              [roomCode, userData.userId]
+          );
+          friendsLocations = rows;
+      } else if (share_location && state.routeId) {
+          // Fetch friends riding the SAME route (Legacy)
           const { rows } = await query(
               `SELECT ar.user_id, u.username,
                       (ar.state->>'lastLat')::double precision as lat,
@@ -644,6 +705,86 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: 'Friend request sent' });
       } catch (error) {
         return res.status(500).json({ message: error.message });
+      }
+    }
+
+    if (req.body.action === 'create-room') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        await ensureRideTables();
+        const { route_id, password } = req.body;
+        const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        const { rows: roomRows } = await query(
+          `INSERT INTO ride_rooms (room_code, host_id, route_id, password, status)
+           VALUES ($1, $2, $3, $4, 'waiting') RETURNING id`,
+          [roomCode, userData.userId, route_id, password || null]
+        );
+        const roomId = roomRows[0].id;
+
+        await query(
+          `INSERT INTO room_members (room_id, user_id, is_ready)
+           VALUES ($1, $2, true)`,
+          [roomId, userData.userId]
+        );
+
+        return res.status(200).json({ success: true, room_code: roomCode });
+      } catch (error) {
+        console.error('Create room error:', error);
+        return res.status(500).json({ message: 'Failed to create room' });
+      }
+    }
+
+    if (req.body.action === 'join-room') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        await ensureRideTables();
+        const { room_code, password } = req.body;
+
+        const { rows: roomRows } = await query(
+          `SELECT id, password, status, route_id FROM ride_rooms WHERE room_code = $1`,
+          [room_code]
+        );
+
+        if (roomRows.length === 0) return res.status(404).json({ message: 'Room not found' });
+        const room = roomRows[0];
+
+        if (room.status !== 'waiting') return res.status(400).json({ message: 'Room already started or closed' });
+
+        if (room.password && room.password !== password) {
+          return res.status(401).json({ message: 'Incorrect password' });
+        }
+
+        await query(
+          `INSERT INTO room_members (room_id, user_id)
+           VALUES ($1, $2) ON CONFLICT (room_id, user_id) DO NOTHING`,
+          [room.id, userData.userId]
+        );
+
+        return res.status(200).json({ success: true, route_id: room.route_id });
+      } catch (error) {
+        console.error('Join room error:', error);
+        return res.status(500).json({ message: 'Failed to join room' });
+      }
+    }
+
+    if (req.body.action === 'start-room') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        await ensureRideTables();
+        const { room_code } = req.body;
+        await query(
+          `UPDATE ride_rooms SET status = 'started', updated_at = NOW()
+           WHERE room_code = $1 AND host_id = $2`,
+          [room_code, userData.userId]
+        );
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        console.error('Start room error:', error);
+        return res.status(500).json({ message: 'Failed to start room' });
       }
     }
 
