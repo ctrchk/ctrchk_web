@@ -704,9 +704,8 @@ export default async function handler(req, res) {
                JOIN room_members rm ON rm.user_id = ar.user_id
                JOIN ride_rooms rr ON rr.id = rm.room_id
                WHERE rr.room_code = $1
-                 AND ar.user_id != $2
                  AND ar.updated_at >= NOW() - INTERVAL '5 minutes'`,
-              [roomCode, userData.userId]
+              [roomCode]
           );
           friendsLocations = rows;
       } else if (share_location && state.routeId) {
