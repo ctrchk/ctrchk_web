@@ -341,44 +341,49 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
     }
     if (action === 'upsert-hk-challenge') {
-        const { id, tier, route_id, name, xp_reward, coin_reward, badge_id, alias, bg_color, start_station_id, end_station_id, stops, gpx } = b;
+        try {
+            const { id, tier, route_id, name, xp_reward, coin_reward, badge_id, alias, bg_color, start_station_id, end_station_id, stops, gpx } = b;
 
-        // 1. Update/Insert hk_challenges
-        if (id) {
-            await query(
-                `UPDATE hk_challenges SET tier=$1, route_id=$2, name=$3, xp_reward=$4, coin_reward=$5, badge_id=$6
-                 WHERE id=$7`,
-                [tier, route_id, name, xp_reward, coin_reward, badge_id, id]
-            );
-        } else {
-            await query(
-                `INSERT INTO hk_challenges (tier, route_id, name, xp_reward, coin_reward, badge_id)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                [tier, route_id, name, xp_reward, coin_reward, badge_id]
-            );
+            // 1. Update/Insert hk_challenges
+            if (id) {
+                await query(
+                    `UPDATE hk_challenges SET tier=$1, route_id=$2, name=$3, xp_reward=$4, coin_reward=$5, badge_id=$6
+                     WHERE id=$7`,
+                    [tier, route_id, name, xp_reward, coin_reward, badge_id || null, id]
+                );
+            } else {
+                await query(
+                    `INSERT INTO hk_challenges (tier, route_id, name, xp_reward, coin_reward, badge_id)
+                     VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [tier, route_id, name, xp_reward, coin_reward, badge_id || null]
+                );
+            }
+
+            // 2. Update/Insert associated route in 'challenge' department
+            if (route_id) {
+                const stopsJson = typeof stops === 'string' ? stops : JSON.stringify(stops || []);
+                const gpxJson = typeof gpx === 'string' ? gpx : JSON.stringify(gpx || []);
+
+                await query(
+                    `INSERT INTO routes (dept, route_number, start_station_id, end_station_id, type, alias, bg_color, stops, gpx, updated_at)
+                     VALUES ('challenge', $1, $2, $3, 'One-way', $4, $5, $6::jsonb, $7::jsonb, NOW())
+                     ON CONFLICT (dept, route_number) DO UPDATE SET
+                        start_station_id = EXCLUDED.start_station_id,
+                        end_station_id = EXCLUDED.end_station_id,
+                        alias = EXCLUDED.alias,
+                        bg_color = EXCLUDED.bg_color,
+                        stops = EXCLUDED.stops,
+                        gpx = EXCLUDED.gpx,
+                        updated_at = NOW()`,
+                    [route_id, start_station_id || null, end_station_id || null, alias || name, bg_color || '#FFD700', stopsJson, gpxJson]
+                );
+            }
+
+            return res.status(200).json({ success: true });
+        } catch (e) {
+            console.error('Upsert HK Challenge error:', e);
+            return res.status(500).json({ message: 'Save failed: ' + e.message });
         }
-
-        // 2. Update/Insert associated route in 'challenge' department
-        if (route_id) {
-            const stopsJson = typeof stops === 'string' ? stops : JSON.stringify(stops || []);
-            const gpxJson = typeof gpx === 'string' ? gpx : JSON.stringify(gpx || []);
-
-            await query(
-                `INSERT INTO routes (dept, route_number, start_station_id, end_station_id, type, alias, bg_color, stops, gpx, updated_at)
-                 VALUES ('challenge', $1, $2, $3, 'One-way', $4, $5, $6::jsonb, $7::jsonb, NOW())
-                 ON CONFLICT (dept, route_number) DO UPDATE SET
-                    start_station_id = EXCLUDED.start_station_id,
-                    end_station_id = EXCLUDED.end_station_id,
-                    alias = EXCLUDED.alias,
-                    bg_color = EXCLUDED.bg_color,
-                    stops = EXCLUDED.stops,
-                    gpx = EXCLUDED.gpx,
-                    updated_at = NOW()`,
-                [route_id, start_station_id || null, end_station_id || null, alias || name, bg_color || '#FFD700', stopsJson, gpxJson]
-            );
-        }
-
-        return res.status(200).json({ success: true });
     }
     if (action === 'upsert_dept') {
         await query(`INSERT INTO department_config (dept_id, name, region, description, map_center_lat, map_center_lng, map_zoom, available) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (dept_id) DO UPDATE SET name=EXCLUDED.name, region=EXCLUDED.region, description=EXCLUDED.description, map_center_lat=EXCLUDED.map_center_lat, map_center_lng=EXCLUDED.map_center_lng, map_zoom=EXCLUDED.map_zoom, available=EXCLUDED.available`, [String(b.dept_id).trim().toLowerCase(), b.name, b.region, b.description, b.map_center_lat, b.map_center_lng, b.map_zoom, b.available !== false]);

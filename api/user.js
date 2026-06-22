@@ -113,6 +113,7 @@ async function ensureRideTables() {
       // 2. Incremental schema updates (robust)
       try { await query(`ALTER TABLE ride_rooms ADD COLUMN password VARCHAR(255);`); } catch(e) {}
       try { await query(`ALTER TABLE ride_rooms ADD COLUMN status VARCHAR(20) DEFAULT 'waiting';`); } catch(e) {}
+      try { await query(`ALTER TABLE ride_rooms ADD COLUMN dir_index INTEGER DEFAULT 0;`); } catch(e) {}
       try { await query(`ALTER TABLE ride_rooms ALTER COLUMN route_id TYPE VARCHAR(50);`); } catch(e) {}
 
       await query(`
@@ -505,7 +506,7 @@ export default async function handler(req, res) {
         await ensureRideTables();
         const { room_code } = req.query;
         const { rows: roomRows } = await query(
-          `SELECT rr.id, rr.status, rr.route_id FROM ride_rooms rr WHERE rr.room_code = $1`,
+          `SELECT rr.id, rr.status, rr.route_id, rr.dir_index FROM ride_rooms rr WHERE rr.room_code = $1`,
           [room_code]
         );
         if (roomRows.length === 0) return res.status(404).json({ message: 'Room not found' });
@@ -529,6 +530,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
             status: room.status,
             route_id: room.route_id,
+            dir_index: room.dir_index || 0,
             members: memberData
         });
       } catch (error) {
@@ -772,13 +774,13 @@ export default async function handler(req, res) {
       if (!userData) return;
       try {
         await ensureRideTables();
-        const { route_id, password } = req.body;
+        const { route_id, dir_index, password } = req.body;
         const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
         const { rows: roomRows } = await query(
-          `INSERT INTO ride_rooms (room_code, host_id, route_id, password, status, updated_at)
-           VALUES ($1, $2, $3, $4, 'waiting', NOW()) RETURNING id`,
-          [roomCode, userData.userId, route_id, password || null]
+          `INSERT INTO ride_rooms (room_code, host_id, route_id, dir_index, password, status, updated_at)
+           VALUES ($1, $2, $3, $4, $5, 'waiting', NOW()) RETURNING id`,
+          [roomCode, userData.userId, route_id, parseInt(dir_index || 0), password || null]
         );
         const roomId = roomRows[0].id;
 

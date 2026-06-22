@@ -936,13 +936,15 @@
         if (!token) return;
         try {
             // Fetch all badges
-            const bResp = await fetch('/api/admin?action=badges', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (bResp.ok) {
-                ALL_BADGES = await bResp.json();
-                _badgesLoaded = true;
-            }
+            try {
+                const bResp = await fetch('/api/admin?action=badges', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (bResp.ok) {
+                    ALL_BADGES = await bResp.json();
+                }
+            } catch(e) { console.warn('Fetch badges failed', e); }
+            _badgesLoaded = true;
 
             // Fetch user progress
             const resp = await fetch('/api/getHistory', {

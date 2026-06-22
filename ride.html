@@ -357,43 +357,6 @@
   </div>
 
   <div class="hud-container">
-    <!-- Industrial Top HUD -->
-    <div class="hud-top-industrial hidden" id="hud-main-top">
-        <div style="text-align:center; margin-bottom: 15px; opacity: 0.6; font-size: 12px;" id="gps-status-msg">正在連接 GPS...</div>
-
-        <div class="hud-status-row">
-            <div class="status-item">
-                <span class="status-val" id="stat-time-top">00:00</span>
-                <span class="status-lbl">⌛ 時間</span>
-            </div>
-            <div class="status-item">
-                <span class="status-val" id="stat-dist-top">0 m</span>
-                <span class="status-lbl">🚴 距離</span>
-            </div>
-            <div class="status-item">
-                <span class="status-val" id="stat-stops-top">0/0</span>
-                <span class="status-lbl">🏣 站點</span>
-            </div>
-            <button class="btn-toggle-hud" onclick="toggleHudExpand()">收起 ▼</button>
-        </div>
-
-        <div class="big-stats-grid">
-            <div class="big-stat-card">
-                <span class="big-stat-val" id="stat-xp">0</span>
-                <span class="big-stat-lbl">⭐ XP</span>
-            </div>
-            <div class="big-stat-card">
-                <span class="big-stat-val" id="stat-speed-top">0.0</span>
-                <span class="big-stat-lbl">💨 速度 (km/h)</span>
-            </div>
-        </div>
-
-        <div class="hud-section-title">站點進度</div>
-        <div class="stops-overview" id="stops-overview">
-            <!-- Stop pills injected here -->
-        </div>
-    </div>
-
     <!-- Turn-by-Turn Overlay -->
     <div class="hud-top hidden" id="hud-nav-instruction">
       <div class="nav-next-icon" id="next-icon"><i class="fas fa-arrow-up"></i></div>
@@ -409,18 +372,55 @@
 
     <div style="flex: 1;"></div>
 
-    <!-- Mini Bottom Controls -->
-    <div class="hud-bottom-panel hidden" id="hud-bottom" style="background:transparent; backdrop-filter:none; border:none; box-shadow:none;">
-      <!-- Room Members Panel -->
-      <div id="room-members-panel" style="display:none; margin-bottom:12px; background:rgba(18, 31, 20, 0.85); backdrop-filter:blur(10px); border-radius:16px; padding:12px; border:1px solid rgba(255,255,255,0.1);">
-          <div style="font-size:10px; color:#BFE340; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">房內成員位置</div>
-          <div id="room-member-list-hud" style="display:flex; gap:10px; overflow-x:auto; scrollbar-width:none;"></div>
-      </div>
+    <!-- Combined Industrial Bottom HUD -->
+    <div class="hud-bottom-industrial hidden" id="hud-main-bottom">
+        <div style="text-align:center; margin-bottom: 10px; opacity: 0.6; font-size: 10px;" id="gps-status-msg-bottom">正在連接 GPS...</div>
 
-      <div class="controls-row">
-        <button class="btn-action btn-pause" id="btn-pause-ride"><i class="fas fa-pause"></i> 暫停</button>
-        <button class="btn-action btn-end" id="btn-end-ride"><i class="fas fa-stop"></i> 結束</button>
-      </div>
+        <div class="hud-status-row" style="margin-bottom: 15px;">
+            <div class="status-item">
+                <span class="status-val" id="stat-time-top" style="font-size: 18px;">00:00</span>
+                <span class="status-lbl" style="font-size: 9px;">⌛ 時間</span>
+            </div>
+            <div class="status-item">
+                <span class="status-val" id="stat-dist-top" style="font-size: 18px;">0 m</span>
+                <span class="status-lbl" style="font-size: 9px;">🚴 距離</span>
+            </div>
+            <div class="status-item">
+                <span class="status-val" id="stat-speed-top" style="font-size: 18px;">0.0</span>
+                <span class="status-lbl" style="font-size: 9px;">💨 速度</span>
+            </div>
+            <button class="btn-toggle-hud" onclick="toggleHudExpand()" id="btn-hud-toggle" style="margin-left: 10px;">展開 ▲</button>
+        </div>
+
+        <!-- Expanded Area -->
+        <div id="hud-expanded-area" style="display:none; margin-bottom: 15px;">
+            <div class="big-stats-grid" style="margin-bottom: 15px;">
+                <div class="big-stat-card" style="padding: 12px;">
+                    <span class="big-stat-val" id="stat-xp" style="font-size: 24px;">0</span>
+                    <span class="big-stat-lbl" style="font-size: 11px;">⭐ XP</span>
+                </div>
+                <div class="big-stat-card" style="padding: 12px;">
+                    <span class="big-stat-val" id="stat-stops-top" style="font-size: 24px;">0/0</span>
+                    <span class="big-stat-lbl" style="font-size: 11px;">🏣 站點</span>
+                </div>
+            </div>
+
+            <div class="hud-section-title">站點進度</div>
+            <div class="stops-overview" id="stops-overview">
+                <!-- Stop pills injected here -->
+            </div>
+
+            <!-- Room Members Panel -->
+            <div id="room-members-panel" style="display:none; margin-bottom:15px; background:rgba(255,255,255,0.05); border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,0.1);">
+                <div style="font-size:10px; color:#BFE340; font-weight:bold; margin-bottom:8px; text-transform:uppercase;">房內成員位置</div>
+                <div id="room-member-list-hud" style="display:flex; gap:10px; overflow-x:auto; scrollbar-width:none;"></div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <button class="btn-action btn-pause" id="btn-pause-ride" style="padding: 12px;"><i class="fas fa-pause"></i> 暫停</button>
+            <button class="btn-action btn-end" id="btn-end-ride" style="padding: 12px;"><i class="fas fa-stop"></i> 結束</button>
+        </div>
     </div>
   </div>
 
@@ -691,9 +691,8 @@
         requestWakeLock();
         document.getElementById('go-to-start-banner').style.display = 'none';
 
-        document.getElementById('hud-main-top').classList.remove('hidden');
+        document.getElementById('hud-main-bottom').classList.remove('hidden');
         document.getElementById('hud-nav-instruction').classList.toggle('hidden', isFreeMode);
-        document.getElementById('hud-bottom').classList.remove('hidden');
 
         if (isFreeMode) {
             const progressTitle = document.querySelector('.hud-section-title');
@@ -822,13 +821,13 @@
     };
 
     window.toggleHudExpand = () => {
-        const hud = document.getElementById('hud-main-top');
-        const btn = hud.querySelector('.btn-toggle-hud');
-        if (hud.classList.contains('collapsed')) {
-            hud.classList.remove('collapsed');
+        const area = document.getElementById('hud-expanded-area');
+        const btn = document.getElementById('btn-hud-toggle');
+        if (area.style.display === 'none') {
+            area.style.display = 'block';
             btn.textContent = '收起 ▼';
         } else {
-            hud.classList.add('collapsed');
+            area.style.display = 'none';
             btn.textContent = '展開 ▲';
         }
     };
