@@ -29,8 +29,9 @@
         <a href="/admin" style="color: #a8d8a0; text-decoration: none; display: inline-block; margin-bottom: 20px;"><i class="fas fa-arrow-left"></i> 返回管理後台</a>
 
         <div class="card">
-            <h2><i class="fas fa-medal"></i> 新增 3D 徽章</h2>
+            <h2 id="badge-form-title"><i class="fas fa-medal"></i> 新增 3D 徽章</h2>
             <form id="badge-form">
+                <input type="hidden" id="badge-id">
                 <div class="badge-grid" style="grid-template-columns: 1fr 1fr;">
                     <div class="form-group">
                         <label>徽章名稱</label>
@@ -153,15 +154,22 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>起點 / 終點站 ID</label>
+                    <label>起點 / 終點站 (從下方挑戰車站選擇)</label>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="ch-start" placeholder="起點 ID">
-                        <input type="text" id="ch-end" placeholder="終點 ID">
+                        <select id="ch-start-select">
+                            <option value="">請選擇起點</option>
+                        </select>
+                        <select id="ch-end-select">
+                            <option value="">請選擇終點</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>中途站 JSON (具體設計)</label>
-                    <textarea id="ch-stops" rows="4" placeholder='[{"station_id":"TKO01","nature":"start"},{"station_id":"TKO02","nature":"both"}]'></textarea>
+                    <label>路線站點設計 (點擊「加入」上方車站)</label>
+                    <div id="ch-stops-builder" style="display:flex; flex-direction:column; gap:5px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:10px;">
+                        <!-- Stops builder list -->
+                    </div>
+                    <textarea id="ch-stops" rows="4" style="display:none;" placeholder='[]'></textarea>
                 </div>
                 <div class="form-group">
                     <label>GPX 檔案 (從 /gpx 選擇)</label>
@@ -191,23 +199,71 @@
             gpxSelect.innerHTML = '<option value="">請選擇 GPX</option>' + data.gpx.map(f => `<option value="${f}">${f}</option>`).join('');
         }
 
+        let ALL_CHALLENGE_STATIONS = [];
         async function loadChallengeStations() {
             const res = await fetch('/api/admin?action=get-challenge-stations', {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
             });
-            const stations = await res.json();
+            ALL_CHALLENGE_STATIONS = await res.json();
+
             const list = document.getElementById('challenge-station-list');
-            list.innerHTML = stations.map(s => `
+            list.innerHTML = ALL_CHALLENGE_STATIONS.map(s => `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <td style="padding: 8px;">${s.id}</td>
                     <td style="padding: 8px;">${s.name_zh}</td>
-                    <td style="padding: 8px;">${s.road || '-'}</td>
-                    <td style="padding: 8px;">
+                    <td style="padding: 8px;">${s.road_name || '-'}</td>
+                    <td style="padding: 8px; display:flex; gap:5px;">
                         <button onclick="editStation(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8em;">編輯</button>
+                        <button onclick="addStopToBuilder('${s.id}', '${s.name_zh}')" class="btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8em; background:#3498db; color:white;">加入路線</button>
+                        <button onclick="deleteStation('${s.id}')" class="btn-primary" style="padding: 4px 8px; width: auto; font-size: 0.8em; background:#e74c3c; border:none; color:white;"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
+
+            // Update Start/End dropdowns
+            const startSel = document.getElementById('ch-start-select');
+            const endSel = document.getElementById('ch-end-select');
+            const options = '<option value="">請選擇車站</option>' + ALL_CHALLENGE_STATIONS.map(s => `<option value="${s.id}">${s.id} ${s.name_zh}</option>`).join('');
+            startSel.innerHTML = options;
+            endSel.innerHTML = options;
         }
+
+        let currentStops = [];
+        function addStopToBuilder(id, name) {
+            currentStops.push({ station_id: id, name: name, nature: 'both' });
+            renderStopsBuilder();
+        }
+
+        function renderStopsBuilder() {
+            const container = document.getElementById('ch-stops-builder');
+            container.innerHTML = currentStops.map((s, idx) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:5px;">
+                    <span style="font-size:0.85em;">${idx+1}. ${s.station_id} ${s.name}</span>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <select onchange="updateStopNature(${idx}, this.value)" style="padding:2px; font-size:0.8em; width:auto; background:#121f14;">
+                            <option value="both" ${s.nature==='both'?'selected':''}>普通</option>
+                            <option value="start" ${s.nature==='start'?'selected':''}>起點</option>
+                            <option value="end" ${s.nature==='end'?'selected':''}>終點</option>
+                        </select>
+                        <button onclick="removeStop(${idx})" style="background:none; border:none; color:#e74c3c; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('ch-stops').value = JSON.stringify(currentStops);
+        }
+
+        window.updateStopNature = (idx, val) => { currentStops[idx].nature = val; renderStopsBuilder(); };
+        window.removeStop = (idx) => { currentStops.splice(idx, 1); renderStopsBuilder(); };
+
+        window.deleteStation = async (id) => {
+            if (!confirm(`確定刪除車站 ${id}？`)) return;
+            const res = await fetch('/api/admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+                body: JSON.stringify({ action: 'delete-challenge-station', id })
+            });
+            if (res.ok) { loadChallengeStations(); }
+        };
 
         window.editStation = (s) => {
             document.getElementById('st-id').value = s.id;
@@ -252,11 +308,23 @@
                             <span style="font-weight:bold;">ID: ${b.id} | ${b.name}</span>
                             <span class="badge-tier">${b.tier}</span>
                         </div>
-                        <p style="font-size:0.8em; opacity:0.6; margin:0;">${b.description || '無描述'}</p>
+                        <p style="font-size:0.8em; opacity:0.6; margin-bottom:10px;">${b.description || '無描述'}</p>
+                        <button onclick="editBadge(${JSON.stringify(b).replace(/"/g, '&quot;')})" class="btn-primary" style="padding: 8px; font-size: 0.8em;">編輯徽章</button>
                     </div>
                 </div>
             `).join('');
         }
+
+        window.editBadge = (b) => {
+            document.getElementById('badge-form-title').innerHTML = `<i class="fas fa-edit"></i> 編輯 3D 徽章 (ID: ${b.id})`;
+            document.getElementById('badge-id').value = b.id;
+            document.getElementById('badge-name').value = b.name;
+            document.getElementById('badge-tier').value = b.tier;
+            document.getElementById('badge-desc').value = b.description || '';
+            document.getElementById('badge-glb').value = b.model_url_glb || '';
+            document.getElementById('badge-usdz').value = b.model_url_usdz || '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
 
         async function loadChallenges() {
             const res = await fetch('/api/admin?action=get-hk-challenges');
@@ -291,9 +359,10 @@
                 if (route) {
                     document.getElementById('ch-alias').value = route.alias || '';
                     document.getElementById('ch-color').value = route.bg_color || '';
-                    document.getElementById('ch-start').value = route.start_station_id || '';
-                    document.getElementById('ch-end').value = route.end_station_id || '';
-                    document.getElementById('ch-stops').value = JSON.stringify(route.stops);
+                    document.getElementById('ch-start-select').value = route.start_station_id || '';
+                    document.getElementById('ch-end-select').value = route.end_station_id || '';
+                    currentStops = route.stops || [];
+                    renderStopsBuilder();
                     const gpxFile = route.gpx && route.gpx[0] ? route.gpx[0].file : '';
                     document.getElementById('ch-gpx-select').value = gpxFile;
                 }
@@ -316,8 +385,8 @@
                 badge_id: document.getElementById('ch-badge-id').value,
                 alias: document.getElementById('ch-alias').value,
                 bg_color: document.getElementById('ch-color').value,
-                start_station_id: document.getElementById('ch-start').value,
-                end_station_id: document.getElementById('ch-end').value,
+                start_station_id: document.getElementById('ch-start-select').value,
+                end_station_id: document.getElementById('ch-end-select').value,
                 stops: document.getElementById('ch-stops').value,
                 gpx: gpxJson
             };
@@ -333,8 +402,10 @@
         document.getElementById('badge-form').onsubmit = async (e) => {
             e.preventDefault();
             const token = localStorage.getItem('accessToken');
+            const id = document.getElementById('badge-id').value;
             const data = {
-                action: 'create-badge',
+                action: id ? 'update-badge' : 'create-badge',
+                id: id,
                 name: document.getElementById('badge-name').value,
                 tier: document.getElementById('badge-tier').value,
                 description: document.getElementById('badge-desc').value,
@@ -346,8 +417,14 @@
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
             });
-            if (res.ok) { alert('徽章已新增'); loadBadges(); }
-            else { alert('新增失敗'); }
+            if (res.ok) {
+                alert(id ? '徽章已更新' : '徽章已新增');
+                document.getElementById('badge-id').value = '';
+                document.getElementById('badge-form-title').innerHTML = `<i class="fas fa-medal"></i> 新增 3D 徽章`;
+                e.target.reset();
+                loadBadges();
+            }
+            else { alert('儲存失敗'); }
         };
 
         loadModelFiles();

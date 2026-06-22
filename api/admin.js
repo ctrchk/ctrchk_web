@@ -204,6 +204,18 @@ export default async function handler(req, res) {
 
   const action = req.query.action || req.body?.action;
 
+  // Public GET actions (no auth or standard auth)
+  if (req.method === 'GET' && ['badges', 'get-hk-challenges'].includes(action)) {
+    if (action === 'badges') {
+      const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
+      return res.status(200).json(rows);
+    }
+    if (action === 'get-hk-challenges') {
+      const { rows } = await query(`SELECT * FROM hk_challenges ORDER BY tier`);
+      return res.status(200).json(rows);
+    }
+  }
+
   // --- 1. Discord Relay Actions (Formerly admin-relay.js) ---
   if (req.method === 'POST' && ['send', 'edit', 'delete'].includes(action)) {
     const auth = verifyAdmin(req);
@@ -225,7 +237,7 @@ export default async function handler(req, res) {
   }
 
   // --- 3. User & Route Management (Formerly admin-users.js) ---
-  const auth = verifyAdmin(req, 'senior_admin');
+  const auth = verifyAdmin(req, 'admin');
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
@@ -235,9 +247,9 @@ export default async function handler(req, res) {
     }
     if (action === 'get-model-files') {
       try {
-        const glbPath = path.join(process.cwd(), 'public', 'model', 'glb');
-        const usdzPath = path.join(process.cwd(), 'public', 'model', 'usdz');
-        const gpxPath = path.join(process.cwd(), 'public', 'gpx');
+        const glbPath = path.join(process.cwd(), 'model', 'glb');
+        const usdzPath = path.join(process.cwd(), 'model', 'usdz');
+        const gpxPath = path.join(process.cwd(), 'gpx');
 
         const [glbFiles, usdzFiles, gpxFiles] = await Promise.all([
           readdir(glbPath).catch(() => []),
@@ -253,14 +265,6 @@ export default async function handler(req, res) {
       } catch (e) {
         return res.status(500).json({ message: 'Failed to read model files' });
       }
-    }
-    if (action === 'badges') {
-        const { rows } = await query(`SELECT * FROM badges ORDER BY created_at DESC`);
-        return res.status(200).json(rows);
-    }
-    if (action === 'get-hk-challenges') {
-        const { rows } = await query(`SELECT * FROM hk_challenges ORDER BY tier`);
-        return res.status(200).json(rows);
     }
     if (action === 'get-stations') {
       try {
@@ -304,12 +308,20 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const b = req.body;
-    if (action === 'create-badge') {
-        await query(
-            `INSERT INTO badges (name, description, model_url_glb, model_url_usdz, tier)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [b.name, b.description, b.model_url_glb || null, b.model_url_usdz || null, b.tier]
-        );
+    if (action === 'create-badge' || action === 'update-badge') {
+        if (action === 'create-badge') {
+            await query(
+                `INSERT INTO badges (name, description, model_url_glb, model_url_usdz, tier)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [b.name, b.description, b.model_url_glb || null, b.model_url_usdz || null, b.tier]
+            );
+        } else {
+            await query(
+                `UPDATE badges SET name=$1, description=$2, model_url_glb=$3, model_url_usdz=$4, tier=$5
+                 WHERE id=$6`,
+                [b.name, b.description, b.model_url_glb || null, b.model_url_usdz || null, b.tier, b.id]
+            );
+        }
         return res.status(200).json({ success: true });
     }
     if (action === 'upsert-challenge-station') {

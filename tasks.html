@@ -871,6 +871,7 @@
 
     let ALL_BADGES = [];
     let EARNED_BADGE_IDS = [];
+    let _badgesLoaded = false;
 
     // ── Storage helpers ───────────────────────────────────────────────
     function getTodayKey() {
@@ -936,7 +937,10 @@
         try {
             // Fetch all badges
             const bResp = await fetch('/api/admin?action=badges');
-            if (bResp.ok) ALL_BADGES = await bResp.json();
+            if (bResp.ok) {
+                ALL_BADGES = await bResp.json();
+                _badgesLoaded = true;
+            }
 
             // Fetch user progress
             const resp = await fetch('/api/getHistory', {
@@ -1538,8 +1542,10 @@
         // Exclusive Badges
         const grid = document.getElementById('medals-grid');
         grid.innerHTML = '';
-        if (ALL_BADGES.length === 0 && isLoggedIn) {
+        if (!_badgesLoaded && isLoggedIn) {
             grid.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:2em; opacity:0.5;">載入徽章中...</div>';
+        } else if (_badgesLoaded && ALL_BADGES.length === 0 && isLoggedIn) {
+            grid.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:2em; opacity:0.5;">目前暫無專屬徽章</div>';
         } else if (!isLoggedIn) {
             grid.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:2em; opacity:0.5;">請先登入以查看徽章</div>';
         } else {
