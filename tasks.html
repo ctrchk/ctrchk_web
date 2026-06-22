@@ -247,49 +247,58 @@
             color: var(--app-text-secondary, #a8d8a0);
             padding: 0.8em 1em 0;
         }
-        /* ── Achievement medals ─────────────────────────────────────── */
+        /* ── Exclusive Badges ─────────────────────────────────────── */
         .medals-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.8em;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1em;
             padding: 1em;
         }
         .medal-card {
             background: #1a2d1c;
             border: 1px solid #2d4d2d;
-            border-radius: 12px;
-            padding: 1em 0.5em;
+            border-radius: 16px;
+            padding: 0;
             text-align: center;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 0.4em;
-            transition: opacity 0.3s;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .medal-card.locked {
-            opacity: 0.35;
-            filter: grayscale(0.7);
+            opacity: 0.5;
+            filter: grayscale(1);
         }
         .medal-card.earned {
-            border-color: var(--app-accent, #6dba65);
-            background: rgba(109,186,101,0.08);
+            border-color: #BFE340;
+            background: rgba(191,227,64,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        .medal-icon {
-            font-size: 2em;
+        .medal-card model-viewer {
+            width: 100%;
+            height: 150px;
+            background: radial-gradient(circle at center, #1e3820, #0d1a12);
+        }
+        .medal-info {
+            padding: 0.8em;
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
         .medal-name {
-            font-size: 0.72em;
-            font-weight: 600;
-            color: var(--app-text-primary, #e8f5e9);
-            line-height: 1.2;
+            font-size: 0.85em;
+            font-weight: 800;
+            color: #BFE340;
+            margin-bottom: 0.2em;
         }
         .medal-desc {
-            font-size: 0.62em;
+            font-size: 0.7em;
             color: var(--app-text-secondary, #a8d8a0);
+            line-height: 1.3;
         }
         .medal-date {
-            font-size: 0.60em;
-            color: var(--app-accent, #6dba65);
+            font-size: 0.65em;
+            color: #ffd700;
+            margin-top: 0.5em;
+            font-weight: bold;
         }
         /* ── Daily check-in card ─────────────────────────────────────── */
         .checkin-card {
@@ -725,7 +734,7 @@
             </div>
             <div class="summary-item">
                 <div class="summary-value" id="summary-medals">0</div>
-                <div class="summary-label" data-i18n="summary_medals">成就獎牌</div>
+                <div class="summary-label" data-i18n="summary_medals">專屬徽章</div>
             </div>
         </div>
 
@@ -733,7 +742,7 @@
         <div class="tasks-tabs">
             <div class="tasks-tab active" data-tab="daily" data-i18n="tab_daily">📅 每日任務</div>
             <div class="tasks-tab" data-tab="weekly" data-i18n="tab_weekly">📆 每週任務</div>
-            <div class="tasks-tab" data-tab="medals" data-i18n="tab_medals">🏅 成就獎牌</div>
+            <div class="tasks-tab" data-tab="medals" data-i18n="tab_medals">🏅 專屬徽章</div>
         </div>
 
         <!-- Daily tasks -->
@@ -806,6 +815,7 @@
 
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <script>
     (function() {
     'use strict';
@@ -859,103 +869,8 @@
 
     const WEEKLY_TASKS = [];  // 每週任務即將推出
 
-    const ACHIEVEMENTS = [
-        {
-            code: 'first_ride',
-            icon: '🚀',
-            name: '首次出發',
-            desc: '完成第一次騎行',
-            type: 'rides_completed',
-            target: 1,
-        },
-        {
-            code: 'explorer',
-            icon: '🗺️',
-            name: '探索者',
-            desc: '完成 5 條不同路線',
-            type: 'unique_routes',
-            target: 5,
-        },
-        {
-            code: 'complete_900',
-            icon: '🌊',
-            name: '海濱達人',
-            desc: '完成路線 900 全程',
-            type: 'specific_route_full',
-            route_id: '900',
-        },
-        {
-            code: 'speed_master',
-            icon: '⚡',
-            name: '速度達人',
-            desc: '45 分鐘內完成 900 線',
-            type: 'fast_route',
-            route_id: '900',
-            max_minutes: 45,
-        },
-        {
-            code: 'all_stops_route',
-            icon: '⭐',
-            name: '全程達成',
-            desc: '在一次騎行中到達所有站點',
-            type: 'all_stops_single_ride',
-        },
-        {
-            code: 'district_cross_3',
-            icon: '🗾',
-            name: '跨區騎士',
-            desc: '單次騎行跨越 3 個或以上分區',
-            type: 'districts_in_ride',
-            target: 3,
-        },
-        {
-            code: 'daily_7',
-            icon: '🗓️',
-            name: '每日打卡',
-            desc: '連續 7 天完成每日任務',
-            type: 'daily_streak',
-            target: 7,
-        },
-        {
-            code: 'endurance',
-            icon: '💪',
-            name: '耐力達人',
-            desc: '累計騎行 50 公里',
-            type: 'total_distance_km',
-            target: 50,
-        },
-        {
-            code: 'station_collector',
-            icon: '📍',
-            name: '集站王者',
-            desc: '到達 50 個不重複站點',
-            type: 'unique_stops',
-            target: 50,
-        },
-        {
-            code: 'tko_expert',
-            icon: '🏅',
-            name: '將軍澳通',
-            desc: '完成所有將軍澳部路線',
-            type: 'dept_routes_complete',
-            dept: 'tko',
-        },
-        {
-            code: 'weekend_rider',
-            icon: '☀️',
-            name: '週末騎手',
-            desc: '連續 4 個週末騎行',
-            type: 'weekend_streak',
-            target: 4,
-        },
-        {
-            code: 'night_rider',
-            icon: '🌙',
-            name: '夜行者',
-            desc: '在晚上 8 點後完成騎行',
-            type: 'night_ride',
-        },
-    ];
+    let ALL_BADGES = [];
+    let EARNED_BADGE_IDS = [];
 
     // ── Storage helpers ───────────────────────────────────────────────
     function getTodayKey() {
@@ -1019,11 +934,21 @@
         const token = localStorage.getItem('accessToken');
         if (!token) return;
         try {
+            // Fetch all badges
+            const bResp = await fetch('/api/admin?action=badges');
+            if (bResp.ok) ALL_BADGES = await bResp.json();
+
+            // Fetch user progress
             const resp = await fetch('/api/getHistory', {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!resp.ok) return;
             const data = await resp.json();
+
+            // Sync earned badges
+            if (data.gameProfile && Array.isArray(data.gameProfile.earned_badge_ids)) {
+                EARNED_BADGE_IDS = data.gameProfile.earned_badge_ids;
+            }
 
             // Sync check-ins
             const checkins = Array.isArray(data.checkins) ? data.checkins : [];
@@ -1437,24 +1362,28 @@
         return card;
     }
 
-    function renderMedalCard(ach, earnedData) {
-        const earned = earnedData.earned;
-        const earnedAt = getAchievements()[ach.code];
+    function renderMedalCard(badge) {
+        const isEarned = EARNED_BADGE_IDS.includes(badge.id);
         const card = document.createElement('div');
-        card.className = 'medal-card' + (earned ? ' earned' : ' locked');
-
-        const dateStr = earnedAt ? `<div class="medal-date">${earnedAt.slice(0, 10)}</div>` : '';
+        card.className = 'medal-card' + (isEarned ? ' earned' : ' locked');
 
         card.innerHTML = `
-            <div class="medal-icon">${ach.icon}</div>
-            <div class="medal-name">${ach.name}</div>
-            <div class="medal-desc">${ach.desc}</div>
-            ${dateStr}
+            <model-viewer
+                src="${badge.model_url_glb}"
+                ios-src="${badge.model_url_usdz}"
+                alt="${badge.name}"
+                auto-rotate
+                ${isEarned ? 'camera-controls' : ''}
+                shadow-intensity="1">
+            </model-viewer>
+            <div class="medal-info">
+                <div class="medal-name">${badge.name}</div>
+                <div class="medal-desc">${badge.description || ''}</div>
+                ${isEarned ? '<div class="medal-date">已獲得 ✓</div>' : '<div class="medal-date" style="color:#666;">未解鎖</div>'}
+            </div>
         `;
         return card;
     }
-
-    // ── Notification toggle ───────────────────────────────────────────
     window.onNotifToggle = async function(enabled) {
         if (enabled) {
             // Request permission if not yet granted
@@ -1606,19 +1535,18 @@
             dailyList.appendChild(bonusDiv);
         }
 
-        // Achievement medals
+        // Exclusive Badges
         const grid = document.getElementById('medals-grid');
         grid.innerHTML = '';
-        ACHIEVEMENTS.forEach(ach => {
-            const earnedData = computeAchievementProgress(ach);
-            // Save earned achievement to localStorage if newly earned
-            const saved = getAchievements();
-            if (earnedData.earned && !saved[ach.code]) {
-                saved[ach.code] = new Date().toISOString();
-                localStorage.setItem('userAchievements', JSON.stringify(saved));
-            }
-            grid.appendChild(renderMedalCard(ach, earnedData));
-        });
+        if (ALL_BADGES.length === 0 && isLoggedIn) {
+            grid.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:2em; opacity:0.5;">載入徽章中...</div>';
+        } else if (!isLoggedIn) {
+            grid.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:2em; opacity:0.5;">請先登入以查看徽章</div>';
+        } else {
+            ALL_BADGES.forEach(badge => {
+                grid.appendChild(renderMedalCard(badge));
+            });
+        }
 
         // Summary bar
         if (isLoggedIn) {
@@ -1765,10 +1693,10 @@
             tasks_subtitle: '完成任務獲取 XP 及里程幣，解鎖成就獎牌',
             summary_daily: '今日任務',
             summary_weekly: '本週任務',
-            summary_medals: '成就獎牌',
+            summary_medals: '專屬徽章',
             tab_daily: '📅 每日任務',
             tab_weekly: '📆 每週任務',
-            tab_medals: '🏅 成就獎牌',
+            tab_medals: '🏅 專屬徽章',
             checkin_title: '每日簽到',
             checkin_subtitle: '連續簽到可獲得更豐厚獎勵',
             checkin_btn: '簽到',
@@ -1785,10 +1713,10 @@
             tasks_subtitle: 'Complete tasks for XP & coins, unlock achievement medals',
             summary_daily: 'Daily',
             summary_weekly: 'Weekly',
-            summary_medals: 'Medals',
+            summary_medals: 'Badges',
             tab_daily: '📅 Daily',
             tab_weekly: '📆 Weekly',
-            tab_medals: '🏅 Medals',
+            tab_medals: '🏅 Badges',
             checkin_title: 'Daily Check-in',
             checkin_subtitle: 'Consecutive check-ins earn better rewards',
             checkin_btn: 'Check In',
