@@ -415,14 +415,18 @@
         body.app-light-theme .conv-search input::placeholder { color: var(--app-text-secondary, #2e7d32); opacity: 0.7; }
         body.app-light-theme .conv-avatar,
         body.app-light-theme .msg-header-avatar { background: var(--app-border, #c8e6c9); }
+        body.app-light-theme .msg-header-avatar img { border-radius: 50%; }
         body.app-light-theme .conv-item:hover,
         body.app-light-theme .conv-item.active { background: var(--app-bg-card, #ffffff); }
         body.app-light-theme .bubble-avatar,
         body.app-light-theme .modal-user-avatar { background: var(--app-border, #c8e6c9); }
         body.app-light-theme .msg-bubble.theirs {
             background: var(--app-bg-card2, #f0f8f0);
-            border-color: var(--app-border, #c8e6c9);
-            color: var(--app-text-primary, #1b3a1f);
+            border: 1px solid var(--app-border, #c8e6c9);
+            color: #1b3a1f !important;
+        }
+        body.app-light-theme .msg-bubble.mine {
+            color: #fff !important;
         }
         body.app-light-theme .msg-input-bar { background: var(--app-bg-card, #ffffff); border-top-color: var(--app-border, #c8e6c9); }
         body.app-light-theme .msg-input-bar textarea {

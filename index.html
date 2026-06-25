@@ -99,10 +99,10 @@
 /* ── User stats card ── */
 .app-user-card {
     margin: 0.8em 1em;
-    background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+    background: linear-gradient(135deg, var(--app-bg-card, #1e3820) 0%, var(--app-bg-card2, #2d5028) 100%);
     border-radius: 16px;
     padding: 1.2em 1.4em;
-    border: 1px solid #2d5028;
+    border: 1px solid var(--app-border, #2d5028);
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
 .app-user-header {
@@ -148,7 +148,7 @@
 .app-user-name {
     font-size: 1.4em;
     font-weight: bold;
-    color: #fff;
+    color: var(--app-text-primary, #fff);
 }
 .app-level-row {
     display: flex;
@@ -204,7 +204,7 @@
 .app-stat-pill .val {
     font-size: 1.1em;
     font-weight: bold;
-    color: #fff;
+    color: var(--app-text-primary, #fff);
     display: block;
 }
 .app-stat-pill .lbl {
@@ -245,7 +245,7 @@
 /* ── Start Ride CTA ── */
 .app-ride-cta {
     margin: 0.8em 1em;
-    background: linear-gradient(135deg, #2d6a2d 0%, #4caf50 100%);
+    background: linear-gradient(135deg, var(--app-accent-light, #2d6a2d) 0%, var(--app-accent, #4caf50) 100%);
     border-radius: 16px;
     padding: 1.4em;
     display: flex;

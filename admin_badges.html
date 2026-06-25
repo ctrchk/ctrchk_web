@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <style>
-        body { background: #0d1a12; color: #e8f5e9; }
+        body { background: var(--app-bg-primary, #0d1a12); color: var(--app-text-primary, #e8f5e9); }
         .admin-container { max-width: 1000px; margin: 2em auto; padding: 20px; }
-        .card { background: #1e3820; border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid #2d4d2d; }
-        h2 { color: #BFE340; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        .card { background: var(--app-bg-card, #1e3820); border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid var(--app-border, #2d4d2d); }
+        h2 { color: var(--app-accent, #BFE340); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
         .form-group { margin-bottom: 16px; }
-        label { display: block; font-size: 0.9em; opacity: 0.8; margin-bottom: 8px; }
-        input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d4d2d; background: #121f14; color: #fff; }
-        .btn-primary { background: #BFE340; color: #121f14; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; }
+        label { display: block; font-size: 0.9em; color: var(--app-text-secondary, rgba(255,255,255,0.8)); margin-bottom: 8px; }
+        input, select, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--app-border, #2d4d2d); background: var(--app-bg-card2, #121f14); color: var(--app-text-primary, #fff); }
+        .btn-primary { background: var(--app-accent, #BFE340); color: #121f14; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; }
 
         .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         .badge-card { background: #121f14; border-radius: 12px; overflow: hidden; border: 1px solid #2d4d2d; }

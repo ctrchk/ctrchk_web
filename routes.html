@@ -60,7 +60,7 @@
     gap: 1em;
     padding: 1em;
     align-items: center;
-    background-color: #fff;
+    background-color: var(--app-bg-card, #fff);
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     position: relative;
@@ -112,11 +112,12 @@
     gap: 2em;
 }
 .route-card-full {
-    background-color: #fff;
+    background-color: var(--app-bg-card, #fff);
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
     overflow: hidden;
+    color: var(--app-text-primary, inherit);
 }
 .route-card-full:hover { transform: translateY(-5px); }
 .route-card-full a { padding: 1.5em; display: block; color: inherit; }
@@ -150,9 +151,9 @@
 
 /* ════════ Route Catalog Styles ════════ */
 #app-catalog-header {
-    background: linear-gradient(135deg, #1e3820 0%, #2d5028 100%);
+    background: linear-gradient(135deg, var(--app-bg-card, #1e3820) 0%, var(--app-bg-card2, #2d5028) 100%);
     padding: calc(env(safe-area-inset-top) + 0.8em) 1em 1.2em;
-    border-bottom: 1px solid #2d4d2d;
+    border-bottom: 1px solid var(--app-border, #2d4d2d);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 .catalog-info-btn {
@@ -177,11 +178,11 @@
     overflow-y: auto;
 }
 .catalog-modal-content {
-    background: #1e3820;
-    border: 2px solid #BFE340;
+    background: var(--app-bg-card, #1e3820);
+    border: 2px solid var(--app-accent, #BFE340);
     border-radius: 20px;
     padding: 1.5em;
-    color: #e8f5e9;
+    color: var(--app-text-primary, #e8f5e9);
     max-width: 500px;
     margin: 0 auto;
 }
@@ -469,11 +470,11 @@ body.app-light-theme .app-filter-chip.active {
     padding-bottom: calc(5em + env(safe-area-inset-bottom));
 }
 .app-route-card {
-    background: #1e3820;
+    background: var(--app-bg-card, #1e3820);
     border-radius: 20px;
     padding: 1.5em;
     min-height: 100px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid var(--app-border, rgba(255,255,255,0.1));
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
@@ -492,8 +493,8 @@ body.app-light-theme .app-filter-chip.active {
     transform: scale(0.97);
 }
 .app-route-card.selected {
-    border-color: #BFE340;
-    background: #244227;
+    border-color: var(--app-accent, #BFE340);
+    background: var(--app-bg-card2, #244227);
     box-shadow: 0 12px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(191,227,64,0.3);
     min-height: 520px;
 }
@@ -686,16 +687,16 @@ body.app-light-theme .app-filter-chip.random-btn {
         <div id="app-catalog-header">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.6em;">
                 <div style="display:flex; align-items:center;">
-                    <h2 style="font-size:1.15em; font-weight:900; color:#BFE340; margin:0; letter-spacing:1px;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
+                    <h2 style="font-size:1.15em; font-weight:900; color:var(--app-accent, #BFE340); margin:0; letter-spacing:1px;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
                     <button class="catalog-info-btn" onclick="showCatalogGameplay()" title="玩法說明"><i class="fas fa-info"></i></button>
                     <button class="catalog-info-btn" onclick="showHkChallengeModal()" style="background:rgba(191,227,64,0.2); color:#BFE340; border:1px solid #BFE340;" title="全港挑戰"><i class="fas fa-trophy"></i></button>
                 </div>
                 <button id="btn-claim-reward" class="btn-click-effect" style="display:none; background:#D4AF37; color:#000; border:none; padding:0.4em 0.8em; border-radius:12px; font-size:0.75em; font-weight:bold; box-shadow: 0 0 15px rgba(212,175,55,0.4);">領取全集獎勵</button>
             </div>
-            <div style="background:rgba(0,0,0,0.2); height:12px; border-radius:6px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,0.1);">
-                <div id="catalog-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #6dba65, #BFE340); transition:width 1s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+                <div style="background:rgba(0,0,0,0.2); height:12px; border-radius:6px; overflow:hidden; position:relative; border:1px solid var(--app-border, rgba(255,255,255,0.1));">
+                    <div id="catalog-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, var(--app-accent, #6dba65), #BFE340); transition:width 1s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:0.4em; font-size:0.72em; font-weight:bold; color:#a8d8a0;">
+                <div style="display:flex; justify-content:space-between; margin-top:0.4em; font-size:0.72em; font-weight:bold; color:var(--app-text-secondary, #a8d8a0);">
                 <span id="catalog-progress-text">已征服 0 / 0 條路線</span>
                 <span id="catalog-pct-text">0%</span>
             </div>

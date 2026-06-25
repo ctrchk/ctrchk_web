@@ -18,26 +18,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { background: #121f14; color: #e8f5e9; font-family: -apple-system, sans-serif; }
+        body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); font-family: -apple-system, sans-serif; }
         .detail-container { max-width: 800px; margin: 0 auto; padding: 1.5em 1em; }
-        .back-btn { display: inline-flex; align-items: center; gap: 0.5em; color: #6dba65; text-decoration: none; font-weight: bold; margin-bottom: 1.5em; }
+        .back-btn { display: inline-flex; align-items: center; gap: 0.5em; color: var(--app-accent, #6dba65); text-decoration: none; font-weight: bold; margin-bottom: 1.5em; }
 
-        .header-card { background: #1e3820; border-radius: 16px; padding: 1.5em; border: 1px solid #2d4d2d; margin-bottom: 1.5em; }
-        .route-title { font-size: 1.5em; font-weight: bold; margin: 0 0 0.2em; color: #fff; }
-        .ride-date { color: #a8d8a0; font-size: 0.9em; }
+        .header-card { background: var(--app-bg-card, #1e3820); border-radius: 16px; padding: 1.5em; border: 1px solid var(--app-border, #2d4d2d); margin-bottom: 1.5em; }
+        .route-title { font-size: 1.5em; font-weight: bold; margin: 0 0 0.2em; color: var(--app-text-primary, #fff); }
+        .ride-date { color: var(--app-text-secondary, #a8d8a0); font-size: 0.9em; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1em; margin-bottom: 1.5em; }
-        .stat-card { background: #1e3820; border-radius: 12px; padding: 1.2em; border: 1px solid #2d4d2d; text-align: center; }
-        .stat-card i { font-size: 1.5em; color: #6dba65; margin-bottom: 0.4em; }
-        .stat-card .val { display: block; font-size: 1.4em; font-weight: bold; color: #fff; }
-        .stat-card .lbl { font-size: 0.75em; color: #a8d8a0; }
+        .stat-card { background: var(--app-bg-card, #1e3820); border-radius: 12px; padding: 1.2em; border: 1px solid var(--app-border, #2d4d2d); text-align: center; }
+        .stat-card i { font-size: 1.5em; color: var(--app-accent, #6dba65); margin-bottom: 0.4em; }
+        .stat-card .val { display: block; font-size: 1.4em; font-weight: bold; color: var(--app-text-primary, #fff); }
+        .stat-card .lbl { font-size: 0.75em; color: var(--app-text-secondary, #a8d8a0); }
 
-        .rewards-section { background: rgba(109,186,101,0.1); border: 1px solid #6dba65; border-radius: 12px; padding: 1em 1.5em; margin-bottom: 1.5em; display: flex; justify-content: space-between; align-items: center; }
-        .reward-item { display: flex; align-items: center; gap: 0.6em; font-weight: bold; color: #6dba65; }
+        .rewards-section { background: rgba(109,186,101,0.1); border: 1px solid var(--app-accent, #6dba65); border-radius: 12px; padding: 1em 1.5em; margin-bottom: 1.5em; display: flex; justify-content: space-between; align-items: center; }
+        .reward-item { display: flex; align-items: center; gap: 0.6em; font-weight: bold; color: var(--app-accent, #6dba65); }
 
-        #map { height: 350px; width: 100%; border-radius: 16px; border: 1px solid #2d4d2d; margin-bottom: 1.5em; z-index: 1; }
+        #map { height: 350px; width: 100%; border-radius: 16px; border: 1px solid var(--app-border, #2d4d2d); margin-bottom: 1.5em; z-index: 1; }
 
-        .loading-overlay { position: fixed; inset: 0; background: #121f14; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .loading-overlay { position: fixed; inset: 0; background: var(--app-bg-primary, #121f14); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(109,186,101,0.2); border-top-color: #6dba65; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1em; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -186,7 +186,12 @@
                 attributionControl: false
             });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            const isLight = document.body.classList.contains('app-light-theme');
+            const tileUrl = isLight
+                ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+            L.tileLayer(tileUrl, {
                 maxZoom: 19
             }).addTo(map);
 
