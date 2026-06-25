@@ -2,6 +2,11 @@
  * 全站通用的基礎樣式
  */
 
+:root {
+    --app-accent: #6dba65;
+    --app-bg-card: #ffffff;
+    --app-text-primary: #333;
+}
 
 /* Greyscale
 */
@@ -802,23 +807,30 @@ footer {
 /* Standalone media query (Chrome/Android, modern browsers) */
 @media (display-mode: standalone) {
     .web-only { display: none !important; }
-    .app-only { display: revert !important; }
+    .app-only { display: block !important; }
+    div.app-only, section.app-only, main.app-only { display: block !important; }
+
+    /* Variables for app mode (default dark green) */
+    body {
+        --app-bg-primary: #121f14;
+        --app-bg-secondary: #1a2e1a;
+        --app-bg-card: #1e3820;
+        --app-bg-card2: #243824;
+        --app-accent: #6dba65;
+        --app-accent-light: #a8d8a0;
+        --app-accent-bright: #4caf50;
+        --app-text-primary: #e8f5e9;
+        --app-text-secondary: #a8d8a0;
+        --app-border: #2d4d2d;
+    }
 }
 
 /* iOS Safari fallback: JS adds .is-pwa to <body> via navigator.standalone */
 body.is-pwa .web-only { display: none !important; }
-body.is-pwa .app-only { display: revert !important; }
-/* Specific flex containers in app mode */
-body.is-pwa #app-home { display: flex !important; }
-body.is-pwa #app-ride-page { display: flex !important; }
-@media (display-mode: standalone) {
-    #app-home { display: flex !important; }
-    #app-ride-page { display: flex !important; }
-}
-
-/* ── App Bottom Navigation Bar (app-only) ─────────────────────────────────── */
-/* Dark green theme for PWA app (default) */
-:root {
+body.is-pwa .app-only { display: block !important; }
+div.app-only, section.app-only, main.app-only { display: block !important; }
+/* Variables for app mode (default dark green) */
+body.is-pwa {
     --app-bg-primary: #121f14;
     --app-bg-secondary: #1a2e1a;
     --app-bg-card: #1e3820;
@@ -831,89 +843,108 @@ body.is-pwa #app-ride-page { display: flex !important; }
     --app-border: #2d4d2d;
 }
 
-/* Light theme — applied when body has .app-light-theme class */
-body.app-light-theme {
+/* Specific flex containers in app mode */
+body.is-pwa #app-home { display: flex !important; }
+body.is-pwa #app-ride-page { display: flex !important; }
+@media (display-mode: standalone) {
+    #app-home { display: flex !important; }
+    #app-ride-page { display: flex !important; }
+}
+
+/* ── App Bottom Navigation Bar (app-only) ─────────────────────────────────── */
+
+/* Light theme — only applied in PWA/App mode when body has .app-light-theme class */
+body.is-pwa.app-light-theme,
+@media (display-mode: standalone) { body.app-light-theme {
     color: #1b3a1f !important;
     background-color: #f5faf5 !important;
-}
-body.app-light-theme header,
-body.app-light-theme footer {
+} }
+
+body.is-pwa.app-light-theme header,
+body.is-pwa.app-light-theme footer {
     background-color: #ffffff !important;
     color: #1b3a1f !important;
     border-bottom: 1px solid #c8e6c9;
     border-top: 1px solid #c8e6c9;
 }
-body.app-light-theme header a,
-body.app-light-theme footer a {
+body.is-pwa.app-light-theme header a,
+body.is-pwa.app-light-theme footer a {
     color: #1b3a1f !important;
 }
-body.app-light-theme .lang-switcher-btn {
+body.is-pwa.app-light-theme .lang-switcher-btn {
     border-color: #c8e6c9;
     color: #1b3a1f;
 }
-body.app-light-theme div:not(.nav-instruction):not(.nav-dist-val):not(.nav-next-road):not(.stat-value):not(.stat-label):not(.app-route-id):not(.route-id-code):not(.route-card-id):not(.db-level-badge):not(.db-ride-xp),
-body.app-light-theme p,
-body.app-light-theme span:not(.nav-dist-unit):not(.stat-value span):not(.app-route-id):not(.route-id-code):not(.route-card-id):not(.db-level-badge):not(.db-ride-xp),
-body.app-light-theme h1,
-body.app-light-theme h2:not(#badge-earned-title),
-body.app-light-theme h3:not(.nav-instruction),
-body.app-light-theme label,
-body.app-light-theme li {
+
+body.is-pwa.app-light-theme div:not(.nav-instruction):not(.nav-dist-val):not(.nav-next-road):not(.stat-value):not(.stat-label):not(.app-route-id):not(.route-id-code):not(.route-card-id):not(.db-level-badge):not(.db-ride-xp):not(.app-ride-cta-text):not(.app-ride-cta-text *),
+body.is-pwa.app-light-theme p:not(.app-ride-cta-text *),
+body.is-pwa.app-light-theme span:not(.nav-dist-unit):not(.stat-value span):not(.app-route-id):not(.route-id-code):not(.route-card-id):not(.db-level-badge):not(.db-ride-xp),
+body.is-pwa.app-light-theme h1,
+body.is-pwa.app-light-theme h2:not(#badge-earned-title),
+body.is-pwa.app-light-theme h3:not(.nav-instruction):not(.app-ride-cta-text *),
+body.is-pwa.app-light-theme label,
+body.is-pwa.app-light-theme li {
     color: #1b3a1f !important;
 }
-body.app-light-theme .filter-button {
+
+body.is-pwa.app-light-theme .filter-button {
     background-color: var(--app-bg-card, #ffffff);
     color: var(--app-text-primary, #1b3a1f);
     border: 1px solid var(--app-border, #c8e6c9);
 }
-body.app-light-theme .filter-button:hover,
-body.app-light-theme .filter-button.active {
+body.is-pwa.app-light-theme .filter-button:hover,
+body.is-pwa.app-light-theme .filter-button.active {
     background-color: var(--app-accent, #2e7d32);
     color: #fff;
     border-color: var(--app-accent, #2e7d32);
 }
+
 /* Light mode: buttons must contrast against light background */
-body.app-light-theme .cta-button,
-body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item),
-body.app-light-theme .app-start-ride-btn {
+body.is-pwa.app-light-theme .cta-button,
+body.is-pwa.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item),
+body.is-pwa.app-light-theme .app-start-ride-btn {
     background-color: var(--app-accent, #2e7d32) !important;
     color: #ffffff !important;
     border-color: var(--app-accent, #2e7d32) !important;
 }
-body.app-light-theme .cta-button *,
-body.app-light-theme button:not(.lang-switcher-btn) * {
+body.is-pwa.app-light-theme .cta-button *,
+body.is-pwa.app-light-theme button:not(.lang-switcher-btn) * {
     color: #ffffff !important;
 }
-body.app-light-theme .cta-button:hover,
-body.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
+body.is-pwa.app-light-theme .cta-button:hover,
+body.is-pwa.app-light-theme button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
     background-color: #1b5e20;
     border-color: #1b5e20;
 }
-@media (prefers-color-scheme: light) {
-    body:not(.app-theme-explicit) .filter-button {
-        background-color: var(--app-bg-card, #ffffff);
-        color: var(--app-text-primary, #1b3a1f);
-        border: 1px solid var(--app-border, #c8e6c9);
-    }
-    body:not(.app-theme-explicit) .filter-button:hover,
-    body:not(.app-theme-explicit) .filter-button.active {
-        background-color: var(--app-accent, #2e7d32);
-        color: #fff;
-        border-color: var(--app-accent, #2e7d32);
-    }
-    body:not(.app-theme-explicit) .cta-button,
-    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item) {
-        background-color: var(--app-accent, #2e7d32);
-        color: #ffffff !important;
-        border-color: var(--app-accent, #2e7d32);
-    }
-    body:not(.app-theme-explicit) .cta-button:hover,
-    body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
-        background-color: #1b5e20;
-        border-color: #1b5e20;
+
+@media (display-mode: standalone) {
+    @media (prefers-color-scheme: light) {
+        body:not(.app-theme-explicit) .filter-button {
+            background-color: var(--app-bg-card, #ffffff);
+            color: var(--app-text-primary, #1b3a1f);
+            border: 1px solid var(--app-border, #c8e6c9);
+        }
+        body:not(.app-theme-explicit) .filter-button:hover,
+        body:not(.app-theme-explicit) .filter-button.active {
+            background-color: var(--app-accent, #2e7d32);
+            color: #fff;
+            border-color: var(--app-accent, #2e7d32);
+        }
+        body:not(.app-theme-explicit) .cta-button,
+        body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item) {
+            background-color: var(--app-accent, #2e7d32);
+            color: #ffffff !important;
+            border-color: var(--app-accent, #2e7d32);
+        }
+        body:not(.app-theme-explicit) .cta-button:hover,
+        body:not(.app-theme-explicit) button:not(.lang-switcher-btn):not(.app-filter-chip):not(.app-dir-btn):not(.app-dept-unlock-btn):not(.app-quick-item):hover {
+            background-color: #1b5e20;
+            border-color: #1b5e20;
+        }
     }
 }
-body.app-light-theme {
+
+body.is-pwa.app-light-theme {
     --app-bg-primary: #f5faf5;
     --app-bg-secondary: #eaf4ea;
     --app-bg-card: #ffffff;
@@ -926,18 +957,20 @@ body.app-light-theme {
     --app-border: #c8e6c9;
 }
 /* Light theme applied via system preference if user hasn't set explicit choice */
-@media (prefers-color-scheme: light) {
-    body:not(.app-theme-explicit) {
-        --app-bg-primary: #f5faf5;
-        --app-bg-secondary: #eaf4ea;
-        --app-bg-card: #ffffff;
-        --app-bg-card2: #f0f8f0;
-        --app-accent: #2e7d32;
-        --app-accent-light: #388e3c;
-        --app-accent-bright: #4caf50;
-        --app-text-primary: #1b3a1f;
-        --app-text-secondary: #2e7d32;
-        --app-border: #c8e6c9;
+@media (display-mode: standalone) {
+    @media (prefers-color-scheme: light) {
+        body:not(.app-theme-explicit) {
+            --app-bg-primary: #f5faf5;
+            --app-bg-secondary: #eaf4ea;
+            --app-bg-card: #ffffff;
+            --app-bg-card2: #f0f8f0;
+            --app-accent: #2e7d32;
+            --app-accent-light: #388e3c;
+            --app-accent-bright: #4caf50;
+            --app-text-primary: #1b3a1f;
+            --app-text-secondary: #2e7d32;
+            --app-border: #c8e6c9;
+        }
     }
 }
 #app-bottom-nav {
@@ -1221,8 +1254,14 @@ body.rank-gold .db-poster-btn,
 body.rank-gold .db-admin-btn,
 body.rank-gold .app-login-btn,
 body.rank-gold .tutorial-close-btn,
-body.rank-gold .app-quick-item {
+body.rank-gold .app-quick-item,
+body.rank-gold .app-ride-cta,
+body.rank-gold .app-start-ride-btn,
+body.rank-gold .wx-btn,
+body.rank-gold .ml-action,
+body.rank-gold .app-filter-chip.active {
   background-color: #d4af37 !important;
+  background-image: none !important;
   color: #000000 !important;
   border-color: #d4af37 !important;
 }
@@ -1233,7 +1272,12 @@ body.rank-gold .db-poster-btn *,
 body.rank-gold .db-admin-btn *,
 body.rank-gold .app-login-btn *,
 body.rank-gold .tutorial-close-btn *,
-body.rank-gold .app-quick-item * {
+body.rank-gold .app-quick-item *,
+body.rank-gold .app-ride-cta *,
+body.rank-gold .app-start-ride-btn *,
+body.rank-gold .wx-btn *,
+body.rank-gold .ml-action *,
+body.rank-gold .app-filter-chip.active * {
   color: #000000 !important;
 }
 body.rank-gold input,

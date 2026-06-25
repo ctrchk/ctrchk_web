@@ -963,7 +963,7 @@
         if (!trackingCoords.length) { alert('無軌跡數據可供下載'); return; }
 
         const canvas = document.createElement('canvas');
-        canvas.width = 1080; canvas.height = 1080;
+        canvas.width = 1080; canvas.height = 1350; // Taller to fit stats
         const ctx = canvas.getContext('2d');
 
         // Find bounds
@@ -973,19 +973,76 @@
             minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
         });
 
-        const pad = 0.1;
         const dLat = maxLat - minLat, dLon = maxLon - minLon;
         const centerLat = (maxLat + minLat) / 2, centerLon = (maxLon + minLon) / 2;
-        const zoom = 0.8 / Math.max(dLat, dLon || 0.001);
+        const zoom = 0.75 / Math.max(dLat, dLon || 0.001);
 
-        ctx.strokeStyle = '#BFE340'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        // 1. Draw Path
+        ctx.strokeStyle = '#BFE340';
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(191, 227, 64, 0.5)';
+
         ctx.beginPath();
         trackingCoords.forEach(([lat, lon], i) => {
             const x = 540 + (lon - centerLon) * zoom * 1000;
-            const y = 540 - (lat - centerLat) * zoom * 1000;
+            const y = 600 - (lat - centerLat) * zoom * 1000; // Shifted down
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.stroke();
+
+        ctx.shadowBlur = 0; // Reset shadow
+
+        // 2. Add Stats
+        const durationMins = Math.max(1, Math.round((Date.now() - startTime) / 60000));
+        const distKm = parseFloat((totalDistM / 1000).toFixed(2));
+        const avgSpeed = parseFloat((distKm / (durationMins / 60)).toFixed(1));
+        const dateStr = new Date().toLocaleDateString('zh-Hant');
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+
+        // Route Name
+        ctx.font = '900 48px sans-serif';
+        ctx.fillText(isFreeMode ? '自由模式騎行' : (routeData?.alias || routeId), 540, 1050);
+
+        // Date
+        ctx.font = '400 24px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillText(dateStr, 540, 1090);
+
+        // Stats Row
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 64px sans-serif';
+        ctx.fillText(distKm + ' km', 270, 1200);
+        ctx.fillText(durationMins + ' min', 540, 1200);
+        ctx.fillText(avgSpeed + ' km/h', 810, 1200);
+
+        ctx.font = '700 24px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText('總距離', 270, 1240);
+        ctx.fillText('總時間', 540, 1240);
+        ctx.fillText('平均速度', 810, 1240);
+
+        // 3. Watermark & Logo
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('香港城市運輸單車 CTRC HK', 540, 1310);
+        ctx.restore();
+
+        // Optional: Simplified Logo Icon (Circle with B)
+        ctx.beginPath();
+        ctx.arc(540, 100, 40, 0, Math.PI * 2);
+        ctx.strokeStyle = '#BFE340';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.fillStyle = '#BFE340';
+        ctx.font = 'bold 40px sans-serif';
+        ctx.fillText('C', 540, 115);
 
         const link = document.createElement('a');
         link.download = `ctrc-track-${Date.now()}.png`;
