@@ -240,7 +240,7 @@ footer {
 }
 .feature-card {
     flex: 1;
-    background-color: #fff;
+    background-color: var(--app-bg-card, #fff);
     padding: 2em;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -285,7 +285,7 @@ footer {
 }
 .route-card {
     flex: 1;
-    background-color: #fff;
+    background-color: var(--app-bg-card, #fff);
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -451,7 +451,7 @@ footer {
     margin-bottom: 0.5em;
 }
 .timeline-content {
-    background-color: #fff;
+    background-color: var(--app-bg-card, #fff);
     padding: 1.5em;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -494,7 +494,7 @@ footer {
     margin: 4em auto;
 }
 .contact-form-container, .contact-info-container {
-    background-color: #fff;
+    background-color: var(--app-bg-card, #fff);
     padding: 2em;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -834,14 +834,31 @@ body.is-pwa #app-ride-page { display: flex !important; }
 /* Light theme — applied when body has .app-light-theme class */
 body.app-light-theme {
     color: #1b3a1f !important;
+    background-color: #f5faf5 !important;
 }
-body.app-light-theme div:not(.nav-instruction):not(.nav-dist-val):not(.nav-next-road):not(.stat-value):not(.stat-label),
+body.app-light-theme header,
+body.app-light-theme footer {
+    background-color: #ffffff !important;
+    color: #1b3a1f !important;
+    border-bottom: 1px solid #c8e6c9;
+    border-top: 1px solid #c8e6c9;
+}
+body.app-light-theme header a,
+body.app-light-theme footer a {
+    color: #1b3a1f !important;
+}
+body.app-light-theme .lang-switcher-btn {
+    border-color: #c8e6c9;
+    color: #1b3a1f;
+}
+body.app-light-theme div:not(.nav-instruction):not(.nav-dist-val):not(.nav-next-road):not(.stat-value):not(.stat-label):not(.app-route-id):not(.route-id-code):not(.route-card-id):not(.db-level-badge):not(.db-ride-xp),
 body.app-light-theme p,
-body.app-light-theme span:not(.nav-dist-unit):not(.stat-value span),
+body.app-light-theme span:not(.nav-dist-unit):not(.stat-value span):not(.app-route-id):not(.route-id-code):not(.route-card-id):not(.db-level-badge):not(.db-ride-xp),
 body.app-light-theme h1,
-body.app-light-theme h2,
-body.app-light-theme h3,
-body.app-light-theme label {
+body.app-light-theme h2:not(#badge-earned-title),
+body.app-light-theme h3:not(.nav-instruction),
+body.app-light-theme label,
+body.app-light-theme li {
     color: #1b3a1f !important;
 }
 body.app-light-theme .filter-button {
@@ -1162,18 +1179,18 @@ body.rank-gold .dashboard-content,
 body.rank-gold .app-page-header,
 body.rank-gold .hero {
   color: var(--app-text-primary, #d4af37) !important;
-  background-color: var(--app-bg-primary, #000000);
+  background-color: var(--app-bg-primary, #000000) !important;
 }
 /* Use more specific selectors instead of universal * to avoid breaking button text contrast */
-body.rank-gold div,
+body.rank-gold div:not(.cta-button):not(button):not(.db-level-badge):not(.app-level-badge):not(.route-card-id):not(.route-id-code):not(.db-ride-xp),
 body.rank-gold p,
 body.rank-gold h1,
 body.rank-gold h2,
 body.rank-gold h3,
-body.rank-gold span:not(.route-card-id):not(.route-id-code):not(.db-ride-xp):not(.app-level-badge),
+body.rank-gold span:not(.route-card-id):not(.route-id-code):not(.db-ride-xp):not(.app-level-badge):not(.db-level-badge):not(.cta-button):not(button),
 body.rank-gold li,
 body.rank-gold label {
-  color: var(--app-text-primary, #d4af37);
+  color: var(--app-text-primary, #d4af37) !important;
 }
 body.rank-gold .app-route-id,
 body.rank-gold #ride-route-label,

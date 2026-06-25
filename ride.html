@@ -40,12 +40,12 @@
         position: relative; z-index: 1;
     }
     @keyframes tlSlideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    #badge-earned-overlay h2 { color: #BFE340; font-size: 2em; margin-bottom: 0.3em; }
+    #badge-earned-overlay h2 { color: var(--app-accent); font-size: 2em; margin-bottom: 0.3em; }
     #badge-earned-viewer { width: 100%; height: 250px; margin-bottom: 1em; }
-    #badge-earned-name { color: #BFE340; font-size: 1.8em; font-weight: 900; margin-bottom: 0.2em; }
-    #badge-earned-desc { color: #fff; opacity: 0.8; font-size: 1em; margin-bottom: 1.5em; max-width: 300px; }
+    #badge-earned-name { color: var(--app-accent); font-size: 1.8em; font-weight: 900; margin-bottom: 0.2em; }
+    #badge-earned-desc { color: var(--hud-text); opacity: 0.8; font-size: 1em; margin-bottom: 1.5em; max-width: 300px; }
     #badge-earned-btn {
-        background: #BFE340; color: #1a252f; border: none;
+        background: var(--app-accent); color: #1a252f; border: none;
         padding: 0.8em 2em; border-radius: 14px; font-size: 1em; font-weight: bold;
         cursor: pointer; box-shadow: 0 4px 12px rgba(191,227,64,0.3);
     }
@@ -56,8 +56,26 @@
       --hud-red: #e74c3c;
       --hud-highway-green: rgba(27, 94, 32, 0.95);
       --hud-bg: rgba(18, 31, 20, 0.9);
+      --hud-text: #ffffff;
+      --hud-text-sub: rgba(255, 255, 255, 0.6);
       --hud-blur: blur(16px);
       --app-accent: #BFE340;
+    }
+
+    body.app-light-theme {
+      --hud-bg: rgba(245, 250, 245, 0.95);
+      --hud-highway-green: rgba(46, 125, 50, 0.95);
+      --hud-text: #1b3a1f;
+      --hud-text-sub: rgba(27, 58, 31, 0.6);
+      --app-accent: #2e7d32;
+    }
+
+    body.rank-gold {
+      --hud-bg: rgba(10, 10, 10, 0.95);
+      --hud-highway-green: rgba(0, 0, 0, 0.95);
+      --hud-text: #d4af37;
+      --hud-text-sub: rgba(212, 175, 55, 0.6);
+      --app-accent: #d4af37;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,12 +102,13 @@
       pointer-events: auto;
       padding: 20px 20px calc(env(safe-area-inset-bottom) + 10px);
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      background: rgba(18, 31, 20, 0.95);
+      background: var(--hud-bg);
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
       border-top: 1px solid rgba(255,255,255,0.1);
       border-radius: 24px 24px 0 0;
       box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+      color: var(--hud-text);
     }
     .hud-bottom-industrial.collapsed {
         transform: translateY(calc(100% - 80px));
@@ -101,17 +120,17 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 24px;
-        color: #fff;
+        color: var(--hud-text);
     }
     .status-item { text-align: center; flex: 1; border-right: 1px solid rgba(255,255,255,0.1); }
     .status-item:last-of-type { border-right: none; }
-    .status-val { font-size: 20px; font-weight: 900; color: #BFE340; display: block; }
-    .status-lbl { font-size: 11px; opacity: 0.6; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .status-val { font-size: 20px; font-weight: 900; color: var(--app-accent); display: block; }
+    .status-lbl { font-size: 11px; color: var(--hud-text-sub); display: flex; align-items: center; justify-content: center; gap: 4px; }
 
     .btn-toggle-hud {
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: #fff;
+        background: rgba(127,127,127,0.1);
+        border: 1px solid rgba(127,127,127,0.2);
+        color: var(--hud-text);
         padding: 4px 12px;
         border-radius: 20px;
         font-size: 12px;
@@ -125,15 +144,15 @@
         margin-bottom: 24px;
     }
     .big-stat-card {
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(127,127,127,0.05);
+        border: 1px solid rgba(127,127,127,0.1);
         border-radius: 16px;
         padding: 20px;
         text-align: center;
         backdrop-filter: blur(10px);
     }
-    .big-stat-val { font-size: 32px; font-weight: 900; color: #BFE340; display: block; margin-bottom: 4px; }
-    .big-stat-lbl { font-size: 13px; color: #fff; opacity: 0.6; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .big-stat-val { font-size: 32px; font-weight: 900; color: var(--app-accent); display: block; margin-bottom: 4px; }
+    .big-stat-lbl { font-size: 13px; color: var(--hud-text-sub); display: flex; align-items: center; justify-content: center; gap: 6px; }
 
     .hud-section-title {
         font-size: 14px;
@@ -196,12 +215,12 @@
     .stops-overview::-webkit-scrollbar { display: none; }
     .stop-pill {
         flex-shrink: 0;
-        background: rgba(255,255,255,0.1);
+        background: rgba(127,127,127,0.1);
         padding: 6px 12px;
         border-radius: 12px;
         font-size: 13px;
-        color: rgba(255,255,255,0.6);
-        border: 1px solid rgba(255,255,255,0.1);
+        color: var(--hud-text-sub);
+        border: 1px solid rgba(127,127,127,0.1);
         display: flex;
         align-items: center;
         gap: 6px;
@@ -228,8 +247,8 @@
       flex: 1;
       text-align: center;
     }
-    .stat-label { font-size: 11px; color: #a8d8a0; opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
-    .stat-value { font-size: 24px; font-weight: 900; color: #fff; line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--hud-text-sub); opacity: 0.8; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+    .stat-value { font-size: 24px; font-weight: 900; color: var(--hud-text); line-height: 1; }
     .stat-value span { font-size: 14px; font-weight: normal; margin-left: 2px; color: var(--app-accent); }
 
     .controls-row {
@@ -253,7 +272,7 @@
     .btn-action:active { transform: scale(0.96); }
     .btn-pause { background: #f1c232; color: #000; }
     .btn-end { background: var(--hud-red); color: #fff; }
-    .btn-exit { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-exit { background: rgba(127,127,127,0.1); color: var(--hud-text); border: 1px solid rgba(127,127,127,0.2); }
 
     /* ── Off-Route Warning ── */
     #off-route-warning {
@@ -305,21 +324,21 @@
     /* ── Summary ── */
     #ride-summary {
       display: none; position: fixed; inset: 0; z-index: 600;
-      background: rgba(18,31,20,0.98); color: #fff;
+      background: var(--hud-bg); color: var(--hud-text);
       flex-direction: column; align-items: center; justify-content: center;
       padding: 2em; text-align: center;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
     #ride-summary.show { display: flex; }
-    #summary-xp-badge { background: #BFE340; color: #1a252f; font-size: 24px; font-weight: 900; padding: 12px 32px; border-radius: 16px; margin: 12px 0; box-shadow: 0 4px 15px rgba(191,227,64,0.4); }
+    #summary-xp-badge { background: var(--app-accent); color: #1a252f; font-size: 24px; font-weight: 900; padding: 12px 32px; border-radius: 16px; margin: 12px 0; box-shadow: 0 4px 15px rgba(191,227,64,0.4); }
     .summary-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 360px; margin-bottom: 24px; }
-    .summary-card { background: rgba(255,255,255,0.06); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
-    .summary-card-lbl { font-size: 11px; opacity: 0.6; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-    .summary-card-val { font-size: 22px; font-weight: 900; color: #fff; }
+    .summary-card { background: rgba(127,127,127,0.06); padding: 16px; border-radius: 16px; border: 1px solid rgba(127,127,127,0.1); }
+    .summary-card-lbl { font-size: 11px; color: var(--hud-text-sub); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .summary-card-val { font-size: 22px; font-weight: 900; color: var(--hud-text); }
     .summary-card-val span { font-size: 12px; font-weight: normal; margin-left: 2px; color: var(--app-accent); }
     .summary-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; }
-    .btn-download-track { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-download-track { background: rgba(127,127,127,0.1); color: var(--hud-text); border: 1px solid rgba(127,127,127,0.2); padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
   </style>
 </head>
 <body class="is-pwa">
@@ -342,10 +361,10 @@
   <div id="off-route-warning">⚠️ 偏離路線</div>
 
   <!-- Custom Pause/Resume Modal -->
-  <div id="custom-pause-modal" style="display:none; position:fixed; inset:0; background:rgba(18,31,20,0.85); backdrop-filter:blur(10px); z-index:3000; align-items:center; justify-content:center; padding:24px;">
-    <div style="background:#1e3820; border:1px solid #BFE340; border-radius:28px; padding:32px; width:100%; max-width:400px; color:#fff; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+  <div id="custom-pause-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(10px); z-index:3000; align-items:center; justify-content:center; padding:24px;">
+    <div style="background:var(--hud-bg); border:1px solid var(--app-accent); border-radius:28px; padding:32px; width:100%; max-width:400px; color:var(--hud-text); text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
         <div style="font-size:56px; margin-bottom:20px;">🚲</div>
-        <h3 style="font-size:24px; font-weight:900; color:#BFE340; margin-bottom:12px;">發現未完成行程</h3>
+        <h3 style="font-size:24px; font-weight:900; color:var(--app-accent); margin-bottom:12px;">發現未完成行程</h3>
         <p id="pause-modal-msg" style="font-size:15px; opacity:0.8; line-height:1.6; margin-bottom:32px;">系統偵測到一段未完成的騎行記錄，是否要繼續？</p>
 
         <div style="display:flex; flex-direction:column; gap:14px;">
@@ -431,11 +450,11 @@
     <h3>前往起點</h3>
     <p id="gts-start-name" style="opacity: 0.8; font-size: 15px; margin-bottom: 8px;">--</p>
     <span id="gts-dist-val">-- m</span>
-    <button class="btn-action btn-pause" onclick="skipGoToStart()" style="margin-bottom: 16px; width: 100%; background: var(--app-accent);">從目前位置直接開始 →</button>
+    <button class="btn-action btn-pause" onclick="skipGoToStart()" style="margin-bottom: 16px; width: 100%; background: var(--app-accent); color: #121f14;">從目前位置直接開始 →</button>
 
-    <div style="text-align: left; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; margin-top: 16px;">
-      <label style="font-size: 12px; opacity: 0.6; display: block; margin-bottom: 8px; font-weight: bold;">更改出發站點：</label>
-      <select id="gts-stop-select"></select>
+    <div style="text-align: left; border-top: 1px solid rgba(127,127,127,0.2); padding-top: 16px; margin-top: 16px;">
+      <label style="font-size: 12px; color: var(--hud-text-sub); display: block; margin-bottom: 8px; font-weight: bold;">更改出發站點：</label>
+      <select id="gts-stop-select" style="background: rgba(127,127,127,0.1); color: var(--hud-text); border: 1px solid rgba(127,127,127,0.2);"></select>
       <button class="btn-action btn-exit" onclick="startFromSelectedStop()" style="width: 100%; padding: 12px;">從選定站出發</button>
     </div>
   </div>
