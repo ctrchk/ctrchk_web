@@ -37,6 +37,11 @@
 
         #map { height: 350px; width: 100%; border-radius: 16px; border: 1px solid var(--app-border, #2d4d2d); margin-bottom: 1.5em; z-index: 1; }
 
+        .actions-container { display: grid; grid-template-columns: 1fr; gap: 1em; margin-top: 1em; }
+        .action-btn { display: flex; align-items: center; justify-content: center; gap: 0.8em; padding: 1em; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: transform 0.1s; }
+        .action-btn:active { transform: scale(0.97); }
+        .btn-download { background: #BFE340; color: #121f14; }
+
         .loading-overlay { position: fixed; inset: 0; background: var(--app-bg-primary, #121f14); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(109,186,101,0.2); border-top-color: #6dba65; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1em; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -95,6 +100,12 @@
 
             <div id="map"></div>
 
+            <div class="actions-container">
+                <button id="btn-download-map" class="action-btn btn-download">
+                    <i class="fas fa-download"></i> 下載透明軌跡地圖 (PNG)
+                </button>
+            </div>
+
             <div id="anti-cheat-notice" class="error-box" style="display:none; margin-top: 1em;">
                 <i class="fas fa-exclamation-triangle" style="font-size: 2em; margin-bottom: 0.5em; display: block;"></i>
                 <strong>此紀錄已作廢</strong>
@@ -110,6 +121,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        let currentRide = null;
+
         document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const rideId = params.get('id');
@@ -121,20 +134,12 @@
             }
 
             try {
-                // Fetch ride history to find the specific one
-                // Since there is no direct single-ride API, we fetch history and filter
-                const resp = await fetch('/api/getHistory', {
+                const resp = await fetch(`/api/getHistory?action=detail&id=${rideId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (!resp.ok) throw new Error('API Error');
-                const data = await resp.json();
-                const ride = data.history.find(r => String(r.id) === rideId);
-
-                if (!ride) {
-                    showError();
-                    return;
-                }
-
+                const ride = await resp.json();
+                currentRide = ride;
                 renderRide(ride);
             } catch (e) {
                 console.error(e);
@@ -142,6 +147,8 @@
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
+
+            document.getElementById('btn-download-map').addEventListener('click', downloadTrackMap);
         });
 
         function renderRide(ride) {
@@ -155,20 +162,9 @@
             document.getElementById('duration').textContent = ride.duration_minutes || 0;
             document.getElementById('avg-speed').textContent = parseFloat(ride.avg_speed_kmh || 0).toFixed(1);
 
-            // Robust stops count
-            let stopsCount = ride.stops_count;
-            if (!stopsCount) {
-                let sr = ride.stops_reached;
-                if (typeof sr === 'string') {
-                    try { sr = JSON.parse(sr); } catch(e) { sr = []; }
-                }
-                stopsCount = Array.isArray(sr) ? sr.length : 0;
-            }
-            document.getElementById('stops-count').textContent = stopsCount;
-
+            document.getElementById('stops-count').textContent = ride.stops_count || 0;
             document.getElementById('xp-earned').textContent = ride.xp_earned || 0;
 
-            // Estimate coins if not directly in history (old system vs new)
             const coins = ride.random_bonus_coins || Math.round(parseFloat(ride.distance_km || 0) * 0.8);
             document.getElementById('coins-earned').textContent = coins;
 
@@ -195,31 +191,36 @@
                 maxZoom: 19
             }).addTo(map);
 
-            let polyline;
             if (ride.gpx_track) {
                 try {
                     let coords = [];
-                    if (typeof ride.gpx_track === 'string' && ride.gpx_track.startsWith('[')) {
-                        coords = JSON.parse(ride.gpx_track);
+                    let geojson = null;
+
+                    if (typeof ride.gpx_track === 'string') {
+                        if (ride.gpx_track.startsWith('[')) {
+                            coords = JSON.parse(ride.gpx_track);
+                        } else {
+                            geojson = JSON.parse(ride.gpx_track);
+                        }
                     } else if (Array.isArray(ride.gpx_track)) {
                         coords = ride.gpx_track;
-                    } else {
-                        const geojson = typeof ride.gpx_track === 'string' ? JSON.parse(ride.gpx_track) : ride.gpx_track;
-                        polyline = L.geoJSON(geojson, {
-                            style: { color: '#04D93C', weight: 4, opacity: 0.8 }
-                        }).addTo(map);
-                        map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
-                        return;
+                    } else if (typeof ride.gpx_track === 'object') {
+                        geojson = ride.gpx_track;
                     }
 
-                    if (coords.length > 0) {
-                        polyline = L.polyline(coords, { color: '#04D93C', weight: 4, opacity: 0.8 }).addTo(map);
+                    if (geojson) {
+                        const layer = L.geoJSON(geojson, {
+                            style: { color: '#04D93C', weight: 4, opacity: 0.8 }
+                        }).addTo(map);
+                        map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+                    } else if (coords.length > 0) {
+                        const polyline = L.polyline(coords, { color: '#04D93C', weight: 4, opacity: 0.8 }).addTo(map);
                         map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
                     } else {
                         useFallbackMap(map);
                     }
                 } catch (e) {
-                    console.warn('GPX track parsing failed', e);
+                    console.warn('Track parsing failed', e);
                     useFallbackMap(map);
                 }
             } else {
@@ -228,7 +229,6 @@
         }
 
         function useFallbackMap(map) {
-            // Default view to TKO if no track
             map.setView([22.305, 114.26], 14);
             const msg = L.divIcon({
                 className: 'map-msg',
@@ -240,6 +240,145 @@
         function showError() {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('error-view').style.display = 'block';
+        }
+
+        function downloadTrackMap() {
+            if (!currentRide || !currentRide.gpx_track) {
+                alert('無軌跡數據可供下載。');
+                return;
+            }
+
+            try {
+                let coords = [];
+                if (typeof currentRide.gpx_track === 'string') {
+                    if (currentRide.gpx_track.startsWith('[')) {
+                        coords = JSON.parse(currentRide.gpx_track);
+                    } else {
+                        const geo = JSON.parse(currentRide.gpx_track);
+                        if (geo.type === 'LineString') coords = geo.coordinates.map(p => [p[1], p[0]]);
+                        else if (geo.type === 'FeatureCollection') {
+                            geo.features.forEach(f => {
+                                if (f.geometry.type === 'LineString') {
+                                    coords.push(...f.geometry.coordinates.map(p => [p[1], p[0]]));
+                                }
+                            });
+                        }
+                    }
+                } else if (Array.isArray(currentRide.gpx_track)) {
+                    coords = currentRide.gpx_track;
+                }
+
+                if (coords.length < 2) {
+                    alert('軌跡點不足，無法生成地圖。');
+                    return;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 1080;
+                canvas.height = 1350;
+                const ctx = canvas.getContext('2d');
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                const lats = coords.map(p => p[0]);
+                const lngs = coords.map(p => p[1]);
+                const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+                const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+
+                const rangeLat = maxLat - minLat;
+                const rangeLng = maxLng - minLng;
+                const padding = 150;
+                const mapW = canvas.width - (padding * 2);
+                const mapH = 750;
+                const mapYOffset = 180;
+
+                const scale = Math.min(mapW / rangeLng, mapH / rangeLat);
+                const offsetX = (canvas.width - rangeLng * scale) / 2;
+                const offsetY = mapYOffset + (mapH - rangeLat * scale) / 2;
+
+                const getX = lng => (lng - minLng) * scale + offsetX;
+                const getY = lat => (maxLat - lat) * scale + offsetY;
+
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = 'rgba(109, 186, 101, 0.8)';
+                ctx.strokeStyle = '#6dba65';
+                ctx.lineWidth = 12;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+                ctx.moveTo(getX(coords[0][1]), getY(coords[0][0]));
+                for (let i = 1; i < coords.length; i++) {
+                    ctx.lineTo(getX(coords[i][1]), getY(coords[i][0]));
+                }
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                const start = coords[0], end = coords[coords.length - 1];
+                ctx.fillStyle = '#BFE340';
+                ctx.beginPath(); ctx.arc(getX(start[1]), getY(start[0]), 12, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff4757';
+                ctx.beginPath(); ctx.arc(getX(end[1]), getY(end[0]), 12, 0, Math.PI * 2); ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 54px sans-serif';
+                ctx.fillText('香港城市運輸單車 CTRC HK', canvas.width / 2, 100);
+                ctx.font = '32px sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.fillText(currentRide.route_name || '自由模式記錄', canvas.width / 2, 150);
+
+                const statsY = 1000;
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                if (ctx.roundRect) {
+                    ctx.beginPath();
+                    ctx.roundRect(80, statsY, canvas.width - 160, 260, 24);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(80, statsY, canvas.width - 160, 260);
+                }
+
+                function drawStat(x, label, value, unit) {
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    ctx.font = '30px sans-serif';
+                    ctx.fillText(label, x, statsY + 70);
+                    ctx.fillStyle = '#BFE340';
+                    ctx.font = 'bold 64px sans-serif';
+                    ctx.fillText(value, x, statsY + 160);
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    ctx.font = '30px sans-serif';
+                    ctx.fillText(unit, x, statsY + 215);
+                }
+
+                const dist = parseFloat(currentRide.distance_km || 0).toFixed(1);
+                const dur = currentRide.duration_minutes || 0;
+                const spd = parseFloat(currentRide.avg_speed_kmh || 0).toFixed(1);
+
+                drawStat(250, '距離', dist, 'km');
+                drawStat(540, '時長', dur, 'min');
+                drawStat(830, '時速', spd, 'km/h');
+
+                ctx.textAlign = 'right';
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.font = '24px monospace';
+                const dateStr = new Date(currentRide.ride_date).toLocaleDateString('en-GB');
+                ctx.fillText(`DATE: ${dateStr} | ID: ${currentRide.id}`, canvas.width - 100, canvas.height - 50);
+
+                ctx.textAlign = 'left';
+                ctx.fillText('CTRC HK - 城市單車', 100, canvas.height - 50);
+
+                const link = document.createElement('a');
+                link.download = `CTRC_Track_${currentRide.id}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (err) {
+                console.error(err);
+                alert('下載失敗。');
+            }
         }
     </script>
 </body>

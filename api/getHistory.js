@@ -247,6 +247,34 @@ export default async function handler(req, res) {
   const userData = await authenticate(req, res);
   if (!userData) return;
 
+  // ── GET：騎行詳情 ──────────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'detail') {
+    try {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ message: 'Missing ride ID' });
+
+      const { rows } = await query(
+        `SELECT id, ride_date, distance_km, route_name, route_id,
+                start_time, end_time, duration_minutes, avg_speed_kmh,
+                stops_reached, stops_count, all_stops, districts_count,
+                xp_earned, gpx_track, source, anti_cheat, anti_cheat_reason,
+                random_bonus_xp, random_bonus_coins
+         FROM cycling_history
+         WHERE user_id = $1 AND id = $2`,
+        [userData.userId, id]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Ride not found' });
+      }
+
+      return res.status(200).json(rows[0]);
+    } catch (error) {
+      console.error('[detail] error:', error);
+      return res.status(500).json({ message: 'Failed to fetch ride detail' });
+    }
+  }
+
   // ── GET：排行榜 ──────────────────────────────────────────────────────
   if (req.method === 'GET' && req.query.action === 'leaderboard') {
     try {
