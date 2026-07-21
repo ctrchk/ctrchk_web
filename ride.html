@@ -339,9 +339,62 @@
     .summary-card-val span { font-size: 12px; font-weight: normal; margin-left: 2px; color: var(--app-accent); }
     .summary-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; }
     .btn-download-track { background: rgba(127,127,127,0.1); color: var(--hud-text); border: 1px solid rgba(127,127,127,0.2); padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    @keyframes rideSpin {
+      0% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(15deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    /* ── Page Entry & Modal Animations ── */
+    @keyframes pwaPageEnter {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .hud-container, .summary-card, #ride-summary, #custom-pause-modal {
+      animation: pwaPageEnter 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* Active Haptic Tap Scaling */
+    .btn-action, .btn-download-track, .btn-toggle-hud {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .btn-action:active, .btn-download-track:active, .btn-toggle-hud:active {
+      transform: scale(0.96) !important;
+    }
+
+    /* Modals backdrop & content scale-up curves */
+    @keyframes modalBgFadeIn {
+      from { background: rgba(0,0,0,0); }
+      to { background: rgba(0,0,0,0.6); }
+    }
+    @keyframes modalContentScaleUp {
+      from { transform: scale(0.9) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    #custom-pause-modal {
+      animation: modalBgFadeIn 0.3s ease both;
+    }
+    #custom-pause-modal > div {
+      animation: modalContentScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    #ride-summary.show {
+      animation: modalBgFadeIn 0.3s ease both;
+    }
+    #ride-summary.show > div {
+      animation: modalContentScaleUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
   </style>
 </head>
 <body class="is-pwa">
+
+  <!-- Ride Loading Overlay -->
+  <div id="ride-loading-overlay" style="position: fixed; inset: 0; background: #121f14; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ffffff; gap: 20px; transition: opacity 0.5s ease;">
+    <div style="font-size: 48px; animation: rideSpin 1.5s ease-in-out infinite;">🚴</div>
+    <div style="font-size: 18px; font-weight: bold; color: var(--app-accent, #BFE340);">正在初始化騎行系統...</div>
+    <div style="font-size: 13px; color: rgba(255,255,255,0.6); max-width: 280px; text-align: center; line-height: 1.5;">自由模式預計 3 秒內開始，無須等待伺服器資料。</div>
+  </div>
 
   <div id="ride-map"></div>
 
@@ -1109,28 +1162,64 @@
     document.getElementById('btn-end-ride').onclick = () => { if (confirm('結束並儲存？')) endRide(); };
 
     (async function init() {
-        const [r1, r2] = await Promise.all([fetch('/routes.json'), fetch('/api/user?action=route-data')]);
-        const d1 = await r1.json(), d2 = await r2.json();
-        routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || d1.routes.find(r => String(r.id) === String(routeId));
+        const overlay = document.getElementById('ride-loading-overlay');
+        const hideLoader = () => {
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            }
+        };
+
         if (mode === 'free') {
+            // Free mode: Instant start under 3s by skipping network fetches
             await initMap([22.3143, 114.2697]);
             beginRide();
-        } else if (routeData) {
-            fullRouteStops = (routeData.stops || []).map((s, i) => ({ ...s, order: i + 1 }));
-            routeStops = [...fullRouteStops];
+            hideLoader();
 
-            if (startStopIdx > 0 && startStopIdx < routeStops.length) {
-                routeStops = routeStops.slice(startStopIdx).map((s, i) => ({ ...s, order: i + 1 }));
+            // Fetch routes/routeData in the background asynchronously just in case
+            try {
+                Promise.all([
+                    fetch('/routes.json').then(r => r.json()),
+                    fetch('/api/user?action=route-data').then(r => r.json())
+                ]).then(([d1, d2]) => {
+                    routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || d1.routes.find(r => String(r.id) === String(routeId));
+                }).catch(e => console.warn(e));
+            } catch(e) {}
+        } else {
+            // Route mode: Fetch data first
+            try {
+                const [r1, r2] = await Promise.all([fetch('/routes.json'), fetch('/api/user?action=route-data')]);
+                const d1 = await r1.json(), d2 = await r2.json();
+                routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || d1.routes.find(r => String(r.id) === String(routeId));
+            } catch (err) {
+                console.warn('Failed to load route data', err);
             }
 
-            if (routeData.gpx && routeData.gpx[dirIndex]) {
-                const gpxRes = await fetch('/gpx/' + routeData.gpx[dirIndex].file);
-                const gpxText = await gpxRes.text();
-                gpxCoords = [...(new DOMParser().parseFromString(gpxText, 'application/xml')).querySelectorAll('trkpt')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
+            if (routeData) {
+                fullRouteStops = (routeData.stops || []).map((s, i) => ({ ...s, order: i + 1 }));
+                routeStops = [...fullRouteStops];
+
+                if (startStopIdx > 0 && startStopIdx < routeStops.length) {
+                    routeStops = routeStops.slice(startStopIdx).map((s, i) => ({ ...s, order: i + 1 }));
+                }
+
+                if (routeData.gpx && routeData.gpx[dirIndex]) {
+                    try {
+                        const gpxRes = await fetch('/gpx/' + routeData.gpx[dirIndex].file);
+                        const gpxText = await gpxRes.text();
+                        gpxCoords = [...(new DOMParser().parseFromString(gpxText, 'application/xml')).querySelectorAll('trkpt')].map(p => [parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]);
+                    } catch (e) {
+                        console.warn(e);
+                    }
+                }
+                await initMap(routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697]);
+                buildStopsUI();
+                hideLoader();
+            } else {
+                location.href = '/routes';
             }
-            await initMap(routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697]);
-            buildStopsUI();
-        } else { location.href = '/routes'; }
+        }
+
         if (navigator.geolocation) {
             watchId = navigator.geolocation.watchPosition(onPosition, e => { console.warn(e); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
         }

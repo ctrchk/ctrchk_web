@@ -1073,11 +1073,39 @@ body.liquid-glass {
 
 /* Bottom navigation: glass effect */
 body.liquid-glass #app-bottom-nav {
-    background: var(--lg-glass-bg) !important;
-    backdrop-filter: var(--lg-blur) !important;
-    -webkit-backdrop-filter: var(--lg-blur) !important;
-    border-top: 1px solid var(--lg-glass-border) !important;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2) !important;
+    bottom: 16px !important;
+    left: 16px !important;
+    right: 16px !important;
+    border-radius: 24px !important;
+    padding: 8px 12px !important;
+    background: rgba(18, 31, 20, 0.4) !important;
+    backdrop-filter: blur(24px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.15) !important;
+}
+
+body.liquid-glass.app-light-theme #app-bottom-nav {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255,255,255,0.4) !important;
+}
+
+body.liquid-glass #app-bottom-nav a {
+    transition: background-color 0.25s, color 0.25s, transform 0.15s !important;
+}
+
+body.liquid-glass #app-bottom-nav a.active {
+    background: rgba(191, 227, 64, 0.15) !important;
+    color: #BFE340 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(191,227,64,0.15) !important;
+}
+
+body.liquid-glass.app-light-theme #app-bottom-nav a.active {
+    background: rgba(46, 125, 50, 0.1) !important;
+    color: #2e7d32 !important;
+    box-shadow: 0 4px 12px rgba(46,125,50,0.08) !important;
 }
 
 /* More sheet: glass effect */
@@ -1298,4 +1326,75 @@ body.rank-gold footer,
 body.rank-gold header {
   background: #000000;
   border-color: var(--app-border, #5a5a5a);
+}
+
+/* ── Page Entry & Element Animations ── */
+@keyframes pwaPageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main,
+.tasks-container,
+.chat-container,
+.forum-container,
+.dashboard-container,
+.profile-container,
+.hud-container,
+.app-page-container,
+#app-ride-page {
+  animation: pwaPageEnter 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Tap/Haptic shrink feedback on active interactive elements */
+.app-route-card,
+.app-home-card,
+.app-stat-card,
+.game-card,
+.xp-card,
+.history-card,
+.task-card,
+.checkin-btn,
+.btn-action,
+.float-btn,
+.catalog-info-btn {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.app-route-card:active,
+.app-home-card:active,
+.app-stat-card:active,
+.game-card:active,
+.xp-card:active,
+.history-card:active,
+.task-card:active,
+.checkin-btn:active,
+.btn-action:active,
+.float-btn:active {
+  transform: scale(0.96) !important;
+}
+
+/* Modal opening transitions */
+@keyframes modalBgFadeIn {
+  from { background: rgba(0,0,0,0); }
+  to { background: rgba(0,0,0,0.8); }
+}
+
+@keyframes modalContentScaleUp {
+  from { transform: scale(0.9) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+#resume-modal {
+  animation: modalBgFadeIn 0.3s ease both;
+}
+
+#resume-modal > div {
+  animation: modalContentScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
