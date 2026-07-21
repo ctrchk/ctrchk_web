@@ -891,6 +891,20 @@ const ROUTE_XP = {
     '962':250,'962A':250,'962P':150,'962X':130,'X935':210,'S90':200,'S91':200,
 };
 
+function getContrastColor(hexColor) {
+    if (!hexColor) return '#ffffff';
+    let hex = hexColor.replace('#', '');
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (hex.length !== 6) return '#ffffff';
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#1a252f' : '#ffffff';
+}
+
 // Terminal stations — loaded exclusively from admin DB (no hardcoded defaults)
 const DEFAULT_TERMINALS = [];
 
@@ -1366,7 +1380,7 @@ function renderRoutes() {
 
         card.innerHTML = `
             <div class="app-route-header">
-                <span class="app-route-id" style="background:${route.color||'#4caf50'}">${route.id}</span>
+                <span class="app-route-id" style="background:${route.color||'#4caf50'}; color:${getContrastColor(route.color||'#4caf50')}">${route.id}</span>
                 <span class="app-route-alias">${route.alias && route.alias.trim() ? route.alias : route.id}</span>
                 ${statusBadge}
             </div>

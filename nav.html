@@ -366,14 +366,27 @@
     }
     .float-btn.active { color: #BFE340; border-color: #BFE340; }
 
+    :root {
+      --nav-loading-bg: #121f14;
+      --nav-loading-text: #6dba65;
+    }
+    body.app-light-theme {
+      --nav-loading-bg: #f9fbf9;
+      --nav-loading-text: #2e7d32;
+    }
+    body.rank-gold, body.gold-rank-theme {
+      --nav-loading-bg: #000000;
+      --nav-loading-text: #f1c232;
+    }
+
     /* Loading Overlay */
     #loading-overlay {
-      position: fixed; inset: 0; background: #121f14; z-index: 1000;
+      position: fixed; inset: 0; background: var(--nav-loading-bg); z-index: 1000;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
       transition: opacity 0.5s ease;
     }
     #loading-overlay.hidden { display: none; }
-    .loader-ring { width: 48px; height: 48px; border: 4px solid rgba(109, 186, 101, 0.2); border-top-color: #6dba65; border-radius: 50%; animation: spin 1s linear infinite; }
+    .loader-ring { width: 48px; height: 48px; border: 4px solid rgba(109, 186, 101, 0.2); border-top-color: var(--nav-loading-text); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Theme Support */
@@ -464,7 +477,7 @@
 
   <div id="loading-overlay">
     <div class="loader-ring"></div>
-    <div style="color: #6dba65; font-weight: bold; font-size: 18px;">系統初始化中...</div>
+    <div style="color: var(--nav-loading-text); font-weight: bold; font-size: 18px;">系統初始化中...</div>
   </div>
 
   <!-- Resume Modal -->
@@ -668,9 +681,15 @@
 
       async init() {
         await this.fetchConfig();
+
+        let mapStyle = 'mapbox://styles/mapbox/dark-v11';
+        if (document.body.classList.contains('app-light-theme')) {
+          mapStyle = 'mapbox://styles/mapbox/light-v11';
+        }
+
         this.map = new mapboxgl.Map({
           container: 'map',
-          style: 'mapbox://styles/mapbox/dark-v11',
+          style: mapStyle,
           center: [114.2597, 22.3083], // Default TKO
           zoom: 13,
           pitch: 0,
@@ -887,6 +906,7 @@
           const resp = await fetch('/CYCFACI.gdb_CYCPARKSPACE_converted.geojson');
           const data = await resp.json();
           this.map.addSource('parking-spaces', { type: 'geojson', data });
+          const beforeId = this.map.getLayer('route-symbols') ? 'route-symbols' : undefined;
           this.map.addLayer({
             id: 'parking-layer',
             type: 'circle',
@@ -897,7 +917,7 @@
               'circle-stroke-width': 1,
               'circle-stroke-color': '#ffffff'
             }
-          }, 'route-symbols'); // Place above route but below instructions
+          }, beforeId); // Place above route but below instructions
 
           // Parking Click Handler
           this.map.on('click', 'parking-layer', (e) => {
