@@ -4,6 +4,19 @@
 
 ---
 
+## v2.1.1 Beta — 2026-06-26
+
+### 新功能 (New Features)
+- **Apple & Google 電子錢包 (Wallet Pass) 正式上線** — 在里程計劃頁面 (`mileage.html`) 整合官方樣式的 "Add to Apple Wallet" 與 "Add to Google Wallet" 按鈕。
+- **WalletWallet API 永久免費通道對接** — 成功避開 Apple 開發者帳號費用及 Pass2U 的 30 天試用限制，直接對接到 WalletWallet API 生成卡片。
+- **等級自適應卡面與色彩調色** — 後端 (`api/user.js`) 根據用戶 365 天滾動里程等級自動匹配 Gold/Silver/Bronze 模板：
+  - **金卡 (Gold)：** 金黃色主題配色 (`#F0D372`)
+  - **銀卡 (Silver)：** 科技銀灰色主題配色 (`#D1D9DF`)
+  - **銅卡 (Bronze)：** 經典銅褐色主題配色 (`#D8A56B`)
+- **品牌 Logo 與資訊整合** — 錢包卡片整合官方 CTRC HK 圖標 (`icon-192.png`)，並支持顯示用戶姓名、滾動里程、卡片等級以及帶有專屬車手 ID 的二維條碼。
+
+---
+
 ## v2.1.0 Beta — 2026-06-25
 
 ### 新功能 (New Features)

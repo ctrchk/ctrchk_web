@@ -259,10 +259,17 @@ export default async function handler(req, res) {
       const name = user.full_name || user.username || '單車愛好者';
 
       let templateId = TEMPLATE_BRONZE;
+      let colorPreset = 'orange';
+      let customColor = '#D8A56B';
+
       if (rank === 'gold') {
         templateId = TEMPLATE_GOLD;
+        colorPreset = 'orange';
+        customColor = '#F0D372';
       } else if (rank === 'silver') {
         templateId = TEMPLATE_SILVER;
+        colorPreset = 'dark';
+        customColor = '#D1D9DF';
       }
 
       // Call WalletWallet API
@@ -277,6 +284,9 @@ export default async function handler(req, res) {
           barcodeValue: `CTRC-USER-${user.id}`,
           barcodeFormat: 'QR',
           logoText: 'CTRC HK',
+          logoURL: 'https://ctrchk.com/images/icon-192.png',
+          colorPreset: colorPreset,
+          color: customColor,
           primaryFields: [
             { label: 'MEMBER', value: name }
           ],
