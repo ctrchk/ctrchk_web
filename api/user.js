@@ -12,6 +12,11 @@ import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } fro
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 
+const WALLETWALLET_API_KEY = "ww_live_22f7b69fddac4dd40890d494fcbc4682";
+const TEMPLATE_GOLD = "https://api.walletwallet.dev/p/40c18c8f-06ba-46aa-a36d-dc83279142e3";
+const TEMPLATE_SILVER = "https://api.walletwallet.dev/p/b9b7b535-2f0e-486e-81d2-d0fc86b3890f";
+const TEMPLATE_BRONZE = "https://api.walletwallet.dev/p/e5940b6a-c7d2-43c6-8bcd-f6bc03183b1d";
+
 let _ensureUsersUsernameColumnPromise = null;
 async function ensureUsersUsernameColumn() {
   if (!_ensureUsersUsernameColumnPromise) {
@@ -221,6 +226,90 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // ── GET → fetch wallet-pass ──────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'wallet-pass') {
+    try {
+      const { user_id, wallet } = req.query;
+      if (!user_id) {
+        return res.status(400).json({ message: 'user_id is required' });
+      }
+
+      const { rows } = await query(
+        `SELECT u.id, u.full_name, u.username,
+                gp.level, gp.mileage_rank,
+                COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
+                COALESCE((SELECT SUM(ch.distance_km)
+                          FROM cycling_history ch
+                          WHERE ch.user_id = u.id
+                            AND ch.ride_date >= (CURRENT_DATE - INTERVAL '365 days')), 0) AS rolling_distance_km
+         FROM users u
+         LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+         WHERE u.id = $1`,
+        [user_id]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const user = rows[0];
+      const rank = normalizeMileageRank(user.mileage_rank || 'bronze');
+      const mileage = Number(user.rolling_distance_km || 0);
+      const name = user.full_name || user.username || '單車愛好者';
+
+      let templateId = TEMPLATE_BRONZE;
+      if (rank === 'gold') {
+        templateId = TEMPLATE_GOLD;
+      } else if (rank === 'silver') {
+        templateId = TEMPLATE_SILVER;
+      }
+
+      // Call WalletWallet API
+      const response = await fetch('https://api.walletwallet.dev/api/passes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${WALLETWALLET_API_KEY}`
+        },
+        body: JSON.stringify({
+          template: templateId,
+          barcodeValue: `CTRC-USER-${user.id}`,
+          barcodeFormat: 'QR',
+          logoText: 'CTRC HK',
+          primaryFields: [
+            { label: 'MEMBER', value: name }
+          ],
+          secondaryFields: [
+            { label: 'MILEAGE', value: `${mileage.toFixed(1)} km` },
+            { label: 'RANK', value: rank === 'gold' ? 'Gold 金卡' : (rank === 'silver' ? 'Silver 銀卡' : 'Bronze 銅卡') }
+          ],
+          headerFields: [
+            { label: 'LEVEL', value: `Lv.${user.level || 1}` }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('WalletWallet API error:', errText);
+        return res.status(500).json({ message: 'WalletWallet API error: ' + errText });
+      }
+
+      const result = await response.json();
+      const passUrl = (wallet === 'google' && result.googleSaveUrl) ? result.googleSaveUrl : (result.shareUrl || result.googleSaveUrl);
+
+      if (!passUrl) {
+        return res.status(500).json({ message: 'No pass URL returned from WalletWallet API' });
+      }
+
+      res.writeHead(302, { Location: passUrl });
+      return res.end();
+    } catch (error) {
+      console.error('WalletPass generation error:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+  }
 
   // ── GET → public route metadata (for app route list) ────────────────────
   if (req.method === 'GET' && req.query.action === 'route-data') {

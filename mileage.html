@@ -142,6 +142,57 @@
             body:not(.app-theme-explicit) .ml-progress-bar { background: rgba(0,0,0,0.08); border-color: var(--app-border, #c8e6c9); }
             body:not(.app-theme-explicit) .ml-action { color: var(--app-text-primary, #1b3a1f); }
         }
+        .ml-wallet-card {
+            background: linear-gradient(145deg, var(--app-bg-secondary, #1b2f22), var(--app-bg-primary, #16241b));
+            border: 1px solid var(--app-border, #2e4a35);
+            border-radius: 16px;
+            padding: 1.15em;
+            margin-bottom: 1em;
+            text-align: center;
+        }
+        .ml-wallet-card h3 {
+            margin-top: 0;
+            margin-bottom: 0.8em;
+            font-size: 1.05em;
+            color: var(--app-accent, #BFE340);
+        }
+        .ml-wallet-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1em;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .ml-wallet-btn {
+            display: inline-block;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .ml-wallet-btn:hover {
+            transform: scale(1.05);
+        }
+        .ml-wallet-btn img {
+            height: 40px;
+            display: block;
+        }
+        body.app-light-theme .ml-wallet-card {
+            background: linear-gradient(145deg, #ffffff, #f0f8f0);
+            border-color: var(--app-border, #c8e6c9);
+            box-shadow: 0 8px 24px rgba(46,125,50,0.08);
+        }
+        body.app-light-theme .ml-wallet-card h3 {
+            color: var(--app-accent, #2e7d32);
+        }
+        @media (prefers-color-scheme: light) {
+            body:not(.app-theme-explicit) .ml-wallet-card {
+                background: linear-gradient(145deg, #ffffff, #f0f8f0);
+                border-color: var(--app-border, #c8e6c9);
+                box-shadow: 0 8px 24px rgba(46,125,50,0.08);
+            }
+            body:not(.app-theme-explicit) .ml-wallet-card h3 {
+                color: var(--app-accent, #2e7d32);
+            }
+        }
         @media (max-width: 760px) {
             .ml-stats, .ml-benefits-grid, .ml-action-grid { grid-template-columns: 1fr; }
         }
@@ -178,6 +229,19 @@
                     </div>
                     <span class="ml-progress-label" id="ml-progress-label-expiry">顯示即將過期的里程比例</span>
                 </div>
+            </div>
+        </section>
+
+        <!-- Wallet Integration Section -->
+        <section class="ml-wallet-card" id="ml-wallet-section" style="display: none;">
+            <h3><i class="fas fa-wallet"></i> 將里程卡加入電子錢包</h3>
+            <div class="ml-wallet-buttons">
+                <a id="btn-add-apple-wallet" class="ml-wallet-btn" href="#" target="_blank">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/30/Add_to_Apple_Wallet_badge.svg" alt="Add to Apple Wallet">
+                </a>
+                <a id="btn-add-google-wallet" class="ml-wallet-btn" href="#" target="_blank">
+                    <img src="https://developers.google.com/static/wallet/images/branding/add-to-wallet-button-primary.png" alt="Add to Google Wallet">
+                </a>
             </div>
         </section>
 
@@ -239,6 +303,11 @@
             const cached = JSON.parse(localStorage.getItem('user') || '{}');
             const userId = cached.id;
             if (userId) {
+                // Configure dynamic wallet pass URLs
+                document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=apple`;
+                document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=google`;
+                document.getElementById('ml-wallet-section').style.display = 'block';
+
                 const userResp = await fetch('/api/user?user_id=' + userId, { headers: { Authorization: 'Bearer ' + token } });
                 if (userResp.ok) {
                     const user = await userResp.json();
@@ -256,6 +325,14 @@
                 const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
                 const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
                 renderMileage(card, km, history.length, history);
+
+                // Keep links synchronized if they are populated or update again if userId changes
+                const finalUserId = profile.user_id || userId;
+                if (finalUserId) {
+                    document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${finalUserId}&wallet=apple`;
+                    document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${finalUserId}&wallet=google`;
+                    document.getElementById('ml-wallet-section').style.display = 'block';
+                }
             }
         } catch (_) {}
     })();
