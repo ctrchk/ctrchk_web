@@ -9,7 +9,7 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } from '../lib/permissions.js';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const WALLETWALLET_API_KEY = "ww_live_22f7b69fddac4dd40890d494fcbc4682";
@@ -272,6 +272,16 @@ export default async function handler(req, res) {
         customColor = '#D1D9DF';
       }
 
+      let logoURL = undefined;
+      const host = req.headers.host || '';
+      if (host.includes('localhost') || host.includes('127.0.0.1') || host.includes('sandbox') || !host) {
+        // Public fallback so developers can test locally without fetch errors
+        logoURL = 'https://raw.githubusercontent.com/google/material-design-icons/master/png/maps/directions_bike/materialicons/48dp/2x/baseline_directions_bike_black_48dp.png';
+      } else {
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        logoURL = `${protocol}://${host}/images/icon-192.png`;
+      }
+
       // Call WalletWallet API
       const response = await fetch('https://api.walletwallet.dev/api/passes', {
         method: 'POST',
@@ -284,7 +294,7 @@ export default async function handler(req, res) {
           barcodeValue: `CTRC-USER-${user.id}`,
           barcodeFormat: 'QR',
           logoText: 'CTRC HK',
-          logoURL: 'https://ctrchk.com/images/icon-192.png',
+          logoURL: logoURL,
           colorPreset: colorPreset,
           color: customColor,
           primaryFields: [
