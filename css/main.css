@@ -1398,3 +1398,18 @@ main,
 #resume-modal > div {
   animation: modalContentScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Smooth Momentum Scrolling for iOS Safari */
+[style*="overflow-y:auto"],
+[style*="overflow-y:scroll"],
+[style*="overflow-x:auto"],
+[style*="overflow-x:scroll"],
+[style*="overflow:auto"],
+[style*="overflow:scroll"],
+.scrollable,
+.overflow-y-auto,
+.overflow-x-auto,
+#room-list,
+#app-bottom-nav {
+  -webkit-overflow-scrolling: touch;
+}

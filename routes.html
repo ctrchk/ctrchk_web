@@ -366,7 +366,7 @@
     border: 1.5px solid var(--app-border, #2d4d2d);
     background: var(--app-bg-card, #1e3820);
     color: var(--app-text-secondary, #a8d8a0);
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
     white-space: nowrap;
     user-select: none;
 }
@@ -476,7 +476,7 @@ body.app-light-theme .app-filter-chip.active {
     min-height: 100px;
     border: 1px solid var(--app-border, rgba(255,255,255,0.1));
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     position: relative;
     overflow: hidden;
@@ -580,7 +580,7 @@ body.app-light-theme .app-filter-chip.active {
     font-weight: bold;
     cursor: pointer;
     text-align: center;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 .app-dir-btn.chosen {
     background: var(--app-accent, #6dba65);
@@ -1010,11 +1010,19 @@ function isCoinRouteUnlocked(route) {
 
 // ── Map initialisation ─────────────────────────────────────────────────
 function initMap() {
-    if (map) return; // already initialized
+    window.PWA_MAPS_INITED = window.PWA_MAPS_INITED || new Set();
+    if (window.PWA_MAPS_INITED.has('app-ride-map') && map) {
+        return; // already initialized on this element
+    }
+    if (map) {
+        try { map.remove(); } catch(e) { console.warn('[Leaflet] map remove error:', e); }
+        map = null;
+    }
     map = L.map('app-ride-map', {
         zoomControl: false,
         attributionControl: false,
     }).setView([22.308, 114.262], 13);
+    window.PWA_MAPS_INITED.add('app-ride-map');
 
     const isLightTheme = document.body.classList.contains('app-light-theme') ||
         (!document.body.classList.contains('app-theme-explicit') &&
@@ -1993,7 +2001,11 @@ async function initAppRidePage() {
         }
 
         if (fetchPromises.length > 0) {
-            await Promise.all(fetchPromises);
+            try {
+                await Promise.all(fetchPromises);
+            } catch(e) {
+                console.warn('[Routes] Error prefetching route data:', e);
+            }
         }
 
         const data = staticData;
@@ -2437,6 +2449,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     setTimeout(initAppRidePage, 150);
 });
+
+function cleanupRoutesResources() {
+    if (roomRefreshInterval) { clearInterval(roomRefreshInterval); roomRefreshInterval = null; }
+    if (map) {
+        try { map.remove(); } catch(e) { console.warn('[Leaflet] map remove error:', e); }
+        map = null;
+    }
+}
+window.addEventListener('pagehide', cleanupRoutesResources);
+window.addEventListener('beforeunload', cleanupRoutesResources);
+window.addEventListener('unload', cleanupRoutesResources);
 
 })();
 </script>
