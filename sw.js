@@ -17,6 +17,7 @@ const PRECACHE_URLS = [
   '/tasks',
   '/forum',
   '/leaderboard',
+  '/verify-user.html',
   '/css/main.css',
   '/js/main.js',
   '/js/login.js',

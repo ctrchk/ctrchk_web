@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#121f14">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>驗證用戶 - 城市運輸單車</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        html, body {
+            background: var(--app-bg-primary, #121f14);
+            color: var(--app-text-primary, #e8f5e9);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .sc-wrap {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1.2em 1em 5em;
+        }
+        .sc-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8em;
+            margin-bottom: 1.2em;
+        }
+        .sc-header h2 {
+            margin: 0;
+            font-size: 1.25em;
+            color: var(--app-accent, #6dba65);
+        }
+        .sc-back-btn {
+            background: none;
+            border: none;
+            color: var(--app-text-secondary, #a8d8a0);
+            font-size: 1.15em;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sc-box {
+            background: var(--app-bg-card, #1e3820);
+            border: 1px solid var(--app-border, #2d4d2d);
+            border-radius: 16px;
+            padding: 1.2em;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            margin-bottom: 1.5em;
+        }
+        #reader {
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px dashed var(--app-accent, #6dba65) !important;
+            background: #000;
+        }
+        #reader__dashboard_section_csr {
+            padding: 10px !important;
+        }
+        #reader__camera_permission_button {
+            background: var(--app-accent, #6dba65) !important;
+            color: #121f14 !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 8px !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+        }
+        /* User details card overlay styling */
+        .sc-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5em;
+        }
+        .sc-card {
+            background: var(--app-bg-card, #1e3820);
+            border: 1px solid var(--app-border, #2d4d2d);
+            border-radius: 18px;
+            padding: 1.5em;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .sc-badge {
+            display: inline-block;
+            padding: 0.25em 0.8em;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 0.8em;
+        }
+        .sc-badge.gold { background: #d4af37; color: #000; }
+        .sc-badge.silver { background: #d1d9df; color: #000; }
+        .sc-badge.bronze { background: #d8a56b; color: #000; }
+        .sc-user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--app-accent, #6dba65);
+            margin: 0 auto 0.8em;
+        }
+        .sc-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5em 0;
+            border-bottom: 1px solid var(--app-border, #2d4d2d);
+            font-size: 0.9em;
+        }
+        .sc-row:last-child { border-bottom: none; }
+        .sc-lbl { color: var(--app-text-secondary, #a8d8a0); }
+        .sc-val { color: var(--app-text-primary, #e8f5e9); font-weight: bold; }
+        .sc-close-btn {
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border: none;
+            padding: 0.8em;
+            border-radius: 10px;
+            width: 100%;
+            margin-top: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+        .sc-checkmark {
+            font-size: 2.2em;
+            color: #6dba65;
+            margin-bottom: 0.3em;
+        }
+        .sc-success-banner {
+            background: rgba(109, 186, 101, 0.15);
+            border: 1px solid #6dba65;
+            color: #a8d8a0;
+            padding: 0.6em;
+            border-radius: 8px;
+            font-size: 0.82em;
+            margin-bottom: 1em;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <main class="sc-wrap">
+        <div class="sc-header">
+            <button class="sc-back-btn" onclick="window.location.href='/dashboard'"><i class="fas fa-arrow-left"></i></button>
+            <h2>驗證用戶身份</h2>
+        </div>
+
+        <div class="sc-box">
+            <p style="font-size:0.9em; color:var(--app-text-secondary, #a8d8a0); margin-bottom:1.2em;">請允許攝像頭權限，並將用戶展示的隨機安全二維碼置於掃描框內進行核對。</p>
+            <div id="reader"></div>
+            <p id="sc-status" style="margin-top:1em; font-size:0.85em; color:var(--app-text-secondary, #a8d8a0); font-weight:bold;">正在啟動相機...</p>
+        </div>
+    </main>
+
+    <!-- Scanner Result Card Modal -->
+    <div id="sc-result-overlay" class="sc-overlay" style="display:none;">
+        <div class="sc-card">
+            <div class="sc-checkmark"><i class="fas fa-check-circle"></i></div>
+            <div class="sc-success-banner">
+                <strong>核對成功</strong><br>該會員具備對應特權權益。
+            </div>
+            <img id="sc-avatar" src="" class="sc-user-avatar" alt="Avatar" style="display:none;">
+            <div id="sc-avatar-fallback" style="width:64px; height:64px; border-radius:50%; background:#2d4d2d; display:flex; align-items:center; justify-content:center; border:2px solid #6dba65; margin:0 auto 0.8em; font-size:1.8em; color:#6dba65;"><i class="fas fa-user"></i></div>
+
+            <div id="sc-name" style="font-size:1.15em; font-weight:bold; color:var(--app-text-primary, #e8f5e9); margin-bottom:0.15em;">正在載入...</div>
+            <div id="sc-email" style="font-size:0.8em; color:var(--app-text-secondary, #a8d8a0); margin-bottom:1.2em;">—</div>
+
+            <div id="sc-badge" class="sc-badge bronze">銅卡</div>
+
+            <div class="sc-row">
+                <span class="sc-lbl">車手等級</span>
+                <span id="sc-level" class="sc-val">—</span>
+            </div>
+            <div class="sc-row">
+                <span class="sc-lbl">365天滾動里程</span>
+                <span id="sc-mileage" class="sc-val">—</span>
+            </div>
+            <div class="sc-row">
+                <span class="sc-lbl">總里程</span>
+                <span id="sc-total-mileage" class="sc-val">—</span>
+            </div>
+            <div class="sc-row">
+                <span class="sc-lbl">車手帳戶 ID</span>
+                <span id="sc-uid" class="sc-val">—</span>
+            </div>
+
+            <button class="sc-close-btn" onclick="closeResultCard()">繼續掃描</button>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
+    <script>
+        var html5QrcodeScanner = null;
+        var scanningActive = true;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Guard: Must be admin or senior_admin
+            const userData = localStorage.getItem('user');
+            if (!userData) {
+                alert('你需要登入才能查看此頁面。');
+                window.location.replace('/login');
+                return;
+            }
+            const user = JSON.parse(userData);
+            const role = user.user_role || user.role || 'junior';
+            if (role !== 'admin' && role !== 'senior_admin') {
+                alert('權限不足！此頁面僅限管理員或高級管理員訪問。');
+                window.location.replace('/dashboard');
+                return;
+            }
+
+            startScanner();
+        });
+
+        function startScanner() {
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).then(() => {
+                document.getElementById('sc-status').textContent = "🔍 正在尋找二維碼...";
+                document.getElementById('sc-status').style.color = "#6dba65";
+            }).catch(err => {
+                console.error("Scanner start error:", err);
+                document.getElementById('sc-status').textContent = "⚠️ 無法開啟相機，請確認已授予攝像頭權限。";
+                document.getElementById('sc-status').style.color = "#ef9a9a";
+            });
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            if (!scanningActive) return;
+
+            // Check signature prefix
+            if (!decodedText.startsWith('CTRC_VERIFY:')) {
+                return; // Ignore other QR codes
+            }
+
+            scanningActive = false;
+            document.getElementById('sc-status').textContent = "⏳ 正在校對驗證碼...";
+            document.getElementById('sc-status').style.color = "#a8d8a0";
+
+            try {
+                const tokenVal = decodedText.split(':')[1];
+                const bearerToken = localStorage.getItem('accessToken');
+
+                const res = await fetch('/api/user?action=verify-user-token&token=' + tokenVal, {
+                    headers: bearerToken ? { 'Authorization': 'Bearer ' + bearerToken } : {}
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showResultCard(data.user);
+                } else {
+                    const errData = await res.json();
+                    alert(errData.message || '驗證失敗，請重試。');
+                    scanningActive = true;
+                    document.getElementById('sc-status').textContent = "🔍 正在尋找二維碼...";
+                    document.getElementById('sc-status').style.color = "#6dba65";
+                }
+            } catch(e) {
+                console.error(e);
+                alert('網絡或系統錯誤，請重試。');
+                scanningActive = true;
+                document.getElementById('sc-status').textContent = "🔍 正在尋找二維碼...";
+                document.getElementById('sc-status').style.color = "#6dba65";
+            }
+        }
+
+        function onScanFailure(error) {
+            // Quiet fail - html5-qrcode fails continuously if QR not in frame
+        }
+
+        function showResultCard(u) {
+            document.getElementById('sc-name').textContent = u.full_name || u.username || '單車愛好者';
+            document.getElementById('sc-email').textContent = u.email || '—';
+            document.getElementById('sc-level').textContent = 'Lv.' + (u.level || 1) + ' (' + u.cyclist_tier + ')';
+            document.getElementById('sc-mileage').textContent = (u.rolling_distance_km || 0).toFixed(1) + ' km';
+            document.getElementById('sc-total-mileage').textContent = (u.total_distance_km || 0).toFixed(1) + ' km';
+            document.getElementById('sc-uid').textContent = 'CTRC-USER-' + u.id;
+
+            // Avatar handling
+            const avatarImg = document.getElementById('sc-avatar');
+            const avatarFallback = document.getElementById('sc-avatar-fallback');
+            if (u.avatar_url) {
+                avatarImg.src = u.avatar_url;
+                avatarImg.style.display = 'block';
+                avatarFallback.style.display = 'none';
+            } else {
+                avatarImg.style.display = 'none';
+                avatarFallback.style.display = 'flex';
+            }
+
+            // Badge/Rank handling
+            const badge = document.getElementById('sc-badge');
+            badge.className = 'sc-badge';
+            const rank = String(u.mileage_rank || u.mileage_card || 'bronze').toLowerCase();
+            if (rank.includes('gold') || rank.includes('金')) {
+                badge.classList.add('gold');
+                badge.textContent = '金卡會員';
+            } else if (rank.includes('silver') || rank.includes('銀')) {
+                badge.classList.add('silver');
+                badge.textContent = '銀卡會員';
+            } else {
+                badge.classList.add('bronze');
+                badge.textContent = '銅卡會員';
+            }
+
+            document.getElementById('sc-result-overlay').style.display = 'flex';
+        }
+
+        function closeResultCard() {
+            document.getElementById('sc-result-overlay').style.display = 'none';
+            scanningActive = true;
+            document.getElementById('sc-status').textContent = "🔍 正在尋找二維碼...";
+            document.getElementById('sc-status').style.color = "#6dba65";
+        }
+    </script>
+</body>
+</html>

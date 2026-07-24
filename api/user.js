@@ -9,6 +9,7 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } from '../lib/permissions.js';
+import crypto from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -131,6 +132,8 @@ async function ensureRideTables() {
           UNIQUE(room_id, user_id)
         );
       `);
+
+      try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64) UNIQUE;`); } catch(e) {}
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -279,7 +282,7 @@ export default async function handler(req, res) {
         logoURL = 'https://raw.githubusercontent.com/google/material-design-icons/master/png/maps/directions_bike/materialicons/48dp/2x/baseline_directions_bike_black_48dp.png';
       } else {
         const protocol = req.headers['x-forwarded-proto'] || 'https';
-        logoURL = `${protocol}://${host}/images/icon-192.png`;
+        logoURL = `${protocol}://${host}/images/logo.png`;
       }
 
       // Call WalletWallet API
@@ -327,6 +330,86 @@ export default async function handler(req, res) {
       return res.end();
     } catch (error) {
       console.error('WalletPass generation error:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+  }
+
+  // ── GET → get-verify-token ──────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'get-verify-token') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      await ensureRideTables();
+      // Look up existing token
+      const { rows } = await query(
+        `SELECT verification_token FROM user_game_profile WHERE user_id = $1`,
+        [userData.userId]
+      );
+
+      let token = rows[0]?.verification_token;
+      if (!token) {
+        // Generate new token
+        token = crypto.randomBytes(24).toString('hex');
+        await query(
+          `UPDATE user_game_profile SET verification_token = $1 WHERE user_id = $2`,
+          [token, userData.userId]
+        );
+      }
+      return res.status(200).json({ token });
+    } catch (error) {
+      console.error('get-verify-token error:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+  }
+
+  // ── GET → verify-user-token (For Admin Scanning) ────────────────────────
+  if (req.method === 'GET' && req.query.action === 'verify-user-token') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      // Security Check: Only admin or senior_admin
+      const { rows: adminRows } = await query(
+        `SELECT user_role FROM users WHERE id = $1`,
+        [userData.userId]
+      );
+      const role = adminRows[0]?.user_role || 'junior';
+      if (role !== 'admin' && role !== 'senior_admin') {
+        return res.status(403).json({ message: 'Permission Denied: Admins Only' });
+      }
+
+      const { token } = req.query;
+      if (!token) {
+        return res.status(400).json({ message: 'Token is required' });
+      }
+
+      // Query the user corresponding to the token
+      const { rows: userRows } = await query(
+        `SELECT u.id, u.email, u.username, u.full_name, u.avatar_url,
+                gp.level, gp.xp, gp.coins, gp.mileage_rank,
+                COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
+                COALESCE((SELECT SUM(ch.distance_km)
+                          FROM cycling_history ch
+                          WHERE ch.user_id = u.id
+                            AND ch.ride_date >= (CURRENT_DATE - INTERVAL '365 days')), 0) AS rolling_distance_km
+         FROM user_game_profile gp
+         JOIN users u ON u.id = gp.user_id
+         WHERE gp.verification_token = $1`,
+        [token]
+      );
+
+      if (userRows.length === 0) {
+        return res.status(404).json({ message: '無效或已過期的用戶驗證碼' });
+      }
+
+      const user = userRows[0];
+      user.total_distance_km = Number(user.total_distance_km || 0);
+      user.rolling_distance_km = Number(user.rolling_distance_km || 0);
+      user.mileage_card = getMileageCardByRank(user.mileage_rank || 'bronze');
+      user.cyclist_tier = getCyclistTierByLevel(user.level || 1);
+
+      return res.status(200).json({ user });
+    } catch (error) {
+      console.error('verify-user-token error:', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
   }
