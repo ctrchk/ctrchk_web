@@ -176,11 +176,23 @@
             initMap(ride);
         }
 
+        let mapInstance = null;
+
         function initMap(ride) {
+            window.PWA_MAPS_INITED = window.PWA_MAPS_INITED || new Set();
+            if (window.PWA_MAPS_INITED.has('ride-history-map') && mapInstance) {
+                return;
+            }
+            if (mapInstance) {
+                try { mapInstance.remove(); } catch(e) { console.warn('[Leaflet] mapInstance remove error:', e); }
+                mapInstance = null;
+            }
             const map = L.map('map', {
                 zoomControl: false,
                 attributionControl: false
             });
+            mapInstance = map;
+            window.PWA_MAPS_INITED.add('ride-history-map');
 
             const isLight = document.body.classList.contains('app-light-theme');
             const tileUrl = isLight
@@ -380,6 +392,16 @@
                 alert('下載失敗。');
             }
         }
+
+        function cleanupHistoryDetailResources() {
+            if (mapInstance) {
+                try { mapInstance.remove(); } catch(e) { console.warn('[Leaflet] mapInstance remove error:', e); }
+                mapInstance = null;
+            }
+        }
+        window.addEventListener('pagehide', cleanupHistoryDetailResources);
+        window.addEventListener('beforeunload', cleanupHistoryDetailResources);
+        window.addEventListener('unload', cleanupHistoryDetailResources);
     </script>
 </body>
 </html>

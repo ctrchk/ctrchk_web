@@ -101,7 +101,7 @@
     .hud-bottom-industrial {
       pointer-events: auto;
       padding: 20px 20px calc(env(safe-area-inset-bottom) + 10px);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       background: var(--hud-bg);
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
@@ -601,8 +601,17 @@
     function formatDist(m) { return m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`; }
 
     async function initMap(center) {
-        if (map) return;
+        window.PWA_MAPS_INITED = window.PWA_MAPS_INITED || new Set();
+        if (window.PWA_MAPS_INITED.has('ride-map') && map) {
+            // Already initialized on this element, do not duplicate
+            return;
+        }
+        if (map) {
+            try { map.remove(); } catch(e) { console.warn('[Leaflet] map remove error:', e); }
+            map = null;
+        }
         map = L.map('ride-map', { zoomControl: false, attributionControl: false }).setView(center, 18);
+        window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
         const tiles = isLight ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
         L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
@@ -778,6 +787,12 @@
             }
         } catch (err) { console.warn(`${err.name}, ${err.message}`); }
     }
+
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && rideStarted) {
+            await requestWakeLock();
+        }
+    });
 
     async function beginRide() {
         if (rideStarted) return;
@@ -1224,6 +1239,23 @@
             watchId = navigator.geolocation.watchPosition(onPosition, e => { console.warn(e); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
         }
     })();
+
+    function cleanupAllResources() {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+        if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        if (wakeLock) {
+            try { wakeLock.release(); } catch(e) {}
+            wakeLock = null;
+        }
+        if (map) {
+            try { map.remove(); } catch(e) { console.warn('[Leaflet] map remove error:', e); }
+            map = null;
+        }
+    }
+    window.addEventListener('pagehide', cleanupAllResources);
+    window.addEventListener('beforeunload', cleanupAllResources);
+    window.addEventListener('unload', cleanupAllResources);
   })();
   </script>
 </body>

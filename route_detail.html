@@ -511,8 +511,16 @@
       }
 
       function initMap(centerLat, centerLon, zoom) {
-        if (map) return;
+        window.PWA_MAPS_INITED = window.PWA_MAPS_INITED || new Set();
+        if (window.PWA_MAPS_INITED.has('route-map') && map) {
+          return;
+        }
+        if (map) {
+          try { map.remove(); } catch(e) { console.warn('[Leaflet] map remove error:', e); }
+          map = null;
+        }
         map = L.map('route-map').setView([centerLat, centerLon], zoom || 14);
+        window.PWA_MAPS_INITED.add('route-map');
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 19,
@@ -813,6 +821,16 @@
         section.style.display = 'block';
       }
       document.addEventListener('DOMContentLoaded', initStartRide);
+
+      function cleanupDetailResources() {
+        if (map) {
+          try { map.remove(); } catch(e) { console.warn('[Leaflet] map remove error:', e); }
+          map = null;
+        }
+      }
+      window.addEventListener('pagehide', cleanupDetailResources);
+      window.addEventListener('beforeunload', cleanupDetailResources);
+      window.addEventListener('unload', cleanupDetailResources);
     })();
     </script>
 </html>
