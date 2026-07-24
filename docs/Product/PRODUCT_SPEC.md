@@ -1,117 +1,111 @@
-# CTRC HK (City Transport Cycling Hong Kong) Product Specification
+# CTRC HK (香港城市運輸單車) 產品架構與技術指標規格書
 
-This document provides a comprehensive, technical, and architectural specification of the City Transport Cycling Hong Kong (CTRC HK) platform, reflecting the system architecture, features, and core mechanics as of version v2.1.1 Beta (2026).
-
----
-
-## 1. Product Overview & Strategic Vision
-
-CTRC HK is a professional, gamified cycling navigation and community platform tailored for urban cyclists in Hong Kong. It aims to bridge the gap between green transport, gaming, and real-time physical-digital utilities.
-
-### 1.1 Core Mission
-* **Urban Decarbonization (城市減碳)**: Promote cycling as a viable, healthy, and sustainable urban transport alternative.
-* **Smart Navigation (智慧出行)**: Deliver high-precision, cycle-track-priority routing to ensure safety and comfort in dense urban spaces.
-* **Gamification of Athletics (騎行遊戲化)**: Incentivize long-term cyclist engagement using level progress, title ranks, rolling milestones, and virtual rewards.
-
-### 1.2 Dual-Platform Architecture
-The system operates as a single codebase but divides interfaces dynamically based on the access environment:
-1. **Web Mode (Browser-only)**:
-   - Primarily serves public brand marketing, routes catalogs (unlocked previews), community blogs, and GPX file downloads.
-   - Hides live navigation, standard/free ride trackers, and other active, PWA-only tools.
-2. **PWA Mode (App/Standalone)**:
-   - Features a high-performance Industrial HUD interface.
-   - Includes real-time tracking, live turn-by-turn navigation, multiplayer rooms, and background Wake Lock features.
-   - Uses the PWA-specific bottom navigation bar.
+本文件提供 **香港城市運輸單車 (CTRC HK)** 平台的完整技術、功能與架構規格，反映截至 v2.1.1 Beta (2026年) 的最新系統實現。
 
 ---
 
-## 2. Core Game & Economic Mechanics (The Three-Track Economy)
+## 1. 產品概述與戰略願景
 
-CTRC HK implements a strict, multi-tiered economic loop to reward consistency and prevent fraudulent behavior.
+CTRC HK 是一個專為香港單車通勤者及運動愛好者量身打造的專業單車導航與遊戲化經濟平台。透過綠色低碳出行與遊戲機制的結合，本平台旨在開創智慧城市與個人健康一體化的新型單車生態。
+
+### 1.1 核心使命
+* **城市減碳 (Decarbonization)**：推廣單車作為中短途日常通勤的骨幹替代工具，為降低城市溫室氣體排放貢獻力量。
+* **智慧導航 (Smart Navigation)**：建立覆蓋全港主要單車徑的動態避障與車道級導航，提供安全、避開繁忙幹道、優先走專用單車徑的路徑引導。
+* **遊戲化體育 (Gamification)**：利用等級晉升、里程卡卡級、多人房即時位置同步與數字/實體獎勵，激發車手長期活躍度。
+
+### 1.2 雙平台分工架構 (Web & PWA Mode)
+本系統基於單一儲存庫編寫，但在客戶端自動根據運行環境切換介面：
+1. **網頁端 (Web Mode)**：
+   - 側重品牌宣傳、單車文化網誌發佈（支持普通用戶投稿與管理後台雙向審核）、開放式路線預覽（不套用未征服置灰濾鏡）與 GPX 文件下載。
+   - 隱藏實時騎行工作台、動態導航及多人實時房間入口，優化 SEO 與頁面載入速度。
+2. **PWA 獨立應用端 (PWA Mode)**：
+   - 用戶加至主畫面後運行。解鎖「沈浸式工業風儀表板 (Industrial HUD)」、屏幕 Wake Lock 常亮、後台高精度 GPS 打卡、離線快取以及專屬的底部導航欄。
+
+---
+
+## 2. 三軌制經濟與遊戲化核心 (The Three-Track Economy)
+
+為了保證機制的趣味性與公平性，CTRC HK 設計了高度防作弊、防刷的「三軌並行經濟體系」。
 
 ```
                   ┌───────────────────────────────┐
-                  │      CYCLED DISTANCE (km)     │
+                  │          騎行距離 (公里)       │
                   └───────────────┬───────────────┘
                                   │
          ┌────────────────────────┼────────────────────────┐
          ▼                        ▼                        ▼
-  [ LEVEL / EXP TRACK ]    [ MILEAGE CARD TRACK ]    [ COINS ECONOMIC TRACK ]
-  - Proportional EXP       - 365-day rolling km      - Sign-in / Gacha / Level Up
-  - 50+ level configs      - Bronze / Silver / Gold  - Used for special route unlocks
-  - Titles (Rookie-Legend) - Tier-specific benefits  - Streak repair (100 Coins)
+  [ 等級與 XP 軌 ]          [ 里程卡卡級軌 ]          [ 里程幣經濟軌 ]
+  - 模式乘數計算            - 近365天滾動里程          - 簽到、打卡與盲盒獎勵
+  - 50+ 級與稱號晉升         - 銅卡 / 銀卡 / 金卡      - 用於購買特別版路線
+  - Dopamine 盲盒隨機獎勵    - 級別專屬功能鎖定         - 100幣修復通勤連勝
 ```
 
-### 2.1 Level / EXP Track (經驗值與等級)
-* **EXP Accumulation Formulas**:
-  - **Travel Mode (旅遊模式)**: Distance $\times$ multiplier of $1.5$.
-  - **Commute/DRT Mode (通勤模式)**: Distance $\times$ multiplier of $1.0$.
-  - **Free Mode (自由模式)**: Distance $\times$ multiplier of $0.8$ (XP awarded starting from $0.2\text{ km}$).
-  - **Dopamine Gacha (盲盒隨機獎勵)**: Generates random $+1\sim10\text{ EXP}$ at the end of valid rides.
-* **Levels progression**:
-  - Over 50 levels defined in `routes.json`. Beyond level 50, EXP requirements scale exponentially.
-  - **Title System**:
-    - `Lv.1 - 5`: 入門車手 (Rookie Rider)
-    - `Lv.6 - 15`: 初階車手 (Novice Rider)
-    - `Lv.16 - 30`: 進階車手 (Intermediate Rider)
-    - `Lv.31 - 50`: 資深車手 (Senior Rider)
-    - `Lv.51 - 75`: 精英車手 (Elite Rider)
-    - `Lv.76+`: 頂尖車手 (Legendary Rider)
+### 2.1 等級與經驗軌 (EXP & Levels)
+* **XP 結算公式**：
+  - **旅遊模式 (Travel)**：騎行里程 $\times 1.5$。
+  - **通勤/DRT 模式 (Commute)**：騎行里程 $\times 1.0$。
+  - **自由模式 (Free Ride)**：騎行里程 $\times 0.8$（里程起計門檻為 $0.2\text{ km}$）。
+  - **Dopamine 隨機盲盒**：每次成功結算騎行，有機率獲得盲盒隨機加成 $+1\sim10\text{ XP}$。
+* **等級與稱號配置**：
+  - 在 `routes.json` 中配置了共 50 個等級，高於 50 級自動採用指數級差值擴充。
+  - **稱號機制**：
+    - `Lv.1 - 5`：入門車手 (Rookie Rider)
+    - `Lv.6 - 15`：初階車手 (Novice Rider)
+    - `Lv.16 - 30`：進階車手 (Intermediate Rider)
+    - `Lv.31 - 50`：資深車手 (Senior Rider)
+    - `Lv.51 - 75`：精英車手 (Elite Rider)
+    - `Lv.76+`：頂尖車手 (Legendary Rider)
 
-### 2.2 Mileage Card Track (365天滾動里程卡)
-Memberships are based on active, rolling $365$-day mileage. Older mileage drops off daily, promoting continuous cycling.
-* **Bronze (銅卡)**: $0\text{ km}$ threshold. Lifetime membership. Standard 2D navigation and stats.
-* **Silver (銀卡)**: $\ge 150\text{ km}$ ($365$-day rolling). Drops to Bronze if $< 120\text{ km}$. Unlocks CYCPARKSPACE layer, up to 5 multi-stop waypoints, and $+5\%$ Coin bonus.
-* **Gold (金卡)**: $\ge 500\text{ km}$ ($365$-day rolling). Drops to Silver if $< 400\text{ km}$. Unlocks Mapbox 3D navigation (neon cyan theme, 3D buildings), extreme high-contrast Black Gold theme, and $+15\%$ Coin bonus.
+### 2.2 365天滾動里程卡軌 (Mileage Tiers)
+基於用戶**近 365 天滾動累積總里程**，每日自動更新卡級與權益（一年前的舊里程會按天扣除，需騎行保級）。
+* **銅卡 (Bronze - 0km 起)**：基礎 2D 導航、基礎數據、多巴胺盲盒。終身無降級風險。
+* **銀卡 (Silver - $\ge 150\text{km}$，保級 $\ge 120\text{km}$)**：解鎖 CYCPARKSPACE 泊位與 Ramp 圖層、多站自訂導航（最高 5 途經點）、結算享 **$+5\%$ 里程幣** 永久乘數加成。
+* **金卡 (Gold - $\ge 500\text{km}$，保級 $\ge 400\text{km}$)**：解鎖 Mapbox 3D 高精度車道視角（霓虹青導航線與流光）、黑金極簡主題、結算享 **$+15\%$ 里程幣** 超高加成。
 
-### 2.3 Coins Economic Track (里程幣)
-* **Earning**: Acquired through level-ups, route completions, and dopamine gacha boxes.
-* **Utility**: Used to purchase "Special routes" from the catalog. High-tier members (Silver $+5\%$, Gold $+15\%$) receive permanent earnings multipliers.
-* **Streak Repair**: Spending $100\text{ Coins}$ repairs a broken daily commute streak.
-
----
-
-## 3. High-Fidelity & Hardware Integrations
-
-### 3.1 Advanced Cycle-Track Navigation
-* **Brouter Custom Router**: Dynamically routes via dedicated cycle paths, giving a 100x weight penalty to push-bike paths and fully avoiding highway segments. Uses OSRM as a failover.
-* **GPS Snapping & Stability**: GPS readings are snapped to the center line of the nearest cycle-track node. Under low speeds ($<3\text{ km/h}$), the map bearing snaps directly to the path segment to avoid GPS drift-induced spinning.
-* **Industrial HUD**: Follows z-index structural safety guidelines: `.hud-top` (navigation directives), `.hud-left` (live speed and ETA metrics), and `.hud-bottom` (Exit / End controls).
-
-### 3.2 Mobile-Specific Integrations
-* **Screen Wake Lock API**: Holds screens on during active rides and navigation.
-* **Local Web Push Notifications**: Notifies PWA users about stops or approaching checkpoints even if the screen is locked (supporting iOS standalone requirements).
-* **High-Res Poster Export**: Generates vertical $1080\times1350$ PNG posters showing paths, average speed, elapsed time, and official CTRC HK branding.
+### 2.3 里程幣經濟軌 (Coins)
+* **產出**：簽到獎勵、路線通關結算、升級大禮包、盲盒隨機產出。
+* **消耗**：解鎖特定「特別版/夜間挑戰」路線。可花費 `100 幣` 在個人中心修復當日意外中斷的通勤連勝紀錄。
 
 ---
 
-## 4. Community & High-Value Subsystems
+## 3. 高頻與硬件集成 (Hardware Integrations)
 
-### 4.1 Multiplayer Rooms System
-* Fully replaces the legacy friend toggle with a rooms system.
-* Cyclists can create Public or Password-protected private rooms.
-* Real-time location sharing of all room participants is synchronized via a `room` parameter during heartbeat checks in `ride.html`.
-* Supports Session Resumption: `roomCode` is saved in unfinished ride cards so disconnected riders can quickly rejoin their active rooms.
+### 3.1 智慧單車徑導航與 GPS 穩定
+* **Brouter 專屬路由**：基於本地與開源拓撲，高額懲罰推車路段（100倍權重），完全避開主幹繁忙公路，OSRM 作為自動降級備援。
+* **GPS 軌跡吸附 (Snapping)**：GPS 位置實時貼附至最近單車徑中心線，防止城市高密度建築帶來的 GPS 漂移。
+* **低速地圖朝向鎖定**：當檢測到行駛速度低於 $3\text{ km/h}$ 時，地圖軸承 (Bearing) 自動鎖定在當前路段方向上，徹底杜絕設備靜止或低速時地圖隨指南針瘋狂打轉的問題。
+* **工業風 HUD 架構**：UI z-index 分層嚴格符合安全設計，導航提示（頂層）、實時時速與 ETA（左側邊欄）、控制開關與結束按鈕（底層浮動面板）。
 
-### 4.2 Apple Wallet & Google Wallet Integration
-* Uses the permanent, free-tier WalletWallet API without requiring Apple Developer account fees.
-* Dynamic template styling: Gold (`#F0D372`), Silver (`#D1D9DF`), Bronze (`#D8A56B`).
-* Dynamically resolves absolute logo URLs (`/images/icon-192.png`) to avoid cross-origin fetching errors.
-* Generates passes with real-time rolling mileage, active rank, and user-specific QR codes.
-
-### 4.3 3D Virtual Badges Showcase
-* Uses `<model-viewer>` in `profile.html` to load and render GLB/USDZ models in real 3D.
-* Models are selected via drop-downs in `admin_badges.html` directly from server folders (`/model/glb` and `/model/usdz`).
-
-### 4.4 The Hong Kong Challenge
-* A premium challenge track divided into 3 levels: 30km, 60km, and 100km.
-* Accessed through a golden trophy icon in the catalog header on `routes.html`.
-* Implements safety rules: Route 960 and Free mode are explicitly excluded from challenge eligibility.
+### 3.2 移動設備 API 特性
+* **Screen Wake Lock API**：在進行 active 導航或騎行追蹤時，自動鎖定設備螢幕常亮，防止用戶熄屏。
+* **本地 Web Push 報站**：接近站點 50 米內自動進行本地消息推送，iOS standalone 完美支援。
+* **高畫質海報導出**：在騎行結束後，一鍵生成 $1080\times1350$ 垂直海報，無水印渲染歷史路徑、時長、距離與平均速度，完美適配 IG Story 宣傳。
 
 ---
 
-## 5. Security & Anti-Cheat Foundations
+## 4. 社交車隊與特色功能
 
-To preserve leaderboards fairness, CTRC HK enforces real-time speed monitoring:
-* **Anti-Cheat Validation**: Any ride reporting speeds exceeding $45\text{ km/h}$ or demonstrating vehicular GPS signatures is voided (`anti_cheat` flag is flagged).
-* **Validation thresholds**: Activities below $0.2\text{ km}$ are rejected to prevent idle record submission.
+### 4.1 多人聯動房間系統
+* 取代傳統的好友點選，改為高彈性的房間模式。車手可以開設「公開」或帶密碼的「私密」房間，實時在 Leaflet/MapLibre 地圖上呈現隊友位置標記。
+* **Session Resumption (房間保存)**：如果騎行中途意外中斷退出，本地 `localStorage` 與 `active_rides` 會暫存 `roomCode`。用戶再次登入時，可一鍵重回車隊，進度與位置自動恢復同步。
+
+### 4.2 Apple Wallet 與 Google Wallet 卡包
+* 對接 WalletWallet API 免費生成通道，完美避開 Apple 開發者年費與 Pass2U 試用期限制。
+* 卡面顏色自適應調整：金卡使用金黃配色（`#F0D372`）、銀卡使用科技銀灰（`#D1D9DF`）、銅卡使用古典銅褐色（`#D8A56B`）。
+* 精準解決沙盒環境下的 Cross-Origin 圖片載入報錯，自適應解析本機絕對路徑圖標。
+
+### 4.3 3D 專屬成就徽章
+* 採用 `<model-viewer>` 技術，支援管理員在後台 `admin_badges.html` 一鍵掃描服務器 `/model/glb` 和 `/model/usdz` 目錄並動態指派給特定徽章。
+* 用戶可在個人主頁 3D 面板中實時縮放、旋轉及檢視實體質感徽章。
+
+### 4.4 全港挑戰賽 (Hong Kong Challenge)
+* 分為 30km、60km、100km 三檔挑戰，在 `routes.html` 圖籍標題旁的「金色獎盃」單獨進入。
+* 防作弊加固：排除了 960 號路線，且自由騎行模式無法計入挑戰，確保挑戰賽公平性。
+
+---
+
+## 5. 反作弊與安全防禦 (Anti-Cheat)
+
+為維護全港排行榜與每日打卡的公信力，後端 `api/getHistory.js` 對上傳的 GPX/GeoJSON 軌跡實施多重檢測：
+* **最大速度限制**：任何點對點瞬時或平均速度大於 $45\text{ km/h}$ 的記錄，自動判定為開車或公共交通作弊，該次記錄判定作廢（`anti_cheat` 標記為 true，扣除當次獎勵）。
+* **極短行程過濾**：小於 $0.2\text{ km}$ 的騎行不予寫入數據庫，防止用戶掛機或刷分。
