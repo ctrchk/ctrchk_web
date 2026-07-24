@@ -626,10 +626,24 @@
                     <i class="fas fa-user"></i> 普通會員
                 </span>
                 <div class="db-status-summary" id="db-status-summary">車手等級：入門車手｜里程卡：銅卡</div>
+                <button id="btn-show-my-qr" style="background:var(--app-accent, #6dba65); color:#121f14; border:none; padding:4px 10px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-top:6px; cursor:pointer;"><i class="fas fa-qrcode"></i> 我的驗證碼</button>
             </div>
             <a href="/profile" class="db-profile-edit-btn web-only" aria-label="設置">
                 <i class="fas fa-cog"></i>
             </a>
+        </div>
+
+        <!-- QR Code Verification Modal -->
+        <div id="qr-verify-modal" class="db-poster-modal" style="display:none; align-items:center; justify-content:center; z-index:99999;" aria-hidden="true">
+            <div class="db-poster-sheet" style="max-width:320px; text-align:center; padding:1.5em; border-radius:16px; background:var(--app-bg-card, #1e3820); border:1px solid var(--app-border, #2d4d2d);">
+                <h3 style="color:var(--app-accent, #6dba65); margin-top:0;"><i class="fas fa-qrcode"></i> 車手身份驗證</h3>
+                <p style="font-size:0.8em; color:var(--app-text-secondary, #a8d8a0); margin-bottom:1.2em; line-height:1.45;">請向管理員或高級管理員出示此隨機安全驗證碼以核對身份與特權。</p>
+                <div id="qr-verify-code-container" style="background:#fff; padding:12px; border-radius:12px; display:inline-block; margin-bottom:1em; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+                    <img id="qr-verify-img" src="" alt="Verification QR Code" style="display:block; width:180px; height:180px;">
+                </div>
+                <div id="qr-verify-user-name" style="font-weight:bold; color:var(--app-text-primary, #e8f5e9); margin-bottom:1em; font-size:0.95em;"></div>
+                <button id="qr-verify-close-btn" class="db-show-more-btn" style="margin:0; width:100%; padding:0.6em; font-size:0.9em; background:transparent; border:1px solid var(--app-border, #2d4d2d); color:var(--app-text-secondary, #a8d8a0); border-radius:8px; cursor:pointer;">關閉</button>
+            </div>
         </div>
 
         <!-- Level & XP card -->
@@ -771,6 +785,9 @@
             </a>
             <a href="/about" class="db-more-item">
                 <i class="fas fa-info-circle"></i><span>關於我們</span>
+            </a>
+            <a href="/verify-user.html" class="db-more-item" id="db-verify-user-btn" style="display:none;">
+                <i class="fas fa-qrcode"></i><span>驗證用戶</span>
             </a>
             <a href="/en" class="db-more-item">
                 <i class="fas fa-language"></i><span>English</span>
@@ -1230,6 +1247,45 @@
     // ── Main init ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async function () {
         renderFromCache();
+
+        // Setup My QR click handler
+        var qrBtn = document.getElementById('btn-show-my-qr');
+        var qrModal = document.getElementById('qr-verify-modal');
+        var qrCloseBtn = document.getElementById('qr-verify-close-btn');
+        if (qrBtn && qrModal && qrCloseBtn) {
+            qrBtn.addEventListener('click', async function() {
+                try {
+                    qrBtn.disabled = true;
+                    var origText = qrBtn.innerHTML;
+                    qrBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 載入中...';
+
+                    var token = localStorage.getItem('accessToken');
+                    var res = await fetch('/api/user?action=get-verify-token', {
+                        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                    });
+                    if (res.ok) {
+                        var data = await res.json();
+                        var verifyToken = data.token;
+                        document.getElementById('qr-verify-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=CTRC_VERIFY:' + verifyToken;
+                        var cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                        document.getElementById('qr-verify-user-name').textContent = cachedUser.full_name || cachedUser.username || '單車愛好者';
+                        qrModal.style.display = 'flex';
+                    } else {
+                        alert('無法取得驗證碼，請稍後再試。');
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert('系統錯誤，請稍後再試。');
+                } finally {
+                    qrBtn.disabled = false;
+                    qrBtn.innerHTML = '<i class="fas fa-qrcode"></i> 我的驗證碼';
+                }
+            });
+            qrCloseBtn.addEventListener('click', function() {
+                qrModal.style.display = 'none';
+            });
+        }
+
         try {
             var user;
             try {
@@ -1319,14 +1375,19 @@
     function _applyRoleUI(role, mileageRank) {
         var badge = document.getElementById('db-role-badge');
         badge.className = 'db-role-badge';
+        var verifyBtn = document.getElementById('db-verify-user-btn');
+        if (verifyBtn) verifyBtn.style.display = 'none';
+
         if (role === 'senior_admin') {
             badge.classList.add('db-role-senior-admin');
             badge.innerHTML = '<i class="fas fa-crown"></i> 高級管理員';
             document.getElementById('admin-section').style.display = '';
+            if (verifyBtn) verifyBtn.style.display = 'block';
         } else if (role === 'admin') {
             badge.classList.add('db-role-admin');
             badge.innerHTML = '<i class="fas fa-shield-alt"></i> 管理員';
             document.getElementById('admin-section').style.display = 'none';
+            if (verifyBtn) verifyBtn.style.display = 'block';
         } else if (role === 'vip') {
             badge.classList.add('db-role-vip');
             badge.innerHTML = '<i class="fas fa-gem"></i> VIP 會員';
