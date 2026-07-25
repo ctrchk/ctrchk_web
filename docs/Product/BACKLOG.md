@@ -136,27 +136,29 @@ CTRC HK 目前定位於一個融合「智慧綠色通勤導航」與「遊戲化
 ### P1: 非常重要問題 (Very Important)
 *未來數月內必須交付的模組，核心關注點：里程卡價值、電子錢包卡面實時刷新、任務系統完善、個人中心體驗與雙平台無縫引導。*
 
-#### 任務 P1-1: 里程卡未來 30 天過期里程可視化與保級壓力預警功能
-* **當前狀態**：里程卡（銅/銀/金）基於 365 天滾動里程。`mileage.html` 展示了卡級，但用戶難以預知自己的里程何時會過期。
+#### 任務 P1-1: [已完成] 里程卡未來 30 天過期里程可視化與保級壓力預警功能
+* **當前狀態**：已完成 (v2.1.3 Beta)。
 * **面臨問題**：用戶在沒有任何警示的情況下，可能在某天起床時發現里程卡突然從金卡降為銀卡，只因一年前的今天他騎行了 100km，這會對用戶造成負面的情緒衝擊（失落與不滿）。
 * **為何重要**：可視化的過期預警能轉化為強大的上癮激勵。告知用戶「您在 7 天內有 25km 里程即將過期，再騎行 10km 即可穩固金卡身份」，能極大刺激用戶再次出發。
-* **建議實現方案**：
-  - 在 `mileage.html` 新增「里程過期預警圖表（線形圖或條形圖）」，展示未來 30 天內每日即將失效的里程數額。
-  - 後端 API 在返回用戶里程數據時，計算 `approaching_expiry_km` (未來 30 天即將失效的里程累計) 並返回給前端。
+* **實現方案**：
+  - 後端 `api/user.js` 在返回用戶數據時，在數據庫中精確計算 `approaching_expiry_km` (未來 30 天即將失效的累計里程) 與 `expiry_schedule` (未來 30 天每日即將到期里程的完整列表) 並隨 user 物件返回給前端。
+  - 前端 `mileage.html` 中，新增專屬的高級高對比度垂直柱狀圖表（無外部依賴 Vanilla JS 繪製，流暢觸控交互及動態高度過渡）。點擊或懸停即可精確看見某日即將過期的里程數量，讓騎士一目了然。
 * **依賴關係**：`mileage.html`, `api/user.js`
 * **開發難度**：中等 (Medium)
 * **估計工作量**：3 人工天
 * **優先級**：P1
 * **預期影響**：顯著提升用戶活躍度與保級留存率，將「被動扣里程」變為主動的「騎行拉動機制」。
 
-#### 任務 P1-2: Apple & Google Wallet 卡包數據實時刷新與動態 Push 機制
-* **當前狀態**：用戶可在 `mileage.html` 通過 WalletWallet 接口生成 Apple/Google Wallet 卡包。但卡包在手機內是不會自動刷新的靜態卡，用戶每次升級或騎行後，卡面上的里程依然是舊數據。
+#### 任務 P1-2: [已完成] Apple & Google Wallet 卡包數據實時刷新與動態 Push 機制
+* **當前狀態**：已完成 (v2.1.3 Beta)。
 * **面臨問題**：如果需要手動刪卡重加，電子錢包卡包的體驗就會大打折扣，淪為一次性玩具。
 * **為何重要**：實時更新的 Wallet 憑證可作為車手隨身的「榮譽勳章」，在線下車友聚會、商戶兌換或日常通勤中出示時，提供極高的尊榮感。
-* **建議實現方案**：
-  - 啟用 WalletWallet 的 **WebService 刷新協議**。
-  - 當用戶成功在後端 `api/getHistory.js` 提交新騎行記錄並導致等級/總里程/卡級發生變更時，後端異步向 WalletWallet API 發送更新推送（Push Update）請求，由 WalletWallet 服務端向 iOS/Android 用戶的手機卡包發送實時刷新信號。
-* **依賴關係**：`api/user.js`, `api/getHistory.js`
+* **實現方案**：
+  - 在 `ensureRideTables()` 中為 `user_game_profile` 表引入 `wallet_serial` 欄位以儲存 WalletWallet 的卡包序號。
+  - 在 `api/user.js?action=wallet-pass` 生成卡包時，將 WalletWallet 返回之 `serialNumber` 自動更新至該欄位。
+  - 封裝通用、完全非阻塞與容錯降級的 `lib/wallet-helper.js?triggerWalletPassUpdate` 更新工具。
+  - 當騎士在後端 `api/getHistory.js` 提交新騎行記錄後，後端將在背景**異步、非阻塞**向 WalletWallet 發送 `PUT /api/passes/<wallet_serial>` 更新請求，完美觸發 Apple/Google 官方 Wallet 卡面的秒級即時自動更新及推送通知。
+* **依賴關係**：`api/user.js`, `api/getHistory.js`, `lib/wallet-helper.js`
 * **開發難度**：高等 (High)
 * **估計工作量**：4 人工天
 * **優先級**：P1

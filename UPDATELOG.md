@@ -4,6 +4,22 @@
 
 ---
 
+## v2.1.3 Beta — 2026-07-25
+
+### 新功能與體驗加固 (New Features & Life Cycle Hardening)
+
+- **里程過期 30 天預警圖表與可視化正式落地 (Task P1-1)**：
+  - **優化內容**：後端 `api/user.js` 新增基於 PostgreSQL 區間查詢的 `approaching_expiry_km` (未來 30 天即將失效的累計里程) 與 `expiry_schedule` (未來 30 天每日即將到期里程的完整列表)。
+  - **前台展現**：在 `mileage.html` (里程計劃) 中，全新設計和實現了高對比度、無外部依賴的玻璃擬態 (Glassmorphic) 垂直柱狀圖表，完美自適應 Light / Dark / Black Gold 三套主題。
+  - **交互特效**：柱狀圖支持動態過渡柱高動畫，支持移動端與桌面端的觸碰與懸停，觸發 tooltip 精確顯示某日即將到期的具體公里數與日期，極大提升保級和騎行上癮性激勵。
+
+- **Apple & Google Wallet 卡包數據實時秒級同步與 Push 推送 (Task P1-2)**：
+  - **數據硬化**：在 `user_game_profile` 表中加入 `wallet_serial` 欄位。當用戶通過 `api/user.js?action=wallet-pass` 下載卡包時，系統自動將 WalletWallet 的序列號 (serialNumber) 進行安全持久化記錄。
+  - **秒級更新與 Push**：封裝獨立且高容錯、非阻塞的 `lib/wallet-helper.js?triggerWalletPassUpdate` 異步更新工具。當用戶在 `api/getHistory.js` 提交新騎行記錄後，系統會自動在背景發送 `PUT` 請求向 WalletWallet 更新用戶的最新的滾動里程、卡級以及等級數值，完美觸發手機電子卡包的即時同步與鎖屏更新 Push Banner。
+  - **防本地報錯**：Wallet 請求的 `logoURL` 自動適配本地 (localhost / sandbox) 的 GitHub RAW bike icon 備份，避免本地調試發生跨域或 404 獲取失敗報錯。
+
+---
+
 ## v2.1.2 Beta — 2026-07-22
 
 ### 系統效能優化與 Bug Sweep (Performance Optimizations & Bug Sweep)
