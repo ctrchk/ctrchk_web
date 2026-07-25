@@ -196,6 +196,31 @@
         @media (max-width: 760px) {
             .ml-stats, .ml-benefits-grid, .ml-action-grid { grid-template-columns: 1fr; }
         }
+
+        /* Custom zero-dependency vertical bar chart styles */
+        .ml-expiry-bar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px 4px 0 0;
+            height: 2%; /* Default min height */
+            transition: height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+        .ml-expiry-bar.has-val {
+            background: var(--app-accent, #6dba65);
+        }
+        .ml-expiry-bar.has-val:hover, .ml-expiry-bar.has-val.active {
+            background: #e74c3c !important;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.8);
+        }
+        body.app-light-theme .ml-expiry-bar.has-val {
+            background: var(--app-accent, #2e7d32);
+        }
+        body.app-light-theme .ml-expiry-bar.has-val:hover, body.app-light-theme .ml-expiry-bar.has-val.active {
+            background: #d32f2f !important;
+            box-shadow: 0 0 8px rgba(211, 47, 47, 0.6);
+        }
     </style>
 </head>
 <body>
@@ -229,6 +254,26 @@
                     </div>
                     <span class="ml-progress-label" id="ml-progress-label-expiry">顯示即將過期的里程比例</span>
                 </div>
+            </div>
+        </section>
+
+        <!-- Mileage Expiration Warning Chart Section (Task P1-1) -->
+        <section class="ml-card" id="ml-expiry-chart-section" style="margin-bottom: 1em;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85em;">
+                <h3 style="margin: 0; font-size: 1.05em; color: var(--app-accent, #BFE340);"><i class="fas fa-chart-bar"></i> 未來 30 天每日即將失效里程預警</h3>
+                <span style="font-size: 0.78em; color: var(--app-text-secondary, #a7c1aa);" id="ml-expiry-total-desc">累計：0.0 km</span>
+            </div>
+            <div id="ml-expiry-chart-container" style="height: 140px; display: flex; align-items: flex-end; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--app-border, rgba(255,255,255,0.1)); position: relative;">
+                <!-- Bars will be inserted here dynamically -->
+            </div>
+            <div id="ml-expiry-chart-labels" style="display: flex; justify-content: space-between; font-size: 0.72em; color: var(--app-text-secondary, #a7c1aa); padding-top: 6px;">
+                <span>今天</span>
+                <span>+10天</span>
+                <span>+20天</span>
+                <span>+30天</span>
+            </div>
+            <div id="ml-expiry-chart-tooltip" style="margin-top: 8px; font-size: 0.78em; text-align: center; color: var(--app-accent, #BFE340); min-height: 1.2em;">
+                點擊或懸停於上方圖表查看具體過期日期與里程
             </div>
         </section>
 
@@ -295,6 +340,76 @@
         }).join('');
     }
 
+    function drawExpiryChart(schedule = [], totalExpiringKm = 0) {
+        const container = document.getElementById('ml-expiry-chart-container');
+        const totalDesc = document.getElementById('ml-expiry-total-desc');
+        const tooltip = document.getElementById('ml-expiry-chart-tooltip');
+        if (!container) return;
+
+        totalDesc.textContent = `未來 30 天累計失效：${totalExpiringKm.toFixed(1)} km`;
+
+        if (totalExpiringKm === 0) {
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.85em; color: var(--app-accent, #6dba65); text-align: center; padding: 0 1em;">
+                    <i class="fas fa-check-circle" style="margin-right: 6px;"></i> 🎉 太棒了！未來 30 天內沒有任何即將過期的里程，您的里程非常穩固！
+                </div>
+            `;
+            tooltip.textContent = "點擊或懸停於上方圖表查看具體過期日期與里程";
+            return;
+        }
+
+        // Build map of expiry date -> distance
+        const scheduleMap = {};
+        schedule.forEach(item => {
+            scheduleMap[item.date] = item.distance_km;
+        });
+
+        // Find max value for scaling
+        let maxVal = 1; // avoid divide by zero
+        const dates_30 = [];
+        const now = new Date();
+        for (let i = 0; i < 30; i++) {
+            const d = new Date(now.getTime() + i * 86400000);
+            const dStr = d.toISOString().slice(0, 10);
+            const val = scheduleMap[dStr] || 0;
+            if (val > maxVal) maxVal = val;
+            dates_30.push({ dateStr: dStr, value: val });
+        }
+
+        // Render bars
+        container.innerHTML = "";
+        dates_30.forEach((item, index) => {
+            const bar = document.createElement('div');
+            bar.className = 'ml-expiry-bar' + (item.value > 0 ? ' has-val' : '');
+
+            // Tooltip interaction
+            const showTooltip = () => {
+                // Remove active from other bars
+                container.querySelectorAll('.ml-expiry-bar').forEach(b => b.classList.remove('active'));
+                if (item.value > 0) {
+                    bar.classList.add('active');
+                    tooltip.innerHTML = `<strong style="color: #e74c3c;">${item.dateStr}</strong>：將失效 <strong style="color: #e74c3c;">${item.value.toFixed(1)} km</strong>`;
+                } else {
+                    tooltip.innerHTML = `<strong>${item.dateStr}</strong>：無過期里程`;
+                }
+            };
+
+            bar.addEventListener('mouseenter', showTooltip);
+            bar.addEventListener('click', showTooltip);
+            bar.addEventListener('touchstart', (e) => {
+                showTooltip();
+            });
+
+            container.appendChild(bar);
+
+            // Trigger animation height transition
+            const pctHeight = (item.value / maxVal) * 85; // cap at 85% for aesthetics
+            setTimeout(() => {
+                bar.style.height = (item.value > 0 ? Math.max(5, pctHeight) : 2) + '%';
+            }, 15 * index);
+        });
+    }
+
     (async function initMileagePage() {
         const token = localStorage.getItem('accessToken');
         renderMileageBenefits();
@@ -314,7 +429,7 @@
                     const km = Number(user.mileage_rolling_km || user.mileage_km_365 || 0);
                     const rides = Number(user.total_rides || 0);
                     const card = user.mileage_card || '銅卡';
-                    renderMileage(card, km, rides, []); // Will be updated by histResp
+                    renderMileage(card, km, rides, [], user.expiry_schedule || [], user.approaching_expiry_km || 0);
                 }
             }
             const histResp = await fetch('/api/getHistory', { headers: { Authorization: 'Bearer ' + token } });
@@ -324,7 +439,18 @@
                 const history = Array.isArray(data.history) ? data.history : [];
                 const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
                 const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
-                renderMileage(card, km, history.length, history);
+
+                let expirySchedule = [];
+                let approachingExpiryKm = 0;
+                if (userId) {
+                    const uResp = await fetch('/api/user?user_id=' + userId, { headers: { Authorization: 'Bearer ' + token } });
+                    if (uResp.ok) {
+                        const u = await uResp.json();
+                        expirySchedule = u.expiry_schedule || [];
+                        approachingExpiryKm = u.approaching_expiry_km || 0;
+                    }
+                }
+                renderMileage(card, km, history.length, history, expirySchedule, approachingExpiryKm);
 
                 // Keep links synchronized if they are populated or update again if userId changes
                 const finalUserId = profile.user_id || userId;
@@ -337,7 +463,7 @@
         } catch (_) {}
     })();
 
-    function renderMileage(card, km, rides, history = []) {
+    function renderMileage(card, km, rides, history = [], userExpirySchedule = [], userApproachingExpiryKm = 0) {
         const cardEl = document.getElementById('ml-card');
         const kmEl = document.getElementById('ml-km');
         const ridesEl = document.getElementById('ml-rides');
@@ -382,31 +508,47 @@
         labelRank.textContent = msgRank;
 
         // Expiry logic: calculate km from rides more than 335 days old (expiring in 30 days)
-        if (history && history.length > 0) {
+        let expiringKm = Number(userApproachingExpiryKm || 0);
+        if (expiringKm === 0 && history && history.length > 0) {
             const now = new Date();
-            const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86400000);
             const oneYearAgo = new Date(now.getTime() - 365 * 86400000);
             const expiringSoonDate = new Date(now.getTime() - (365 - 30) * 86400000); // Rides older than this will expire in 30 days
 
-            let expiringKm = 0;
             history.forEach(h => {
                 const rDate = new Date(h.date || h.ride_date);
                 if (rDate > oneYearAgo && rDate <= expiringSoonDate) {
                     expiringKm += Number(h.distance_km || 0);
                 }
             });
-
-            const pctExpiry = v > 0 ? (expiringKm / v) * 100 : 0;
-            fillExpiry.style.width = Math.min(100, pctExpiry).toFixed(1) + '%';
-            valExpiry.textContent = Math.round(pctExpiry) + '%';
-            labelExpiry.textContent = `未來 30 天內將有 ${expiringKm.toFixed(1)} km 里程過期`;
-
-            if (pctExpiry > 50) fillExpiry.classList.add('danger');
-            else if (pctExpiry > 20) fillExpiry.classList.add('warning');
-            else fillExpiry.classList.remove('warning', 'danger');
-        } else {
-            labelExpiry.textContent = '暫無騎行紀錄可分析過期里程';
         }
+
+        const pctExpiry = v > 0 ? (expiringKm / v) * 100 : 0;
+        fillExpiry.style.width = Math.min(100, pctExpiry).toFixed(1) + '%';
+        valExpiry.textContent = Math.round(pctExpiry) + '%';
+        labelExpiry.textContent = `未來 30 天內將有 ${expiringKm.toFixed(1)} km 里程過期`;
+
+        if (pctExpiry > 50) fillExpiry.classList.add('danger');
+        else if (pctExpiry > 20) fillExpiry.classList.add('warning');
+        else fillExpiry.classList.remove('warning', 'danger');
+
+        // Draw the custom bar chart!
+        let finalSchedule = userExpirySchedule;
+        if ((!finalSchedule || finalSchedule.length === 0) && history && history.length > 0) {
+            const now = new Date();
+            const oneYearAgo = new Date(now.getTime() - 365 * 86400000);
+            const expiringSoonDate = new Date(now.getTime() - (365 - 30) * 86400000);
+            const scheduleMap = {};
+            history.forEach(h => {
+                const rDate = new Date(h.date || h.ride_date);
+                if (rDate > oneYearAgo && rDate <= expiringSoonDate) {
+                    const expDate = new Date(rDate.getTime() + 365 * 86400000);
+                    const expStr = expDate.toISOString().slice(0, 10);
+                    scheduleMap[expStr] = (scheduleMap[expStr] || 0) + Number(h.distance_km || 0);
+                }
+            });
+            finalSchedule = Object.keys(scheduleMap).map(d => ({ date: d, distance_km: scheduleMap[d] }));
+        }
+        drawExpiryChart(finalSchedule, expiringKm);
     }
     </script>
 </body>

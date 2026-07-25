@@ -134,6 +134,7 @@ async function ensureRideTables() {
       `);
 
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64) UNIQUE;`); } catch(e) {}
+      try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS wallet_serial VARCHAR(64);`); } catch(e) {}
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -324,6 +325,18 @@ export default async function handler(req, res) {
 
       if (!passUrl) {
         return res.status(500).json({ message: 'No pass URL returned from WalletWallet API' });
+      }
+
+      // Save serialNumber to user_game_profile (Task P1-2)
+      if (result.serialNumber) {
+        try {
+          await query(
+            `UPDATE user_game_profile SET wallet_serial = $1 WHERE user_id = $2`,
+            [result.serialNumber, user.id]
+          );
+        } catch (dbErr) {
+          console.error('Error saving wallet_serial:', dbErr);
+        }
       }
 
       res.writeHead(302, { Location: passUrl });
@@ -811,6 +824,41 @@ export default async function handler(req, res) {
       const permContext = buildPermissionContext(storedRank);
       user.permissions = permContext.permissions;
       user.permission_rank = permContext.rank;
+
+      // Fetch approaching expiry mileage (rolling mileage falling out in the next 30 days)
+      try {
+        const { rows: expiryRows } = await query(
+          `SELECT COALESCE(SUM(distance_km), 0) AS approaching_expiry_km
+           FROM cycling_history
+           WHERE user_id = $1
+             AND ride_date >= CURRENT_DATE - INTERVAL '365 days'
+             AND ride_date < CURRENT_DATE - INTERVAL '335 days'`,
+          [user.id]
+        );
+        user.approaching_expiry_km = Number(expiryRows[0]?.approaching_expiry_km || 0);
+      } catch (e) {
+        user.approaching_expiry_km = 0;
+      }
+
+      try {
+        const { rows: scheduleRows } = await query(
+          `SELECT (ride_date + INTERVAL '365 days')::date::text AS expiry_date,
+                  COALESCE(SUM(distance_km), 0) AS distance_km
+           FROM cycling_history
+           WHERE user_id = $1
+             AND ride_date >= CURRENT_DATE - INTERVAL '365 days'
+             AND ride_date < CURRENT_DATE - INTERVAL '335 days'
+           GROUP BY expiry_date
+           ORDER BY expiry_date ASC`,
+          [user.id]
+        );
+        user.expiry_schedule = scheduleRows.map(r => ({
+          date: r.expiry_date,
+          distance_km: Number(r.distance_km || 0)
+        }));
+      } catch (e) {
+        user.expiry_schedule = [];
+      }
 
       // Fetch coin-purchased route IDs for the front-end unlock cache
       try {

@@ -2,6 +2,7 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
+import { triggerWalletPassUpdate } from '../lib/wallet-helper.js';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
@@ -1091,6 +1092,17 @@ export default async function handler(req, res) {
         };
       } catch (e) {
         console.warn('[getHistory POST] Game profile update skipped:', e.message);
+      }
+
+      // Trigger Wallet pass real-time update push asynchronously (Task P1-2)
+      try {
+        const host = req.headers.host || '';
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        triggerWalletPassUpdate(userData.userId, host, protocol).catch(err => {
+          console.warn('[getHistory] Wallet pass update trigger failed:', err.message);
+        });
+      } catch (e) {
+        console.warn('[getHistory] Wallet pass update trigger skipped:', e.message);
       }
 
       return res.status(201).json({
