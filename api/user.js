@@ -8,6 +8,7 @@
 //
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
+import { updateWalletPassForUser } from '../lib/wallet.js';
 import { buildPermissionContext, MILEAGE_RANK_LABELS, normalizeMileageRank } from '../lib/permissions.js';
 import crypto from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
@@ -134,6 +135,7 @@ async function ensureRideTables() {
       `);
 
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64) UNIQUE;`); } catch(e) {}
+      try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS wallet_serial_number VARCHAR(100);`); } catch(e) {}
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -240,7 +242,7 @@ export default async function handler(req, res) {
 
       const { rows } = await query(
         `SELECT u.id, u.full_name, u.username,
-                gp.level, gp.mileage_rank,
+                gp.level, gp.mileage_rank, gp.wallet_serial_number,
                 COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                 COALESCE((SELECT SUM(ch.distance_km)
                           FROM cycling_history ch
@@ -285,42 +287,81 @@ export default async function handler(req, res) {
         logoURL = `${protocol}://${host}/images/logo.png`;
       }
 
-      // Call WalletWallet API
-      const response = await fetch('https://api.walletwallet.dev/api/passes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${WALLETWALLET_API_KEY}`
-        },
-        body: JSON.stringify({
-          template: templateId,
-          barcodeValue: `CTRC-USER-${user.id}`,
-          barcodeFormat: 'QR',
-          logoText: 'CTRC HK',
-          logoURL: logoURL,
-          colorPreset: colorPreset,
-          color: customColor,
-          primaryFields: [
-            { label: 'MEMBER', value: name }
-          ],
-          secondaryFields: [
-            { label: 'MILEAGE', value: `${mileage.toFixed(1)} km` },
-            { label: 'RANK', value: rank === 'gold' ? 'Gold 金卡' : (rank === 'silver' ? 'Silver 銀卡' : 'Bronze 銅卡') }
-          ],
-          headerFields: [
-            { label: 'LEVEL', value: `Lv.${user.level || 1}` }
-          ]
-        })
-      });
+      const passBody = {
+        template: templateId,
+        barcodeValue: `CTRC-USER-${user.id}`,
+        barcodeFormat: 'QR',
+        logoText: 'CTRC HK',
+        logoURL: logoURL,
+        colorPreset: colorPreset,
+        color: customColor,
+        primaryFields: [
+          { label: 'MEMBER', value: name }
+        ],
+        secondaryFields: [
+          { label: 'MILEAGE', value: `${mileage.toFixed(1)} km`, changeMessage: '您的近 365 天總里程已更新為 %@' },
+          { label: 'RANK', value: rank === 'gold' ? 'Gold 金卡' : (rank === 'silver' ? 'Silver 銀卡' : 'Bronze 銅卡'), changeMessage: '您的會員等級已更新為 %@' }
+        ],
+        headerFields: [
+          { label: 'LEVEL', value: `Lv.${user.level || 1}`, changeMessage: '恭喜！您的等級已提升至 %@' }
+        ]
+      };
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('WalletWallet API error:', errText);
-        return res.status(500).json({ message: 'WalletWallet API error: ' + errText });
+      let serialNumber = user.wallet_serial_number;
+      let passUrl = '';
+
+      if (serialNumber) {
+        // We have an existing pass! Let's update it using PUT
+        const updateResponse = await fetch(`https://api.walletwallet.dev/api/passes/${serialNumber}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${WALLETWALLET_API_KEY}`
+          },
+          body: JSON.stringify(passBody)
+        });
+
+        if (updateResponse.status === 200) {
+          // Success! Pass updated. Construct the redirect URL.
+          passUrl = (wallet === 'google')
+            ? `https://api.walletwallet.dev/api/passes/${serialNumber}/google`
+            : `https://api.walletwallet.dev/p/${serialNumber}`;
+        } else {
+          // If the pass was deleted on the WalletWallet server (404), reset and POST a new one
+          console.warn(`PUT on existing serial ${serialNumber} returned status ${updateResponse.status}. Re-creating.`);
+          serialNumber = null;
+        }
       }
 
-      const result = await response.json();
-      const passUrl = (wallet === 'google' && result.googleSaveUrl) ? result.googleSaveUrl : (result.shareUrl || result.googleSaveUrl);
+      if (!serialNumber) {
+        // Create new pass using POST
+        const createResponse = await fetch('https://api.walletwallet.dev/api/passes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${WALLETWALLET_API_KEY}`
+          },
+          body: JSON.stringify(passBody)
+        });
+
+        if (!createResponse.ok) {
+          const errText = await createResponse.text();
+          console.error('WalletWallet API error on create:', errText);
+          return res.status(500).json({ message: 'WalletWallet API error: ' + errText });
+        }
+
+        const createResult = await createResponse.json();
+        serialNumber = createResult.serialNumber;
+        passUrl = (wallet === 'google' && createResult.googleSaveUrl)
+          ? createResult.googleSaveUrl
+          : (createResult.shareUrl || createResult.googleSaveUrl);
+
+        // Save the new serial number to the database
+        await query(
+          `UPDATE user_game_profile SET wallet_serial_number = $1 WHERE user_id = $2`,
+          [serialNumber, user.id]
+        );
+      }
 
       if (!passUrl) {
         return res.status(500).json({ message: 'No pass URL returned from WalletWallet API' });
@@ -807,6 +848,53 @@ export default async function handler(req, res) {
       user.mileage_rolling_km = rollingKm;
       user.cyclist_tier = getCyclistTierByLevel(user.level);
       user.membership_status = getMembershipLabel(user.user_role);
+
+      // Calculate approaching_expiry_km and expiring_soon_days for Task P1-1
+      let approaching_expiry_km = 0;
+      let expiring_soon_days = [];
+      try {
+        const { rows: rollingRides } = await query(
+          `SELECT ride_date, distance_km FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '365 days'`,
+          [user.id]
+        );
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const expiringDays = Array.from({ length: 30 }, (_, idx) => {
+          const dayNum = idx + 1;
+          const targetDate = new Date(today.getTime() + dayNum * 86400000);
+          return {
+            day: dayNum,
+            date_str: targetDate.toISOString().slice(0, 10),
+            formatted_date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}`,
+            km: 0
+          };
+        });
+
+        rollingRides.forEach(r => {
+          const rDate = new Date(r.ride_date);
+          const rDateNoTime = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
+          const diffMs = today.getTime() - rDateNoTime.getTime();
+          const ageInDays = Math.round(diffMs / 86400000);
+
+          if (ageInDays >= 336 && ageInDays <= 365) {
+            const dayIndex = 365 - ageInDays;
+            if (dayIndex >= 0 && dayIndex < 30) {
+              expiringDays[dayIndex].km += Number(r.distance_km || 0);
+              approaching_expiry_km += Number(r.distance_km || 0);
+            }
+          }
+        });
+
+        approaching_expiry_km = Number(approaching_expiry_km.toFixed(2));
+        expiringDays.forEach(d => { d.km = Number(d.km.toFixed(2)); });
+        expiring_soon_days = expiringDays;
+      } catch (e) {
+        console.error('Failed to calculate expiring soon km in user.js GET:', e);
+      }
+
+      user.approaching_expiry_km = approaching_expiry_km;
+      user.expiring_soon_days = expiring_soon_days;
 
       const permContext = buildPermissionContext(storedRank);
       user.permissions = permContext.permissions;

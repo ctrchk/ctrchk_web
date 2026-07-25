@@ -4,6 +4,26 @@
 
 ---
 
+## v2.1.3 Beta — 2026-07-24
+
+### 里程計劃過期預警與電子錢包自動刷新升級 (Task P1-1 & P1-2)
+
+- **優化內容**：新增里程卡「未來 30 天過期里程預警與保級壓力測試」功能 (Task P1-1)。
+  - **原因**：由於里程卡基於 365 天滾動里程，騎士以往難以預估一年前的里程在何時過期，容易造成突然降級（例如金卡降銀卡）的失落體驗。
+  - **改善效果**：
+    - 後端 API (`api/user.js`, `api/getHistory.js`) 精確計算未來 30 天內每日即將失效的滾動里程及 `approaching_expiry_km` 累計。
+    - 前端 `mileage.html` 引入直觀、響應式的「柱狀過期預警圖表」及「詳細時間軸失效清單」。透過綠、藍、黃、紅漸變視覺預警，為騎士提供保級推動力，完美激勵再次出發。
+
+- **優化內容**：升級 Apple & Google Wallet 電子錢包卡包，實現實時刷新與動態 Push 推送通知 (Task P1-2)。
+  - **原因**：舊版電子卡包為靜態卡片，用戶每次完成騎行或升級後無法自動同步卡面上的里程、等級與級別顏色，大幅降低尊榮體感。
+  - **改善效果**：
+    - 在資料庫 `user_game_profile` 中新增 `wallet_serial_number` 欄位以追蹤與綁定騎士卡包。
+    - 錢包下載 API (`api/user?action=wallet-pass`) 升級為 **PUT 增量式更新**及 **POST 離線生成/自癒機制**，自動保存序列號並根據 `wallet` 參數（apple / google）執行智能 302 重新定向，安全直達 Google Pay 或 Apple hosted 安裝頁。
+    - 新增通用錢包更新模組 `lib/wallet.js` 中的 `updateWalletPassForUser` 函數。
+    - 當騎士**完成騎行上載**或**每日簽到**時，後端會異步、非阻塞地向 WalletWallet WebService 發送更新請求，用戶手機卡包可在數秒內完成自動更新，並觸發帶有 %@ 替代符（如里程、等級）的 iOS/Android 鎖屏 banner 通知。
+
+---
+
 ## v2.1.2 Beta — 2026-07-22
 
 ### 系統效能優化與 Bug Sweep (Performance Optimizations & Bug Sweep)
