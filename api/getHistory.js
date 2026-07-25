@@ -2,6 +2,7 @@
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
+import { updateWalletPassForUser } from '../lib/wallet.js';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
@@ -154,9 +155,12 @@ function calcLevel(xp) {
 
 // 確保用戶有遊戲進度記錄（若無則初始化）
 async function ensureGameProfile(userId) {
+  try {
+    await query('ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS wallet_serial_number VARCHAR(100);');
+  } catch (e) {}
   const { rows } = await query(
     `SELECT level, xp, coins, mileage_km_365, mileage_rank,
-            commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date, total_saved_fare
+            commute_streak, commute_streak_last_date, commute_streak_pending, commute_streak_pending_date, total_saved_fare, wallet_serial_number
      FROM user_game_profile WHERE user_id = $1`,
     [userId]
   );
@@ -441,6 +445,53 @@ export default async function handler(req, res) {
           gameProfile.mileage_rolling_km = await getRollingMileageKm(userData.userId);
           const { rows: badgeRows } = await query('SELECT badge_id FROM user_badges WHERE user_id = $1', [userData.userId]);
           gameProfile.earned_badge_ids = badgeRows.map(r => r.badge_id);
+
+          // Calculate approaching_expiry_km and expiring_soon_days for Task P1-1
+          let approaching_expiry_km = 0;
+          let expiring_soon_days = [];
+          try {
+            const { rows: rollingRides } = await query(
+              `SELECT ride_date, distance_km FROM cycling_history
+               WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '365 days'`,
+              [userData.userId]
+            );
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const expiringDays = Array.from({ length: 30 }, (_, idx) => {
+              const dayNum = idx + 1;
+              const targetDate = new Date(today.getTime() + dayNum * 86400000);
+              return {
+                day: dayNum,
+                date_str: targetDate.toISOString().slice(0, 10),
+                formatted_date: `${targetDate.getMonth() + 1}/${targetDate.getDate()}`,
+                km: 0
+              };
+            });
+
+            rollingRides.forEach(r => {
+              const rDate = new Date(r.ride_date);
+              const rDateNoTime = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate());
+              const diffMs = today.getTime() - rDateNoTime.getTime();
+              const ageInDays = Math.round(diffMs / 86400000);
+
+              if (ageInDays >= 336 && ageInDays <= 365) {
+                const dayIndex = 365 - ageInDays;
+                if (dayIndex >= 0 && dayIndex < 30) {
+                  expiringDays[dayIndex].km += Number(r.distance_km || 0);
+                  approaching_expiry_km += Number(r.distance_km || 0);
+                }
+              }
+            });
+
+            approaching_expiry_km = Number(approaching_expiry_km.toFixed(2));
+            expiringDays.forEach(d => { d.km = Number(d.km.toFixed(2)); });
+            expiring_soon_days = expiringDays;
+          } catch (errCalc) {
+            console.error('Failed to calculate expiring soon km in getHistory GET:', errCalc);
+          }
+
+          gameProfile.approaching_expiry_km = approaching_expiry_km;
+          gameProfile.expiring_soon_days = expiring_soon_days;
         }
       } catch (e) {
         // game tables 可能尚未建立；忽略錯誤
@@ -678,6 +729,11 @@ export default async function handler(req, res) {
         syncDiscordRolesForUser(userData.userId).catch(e =>
           console.warn('[getHistory] Discord role sync failed:', e.message)
         );
+
+        // Update Wallet pass asynchronously in background for real-time push update
+        updateWalletPassForUser(userData.userId).catch(e => {
+          console.warn('[getHistory] Wallet pass update failed on checkin:', e.message);
+        });
 
         const gameProfile = { level: newLevel, xp: newXp, coins: newCoins, mileage_rank: mileageRank };
         return res.status(200).json({
@@ -1064,6 +1120,11 @@ export default async function handler(req, res) {
         syncDiscordRolesForUser(userData.userId).catch(e =>
           console.warn('[getHistory] Discord role sync failed:', e.message)
         );
+
+        // Update Wallet pass asynchronously in background for real-time push update
+        updateWalletPassForUser(userData.userId).catch(e => {
+          console.warn('[getHistory] Wallet pass update failed on ride submit:', e.message);
+        });
 
         gameResult = {
           level: newLevel,

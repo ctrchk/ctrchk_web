@@ -229,6 +229,21 @@
                     </div>
                     <span class="ml-progress-label" id="ml-progress-label-expiry">顯示即將過期的里程比例</span>
                 </div>
+
+                <!-- Future 30 days detailed expiration panel -->
+                <div class="ml-expiry-details" style="margin-top: 1.5em; display: none;" id="ml-expiry-details-panel">
+                    <div class="ml-progress-title" style="margin-bottom: 0.6em; display: flex; align-items: center; gap: 0.5em; font-size: 0.82em; font-weight: 700; color: var(--app-text-primary);">
+                        <i class="fas fa-history" style="color: var(--app-accent, #BFE340);"></i> 未來 30 天每日即將失效里程預警圖表
+                    </div>
+                    <!-- Pure CSS/HTML Bar Chart -->
+                    <div class="ml-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 120px; background: rgba(0,0,0,0.2); border: 1px solid var(--app-border, rgba(255,255,255,0.08)); border-radius: 12px; padding: 1.2em 0.8em 0.4em; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <!-- Bars will be injected dynamically -->
+                    </div>
+                    <!-- Detailed list for readability on mobile -->
+                    <div class="ml-expiry-list" id="ml-expiry-list-container" style="margin-top: 1em; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5em; max-height: 150px; overflow-y: auto; padding-right: 4px;">
+                        <!-- List items will be injected dynamically -->
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -314,7 +329,7 @@
                     const km = Number(user.mileage_rolling_km || user.mileage_km_365 || 0);
                     const rides = Number(user.total_rides || 0);
                     const card = user.mileage_card || '銅卡';
-                    renderMileage(card, km, rides, []); // Will be updated by histResp
+                    renderMileage(card, km, rides, [], user.expiring_soon_days); // Will be updated by histResp
                 }
             }
             const histResp = await fetch('/api/getHistory', { headers: { Authorization: 'Bearer ' + token } });
@@ -324,7 +339,7 @@
                 const history = Array.isArray(data.history) ? data.history : [];
                 const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
                 const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
-                renderMileage(card, km, history.length, history);
+                renderMileage(card, km, history.length, history, profile.expiring_soon_days);
 
                 // Keep links synchronized if they are populated or update again if userId changes
                 const finalUserId = profile.user_id || userId;
@@ -337,7 +352,7 @@
         } catch (_) {}
     })();
 
-    function renderMileage(card, km, rides, history = []) {
+    function renderMileage(card, km, rides, history = [], expiringSoonDays = []) {
         const cardEl = document.getElementById('ml-card');
         const kmEl = document.getElementById('ml-km');
         const ridesEl = document.getElementById('ml-rides');
@@ -406,6 +421,75 @@
             else fillExpiry.classList.remove('warning', 'danger');
         } else {
             labelExpiry.textContent = '暫無騎行紀錄可分析過期里程';
+        }
+
+        // Render future 30 days detailed expiration chart & list
+        const panel = document.getElementById('ml-expiry-details-panel');
+        if (panel && expiringSoonDays && expiringSoonDays.length > 0) {
+            panel.style.display = 'block';
+            const chartContainer = panel.querySelector('.ml-chart-container');
+            const listContainer = document.getElementById('ml-expiry-list-container');
+
+            // Find maximum expiring km to scale the chart bars
+            const maxKm = Math.max(...expiringSoonDays.map(d => d.km), 1); // avoid division by zero
+
+            // Render bars
+            if (chartContainer) {
+                chartContainer.innerHTML = expiringSoonDays.map(d => {
+                    const pct = (d.km / maxKm) * 100;
+                    // Proportional color based on intensity of expiration
+                    let barColor = 'var(--app-accent, #6dba65)';
+                    if (d.km > 15) {
+                        barColor = '#e74c3c'; // Danger
+                    } else if (d.km > 5) {
+                        barColor = '#f1c40f'; // Warning
+                    } else if (d.km > 0) {
+                        barColor = '#3498db'; // Moderate
+                    } else {
+                        barColor = 'rgba(255, 255, 255, 0.1)'; // Empty
+                    }
+
+                    return `
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 14px; height: 100%; justify-content: flex-end;" title="日期: ${d.date_str}&#10;即將失效: ${d.km.toFixed(1)} km">
+                            <div style="font-size: 0.6em; color: var(--app-text-secondary); margin-bottom: 2px; text-align: center; font-weight: bold; ${d.km === 0 ? 'visibility: hidden;' : ''}">${d.km.toFixed(0)}</div>
+                            <div style="width: 100%; height: ${Math.max(3, pct)}%; background: ${barColor}; border-radius: 3px 3px 0 0; min-height: ${d.km > 0 ? '4px' : '1px'}; transition: height 0.3s ease;"></div>
+                            <div style="font-size: 0.55em; color: var(--app-text-secondary); margin-top: 4px; white-space: nowrap; transform: scale(0.85);">${d.formatted_date}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Render detailed list (only show days with actual expiring mileage > 0 for high visibility)
+            if (listContainer) {
+                const activeExpirations = expiringSoonDays.filter(d => d.km > 0);
+                if (activeExpirations.length > 0) {
+                    listContainer.innerHTML = activeExpirations.map(d => {
+                        let textStyle = '';
+                        let badgeColor = 'rgba(52, 152, 219, 0.15)';
+                        let textColor = '#3498db';
+                        if (d.km > 15) {
+                            badgeColor = 'rgba(231, 76, 60, 0.15)';
+                            textColor = '#e74c3c';
+                            textStyle = 'font-weight: bold;';
+                        } else if (d.km > 5) {
+                            badgeColor = 'rgba(241, 196, 15, 0.15)';
+                            textColor = '#f1c40f';
+                        }
+                        return `
+                            <div class="ml-expiry-item" style="background: ${badgeColor}; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.5em; text-align: center; ${textStyle}">
+                                <div style="font-size: 0.72em; color: var(--app-text-secondary);">${d.date_str}</div>
+                                <div style="font-size: 0.85em; font-weight: 800; color: ${textColor}; margin-top: 0.25em;">-${d.km.toFixed(1)} km</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    listContainer.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 1em; color: var(--app-text-secondary); font-size: 0.82em;">
+                            🎉 太棒了！未來 30 天內沒有即將過期的里程。
+                        </div>
+                    `;
+                }
+            }
         }
     }
     </script>
