@@ -1611,6 +1611,8 @@
         });
     });
 
+    let dailyCountdownTimer = null;
+
     // ── Init ──────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
         // Render immediately from local cache so the page is usable right away
@@ -1619,7 +1621,8 @@
         initNotifToggle();
         render();
         updateDailyCountdown();
-        setInterval(updateDailyCountdown, 1000);
+        if (dailyCountdownTimer) clearInterval(dailyCountdownTimer);
+        dailyCountdownTimer = setInterval(updateDailyCountdown, 1000);
 
         const token = localStorage.getItem('accessToken');
         if (token) {
@@ -1752,6 +1755,13 @@
             if (t[key] !== undefined) el.innerHTML = t[key];
         });
     })();
+
+    function cleanupTasksTimers() {
+        if (dailyCountdownTimer) { clearInterval(dailyCountdownTimer); dailyCountdownTimer = null; }
+    }
+    window.addEventListener('pagehide', cleanupTasksTimers);
+    window.addEventListener('beforeunload', cleanupTasksTimers);
+    window.addEventListener('unload', cleanupTasksTimers);
     </script>
 </body>
 </html>

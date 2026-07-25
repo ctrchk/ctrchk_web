@@ -1495,6 +1495,15 @@
             // On mobile, open the conversation panel on first load so users can see their conversations
             if (isMobile()) openConvPanel();
         })();
+
+        function cleanupChatTimers() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+            if (convRefreshTimer) { clearInterval(convRefreshTimer); convRefreshTimer = null; }
+            if (supportPollTimer) { clearInterval(supportPollTimer); supportPollTimer = null; }
+        }
+        window.addEventListener('pagehide', cleanupChatTimers);
+        window.addEventListener('beforeunload', cleanupChatTimers);
+        window.addEventListener('unload', cleanupChatTimers);
     })();
     </script>
 </body>

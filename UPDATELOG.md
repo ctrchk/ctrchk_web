@@ -4,6 +4,32 @@
 
 ---
 
+## v2.1.2 Beta — 2026-07-22
+
+### 系統效能優化與 Bug Sweep (Performance Optimizations & Bug Sweep)
+
+- **優化內容**：重構 Leaflet 與 Mapbox 地圖生命週期管理，全面檢查並防止重複初始化（利用全新的 `window.PWA_MAPS_INITED` 作為守衛，地圖在退出前顯式調用 `map.remove()`）。
+  - **原因**：避免 PWA 應用因切換頁面或重複初始化地圖產生 `Map container is already initialized` 的 Console 報錯與嚴重的記憶體洩漏（Memory Leak）。
+  - **改善效果**：完美解決地圖二次加載的 JavaScript 報錯與崩潰，降低移動端在長途騎行時的內存佔用，保證 App 流暢穩定。
+
+- **優化內容**：全面清理、歸集並銷毀 `setInterval` 與 Geolocation GPS 定位追蹤 `watchId`。
+  - **原因**：頁面跳轉或關閉時，後台的定時器與定位追蹤器如果持續運行，會導致手機電量在騎士騎行過程中加速耗盡。
+  - **改善效果**：在 `pagehide` / `unload` 事件觸發時徹底清理所有計時器和監聽器，消除後台背景流氓線程，降低移動裝置能耗。
+
+- **優化內容**：加固 Wake Lock 防護與自動重連機制。
+  - **原因**：當騎士將 App 置於背景再返回前台時，Wake Lock 鎖可能被系統自動釋放，導致手機熄屏 GPS 信號丟失。
+  - **改善效果**：使用 try-catch 包裹 `wakeLock.request` 避免 Promise rejection 崩潰，並引入全自動 `visibilitychange` 重連機制，返回前台時重奪 Wake Lock 鎖，保障屏幕常亮不熄滅。
+
+- **優化內容**：對高頻動畫與 CSS 變更進行 Paint/Reflow 減碳優化。
+  - **原因**：`transition: all` 會在多個屬性（如寬高、位置、顏色）變動時引發高強度的重排（Reflow）與重繪（Repaint）。
+  - **改善效果**：將關鍵組件的過渡動畫修改為具體的 `transition: transform` 或 `transition: background-color`，顯著降低 CPU/GPU 渲染開銷，提升 mobile Safari 滑動時的 FPS 到 60 幀。
+
+- **優化內容**：Mobile Safari 體驗、對比度及滾動優化。
+  - **原因**：iOS 網頁原生滾動存在回彈與阻尼不足，且黑金主題下高對比度文字需要極強的對比。
+  - **改善效果**：在 scroll 容器上添加 `-webkit-overflow-scrolling: touch;` 提供媲美 Native 的流暢阻尼感；加強並確保 `isLoggedIn()` 下 `localStorage` user 清洗安全性。
+
+---
+
 ## v2.1.1 Beta — 2026-06-26
 
 ### 新功能 (New Features)

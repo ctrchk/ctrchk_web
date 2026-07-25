@@ -102,6 +102,10 @@ function setAppTheme(theme) {
  */
 function isLoggedIn() {
     let token = localStorage.getItem('accessToken');
+    let userStr = localStorage.getItem('user');
+    if (userStr === 'null' || userStr === 'undefined' || userStr === '') {
+        localStorage.removeItem('user');
+    }
     if (token) {
         // Clean token if it contains unexpected quotes
         if (token.includes('"') || token.includes("'")) {
@@ -110,6 +114,7 @@ function isLoggedIn() {
         }
         if (token === 'null' || token === 'undefined' || token === '') {
             localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
             return false;
         }
         return true;
@@ -1159,8 +1164,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeNotification() {
         if (!modal) return;
         const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
-        modalContent.classList.remove('modal-enter');
-        modalContent.classList.add('modal-exit');
+        if (modalContent) {
+            modalContent.classList.remove('modal-enter');
+            modalContent.classList.add('modal-exit');
+        }
         setTimeout(() => {
             modal.style.display = 'none';
         }, 200);
@@ -1170,8 +1177,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!modal) return;
         modal.style.display = 'flex';
         const modalContent = modal.querySelector('.bg-white, .bg-gray-800');
-        modalContent.classList.remove('modal-exit');
-        modalContent.classList.add('modal-enter');
+        if (modalContent) {
+            modalContent.classList.remove('modal-exit');
+            modalContent.classList.add('modal-enter');
+        }
     }
 
     function initializeNotificationModal() {

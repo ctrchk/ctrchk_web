@@ -705,6 +705,12 @@
         this.setupUI();
         this.requestLocation();
         this.checkActiveRide();
+
+        document.addEventListener('visibilitychange', async () => {
+          if (document.visibilityState === 'visible' && this.isNavigating) {
+            await this.requestWakeLock();
+          }
+        });
       },
 
       async checkActiveRide() {
@@ -2135,6 +2141,19 @@
         document.getElementById('hud-left').classList.add('hidden');
 
         this.map.easeTo({ pitch: 0, bearing: 0, zoom: 14 });
+      },
+
+      cleanup() {
+        if (this.heartbeatInterval) { clearInterval(this.heartbeatInterval); this.heartbeatInterval = null; }
+        if (this.watchId) { navigator.geolocation.clearWatch(this.watchId); this.watchId = null; }
+        if (this.wakeLock) {
+          try { this.wakeLock.release(); } catch(e) {}
+          this.wakeLock = null;
+        }
+        if (this.map) {
+          try { this.map.remove(); } catch(e) { console.warn('[Mapbox] map remove error:', e); }
+          this.map = null;
+        }
       }
     };
 
@@ -2148,6 +2167,10 @@
 
     // Run Engine
     NavEngine.init();
+
+    window.addEventListener('pagehide', () => NavEngine.cleanup());
+    window.addEventListener('beforeunload', () => NavEngine.cleanup());
+    window.addEventListener('unload', () => NavEngine.cleanup());
 
   </script>
 </body>
