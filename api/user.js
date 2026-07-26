@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const WALLETWALLET_API_KEY = "ww_live_22f7b69fddac4dd40890d494fcbc4682";
+const WALLETWALLET_API_KEY = process.env.WALLETWALLET_API_KEY || "ww_live_22f7b69fddac4dd40890d494fcbc4682";
 const TEMPLATE_GOLD = "https://api.walletwallet.dev/p/40c18c8f-06ba-46aa-a36d-dc83279142e3";
 const TEMPLATE_SILVER = "https://api.walletwallet.dev/p/b9b7b535-2f0e-486e-81d2-d0fc86b3890f";
 const TEMPLATE_BRONZE = "https://api.walletwallet.dev/p/e5940b6a-c7d2-43c6-8bcd-f6bc03183b1d";

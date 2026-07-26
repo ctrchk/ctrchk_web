@@ -416,7 +416,7 @@
         if (!token) return;
         try {
             const cached = JSON.parse(localStorage.getItem('user') || '{}');
-            const userId = cached.id;
+            const userId = cached.id || cached.user_id;
             if (userId) {
                 // Configure dynamic wallet pass URLs
                 document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=apple`;
@@ -440,10 +440,11 @@
                 const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
                 const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
 
+                const finalUserId = profile.user_id || userId;
                 let expirySchedule = [];
                 let approachingExpiryKm = 0;
-                if (userId) {
-                    const uResp = await fetch('/api/user?user_id=' + userId, { headers: { Authorization: 'Bearer ' + token } });
+                if (finalUserId) {
+                    const uResp = await fetch('/api/user?user_id=' + finalUserId, { headers: { Authorization: 'Bearer ' + token } });
                     if (uResp.ok) {
                         const u = await uResp.json();
                         expirySchedule = u.expiry_schedule || [];
@@ -453,7 +454,6 @@
                 renderMileage(card, km, history.length, history, expirySchedule, approachingExpiryKm);
 
                 // Keep links synchronized if they are populated or update again if userId changes
-                const finalUserId = profile.user_id || userId;
                 if (finalUserId) {
                     document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${finalUserId}&wallet=apple`;
                     document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${finalUserId}&wallet=google`;

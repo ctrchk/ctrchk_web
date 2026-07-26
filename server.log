@@ -45,3 +45,24 @@
 127.0.0.1 - - [25/Jul/2026 17:00:19] code 404, message File not found
 127.0.0.1 - - [25/Jul/2026 17:00:19] "GET /api/getHistory HTTP/1.1" 404 -
 127.0.0.1 - - [25/Jul/2026 17:00:19] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:53] "GET /mileage.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:53] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:53] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:53] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:53] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:53] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] code 404, message File not found
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] code 404, message File not found
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /mileage.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] code 404, message File not found
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /api/getHistory HTTP/1.1" 404 -
+127.0.0.1 - - [26/Jul/2026 03:14:54] "GET /images/icon-192.png HTTP/1.1" 200 -
