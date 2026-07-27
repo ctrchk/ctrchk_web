@@ -5,7 +5,8 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-53F09894GX"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){gtag('js', new Date());}
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
       gtag('config', 'G-53F09894GX');
     </script>
 
@@ -721,6 +722,46 @@
             color: #334155;
         }
 
+        .privilege-tab-btn:hover {
+            background: rgba(255,255,255,0.08) !important;
+            color: #fff !important;
+        }
+        .privilege-tab-btn.active {
+            background: var(--gold-color) !important;
+            color: #000000 !important;
+            border-color: var(--gold-color) !important;
+            font-weight: 700;
+        }
+        body.app-light-theme .privilege-tab-btn.active {
+            background: #b45309 !important;
+            color: #ffffff !important;
+            border-color: #b45309 !important;
+        }
+
+        /* Mileage Changelog Styles */
+        .log-item {
+            transition: transform 0.2s, background 0.2s;
+        }
+        .log-item:hover {
+            transform: translateX(4px);
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+        .log-status-badge.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+        .log-status-badge.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        .log-status-badge.expired {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        body.app-light-theme .log-title {
+            color: #0f172a !important;
+        }
+
         @media (max-width: 768px) {
             .es-hub { flex-direction: column; text-align: center; }
             .factor-grid { grid-template-columns: 1fr; }
@@ -812,16 +853,28 @@
                             <div class="prog-bar-subtext" id="prog-xp-subtext">累積經驗值提升等級，Lv.6 可解鎖初階車手。</div>
                         </div>
 
-                        <!-- Mileage Maintenance Progress -->
+                        <!-- Mileage Upgrade Progress -->
                         <div class="prog-bar-container">
                             <div class="prog-bar-label">
-                                <span id="prog-mileage-title">365天滾動里程進度</span>
-                                <span id="prog-mileage-txt">0 / 150 km</span>
+                                <span id="prog-upgrade-title">365天滾動里程 ｜ 晉升進度</span>
+                                <span id="prog-upgrade-txt">0 / 150 km</span>
                             </div>
                             <div class="prog-bar-wrapper">
-                                <div class="prog-bar-fill silver" id="prog-mileage-fill"></div>
+                                <div class="prog-bar-fill silver" id="prog-upgrade-fill"></div>
                             </div>
-                            <div class="prog-bar-subtext" id="prog-mileage-subtext">365天滾動里程按天更新。</div>
+                            <div class="prog-bar-subtext" id="prog-upgrade-subtext">365天滾動里程按天更新。</div>
+                        </div>
+
+                        <!-- Mileage Retention Progress -->
+                        <div class="prog-bar-container">
+                            <div class="prog-bar-label">
+                                <span id="prog-retention-title">365天滾動里程 ｜ 保級進度</span>
+                                <span id="prog-retention-txt">0 / 120 km</span>
+                            </div>
+                            <div class="prog-bar-wrapper">
+                                <div class="prog-bar-fill gold" id="prog-retention-fill"></div>
+                            </div>
+                            <div class="prog-bar-subtext" id="prog-retention-subtext">365天滾動里程按天更新。</div>
                         </div>
                     </div>
 
@@ -942,9 +995,29 @@
             </div>
         </section>
 
+        <!-- Changelog-style Detailed Mileage History Log & Expiration Timetable -->
+        <section class="glass-panel" id="ml-history-log-section" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em;">
+                <h3 style="margin: 0; font-size: 1.05em; color: var(--gold-color);"><i class="fas fa-history"></i> 具體里程獲得明細與過期時間表 (Update Log)</h3>
+                <span style="font-size: 0.75em; color: #94a3b8;"><i class="fas fa-bicycle"></i> 365天滾動統計</span>
+            </div>
+            <div id="ml-history-log-container" style="display: flex; flex-direction: column; gap: 0.8em; max-height: 400px; overflow-y: auto; padding-right: 4px; -webkit-overflow-scrolling: touch;">
+                <!-- Logs dynamically inserted in update-log/changelog style -->
+            </div>
+        </section>
+
         <!-- Dynamic Entitlement Privileges Grid -->
         <section class="glass-panel">
-            <h3 style="margin-top: 0; margin-bottom: 0.8em; color: var(--gold-color);"><i class="fas fa-gem"></i> 您當前等級特權狀態 (Dynamic Privileges)</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1em; margin-bottom: 1.2em;">
+                <h3 style="margin: 0; color: var(--gold-color);"><i class="fas fa-gem"></i> 您當前等級特權狀態 (Dynamic Privileges)</h3>
+                <!-- Tab filters for Bronze, Silver, Gold, All -->
+                <div class="privilege-tabs" style="display: flex; gap: 0.5em;">
+                    <button class="privilege-tab-btn active" data-filter="all" style="padding: 0.4em 0.8em; font-size: 0.8em; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); color: #94a3b8; cursor: pointer; transition: all 0.2s;">全部權益</button>
+                    <button class="privilege-tab-btn" data-filter="bronze" style="padding: 0.4em 0.8em; font-size: 0.8em; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); color: #94a3b8; cursor: pointer; transition: all 0.2s;">🌱 銅卡</button>
+                    <button class="privilege-tab-btn" data-filter="silver" style="padding: 0.4em 0.8em; font-size: 0.8em; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); color: #94a3b8; cursor: pointer; transition: all 0.2s;">✨ 銀卡</button>
+                    <button class="privilege-tab-btn" data-filter="gold" style="padding: 0.4em 0.8em; font-size: 0.8em; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); color: #94a3b8; cursor: pointer; transition: all 0.2s;">👑 金卡</button>
+                </div>
+            </div>
             <div class="privileges-grid" id="dynamic-privileges-container">
                 <!-- Loaded dynamically -->
             </div>
@@ -1132,21 +1205,41 @@
             });
         }
 
-        // Unified static entitlement list for local dynamic privilege generation
+        // Unified static entitlement list fully mapping the 25 official privileges (lib/permissions.js & docs/mileage.md)
         const PERMISSION_DEFS_CLIENT = [
-            { key: 'nav_2d_basic', rank: 'bronze', label: '基礎 2D 導航', desc: '隨開隨用的 Leaflet 地圖標準路線導航。', icon: 'fa-map' },
-            { key: 'ride_basic_stats', rank: 'bronze', label: '基礎數據紀錄', desc: '追蹤個人有氧里程、通勤時長與平均速度。', icon: 'fa-chart-bar' },
-            { key: 'weather_basic', rank: 'bronze', label: '基礎氣象資訊', desc: '即時天氣溫度、風速與濕度標準看板。', icon: 'fa-sun' },
-            { key: 'reward_variable', rank: 'bronze', label: '隨機里程幣盲盒', desc: '每次完成低碳出行結算即可獲取隨機盲盒。', icon: 'fa-box-open' },
-            { key: 'map_cycparkspace', rank: 'silver', label: '全港單車泊位圖層', desc: '解鎖 CYCPARKSPACE 即時公共與私人泊車點分佈。', icon: 'fa-parking' },
-            { key: 'theme_silver', rank: 'silver', label: '鈦銀閃耀 UI 特效', desc: '解鎖銀白色動態頭像圈與專屬社群名字。', icon: 'fa-palette' },
-            { key: 'nav_multistop', rank: 'silver', label: '自訂途經點 (上限5)', desc: '在 A 到 B 之間隨意加插最高 5 個中途停留站點。', icon: 'fa-map-pin' },
-            { key: 'coin_bonus_silver', rank: 'silver', label: '里程幣收益永久 +5%', desc: '每一次騎行所產出的 XP 與里程幣均享受 +5% 加成。', icon: 'fa-percent' },
-            { key: 'map_3d_gold', rank: 'gold', label: 'Mapbox 3D 高空車道', desc: '解鎖最高規格的霓虹流光 3D 車道巡航視覺。', icon: 'fa-cube' },
-            { key: 'theme_gold', rank: 'gold', label: '黑金版地圖與高對比主題', desc: '無上尊榮的 Black Gold 特效，享有炫彩漸變霓虹。', icon: 'fa-crown' },
-            { key: 'coin_bonus_gold', rank: 'gold', label: '里程幣收益永久 +15%', desc: '每一次低碳騎行結算享受高達 +15% 的極限加成。', icon: 'fa-coins' },
-            { key: 'beta_priority', rank: 'gold', label: 'Beta 新功能優先權', desc: '提前參與 CTRC HK 核心新功能的優先灰度體驗。', icon: 'fa-flask' },
+            // Bronze 1-6
+            { key: 'nav_2d_basic', rank: 'bronze', label: '基礎 2D 單車徑導航', desc: '隨開隨用的 Leaflet 地圖標準路線導航。', icon: 'fa-map' },
+            { key: 'ride_basic_stats', rank: 'bronze', label: '基礎個人數據紀錄', desc: '追蹤個人有氧里程、通勤時長與平均速度。', icon: 'fa-chart-bar' },
+            { key: 'weather_basic', rank: 'bronze', label: '基礎氣象資訊（氣溫、濕度）', desc: '即時天氣溫度、風速與濕度標準看板。', icon: 'fa-sun' },
+            { key: 'poster_basic', rank: 'bronze', label: 'IG Story 數據海報 (含浮水印)', desc: '支持生成帶有 CTRCHK 浮水印的社交分享海報。', icon: 'fa-image' },
+            { key: 'discord_basic', rank: 'bronze', label: 'Discord 基礎頻道訪問權', desc: '加入官方 Discord 伺服器並解鎖大眾公共頻道。', icon: 'fa-comments' },
+            { key: 'reward_variable', rank: 'bronze', label: '基礎隨機多巴胺盲盒結算', desc: '每次完成低碳出行結算即可獲取隨機盲盒獎勵。', icon: 'fa-box-open' },
+
+            // Silver 7-15
+            { key: 'map_cycparkspace', rank: 'silver', label: 'CYCPARKSPACE 泊位圖層', desc: '解鎖 CYCPARKSPACE 即時公共與私人泊車點分佈。', icon: 'fa-parking' },
+            { key: 'theme_silver', rank: 'silver', label: '銀色閃耀 UI 主題與頭像框', desc: '解鎖銀白色動態頭像圈與專屬社群名字。', icon: 'fa-palette' },
+            { key: 'nav_multistop', rank: 'silver', label: '多站點自訂路線規劃 (最多5站)', desc: '在 A 到 B 之間隨意加插最高 5 個中途停留站點。', icon: 'fa-map-pin' },
+            { key: 'weather_heavy_rain_alert', rank: 'silver', label: '突發暴雨預警優先推送', desc: '優先接收全港突發雷雨或暴雨安全警告廣播。', icon: 'fa-cloud-showers-heavy' },
+            { key: 'poster_no_watermark', rank: 'silver', label: '無浮水印高清數據海報', desc: '生成 1080x1350 高解析度、乾淨精美的無浮水印海報。', icon: 'fa-camera-retro' },
+            { key: 'coin_bonus_silver', rank: 'silver', label: '里程幣收益永久加成 +5%', desc: '每一次低碳出行結算享受額外 +5% 里程幣加成。', icon: 'fa-percent' },
+            { key: 'map_issue_report', rank: 'silver', label: '路面維修/障礙標記權', desc: '在導航地圖中實時回報塌樹、違泊等路況障礙。', icon: 'fa-exclamation-triangle' },
+            { key: 'weekly_efficiency_report', rank: 'silver', label: '週度騎行效率深度分析', desc: '解鎖個人週度平均配速、通勤效率與體能消耗報告。', icon: 'fa-chart-line' },
+            { key: 'discord_silver_role', rank: 'silver', label: 'Discord「銀色破風手」身份組', desc: '綁定後在官方 Discord 自動獲得尊屬銀卡身份標誌。', icon: 'fa-shield-alt' },
+
+            // Gold 16-25
+            { key: 'map_3d_gold', rank: 'gold', label: 'Mapbox 3D 高精度車道視角', desc: '解鎖最高規格的霓虹流光 3D 車道巡航視覺。', icon: 'fa-cube' },
+            { key: 'theme_gold', rank: 'gold', label: '極簡黑金版地圖皮膚與黑金主題', desc: '無上尊榮的 Black Gold 烈日高對比黑底金字安全 UI。', icon: 'fa-crown' },
+            { key: 'poster_gold_copy', rank: 'gold', label: '海報黃金優越感文案', desc: '海報生成解鎖金卡專屬霸氣燙金字與自豪宣傳句。', icon: 'fa-font' },
+            { key: 'coin_bonus_gold', rank: 'gold', label: '里程幣收益永久加成 +15%', desc: '每一次低碳騎行結算享受高達 +15% 的極限加成。', icon: 'fa-coins' },
+            { key: 'route_naming_rights', rank: 'gold', label: '路線命名權（提交審核）', desc: '有權為新設計或已征服路線提交命名，並署名作者。', icon: 'fa-pen-fancy' },
+            { key: 'weather_radar_5min', rank: 'gold', label: '5 分鐘級降雨雷達圖層', desc: '高精度雷達即時雨量追蹤，精準避開突發陣雨。', icon: 'fa-broadcast-tower' },
+            { key: 'beta_priority', rank: 'gold', label: '新功能 Beta 優先體驗', desc: '提前 14 天Gray-scale參與 CTRC HK 核心功能體驗。', icon: 'fa-flask' },
+            { key: 'discord_emergency', rank: 'gold', label: 'Discord 金卡應急小組一鍵求援', desc: '遭遇事故或故障時可在 Discord 應急頻道一鍵報警。', icon: 'fa-ambulance' },
+            { key: 'weekend_double_preview', rank: 'gold', label: '雙倍里程路線提前 24小時解鎖', desc: '搶先預覽本週末雙倍倍率推薦路網，提前佈局。', icon: 'fa-calendar-alt' },
+            { key: 'discord_gold_role', rank: 'gold', label: 'Discord「黃金領領」稱號與特效', desc: '尊享官方論壇黃金頭像框、黃金渐變名與入場特效。', icon: 'fa-award' }
         ];
+
+        let currentActiveFilter = 'all';
 
         function renderDynamicPrivileges(userRank) {
             const container = document.getElementById('dynamic-privileges-container');
@@ -1156,7 +1249,12 @@
             const rankOrder = ['bronze', 'silver', 'gold'];
             const userRankIndex = rankOrder.indexOf(userRank.toLowerCase());
 
-            PERMISSION_DEFS_CLIENT.forEach(item => {
+            const filtered = PERMISSION_DEFS_CLIENT.filter(item => {
+                if (currentActiveFilter === 'all') return true;
+                return item.rank === currentActiveFilter;
+            });
+
+            filtered.forEach(item => {
                 const requiredIndex = rankOrder.indexOf(item.rank);
                 const isUnlocked = userRankIndex >= requiredIndex;
 
@@ -1179,6 +1277,98 @@
             });
         }
 
+        // Render Mileage Changelog
+        function renderMileageLog(historyList) {
+            const container = document.getElementById('ml-history-log-container');
+            const section = document.getElementById('ml-history-log-section');
+            if (!container || !section) return;
+
+            if (!historyList || historyList.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2em 1em; color: #94a3b8; font-size: 0.9em;">
+                        <i class="fas fa-bicycle" style="font-size: 2em; color: #475569; display: block; margin-bottom: 0.5em;"></i>
+                        暫無任何騎行里程記錄
+                    </div>
+                `;
+                section.style.display = 'block';
+                return;
+            }
+
+            container.innerHTML = '';
+            section.style.display = 'block';
+
+            const now = new Date();
+            const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            const thirtyDaysLater = new Date(todayUtc.getTime() + 30 * 86400000);
+
+            // Filter out records that don't have valid distance_km or are 0
+            const validRides = historyList.filter(h => Number(h.distance_km || 0) > 0);
+
+            if (validRides.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2em 1em; color: #94a3b8; font-size: 0.9em;">
+                        <i class="fas fa-bicycle" style="font-size: 2em; color: #475569; display: block; margin-bottom: 0.5em;"></i>
+                        暫無任何騎行里程記錄
+                    </div>
+                `;
+                return;
+            }
+
+            validRides.forEach(ride => {
+                const distance = Number(ride.distance_km || 0);
+                const duration = Number(ride.duration_minutes || 0);
+                const xp = Number(ride.xp_earned || 0);
+
+                // Calculate expiration date (+365 days)
+                const rideDate = new Date(ride.ride_date);
+                const expiryDate = new Date(rideDate.getTime() + 365 * 86400000);
+
+                const rideDateStr = ride.ride_date.slice(0, 10);
+                const expiryDateStr = expiryDate.toISOString().slice(0, 10);
+
+                let statusClass = 'active';
+                let statusText = '有效中';
+                let borderColor = '#10b981'; // green
+
+                if (expiryDate.getTime() < todayUtc.getTime()) {
+                    statusClass = 'expired';
+                    statusText = '已失效';
+                    borderColor = '#475569'; // grey
+                } else if (expiryDate.getTime() <= thirtyDaysLater.getTime()) {
+                    statusClass = 'warning';
+                    statusText = '即將過期';
+                    borderColor = '#f59e0b'; // orange
+                }
+
+                const logItem = document.createElement('div');
+                logItem.className = 'log-item';
+                logItem.style.padding = '1em';
+                logItem.style.borderLeft = `4px solid ${borderColor}`;
+                logItem.style.background = 'rgba(255,255,255,0.015)';
+                logItem.style.borderRadius = '0 8px 8px 0';
+                logItem.style.display = 'flex';
+                logItem.style.justifyContent = 'space-between';
+                logItem.style.alignItems = 'center';
+                logItem.style.gap = '1em';
+
+                logItem.innerHTML = `
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.6em; margin-bottom: 0.25em;">
+                            <span class="log-date" style="font-size: 0.75em; color: #94a3b8; font-weight: 600;"><i class="far fa-calendar-alt"></i> ${rideDateStr}</span>
+                            <span class="log-status-badge ${statusClass}" style="font-size: 0.7em; font-weight: 700; padding: 0.15em 0.5em; border-radius: 4px;">${statusText}</span>
+                        </div>
+                        <div class="log-title" style="font-size: 0.95em; font-weight: 700; color: #fff; margin-bottom: 0.25em;">${ride.route_name || '自由模式騎行'}</div>
+                        <div class="log-meta" style="font-size: 0.75em; color: #64748b;"><i class="fas fa-history"></i> 歷時 ${duration} 分鐘 ｜ <i class="fas fa-clock"></i> 失效時間：${expiryDateStr}</div>
+                    </div>
+                    <div style="text-align: right; flex-shrink: 0;">
+                        <div class="log-value" style="font-size: 1.25em; font-weight: 800; color: var(--gold-color);">+${distance.toFixed(1)} km</div>
+                        <div class="log-rewards" style="font-size: 0.7em; color: #bfe340; font-weight: 600;"><i class="fas fa-star"></i> +${xp} XP</div>
+                    </div>
+                `;
+                container.appendChild(logItem);
+            });
+        }
+
         // Initialize state
         (async function initPremiumPage() {
             const token = localStorage.getItem('accessToken');
@@ -1186,6 +1376,16 @@
                 document.getElementById('es-eval-title').textContent = "請登入以查看您的評分";
                 document.getElementById('user-profile-name').textContent = "未登入訪客";
                 renderDynamicPrivileges('bronze');
+
+                // Setup interactive privilege tabs for guests
+                document.querySelectorAll('.privilege-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.privilege-tab-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        currentActiveFilter = btn.dataset.filter;
+                        renderDynamicPrivileges('bronze');
+                    });
+                });
                 return;
             }
 
@@ -1196,6 +1396,7 @@
                 });
                 if (res.ok) {
                     const u = await res.json();
+                    const rollingKm = Number(u.mileage_rolling_km || u.rolling_distance_km || 0);
 
                     // Sync basic card details first with fallback to actual user id from database response
                     const userId = u.id;
@@ -1234,28 +1435,58 @@
                     xpFill.className = `prog-bar-fill ${cardRank}`;
                     document.getElementById('prog-xp-subtext').textContent = `升級至 Lv.${(u.level || 1) + 1} 還需要 ${xpRequiredForNext - xpCurrent} XP。`;
 
-                    // Rolling Mileage Target progression based on tiers
-                    let targetMileage = 150; // default silver threshold
-                    let mileageTitle = "365天滾動里程 ｜ 晉升銀卡進度";
-                    let mileageSub = `再累積 ${(150 - rollingKm).toFixed(1)} km 解鎖銀卡。滾動里程每日結算更新。`;
+                    // Rolling Mileage Target progression based on tiers - Split into Upgrade and Retention
+                    let upgradeTarget = 150; // default bronze -> silver
+                    let upgradeTitle = "365天滾動里程 ｜ 晉升銀卡進度";
+                    let upgradeSub = `再累積 ${Math.max(0, 150 - rollingKm).toFixed(1)} km 解鎖銀卡。滾動里程每日結算更新。`;
+                    let upgradePct = Math.min(100, Math.max(0, (rollingKm / 150) * 100));
+
+                    let retentionTarget = 0; // bronze doesn't need retention (permanent)
+                    let retentionTitle = "365天滾動里程 ｜ 銅卡免降級";
+                    let retentionSub = `🌱 銅卡享有終身免降級保證，無任何保級里程壓力！`;
+                    let retentionPct = 100;
 
                     if (cardRank === 'silver') {
-                        targetMileage = 400; // maintenance target or gold target
-                        mileageTitle = "365天滾動里程 ｜ 晉升金卡進度";
-                        mileageSub = `保持 120 km 以上維持銀卡，再累積 ${(500 - rollingKm).toFixed(1)} km 晉升金卡。`;
+                        upgradeTarget = 500; // silver -> gold
+                        upgradeTitle = "365天滾動里程 ｜ 晉升金卡進度";
+                        upgradeSub = `再累積 ${Math.max(0, 500 - rollingKm).toFixed(1)} km 晉升金卡。`;
+                        upgradePct = Math.min(100, Math.max(0, (rollingKm / 500) * 100));
+
+                        retentionTarget = 120;
+                        retentionTitle = "365天滾動里程 ｜ 銀卡保級進度";
+                        retentionSub = rollingKm >= 120
+                            ? `🎉 已達 120 km，成功保級銀卡！`
+                            : `需保持 120 km 以上以維持銀卡，還差 ${Math.max(0, 120 - rollingKm).toFixed(1)} km。`;
+                        retentionPct = Math.min(100, Math.max(0, (rollingKm / 120) * 100));
                     } else if (cardRank === 'gold') {
-                        targetMileage = 400; // gold maintenance target
-                        mileageTitle = "365天滾動里程 ｜ 金卡保級進度";
-                        mileageSub = `保持 400 km 以上即可在未來 365 天內持續維持無上的金卡頭銜。`;
+                        upgradeTarget = 500;
+                        upgradeTitle = "365天滾動里程 ｜ 已達最高卡級";
+                        upgradeSub = `👑 您已解鎖最高榮譽金卡，無可再升級！`;
+                        upgradePct = 100;
+
+                        retentionTarget = 400;
+                        retentionTitle = "365天滾動里程 ｜ 金卡保級進度";
+                        retentionSub = rollingKm >= 400
+                            ? `🎉 已達 400 km，成功保級金卡！`
+                            : `需保持 400 km 以上以維持金卡，還差 ${Math.max(0, 400 - rollingKm).toFixed(1)} km。`;
+                        retentionPct = Math.min(100, Math.max(0, (rollingKm / 400) * 100));
                     }
 
-                    const mPct = Math.min(100, Math.max(0, (rollingKm / targetMileage) * 100));
-                    document.getElementById('prog-mileage-title').textContent = mileageTitle;
-                    document.getElementById('prog-mileage-txt').textContent = `${rollingKm.toFixed(1)} / ${targetMileage} km`;
-                    const mileageFill = document.getElementById('prog-mileage-fill');
-                    mileageFill.style.width = `${mPct}%`;
-                    mileageFill.className = `prog-bar-fill ${cardRank}`;
-                    document.getElementById('prog-mileage-subtext').textContent = mileageSub;
+                    // Render Upgrade Progress Bar
+                    document.getElementById('prog-upgrade-title').textContent = upgradeTitle;
+                    document.getElementById('prog-upgrade-txt').textContent = `${rollingKm.toFixed(1)} / ${upgradeTarget} km`;
+                    const upgradeFill = document.getElementById('prog-upgrade-fill');
+                    upgradeFill.style.width = `${upgradePct}%`;
+                    upgradeFill.className = `prog-bar-fill ${cardRank}`;
+                    document.getElementById('prog-upgrade-subtext').textContent = upgradeSub;
+
+                    // Render Retention Progress Bar
+                    document.getElementById('prog-retention-title').textContent = retentionTitle;
+                    document.getElementById('prog-retention-txt').textContent = retentionTarget > 0 ? `${rollingKm.toFixed(1)} / ${retentionTarget} km` : 'PERMANENT';
+                    const retentionFill = document.getElementById('prog-retention-fill');
+                    retentionFill.style.width = `${retentionPct}%`;
+                    retentionFill.className = `prog-bar-fill ${cardRank}`;
+                    document.getElementById('prog-retention-subtext').textContent = retentionSub;
 
                     // Numeric Mileage records indicators
                     document.getElementById('rec-rolling-mileage').textContent = `${rollingKm.toFixed(1)} km`;
@@ -1299,6 +1530,29 @@
 
                     // Expiration Warning
                     drawExpiryChart(u.expiry_schedule || [], u.approaching_expiry_km || 0);
+
+                    // Fetch detailed ride history to build Changelog detailed mileage log
+                    try {
+                        const historyRes = await fetch(`/api/getHistory`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (historyRes.ok) {
+                            const historyData = await historyRes.json();
+                            renderMileageLog(historyData.history || []);
+                        }
+                    } catch (historyErr) {
+                        console.error('Failed to load ride history for log:', historyErr);
+                    }
+
+                    // Setup interactive privilege tabs
+                    document.querySelectorAll('.privilege-tab-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            document.querySelectorAll('.privilege-tab-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            currentActiveFilter = btn.dataset.filter;
+                            renderDynamicPrivileges(cardRank);
+                        });
+                    });
                 }
 
             } catch (err) {
