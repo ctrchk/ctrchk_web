@@ -136,6 +136,12 @@ ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_last_date 
 ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_pending INTEGER DEFAULT 0;
 ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS commute_streak_pending_date DATE;
 ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS total_saved_fare NUMERIC DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS elite_score NUMERIC DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS elevation_gain_30 NUMERIC DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS consistency_days_30 INTEGER DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS exploration_ratio NUMERIC DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS community_contribution INTEGER DEFAULT 0;
+ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS current_season INTEGER DEFAULT 1;
 
 -- =========================================================
 -- 遊戲化：用戶已解鎖路線

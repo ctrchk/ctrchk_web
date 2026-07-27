@@ -888,6 +888,61 @@ export default async function handler(req, res) {
         let coinsEarned = 0;
         let levelUp = newLevel > oldLevel;
 
+        // Recalculate Elite Score stats
+        const { rows: m30Rows } = await query(
+          `SELECT COALESCE(SUM(distance_km), 0) AS m30
+           FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+          [userData.userId]
+        );
+        const distance30 = Number(m30Rows[0]?.m30 || 0) + distKmVal;
+        const mFactor = distance30 * 10;
+
+        const { rows: e30Rows } = await query(
+          `SELECT COALESCE(SUM(distance_km * 18.5), 0) AS e30
+           FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+          [userData.userId]
+        );
+        const elevation30 = Number(e30Rows[0]?.e30 || 0) + (distKmVal * 18.5);
+        const eFactor = elevation30 / 5;
+
+        const { rows: c30Rows } = await query(
+          `SELECT COUNT(DISTINCT ride_date) AS c30
+           FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+          [userData.userId]
+        );
+        const consistencyDays = Number(c30Rows[0]?.c30 || 0) + 1;
+        const cFactor = consistencyDays * 15;
+
+        const esCommuteStreak = Number(profile.commute_streak || 0);
+        const sFactor = Math.min(150, esCommuteStreak * 5);
+
+        // Fetch user routes
+        const { rows: routesCountRows } = await query('SELECT COUNT(*) AS total_count FROM routes');
+        const totalRoutesCount = Math.max(1, Number(routesCountRows[0]?.total_count || 12));
+        const explorationRatio = Math.min(1.0, 1 / totalRoutesCount); // incremental base
+        const xFactor = explorationRatio * 200;
+
+        const { rows: forumCountRows } = await query(
+          `SELECT COUNT(*) AS cnt FROM forum_topics WHERE user_id = $1`, [userData.userId]
+        );
+        const { rows: replyCountRows } = await query(
+          `SELECT COUNT(*) AS cnt FROM forum_replies WHERE user_id = $1`, [userData.userId]
+        );
+        const communityContribution = Number(forumCountRows[0]?.cnt || 0) + Number(replyCountRows[0]?.cnt || 0);
+        const pFactor = communityContribution * 20;
+
+        const totalEliteScore = Math.round(mFactor + eFactor + cFactor + sFactor + xFactor + pFactor);
+
+        await query(
+          `UPDATE user_game_profile
+           SET elite_score = $1, elevation_gain_30 = $2, consistency_days_30 = $3
+           WHERE user_id = $4`,
+          [totalEliteScore, elevation30, consistencyDays, userData.userId]
+        );
+
         if (levelUp) {
           // 累計升級獎勵里程幣
           const { rows: levelRows } = await query(
