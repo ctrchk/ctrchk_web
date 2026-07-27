@@ -767,10 +767,15 @@ export default async function handler(req, res) {
     }
 
     try {
-      const { google_id, email, user_id } = req.query;
+      let { google_id, email, user_id } = req.query;
 
       if (!google_id && !email && !user_id) {
-        return res.status(400).json({ message: 'User identifier required (google_id, email, or user_id)' });
+        const userData = await authenticate(req, res, false);
+        if (userData && userData.userId) {
+          user_id = userData.userId;
+        } else {
+          return res.status(400).json({ message: 'User identifier required (google_id, email, or user_id)' });
+        }
       }
 
       let result;
