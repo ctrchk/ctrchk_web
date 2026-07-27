@@ -84,120 +84,202 @@
             margin-bottom: 2.5em;
         }
 
-        /* Interactive 3D Card */
+        /* Interactive 3D Card Redesigned */
         .physical-card {
-            width: 340px;
-            height: 205px;
-            border-radius: 18px;
+            width: 345px;
+            height: 215px;
+            border-radius: 20px;
             position: relative;
             transform-style: preserve-3d;
             transition: transform 0.1s ease-out, box-shadow 0.3s ease;
             cursor: pointer;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05);
-            background: var(--bronze-gradient);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
             overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 1.4em;
+            padding: 1.5em;
         }
 
-        .physical-card::before {
-            content: '';
+        /* Laser Grid Overlay Effect */
+        .card-laser-grid {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15) 0%, transparent 60%);
-            pointer-events: none;
+            background:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 14px 14px,
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 14px 14px;
+            mix-blend-mode: overlay;
             z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Quantum Core / NFC element with pulsing breathing animation */
+        .quantum-core {
+            position: absolute;
+            right: 25px;
+            top: 45%;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: core-spin 12s linear infinite;
+            z-index: 2;
+        }
+
+        .quantum-core::after {
+            content: '';
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 15px #fff;
+            animation: core-breath 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes core-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes core-breath {
+            0% { transform: scale(0.85); opacity: 0.4; }
+            100% { transform: scale(1.15); opacity: 1; }
         }
 
         /* Reflex stream glare line */
         .card-glare {
             position: absolute;
             top: -100%; left: -100%; right: -100%; bottom: -100%;
-            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.12) 55%, transparent 60%);
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 45%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 55%, transparent 60%);
             transform: rotate(25deg);
             transition: all 0.1s ease;
             pointer-events: none;
-            z-index: 2;
+            z-index: 5;
         }
 
-        .physical-card.bronze { background: var(--bronze-gradient); border: 1.5px solid var(--bronze-color); }
-        .physical-card.silver { background: var(--silver-gradient); border: 1.5px solid var(--silver-color); }
-        .physical-card.gold { background: var(--gold-gradient); border: 1.5px solid var(--gold-color); }
+        /* Metallic-edge borders & specific custom gradients for tiers */
+        .physical-card.bronze {
+            background: var(--bronze-gradient);
+            border: 2px solid rgba(216, 165, 107, 0.6);
+            box-shadow: 0 20px 45px rgba(216, 165, 107, 0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .physical-card.bronze .quantum-core {
+            border-color: rgba(216, 165, 107, 0.3);
+        }
+        .physical-card.bronze .quantum-core::after {
+            background: var(--bronze-color);
+            box-shadow: 0 0 12px var(--bronze-color);
+        }
+
+        .physical-card.silver {
+            background: var(--silver-gradient);
+            border: 2px solid rgba(209, 217, 223, 0.6);
+            box-shadow: 0 20px 45px rgba(209, 217, 223, 0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+        .physical-card.silver .quantum-core {
+            border-color: rgba(209, 217, 223, 0.4);
+        }
+        .physical-card.silver .quantum-core::after {
+            background: var(--silver-color);
+            box-shadow: 0 0 12px var(--silver-color);
+        }
+
+        .physical-card.gold {
+            background: var(--gold-gradient);
+            border: 2px solid rgba(240, 211, 114, 0.75);
+            box-shadow: 0 25px 55px rgba(240, 211, 114, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .physical-card.gold .quantum-core {
+            border-color: rgba(240, 211, 114, 0.5);
+            background: radial-gradient(circle, rgba(240, 211, 114, 0.15) 0%, transparent 70%);
+        }
+        .physical-card.gold .quantum-core::after {
+            background: var(--gold-color);
+            box-shadow: 0 0 15px var(--gold-color);
+        }
 
         .card-top {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             transform: translateZ(30px);
+            z-index: 3;
         }
         .card-brand {
-            font-size: 0.85em;
+            font-size: 0.8em;
             font-weight: 800;
-            letter-spacing: 0.1em;
-            color: #fff;
+            letter-spacing: 0.12em;
+            color: rgba(255, 255, 255, 0.9);
             text-transform: uppercase;
         }
         .card-logo {
-            font-size: 1.4em;
+            font-size: 1.5em;
             color: #fff;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
         }
         .card-mid {
             transform: translateZ(40px);
-            margin-top: 1.5em;
+            margin-top: 1.2em;
+            z-index: 3;
         }
         .card-chip {
-            width: 38px;
-            height: 28px;
-            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            width: 42px;
+            height: 30px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             border-radius: 6px;
             position: relative;
             margin-bottom: 0.8em;
-            box-shadow: inset 0 1px 1px rgba(255,255,255,0.6);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.3);
         }
         .card-chip::after {
             content: '';
             position: absolute;
-            top: 2px; left: 2px; right: 2px; bottom: 2px;
-            border: 1px solid rgba(0,0,0,0.15);
+            top: 3px; left: 3px; right: 3px; bottom: 3px;
+            border: 1px solid rgba(0,0,0,0.12);
             border-radius: 4px;
         }
         .card-number {
             font-family: "Courier New", Courier, monospace;
-            font-size: 1.05em;
-            letter-spacing: 0.15em;
+            font-size: 1.15em;
+            font-weight: bold;
+            letter-spacing: 0.12em;
             color: #fff;
-            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
         }
         .card-bottom {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
             transform: translateZ(30px);
+            z-index: 3;
         }
         .card-holder {
-            font-size: 0.72em;
+            font-size: 0.75em;
             letter-spacing: 0.05em;
             text-transform: uppercase;
-            color: #cbd5e1;
+            color: #e2e8f0;
         }
         .card-holder span {
             display: block;
-            font-size: 1.15em;
-            font-weight: 700;
+            font-size: 1.2em;
+            font-weight: 800;
             color: #fff;
             margin-top: 0.25em;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         .card-tier-label {
-            font-size: 1.15em;
+            font-size: 1.25em;
             font-weight: 900;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
         }
-        .bronze .card-tier-label { color: var(--bronze-color); text-shadow: 0 0 10px rgba(216,165,107,0.3); }
-        .silver .card-tier-label { color: var(--silver-color); text-shadow: 0 0 10px rgba(209,217,223,0.3); }
-        .gold .card-tier-label { color: var(--gold-color); text-shadow: 0 0 10px rgba(240,211,114,0.4); }
+        .bronze .card-tier-label { color: var(--bronze-color); text-shadow: 0 0 12px rgba(216,165,107,0.5); }
+        .silver .card-tier-label { color: var(--silver-color); text-shadow: 0 0 12px rgba(209,217,223,0.5); }
+        .gold .card-tier-label { color: var(--gold-color); text-shadow: 0 0 15px rgba(240,211,114,0.6); }
 
         /* General Grid Glass Card */
         .glass-panel {
@@ -391,6 +473,60 @@
             box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
         }
 
+        /* Unified Dynamic Privileges Layout */
+        .privileges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.2em;
+            margin-top: 1em;
+        }
+        .privilege-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.2em;
+            position: relative;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .privilege-card.unlocked {
+            border-color: rgba(191, 227, 64, 0.3);
+            background: linear-gradient(135deg, rgba(191, 227, 64, 0.04) 0%, rgba(255,255,255,0.01) 100%);
+        }
+        .privilege-card.locked {
+            opacity: 0.6;
+            filter: grayscale(80%);
+        }
+        .privilege-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.7em;
+            font-weight: bold;
+            padding: 0.2em 0.6em;
+            border-radius: 20px;
+        }
+        .privilege-badge.unlocked {
+            background: rgba(191, 227, 64, 0.2);
+            color: #bfe340;
+        }
+        .privilege-badge.locked {
+            background: rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+        }
+        .privilege-meta {
+            margin-top: auto;
+            font-size: 0.72em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .privilege-meta.bronze { color: var(--bronze-color); }
+        .privilege-meta.silver { color: var(--silver-color); }
+        .privilege-meta.gold { color: var(--gold-color); }
+
         /* Professional Benefit Matrix Table */
         .comparison-table-wrapper {
             overflow-x: auto;
@@ -517,6 +653,8 @@
         <!-- 3D Card Showcase -->
         <section class="card-showcase">
             <div class="physical-card bronze" id="membership-card">
+                <div class="card-laser-grid"></div>
+                <div class="quantum-core"></div>
                 <div class="card-glare" id="card-glare"></div>
                 <div class="card-top">
                     <span class="card-brand">CTRC HK LICENSE</span>
@@ -659,6 +797,14 @@
             </div>
             <div id="ml-expiry-chart-tooltip" style="margin-top: 10px; font-size: 0.78em; text-align: center; color: var(--gold-color); min-height: 1.2em;">
                 點擊或懸停上方柱狀圖，查看特定日期之預期失效里程
+            </div>
+        </section>
+
+        <!-- Dynamic Entitlement Privileges Grid -->
+        <section class="glass-panel">
+            <h3 style="margin-top: 0; margin-bottom: 0.8em; color: var(--gold-color);"><i class="fas fa-gem"></i> 您當前等級特權狀態 (Dynamic Privileges)</h3>
+            <div class="privileges-grid" id="dynamic-privileges-container">
+                <!-- Loaded dynamically -->
             </div>
         </section>
 
@@ -844,31 +990,78 @@
             });
         }
 
+        // Unified static entitlement list for local dynamic privilege generation
+        const PERMISSION_DEFS_CLIENT = [
+            { key: 'nav_2d_basic', rank: 'bronze', label: '基礎 2D 導航', desc: '隨開隨用的 Leaflet 地圖標準路線導航。', icon: 'fa-map' },
+            { key: 'ride_basic_stats', rank: 'bronze', label: '基礎數據紀錄', desc: '追蹤個人有氧里程、通勤時長與平均速度。', icon: 'fa-chart-bar' },
+            { key: 'weather_basic', rank: 'bronze', label: '基礎氣象資訊', desc: '即時天氣溫度、風速與濕度標準看板。', icon: 'fa-sun' },
+            { key: 'reward_variable', rank: 'bronze', label: '隨機里程幣盲盒', desc: '每次完成低碳出行結算即可獲取隨機盲盒。', icon: 'fa-box-open' },
+            { key: 'map_cycparkspace', rank: 'silver', label: '全港單車泊位圖層', desc: '解鎖 CYCPARKSPACE 即時公共與私人泊車點分佈。', icon: 'fa-parking' },
+            { key: 'theme_silver', rank: 'silver', label: '鈦銀閃耀 UI 特效', desc: '解鎖銀白色動態頭像圈與專屬社群名字。', icon: 'fa-palette' },
+            { key: 'nav_multistop', rank: 'silver', label: '自訂途經點 (上限5)', desc: '在 A 到 B 之間隨意加插最高 5 個中途停留站點。', icon: 'fa-map-pin' },
+            { key: 'coin_bonus_silver', rank: 'silver', label: '里程幣收益永久 +5%', desc: '每一次騎行所產出的 XP 與里程幣均享受 +5% 加成。', icon: 'fa-percent' },
+            { key: 'map_3d_gold', rank: 'gold', label: 'Mapbox 3D 高空車道', desc: '解鎖最高規格的霓虹流光 3D 車道巡航視覺。', icon: 'fa-cube' },
+            { key: 'theme_gold', rank: 'gold', label: '黑金版地圖與高對比主題', desc: '無上尊榮的 Black Gold 特效，享有炫彩漸變霓虹。', icon: 'fa-crown' },
+            { key: 'coin_bonus_gold', rank: 'gold', label: '里程幣收益永久 +15%', desc: '每一次低碳騎行結算享受高達 +15% 的極限加成。', icon: 'fa-coins' },
+            { key: 'beta_priority', rank: 'gold', label: 'Beta 新功能優先權', desc: '提前參與 CTRC HK 核心新功能的優先灰度體驗。', icon: 'fa-flask' },
+        ];
+
+        function renderDynamicPrivileges(userRank) {
+            const container = document.getElementById('dynamic-privileges-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const rankOrder = ['bronze', 'silver', 'gold'];
+            const userRankIndex = rankOrder.indexOf(userRank.toLowerCase());
+
+            PERMISSION_DEFS_CLIENT.forEach(item => {
+                const requiredIndex = rankOrder.indexOf(item.rank);
+                const isUnlocked = userRankIndex >= requiredIndex;
+
+                const card = document.createElement('div');
+                card.className = `privilege-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="privilege-badge ${isUnlocked ? 'unlocked' : 'locked'}">
+                            <i class="fas ${isUnlocked ? 'fa-lock-open' : 'fa-lock'}"></i> ${isUnlocked ? '已解鎖' : '未解鎖'}
+                        </div>
+                        <h4 style="margin: 0 0 0.5em; font-size: 1.05em; color: ${isUnlocked ? '#fff' : '#64748b'};"><i class="fas ${item.icon}" style="margin-right: 6px; color: ${isUnlocked ? 'var(--gold-color)' : '#475569'}"></i> ${item.label}</h4>
+                        <p style="margin: 0; font-size: 0.78em; color: #94a3b8; line-height: 1.4;">${item.desc}</p>
+                    </div>
+                    <div class="privilege-meta ${item.rank}" style="margin-top: 1.2em;">
+                        ${item.rank === 'gold' ? '👑 金卡專屬' : (item.rank === 'silver' ? '✨ 銀卡專屬' : '🌱 銅卡標配')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
         // Initialize state
         (async function initPremiumPage() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
                 document.getElementById('es-eval-title').textContent = "請登入以查看您的評分";
                 document.getElementById('user-profile-name').textContent = "未登入訪客";
+                renderDynamicPrivileges('bronze');
                 return;
             }
 
             try {
-                const cached = JSON.parse(localStorage.getItem('user') || '{}');
-                const userId = cached.id || cached.user_id;
-                if (!userId) return;
-
-                // Sync basic card details first
-                document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=apple`;
-                document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=google`;
-                document.getElementById('ml-wallet-section').style.display = 'flex';
-
                 // Fetch fresh profile with Elite Score
-                const res = await fetch(`/api/user?user_id=${userId}`, {
+                const res = await fetch(`/api/user`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
                     const u = await res.json();
+
+                    // Sync basic card details first with fallback to actual user id from database response
+                    const userId = u.id;
+                    if (userId) {
+                        document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=apple`;
+                        document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=google`;
+                        document.getElementById('ml-wallet-section').style.display = 'flex';
+                    }
 
                     // Render 3D Card text
                     document.getElementById('card-member-name').textContent = u.full_name || u.username || '單車愛好者';
@@ -885,6 +1078,9 @@
                     if (u.avatar_url) {
                         document.getElementById('user-profile-avatar').style.backgroundImage = `url('${u.avatar_url}')`;
                     }
+
+                    // Dynamic privilege card generation
+                    renderDynamicPrivileges(cardRank);
 
                     // Score Hub Gauge
                     const score = Number(u.elite_score || 0);

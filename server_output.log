@@ -31,3 +31,22 @@
 127.0.0.1 - - [27/Jul/2026 09:43:28] code 404, message File not found
 127.0.0.1 - - [27/Jul/2026 09:43:28] "GET /api/getHistory HTTP/1.1" 404 -
 127.0.0.1 - - [27/Jul/2026 09:43:30] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [27/Jul/2026 10:16:36] "GET /mileage.html HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:36] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:36] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:36] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] code 404, message File not found
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] code 404, message File not found
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [27/Jul/2026 10:16:37] code 404, message File not found
+127.0.0.1 - - [27/Jul/2026 10:16:37] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [27/Jul/2026 10:16:38] "GET /mileage.html HTTP/1.1" 304 -
+127.0.0.1 - - [27/Jul/2026 10:16:38] code 404, message File not found
+127.0.0.1 - - [27/Jul/2026 10:16:38] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [27/Jul/2026 10:16:40] "GET /sw.js HTTP/1.1" 304 -
