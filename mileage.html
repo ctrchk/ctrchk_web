@@ -293,6 +293,95 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
+        /* Progression & Mileage Stats Styles */
+        .progression-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            padding-top: 1.5em;
+            margin-top: 1.5em;
+        }
+        .progression-title {
+            font-size: 1.05em;
+            font-weight: 800;
+            color: var(--gold-color);
+            margin: 0 0 1em;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .progression-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 1.5em;
+        }
+        @media (max-width: 768px) {
+            .progression-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Progress bars */
+        .prog-bar-container {
+            margin-bottom: 1em;
+        }
+        .prog-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: #cbd5e1;
+            margin-bottom: 0.4em;
+            font-weight: 600;
+        }
+        .prog-bar-wrapper {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 999px;
+            height: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .prog-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .prog-bar-fill.bronze { background: linear-gradient(90deg, #D8A56B, #b45309); }
+        .prog-bar-fill.silver { background: linear-gradient(90deg, #D1D9DF, #475569); }
+        .prog-bar-fill.gold { background: linear-gradient(90deg, #F0D372, #b45309); }
+
+        .prog-bar-subtext {
+            font-size: 0.72em;
+            color: #94a3b8;
+            margin-top: 0.35em;
+            line-height: 1.4;
+        }
+
+        /* Specific mileage record badges */
+        .mileage-records-box {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8em;
+        }
+        .mileage-record-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 0.8em;
+            text-align: center;
+        }
+        .mileage-record-val {
+            font-size: 1.3em;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.15em;
+        }
+        .mileage-record-lbl {
+            font-size: 0.7em;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
         /* Quick Profile Header */
         .profile-row {
             display: flex;
@@ -705,6 +794,59 @@
                 </div>
             </div>
 
+            <!-- Progression & Specific Mileage Records Re-integrated Section -->
+            <div class="progression-section" id="user-progression-sec" style="display: none;">
+                <h4 class="progression-title"><i class="fas fa-tasks"></i> 級別晉升與保級進度</h4>
+                <div class="progression-grid">
+                    <!-- Progress bars column -->
+                    <div>
+                        <!-- Level XP Progress -->
+                        <div class="prog-bar-container">
+                            <div class="prog-bar-label">
+                                <span>個人等級經驗值 (XP)</span>
+                                <span id="prog-xp-txt">0 / 1000 XP</span>
+                            </div>
+                            <div class="prog-bar-wrapper">
+                                <div class="prog-bar-fill bronze" id="prog-xp-fill"></div>
+                            </div>
+                            <div class="prog-bar-subtext" id="prog-xp-subtext">累積經驗值提升等級，Lv.6 可解鎖初階車手。</div>
+                        </div>
+
+                        <!-- Mileage Maintenance Progress -->
+                        <div class="prog-bar-container">
+                            <div class="prog-bar-label">
+                                <span id="prog-mileage-title">365天滾動里程進度</span>
+                                <span id="prog-mileage-txt">0 / 150 km</span>
+                            </div>
+                            <div class="prog-bar-wrapper">
+                                <div class="prog-bar-fill silver" id="prog-mileage-fill"></div>
+                            </div>
+                            <div class="prog-bar-subtext" id="prog-mileage-subtext">365天滾動里程按天更新。</div>
+                        </div>
+                    </div>
+
+                    <!-- Specific Mileage Records Box -->
+                    <div class="mileage-records-box">
+                        <div class="mileage-record-item">
+                            <div class="mileage-record-val" id="rec-rolling-mileage">0.0 km</div>
+                            <div class="mileage-record-lbl">365天滾動里程</div>
+                        </div>
+                        <div class="mileage-record-item">
+                            <div class="mileage-record-val" id="rec-total-mileage">0.0 km</div>
+                            <div class="mileage-record-lbl">終身總行駛里程</div>
+                        </div>
+                        <div class="mileage-record-item">
+                            <div class="mileage-record-val" id="rec-commute-streak">0 天</div>
+                            <div class="mileage-record-lbl">當前通勤連勝</div>
+                        </div>
+                        <div class="mileage-record-item">
+                            <div class="mileage-record-val" id="rec-community-score">0</div>
+                            <div class="mileage-record-lbl">社群貢獻度</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Factor Breakdowns -->
             <div class="factor-grid">
                 <!-- M -->
@@ -1078,6 +1220,48 @@
                     if (u.avatar_url) {
                         document.getElementById('user-profile-avatar').style.backgroundImage = `url('${u.avatar_url}')`;
                     }
+
+                    // Re-integrate Progression details UI rendering
+                    document.getElementById('user-progression-sec').style.display = 'block';
+
+                    // Level XP Calculations (XP required for next level is approx level * 1000)
+                    const xpRequiredForNext = (u.level || 1) * 1000;
+                    const xpCurrent = u.xp || 0;
+                    const xpPct = Math.min(100, Math.max(0, (xpCurrent / xpRequiredForNext) * 100));
+                    document.getElementById('prog-xp-txt').textContent = `${xpCurrent} / ${xpRequiredForNext} XP`;
+                    const xpFill = document.getElementById('prog-xp-fill');
+                    xpFill.style.width = `${xpPct}%`;
+                    xpFill.className = `prog-bar-fill ${cardRank}`;
+                    document.getElementById('prog-xp-subtext').textContent = `升級至 Lv.${(u.level || 1) + 1} 還需要 ${xpRequiredForNext - xpCurrent} XP。`;
+
+                    // Rolling Mileage Target progression based on tiers
+                    let targetMileage = 150; // default silver threshold
+                    let mileageTitle = "365天滾動里程 ｜ 晉升銀卡進度";
+                    let mileageSub = `再累積 ${(150 - rollingKm).toFixed(1)} km 解鎖銀卡。滾動里程每日結算更新。`;
+
+                    if (cardRank === 'silver') {
+                        targetMileage = 400; // maintenance target or gold target
+                        mileageTitle = "365天滾動里程 ｜ 晉升金卡進度";
+                        mileageSub = `保持 120 km 以上維持銀卡，再累積 ${(500 - rollingKm).toFixed(1)} km 晉升金卡。`;
+                    } else if (cardRank === 'gold') {
+                        targetMileage = 400; // gold maintenance target
+                        mileageTitle = "365天滾動里程 ｜ 金卡保級進度";
+                        mileageSub = `保持 400 km 以上即可在未來 365 天內持續維持無上的金卡頭銜。`;
+                    }
+
+                    const mPct = Math.min(100, Math.max(0, (rollingKm / targetMileage) * 100));
+                    document.getElementById('prog-mileage-title').textContent = mileageTitle;
+                    document.getElementById('prog-mileage-txt').textContent = `${rollingKm.toFixed(1)} / ${targetMileage} km`;
+                    const mileageFill = document.getElementById('prog-mileage-fill');
+                    mileageFill.style.width = `${mPct}%`;
+                    mileageFill.className = `prog-bar-fill ${cardRank}`;
+                    document.getElementById('prog-mileage-subtext').textContent = mileageSub;
+
+                    // Numeric Mileage records indicators
+                    document.getElementById('rec-rolling-mileage').textContent = `${rollingKm.toFixed(1)} km`;
+                    document.getElementById('rec-total-mileage').textContent = `${(u.total_distance_km || 0).toFixed(1)} km`;
+                    document.getElementById('rec-commute-streak').textContent = `${u.commute_streak || 0} 天`;
+                    document.getElementById('rec-community-score').textContent = `${u.community_contribution || 0}`;
 
                     // Dynamic privilege card generation
                     renderDynamicPrivileges(cardRank);
