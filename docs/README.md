@@ -10,6 +10,7 @@
 
 ### 1. 產品規格與架構 spec
 * [Product/PRODUCT_SPEC.md](./Product/PRODUCT_SPEC.md) — 平台深度技術SPEC，詳解三軌制經濟與導航演算法。
+* [mileage.md](./mileage.md) — 城市運輸單車里程計劃 (Mileage Program) 系統設計與會員生態藍圖。
 
 ### 2. 開發與迭代歷史
 * [APP-DEVELOPMENT.md](../APP-DEVELOPMENT.md) — PWA 漸進式 Web App 開發演進歷程與下一步規劃。
@@ -17,7 +18,6 @@
 
 ### 3. 指南與運作手冊
 * [ADMIN_SETUP_GUIDE.md](../ADMIN_SETUP_GUIDE.md) — 管理員后台、3D 虛擬徽章上傳、及路段管理設置指南。
-* [MILEAGE.md](../MILEAGE.md) — 里程計劃卡級（金/銀/銅）晉升與保級門檻，以及 WalletWallet 卡包對接配置細節。
 * [TESTING-GUIDE.md](../TESTING-GUIDE.md) — 傳統註冊、Google 登入、初級與高級會員路徑認證測試指南。
 
 ### 4. 數據庫與雲端部署
