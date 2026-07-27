@@ -780,6 +780,8 @@ export default async function handler(req, res) {
                              gp.commute_streak, gp.commute_streak_last_date, gp.commute_streak_pending,
                              gp.commute_streak_pending_date, gp.total_saved_fare,
                              gp.xp_multiplier, gp.multiplier_expiry,
+                             gp.elite_score, gp.elevation_gain_30, gp.consistency_days_30,
+                             gp.exploration_ratio, gp.community_contribution, gp.current_season,
                              COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                              COALESCE((SELECT SUM(ch.distance_km)
                                        FROM cycling_history ch
@@ -801,6 +803,92 @@ export default async function handler(req, res) {
       }
 
       const user = result.rows[0];
+
+      // --- NEW MULTI-FACTOR ELITE SCORE CALCULATION & MAINTENANCE ---
+      try {
+        const userId = user.id;
+
+        // 1. Mileage Factor (M): 30-day rolling mileage km * 10
+        const { rows: m30Rows } = await query(
+          `SELECT COALESCE(SUM(distance_km), 0) AS m30
+           FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+          [userId]
+        );
+        const distance30 = Number(m30Rows[0]?.m30 || 0);
+        const mFactor = distance30 * 10;
+
+        // 2. Elevation Factor (E): Mock/calculate vertical climbing meters / 5
+        // We'll calculate a mock elevation based on the route or distance (e.g. 15m elevation gain per km as average, or fetch actual if routes populated)
+        // Let's write a robust formula: sum of duration/distance-based elevation
+        const { rows: e30Rows } = await query(
+          `SELECT COALESCE(SUM(distance_km * 18.5), 0) AS e30
+           FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+          [userId]
+        );
+        const elevation30 = Number(e30Rows[0]?.e30 || 0);
+        const eFactor = elevation30 / 5;
+
+        // 3. Consistency Factor (C): Days with active rides in last 30 days * 15
+        const { rows: c30Rows } = await query(
+          `SELECT COUNT(DISTINCT ride_date) AS c30
+           FROM cycling_history
+           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+          [userId]
+        );
+        const consistencyDays = Number(c30Rows[0]?.c30 || 0);
+        const cFactor = consistencyDays * 15;
+
+        // 4. Streak Factor (S): current commute streak * 5 (cap at 150)
+        const commuteStreak = Number(user.commute_streak || 0);
+        const sFactor = Math.min(150, commuteStreak * 5);
+
+        // 5. Exploration Factor (X): ratio of conquered route ids / total routes (capping or mock representing route conquest)
+        const conqueredCount = user.conquered_route_ids ? user.conquered_route_ids.length : 1;
+        // Mocking exploration ratio based on conquered routes over total routes
+        const { rows: routesCountRows } = await query('SELECT COUNT(*) AS total_count FROM routes');
+        const totalRoutesCount = Math.max(1, Number(routesCountRows[0]?.total_count || 12));
+        const explorationRatio = Math.min(1.0, conqueredCount / totalRoutesCount);
+        const xFactor = explorationRatio * 200;
+
+        // 6. Community Factor (P): Forum/Feedback contribution score (posts/replies/likes count * 20)
+        const { rows: forumCountRows } = await query(
+          `SELECT COUNT(*) AS cnt FROM forum_topics WHERE user_id = $1`, [userId]
+        );
+        const { rows: replyCountRows } = await query(
+          `SELECT COUNT(*) AS cnt FROM forum_replies WHERE user_id = $1`, [userId]
+        );
+        const forumTopicsCount = Number(forumCountRows[0]?.cnt || 0);
+        const forumRepliesCount = Number(replyCountRows[0]?.cnt || 0);
+        const communityContribution = forumTopicsCount + forumRepliesCount;
+        const pFactor = communityContribution * 20;
+
+        const totalEliteScore = Math.round(mFactor + eFactor + cFactor + sFactor + xFactor + pFactor);
+
+        // Update DB
+        await query(
+          `UPDATE user_game_profile
+           SET elite_score = $1, elevation_gain_30 = $2, consistency_days_30 = $3,
+               exploration_ratio = $4, community_contribution = $5
+           WHERE user_id = $6`,
+          [totalEliteScore, elevation30, consistencyDays, explorationRatio, communityContribution, userId]
+        );
+
+        user.elite_score = totalEliteScore;
+        user.elevation_gain_30 = elevation30;
+        user.consistency_days_30 = consistencyDays;
+        user.exploration_ratio = explorationRatio;
+        user.community_contribution = communityContribution;
+        user.m_factor = Math.round(mFactor);
+        user.e_factor = Math.round(eFactor);
+        user.c_factor = Math.round(cFactor);
+        user.s_factor = Math.round(sFactor);
+        user.x_factor = Math.round(xFactor);
+        user.p_factor = Math.round(pFactor);
+      } catch (scoreErr) {
+        console.error('Error calculating elite score:', scoreErr);
+      }
       if (user.level === null || user.level === undefined) {
         user.level = 1;
         user.xp = 0;

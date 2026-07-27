@@ -1,555 +1,930 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-53F09894GX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-53F09894GX');
-</script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-53F09894GX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){gtag('js', new Date());}
+      gtag('config', 'G-53F09894GX');
+    </script>
 
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#121f14">
+    <meta name="theme-color" content="#0d0d0d">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- SEO Meta Tags -->
-    <title>里程計劃 | 香港城市運輸單車 (CTRC HK) - 紀錄您的每一公里</title>
-    <meta name="description" content="了解香港城市運輸單車 (CTRC HK) 的里程卡制度。從銅卡到金卡，累積年度里程，提升您的榮譽等級並解鎖專屬獎勵。">
-    <meta name="keywords" content="里程等級, 里程卡, 銅卡, 銀卡, 金卡, 單車紀錄, CTRC HK 榮譽, 里程計劃">
+    <title>城市運輸單車里程計劃 — 世界級車手身份系統</title>
+    <meta name="description" content="了解城市運輸單車里程計劃 (Mileage Program)。從銅卡到金卡，累積年度里程與 Elite Score，解鎖專屬的 3D 車道巡航、黑金高對比主題，並加入您的 Apple Wallet。">
+    <meta name="keywords" content="城市運輸單車, 里程等級, 里程卡, 銅卡, 銀卡, 金卡, 單車紀錄, Elite Score, Apple Wallet 卡包">
     <link rel="canonical" href="https://ctrchk.com/mileage">
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://ctrchk.com/mileage">
-    <meta property="og:title" content="里程計劃 - 香港城市運輸單車 (CTRC HK)">
-    <meta property="og:description" content="追蹤您的騎行進度，挑戰年度里程目標。累積里程，換取會員專屬權益。">
-    <meta property="og:image" content="https://ctrchk.com/images/bike-commute.jpg">
+    <meta property="og:title" content="城市運輸單車里程計劃 — 世界級車手身份系統">
+    <meta property="og:description" content="追蹤您的騎行進度，挑戰年度里程目標。結合 M, E, C, S, X, P 六大核心，打造您專屬的城市低碳身份證。">
+    <meta property="og:image" content="/images/logo.png">
+
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        html, body { background: var(--app-bg-primary, #121f14); }
-        .ml-wrap { max-width: 980px; margin: 0 auto; padding: 1.2em 1em 2.2em; color: var(--app-text-primary, #e8f3e9); }
-        .ml-hero {
-            background: linear-gradient(145deg, var(--app-bg-secondary, #1b2f22), var(--app-bg-primary, #16241b));
-            border: 1px solid var(--app-border, #2e4a35);
-            border-radius: 16px;
-            padding: 1.15em;
-            margin-bottom: 1em;
-        }
-        .ml-hero h1 { margin: 0 0 0.45em; font-size: 1.45em; color: var(--app-accent, #BFE340); }
-        .ml-stats { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
-        .ml-stat { background: var(--app-bg-card, rgba(255,255,255,0.04)); border:1px solid var(--app-border, rgba(255,255,255,0.08)); border-radius: 12px; padding: 0.7em; }
-        .ml-stat .k { font-size: 0.76em; color: var(--app-text-secondary, #a7c1aa); }
-        .ml-stat .v { font-size: 1.15em; font-weight: 800; margin-top: 0.2em; color: var(--app-text-primary, #e8f3e9); }
-        .ml-progress-group { margin-top: 1.2em; display: flex; flex-direction: column; gap: 1em; }
-        .ml-progress-item { }
-        .ml-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4em; }
-        .ml-progress-title { font-size: 0.82em; font-weight: 700; color: var(--app-text-primary); }
-        .ml-progress-val { font-size: 0.78em; color: var(--app-accent); font-weight: 800; }
-        .ml-progress-bar { height: 10px; border-radius: 999px; background: var(--app-bg-primary, #132018); overflow: hidden; border:1px solid var(--app-border, #2f4b36); position: relative; }
-        .ml-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6dba65, var(--app-accent, #BFE340)); transition: width 1s ease-out; }
-        .ml-progress-fill.warning { background: linear-gradient(90deg, #f1c40f, #e67e22); }
-        .ml-progress-fill.danger { background: linear-gradient(90deg, #e74c3c, #c0392b); }
-        .ml-progress-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.3); z-index: 2; }
-        .ml-progress-label { font-size: 0.72em; margin-top: 0.35em; color: var(--app-text-secondary, #a7c1aa); display: block; }
 
-        .ml-section-title { margin:1.15em 0 0.35em; font-size:1em; color: var(--app-accent, #BFE340); }
-        .ml-section-desc { margin: 0 0 0.8em; color: var(--app-text-secondary, #9cb29e); font-size:0.82em; line-height:1.55; }
-        .ml-benefits-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.7em; margin-top:0.3em; }
-        .ml-card {
-            border-radius: 14px;
-            padding: 0.95em;
-            border: 1px solid var(--app-border, #324f38);
-            background: var(--app-bg-card, #1a2b1f);
-            box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+    <style>
+        :root {
+            --gold-gradient: linear-gradient(135deg, #1c1c1c 0%, #0d0d0d 100%);
+            --silver-gradient: linear-gradient(135deg, #2c3e50 0%, #0f172a 100%);
+            --bronze-gradient: linear-gradient(135deg, #2e1d13 0%, #0f0a06 100%);
+            --gold-color: #F0D372;
+            --silver-color: #D1D9DF;
+            --bronze-color: #D8A56B;
+            --neon-glow: 0 0 20px rgba(191, 227, 64, 0.4);
         }
-        .ml-card-head { margin-bottom: 0.65em; }
-        .ml-card h3 { margin: 0 0 0.25em; font-size: 1.02em; }
-        .ml-card p { margin: 0; font-size:0.8em; color:#b9cfbc; line-height:1.5; }
-        .ml-card ul { margin:0; padding-left: 1.15em; color: #d4e8d6; font-size: 0.86em; line-height: 1.58; }
-        .ml-card li + li { margin-top: 0.35em; }
-        .ml-card.bronze h3 { color:#d8a56b; }
-        .ml-card.silver h3 { color:#d1d9df; }
-        .ml-card.gold h3 { color:#f0d372; }
-        .ml-tag {
-            display:inline-flex;
-            align-items:center;
-            gap:0.35em;
-            padding:0.18em 0.65em;
-            border-radius:999px;
-            font-size:0.72em;
-            font-weight:700;
-            letter-spacing:0.03em;
-            margin-bottom:0.45em;
-            border:1px solid currentColor;
+
+        html, body {
+            background: #08080c !important;
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
         }
-        .ml-tag.bronze { color:#d8a56b; background: rgba(216,165,107,0.12); }
-        .ml-tag.silver { color:#d1d9df; background: rgba(209,217,223,0.12); }
-        .ml-tag.gold { color:#f0d372; background: rgba(240,211,114,0.14); }
-        .ml-action-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:0.55em; }
-        .ml-action { text-decoration:none; text-align:center; border-radius: 10px; border:1px solid var(--app-border, #325239); background: var(--app-bg-secondary, #1c3122); color: var(--app-text-primary, #d9efdb); padding:0.7em 0.65em; font-weight: 700; font-size:0.85em; }
-        .ml-note { margin-top:0.8em; color:#9cb29e; font-size:0.8em; line-height:1.55; }
-        body.app-light-theme .ml-wrap { color: var(--app-text-primary, #1b3a1f); }
-        body.app-light-theme .ml-hero {
-            background: linear-gradient(145deg, #ffffff, #f0f8f0);
-            border-color: var(--app-border, #c8e6c9);
-            box-shadow: 0 8px 24px rgba(46,125,50,0.08);
+
+        /* Hero Wrapper */
+        .premium-container {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 1.5em 1em 4em;
         }
-        body.app-light-theme .ml-hero h1,
-        body.app-light-theme .ml-section-title { color: var(--app-accent, #2e7d32); }
-        body.app-light-theme .ml-stat,
-        body.app-light-theme .ml-card,
-        body.app-light-theme .ml-action {
-            background: var(--app-bg-card, #ffffff);
-            border-color: var(--app-border, #c8e6c9);
-        }
-        body.app-light-theme .ml-stat .k,
-        body.app-light-theme .ml-progress-label,
-        body.app-light-theme .ml-section-desc,
-        body.app-light-theme .ml-card p,
-        body.app-light-theme .ml-note,
-        body.app-light-theme .ml-card ul { color: var(--app-text-secondary, #2e7d32); }
-        body.app-light-theme .ml-progress-bar { background: rgba(0,0,0,0.08); border-color: var(--app-border, #c8e6c9); }
-        body.app-light-theme .ml-action { color: var(--app-text-primary, #1b3a1f); }
-        body.app-light-theme .ml-tag.bronze { color:#a56a31; background: rgba(216,165,107,0.16); }
-        body.app-light-theme .ml-tag.silver { color:#65727c; background: rgba(209,217,223,0.16); }
-        body.app-light-theme .ml-tag.gold { color:#8d6a00; background: rgba(240,211,114,0.22); }
-        @media (prefers-color-scheme: light) {
-            body:not(.app-theme-explicit) .ml-wrap { color: var(--app-text-primary, #1b3a1f); }
-            body:not(.app-theme-explicit) .ml-hero {
-                background: linear-gradient(145deg, #ffffff, #f0f8f0);
-                border-color: var(--app-border, #c8e6c9);
-                box-shadow: 0 8px 24px rgba(46,125,50,0.08);
-            }
-            body:not(.app-theme-explicit) .ml-hero h1,
-            body:not(.app-theme-explicit) .ml-section-title { color: var(--app-accent, #2e7d32); }
-            body:not(.app-theme-explicit) .ml-stat,
-            body:not(.app-theme-explicit) .ml-card,
-            body:not(.app-theme-explicit) .ml-action {
-                background: var(--app-bg-card, #ffffff);
-                border-color: var(--app-border, #c8e6c9);
-            }
-            body:not(.app-theme-explicit) .ml-stat .k,
-            body:not(.app-theme-explicit) .ml-progress-label,
-            body:not(.app-theme-explicit) .ml-section-desc,
-            body:not(.app-theme-explicit) .ml-card p,
-            body:not(.app-theme-explicit) .ml-note,
-            body:not(.app-theme-explicit) .ml-card ul { color: var(--app-text-secondary, #2e7d32); }
-            body:not(.app-theme-explicit) .ml-progress-bar { background: rgba(0,0,0,0.08); border-color: var(--app-border, #c8e6c9); }
-            body:not(.app-theme-explicit) .ml-action { color: var(--app-text-primary, #1b3a1f); }
-        }
-        .ml-wallet-card {
-            background: linear-gradient(145deg, var(--app-bg-secondary, #1b2f22), var(--app-bg-primary, #16241b));
-            border: 1px solid var(--app-border, #2e4a35);
-            border-radius: 16px;
-            padding: 1.15em;
-            margin-bottom: 1em;
+
+        /* Top Header */
+        .premium-header {
             text-align: center;
+            margin-bottom: 2em;
         }
-        .ml-wallet-card h3 {
-            margin-top: 0;
-            margin-bottom: 0.8em;
-            font-size: 1.05em;
-            color: var(--app-accent, #BFE340);
+        .premium-header h1 {
+            font-size: 2em;
+            font-weight: 900;
+            color: var(--gold-color);
+            margin: 0 0 0.25em;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 10px rgba(240, 211, 114, 0.2);
         }
-        .ml-wallet-buttons {
+        .premium-header p {
+            font-size: 0.95em;
+            color: #94a3b8;
+            margin: 0;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* 3D Card Area */
+        .card-showcase {
+            perspective: 1000px;
             display: flex;
             justify-content: center;
-            gap: 1em;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .ml-wallet-btn {
-            display: inline-block;
-            transition: transform 0.2s;
-            cursor: pointer;
-        }
-        .ml-wallet-btn:hover {
-            transform: scale(1.05);
-        }
-        .ml-wallet-btn img {
-            height: 40px;
-            display: block;
-        }
-        body.app-light-theme .ml-wallet-card {
-            background: linear-gradient(145deg, #ffffff, #f0f8f0);
-            border-color: var(--app-border, #c8e6c9);
-            box-shadow: 0 8px 24px rgba(46,125,50,0.08);
-        }
-        body.app-light-theme .ml-wallet-card h3 {
-            color: var(--app-accent, #2e7d32);
-        }
-        @media (prefers-color-scheme: light) {
-            body:not(.app-theme-explicit) .ml-wallet-card {
-                background: linear-gradient(145deg, #ffffff, #f0f8f0);
-                border-color: var(--app-border, #c8e6c9);
-                box-shadow: 0 8px 24px rgba(46,125,50,0.08);
-            }
-            body:not(.app-theme-explicit) .ml-wallet-card h3 {
-                color: var(--app-accent, #2e7d32);
-            }
-        }
-        @media (max-width: 760px) {
-            .ml-stats, .ml-benefits-grid, .ml-action-grid { grid-template-columns: 1fr; }
+            margin-bottom: 2.5em;
         }
 
-        /* Custom zero-dependency vertical bar chart styles */
+        /* Interactive 3D Card */
+        .physical-card {
+            width: 340px;
+            height: 205px;
+            border-radius: 18px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05);
+            background: var(--bronze-gradient);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.4em;
+        }
+
+        .physical-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Reflex stream glare line */
+        .card-glare {
+            position: absolute;
+            top: -100%; left: -100%; right: -100%; bottom: -100%;
+            background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.12) 55%, transparent 60%);
+            transform: rotate(25deg);
+            transition: all 0.1s ease;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .physical-card.bronze { background: var(--bronze-gradient); border: 1.5px solid var(--bronze-color); }
+        .physical-card.silver { background: var(--silver-gradient); border: 1.5px solid var(--silver-color); }
+        .physical-card.gold { background: var(--gold-gradient); border: 1.5px solid var(--gold-color); }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            transform: translateZ(30px);
+        }
+        .card-brand {
+            font-size: 0.85em;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            color: #fff;
+            text-transform: uppercase;
+        }
+        .card-logo {
+            font-size: 1.4em;
+            color: #fff;
+        }
+        .card-mid {
+            transform: translateZ(40px);
+            margin-top: 1.5em;
+        }
+        .card-chip {
+            width: 38px;
+            height: 28px;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            border-radius: 6px;
+            position: relative;
+            margin-bottom: 0.8em;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.6);
+        }
+        .card-chip::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px; right: 2px; bottom: 2px;
+            border: 1px solid rgba(0,0,0,0.15);
+            border-radius: 4px;
+        }
+        .card-number {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 1.05em;
+            letter-spacing: 0.15em;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+        .card-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            transform: translateZ(30px);
+        }
+        .card-holder {
+            font-size: 0.72em;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #cbd5e1;
+        }
+        .card-holder span {
+            display: block;
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 0.25em;
+        }
+        .card-tier-label {
+            font-size: 1.15em;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .bronze .card-tier-label { color: var(--bronze-color); text-shadow: 0 0 10px rgba(216,165,107,0.3); }
+        .silver .card-tier-label { color: var(--silver-color); text-shadow: 0 0 10px rgba(209,217,223,0.3); }
+        .gold .card-tier-label { color: var(--gold-color); text-shadow: 0 0 10px rgba(240,211,114,0.4); }
+
+        /* General Grid Glass Card */
+        .glass-panel {
+            background: rgba(18, 18, 24, 0.45);
+            backdrop-filter: blur(16px) saturate(160%);
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 1.5em;
+            margin-bottom: 1.5em;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Quick Profile Header */
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding-bottom: 1em;
+            margin-bottom: 1.2em;
+        }
+        .profile-user-info {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        .profile-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50px;
+            border: 2px solid var(--gold-color);
+            background-size: cover;
+            background-position: center;
+        }
+        .profile-username {
+            font-size: 1.1em;
+            font-weight: 800;
+            margin: 0;
+            color: #fff;
+        }
+        .profile-subtext {
+            font-size: 0.8em;
+            color: #94a3b8;
+            margin: 0.25em 0 0;
+        }
+
+        /* Elite Score Circular Hub */
+        .es-hub {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2em;
+        }
+        .es-circle-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            flex-shrink: 0;
+        }
+        .es-svg {
+            transform: rotate(-90deg);
+        }
+        .es-track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.04);
+            stroke-width: 10px;
+        }
+        .es-fill {
+            fill: none;
+            stroke: var(--gold-color);
+            stroke-width: 10px;
+            stroke-linecap: round;
+            stroke-dasharray: 440;
+            stroke-dashoffset: 440;
+            transition: stroke-dashoffset 1s ease-out;
+        }
+        .es-center-content {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .es-value {
+            font-size: 1.8em;
+            font-weight: 900;
+            color: #fff;
+            margin: 0;
+            letter-spacing: -0.05em;
+        }
+        .es-label {
+            font-size: 0.7em;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 0.1em;
+        }
+        .es-summary-text {
+            flex-grow: 1;
+        }
+        .es-summary-text h3 {
+            margin: 0 0 0.5em;
+            font-size: 1.2em;
+            color: #fff;
+        }
+        .es-summary-text p {
+            margin: 0;
+            font-size: 0.85em;
+            line-height: 1.5;
+            color: #94a3b8;
+        }
+
+        /* M, E, C, S, X, P Breakdown Grid */
+        .factor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1em;
+            margin-top: 1.5em;
+        }
+        .factor-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1em;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .factor-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateY(-2px);
+        }
+        .factor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.6em;
+        }
+        .factor-icon-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+        }
+        .factor-icon-badge.m { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .factor-icon-badge.e { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+        .factor-icon-badge.c { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+        .factor-icon-badge.s { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .factor-icon-badge.x { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .factor-icon-badge.p { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+
+        .factor-score {
+            font-size: 1.25em;
+            font-weight: 800;
+            color: #fff;
+        }
+        .factor-title {
+            font-size: 0.85em;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 0.25em;
+        }
+        .factor-desc {
+            font-size: 0.72em;
+            color: #64748b;
+            line-height: 1.35;
+        }
+
+        /* Expiration Section Adjustments */
+        .expiry-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 120px;
+            margin: 1.5em 0 1em;
+        }
         .ml-expiry-bar {
             flex: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px 4px 0 0;
-            height: 2%; /* Default min height */
-            transition: height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s, box-shadow 0.2s;
-            cursor: pointer;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px 3px 0 0;
+            height: 3%;
+            transition: height 0.6s ease;
             position: relative;
         }
         .ml-expiry-bar.has-val {
-            background: var(--app-accent, #6dba65);
+            background: rgba(240, 211, 114, 0.45);
         }
         .ml-expiry-bar.has-val:hover, .ml-expiry-bar.has-val.active {
-            background: #e74c3c !important;
-            box-shadow: 0 0 8px rgba(231, 76, 60, 0.8);
+            background: #f43f5e !important;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
         }
-        body.app-light-theme .ml-expiry-bar.has-val {
-            background: var(--app-accent, #2e7d32);
+
+        /* Professional Benefit Matrix Table */
+        .comparison-table-wrapper {
+            overflow-x: auto;
+            margin-top: 1em;
         }
-        body.app-light-theme .ml-expiry-bar.has-val:hover, body.app-light-theme .ml-expiry-bar.has-val.active {
-            background: #d32f2f !important;
-            box-shadow: 0 0 8px rgba(211, 47, 47, 0.6);
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+            text-align: left;
+        }
+        .comparison-table th {
+            padding: 1em;
+            background: rgba(255,255,255,0.02);
+            color: #94a3b8;
+            border-bottom: 1.5px solid rgba(255,255,255,0.06);
+            font-weight: 700;
+        }
+        .comparison-table td {
+            padding: 1em;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #cbd5e1;
+            line-height: 1.45;
+        }
+        .comparison-table tr:hover td {
+            background: rgba(255,255,255,0.01);
+        }
+        .comparison-feature-cat {
+            font-weight: 700;
+            color: var(--gold-color) !important;
+            background: rgba(255,255,255,0.01);
+        }
+
+        /* Wallet Section Placement */
+        .wallet-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5em;
+            background: linear-gradient(135deg, rgba(240, 211, 114, 0.05) 0%, rgba(0,0,0,0.15) 100%);
+            border: 1px solid rgba(240, 211, 114, 0.15);
+        }
+        .wallet-text h3 {
+            margin: 0 0 0.3em;
+            color: #fff;
+            font-size: 1.1em;
+        }
+        .wallet-text p {
+            margin: 0;
+            font-size: 0.85em;
+            color: #94a3b8;
+            line-height: 1.45;
+        }
+        .wallet-btns {
+            display: flex;
+            gap: 0.8em;
+            align-items: center;
+        }
+        .wallet-badge-btn {
+            height: 40px;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .wallet-badge-btn:hover {
+            transform: scale(1.04);
+        }
+        .wallet-badge-btn img {
+            height: 100%;
+            display: block;
+        }
+
+        /* Light Theme support override */
+        body.app-light-theme {
+            background: #f8fafc !important;
+            color: #0f172a;
+        }
+        body.app-light-theme .glass-panel {
+            background: rgba(255,255,255,0.7);
+            border-color: rgba(0,0,0,0.06);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        body.app-light-theme .premium-header h1 {
+            color: #b45309;
+        }
+        body.app-light-theme .profile-username,
+        body.app-light-theme .es-summary-text h3,
+        body.app-light-theme .es-value,
+        body.app-light-theme .factor-score,
+        body.app-light-theme .factor-title,
+        body.app-light-theme .wallet-text h3 {
+            color: #0f172a;
+        }
+        body.app-light-theme .factor-card {
+            background: #ffffff;
+            border-color: rgba(0,0,0,0.06);
+        }
+        body.app-light-theme .comparison-table th {
+            background: rgba(0,0,0,0.02);
+            border-bottom-color: rgba(0,0,0,0.08);
+        }
+        body.app-light-theme .comparison-table td {
+            border-bottom-color: rgba(0,0,0,0.04);
+            color: #334155;
+        }
+
+        @media (max-width: 768px) {
+            .es-hub { flex-direction: column; text-align: center; }
+            .factor-grid { grid-template-columns: 1fr; }
+            .wallet-banner { flex-direction: column; text-align: center; }
+            .wallet-btns { justify-content: center; }
         }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
-    <main class="ml-wrap">
-        <section class="ml-hero">
-            <h1><i class="fas fa-road"></i> 里程計劃</h1>
-            <div class="ml-stats">
-                <div class="ml-stat"><div class="k">目前里程卡</div><div class="v" id="ml-card">銅卡</div></div>
-                <div class="ml-stat"><div class="k">近 365 天里程</div><div class="v" id="ml-km">0.0 km</div></div>
-                <div class="ml-stat"><div class="k">騎行次數</div><div class="v" id="ml-rides">0</div></div>
-            </div>
-            <div class="ml-progress-group">
-                <div class="ml-progress-item">
-                    <div class="ml-progress-header">
-                        <span class="ml-progress-title">卡級升級/保級進度</span>
-                        <span class="ml-progress-val" id="ml-progress-val-rank">0%</span>
-                    </div>
-                    <div class="ml-progress-bar">
-                        <div class="ml-progress-fill" id="ml-progress-fill-rank"></div>
-                    </div>
-                    <span class="ml-progress-label" id="ml-progress-label-rank">載入中...</span>
+
+    <main class="premium-container">
+        <!-- Brand Header -->
+        <section class="premium-header">
+            <h1>城市運輸單車里程計劃</h1>
+            <p>累積不僅是里程，更是榮耀與社會聲譽。透過 365 天滾動里程與多維度評分，刻畫您的低碳足跡。</p>
+        </section>
+
+        <!-- 3D Card Showcase -->
+        <section class="card-showcase">
+            <div class="physical-card bronze" id="membership-card">
+                <div class="card-glare" id="card-glare"></div>
+                <div class="card-top">
+                    <span class="card-brand">CTRC HK LICENSE</span>
+                    <i class="fas fa-bicycle card-logo"></i>
                 </div>
-                <div class="ml-progress-item">
-                    <div class="ml-progress-header">
-                        <span class="ml-progress-title">里程過期壓力測試 (近 30 天)</span>
-                        <span class="ml-progress-val" id="ml-progress-val-expiry">0%</span>
+                <div class="card-mid">
+                    <div class="card-chip"></div>
+                    <div class="card-number" id="card-member-serial">BRZ-000000-0000</div>
+                </div>
+                <div class="card-bottom">
+                    <div class="card-holder">
+                        MEMBER
+                        <span id="card-member-name">單車愛好者</span>
                     </div>
-                    <div class="ml-progress-bar">
-                        <div class="ml-progress-fill" id="ml-progress-fill-expiry"></div>
-                    </div>
-                    <span class="ml-progress-label" id="ml-progress-label-expiry">顯示即將過期的里程比例</span>
+                    <div class="card-tier-label" id="card-tier-text">BRONZE</div>
                 </div>
             </div>
         </section>
 
-        <!-- Mileage Expiration Warning Chart Section (Task P1-1) -->
-        <section class="ml-card" id="ml-expiry-chart-section" style="margin-bottom: 1em;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85em;">
-                <h3 style="margin: 0; font-size: 1.05em; color: var(--app-accent, #BFE340);"><i class="fas fa-chart-bar"></i> 未來 30 天每日即將失效里程預警</h3>
-                <span style="font-size: 0.78em; color: var(--app-text-secondary, #a7c1aa);" id="ml-expiry-total-desc">累計：0.0 km</span>
+        <!-- Global Progress & Elite Score Panel -->
+        <section class="glass-panel">
+            <div class="profile-row">
+                <div class="profile-user-info">
+                    <div class="profile-avatar" id="user-profile-avatar" style="background-image: url('https://raw.githubusercontent.com/google/material-design-icons/master/png/maps/directions_bike/materialicons/48dp/2x/baseline_directions_bike_black_48dp.png')"></div>
+                    <div>
+                        <h4 class="profile-username" id="user-profile-name">載入中...</h4>
+                        <p class="profile-subtext" id="user-profile-tier-sub">會員卡級計算中</p>
+                    </div>
+                </div>
+                <div class="ml-progress-val" style="font-size: 0.85em; font-weight: 800; letter-spacing: 0.05em;" id="user-season-num">SEASON 1</div>
             </div>
-            <div id="ml-expiry-chart-container" style="height: 140px; display: flex; align-items: flex-end; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--app-border, rgba(255,255,255,0.1)); position: relative;">
-                <!-- Bars will be inserted here dynamically -->
+
+            <!-- Elite Score Hub -->
+            <div class="es-hub">
+                <div class="es-circle-wrapper">
+                    <svg class="es-svg" width="140" height="140">
+                        <circle class="es-track" cx="70" cy="70" r="60"></circle>
+                        <circle class="es-fill" id="es-circle-fill" cx="70" cy="70" r="60"></circle>
+                    </svg>
+                    <div class="es-center-content">
+                        <h2 class="es-value" id="es-score-val">0</h2>
+                        <span class="es-label">Elite Score</span>
+                    </div>
+                </div>
+                <div class="es-summary-text">
+                    <h3 id="es-eval-title">評分分析中...</h3>
+                    <p id="es-eval-paragraph">系統正在綜合您的騎行里程、垂直爬升、通勤頻次、連勝、地區探索率與社群貢獻，計算您的當前低碳精英得分。此評分決定了您在全港車手名錄中的聲譽與推薦等級。</p>
+                </div>
             </div>
-            <div id="ml-expiry-chart-labels" style="display: flex; justify-content: space-between; font-size: 0.72em; color: var(--app-text-secondary, #a7c1aa); padding-top: 6px;">
-                <span>今天</span>
-                <span>+10天</span>
-                <span>+20天</span>
-                <span>+30天</span>
-            </div>
-            <div id="ml-expiry-chart-tooltip" style="margin-top: 8px; font-size: 0.78em; text-align: center; color: var(--app-accent, #BFE340); min-height: 1.2em;">
-                點擊或懸停於上方圖表查看具體過期日期與里程
+
+            <!-- Factor Breakdowns -->
+            <div class="factor-grid">
+                <!-- M -->
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-badge m"><i class="fas fa-road"></i></div>
+                        <span class="factor-score" id="f-m">0</span>
+                    </div>
+                    <div class="factor-title">里程因子 (M)</div>
+                    <div class="factor-desc">30天滾動總里程 km * 10。核心有氧耐力代表。</div>
+                </div>
+                <!-- E -->
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-badge e"><i class="fas fa-mountain"></i></div>
+                        <span class="factor-score" id="f-e">0</span>
+                    </div>
+                    <div class="factor-title">爬升因子 (E)</div>
+                    <div class="factor-desc">30天累計爬升米數 / 5。象徵征服香港險峻斜坡之意志。</div>
+                </div>
+                <!-- C -->
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-badge c"><i class="fas fa-calendar-check"></i></div>
+                        <span class="factor-score" id="f-c">0</span>
+                    </div>
+                    <div class="factor-title">頻次因子 (C)</div>
+                    <div class="factor-desc">30天內有記錄騎行的天數 * 15。彰顯生活習慣之自律。</div>
+                </div>
+                <!-- S -->
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-badge s"><i class="fas fa-fire"></i></div>
+                        <span class="factor-score" id="f-s">0</span>
+                    </div>
+                    <div class="factor-title">連勝因子 (S)</div>
+                    <div class="factor-desc">目前通勤連勝天數 * 5 (上限 150)。抵抗惰性的護城河。</div>
+                </div>
+                <!-- X -->
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-badge x"><i class="fas fa-map-marked-alt"></i></div>
+                        <span class="factor-score" id="f-x">0</span>
+                    </div>
+                    <div class="factor-title">探索因子 (X)</div>
+                    <div class="factor-desc">已解鎖路線/站點比例 * 200。征服城市未知路網。</div>
+                </div>
+                <!-- P -->
+                <div class="factor-card">
+                    <div class="factor-header">
+                        <div class="factor-icon-badge p"><i class="fas fa-hands-helping"></i></div>
+                        <span class="factor-score" id="f-p">0</span>
+                    </div>
+                    <div class="factor-title">貢獻因子 (P)</div>
+                    <div class="factor-desc">論壇發文/回覆/舉報障礙 * 20。共建優質車友生態圈。</div>
+                </div>
             </div>
         </section>
 
-        <!-- Wallet Integration Section -->
-        <section class="ml-wallet-card" id="ml-wallet-section" style="display: none;">
-            <h3><i class="fas fa-wallet"></i> 將里程卡加入電子錢包</h3>
-            <div class="ml-wallet-buttons">
-                <a id="btn-add-apple-wallet" class="ml-wallet-btn" href="#" target="_blank">
+        <!-- Digital Wallet Installation Section -->
+        <section class="glass-panel wallet-banner" id="ml-wallet-section" style="display: none;">
+            <div class="wallet-text">
+                <h3>將您的榮譽卡加入電子錢包</h3>
+                <p>將您的里程卡無縫同步至 iOS Apple Wallet 或 Android Google Wallet 中，在現實世界中隨時展現您的低碳精英身份。</p>
+            </div>
+            <div class="wallet-btns">
+                <a id="btn-add-apple-wallet" class="wallet-badge-btn" href="#" target="_blank">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/3/30/Add_to_Apple_Wallet_badge.svg" alt="Add to Apple Wallet">
                 </a>
-                <a id="btn-add-google-wallet" class="ml-wallet-btn" href="#" target="_blank">
+                <a id="btn-add-google-wallet" class="wallet-badge-btn" href="#" target="_blank">
                     <img src="https://developers.google.com/static/wallet/images/branding/add-to-wallet-button-primary.png" alt="Add to Google Wallet">
                 </a>
             </div>
         </section>
 
-        <div class="ml-section-title">金銀銅卡權益總覽</div>
-        <p class="ml-section-desc">以下整理自「我的」頁面會員權益，並依里程卡等級重新編排；你可以直接看見目前可用與下一階段可解鎖的內容。</p>
-        <section class="ml-benefits-grid" id="ml-benefits-grid"></section>
-
-        <div class="ml-section-title">快速體驗</div>
-        <section class="ml-action-grid">
-            <a class="ml-action" href="/routes"><i class="fas fa-biking"></i> 立即開始騎行</a>
-            <a class="ml-action" href="/dashboard"><i class="fas fa-chart-line"></i> 查看我的進度</a>
-            <a class="ml-action" href="/weather"><i class="fas fa-cloud-sun"></i> 查看天氣資訊</a>
+        <!-- 30-Day Expiry Warn Panel -->
+        <section class="glass-panel" id="ml-expiry-chart-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85em;">
+                <h3 style="margin: 0; font-size: 1.05em; color: var(--gold-color);"><i class="fas fa-chart-line"></i> 未來 30 天每日即將失效里程預警</h3>
+                <span style="font-size: 0.78em; color: #94a3b8;" id="ml-expiry-total-desc">累計：0.0 km</span>
+            </div>
+            <div class="expiry-container" id="ml-expiry-chart-container">
+                <!-- Bars dynamically inserted -->
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.72em; color: #64748b; padding-top: 6px;">
+                <span>今天</span>
+                <span>+10天</span>
+                <span>+20天</span>
+                <span>+30天</span>
+            </div>
+            <div id="ml-expiry-chart-tooltip" style="margin-top: 10px; font-size: 0.78em; text-align: center; color: var(--gold-color); min-height: 1.2em;">
+                點擊或懸停上方柱狀圖，查看特定日期之預期失效里程
+            </div>
         </section>
-        <p class="ml-note">
-            里程卡依近 365 天滾動總里程計算：銅卡 0–149.9 km、銀卡 150–499.9 km、金卡 500 km 以上。金卡保級線為 400 km，銀卡保級線為 120 km。里程採 365 天滾動制，每日會自動扣除一年前的里程。
-        </p>
+
+        <!-- Dynamic Benefit Matrix Table -->
+        <section class="glass-panel">
+            <h3 style="margin-top: 0; margin-bottom: 0.8em; color: var(--gold-color);"><i class="fas fa-table"></i> 會員級別特權對比矩陣</h3>
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>權益與特權</th>
+                            <th>銅卡 (Bronze)</th>
+                            <th>銀卡 (Silver)</th>
+                            <th>金卡 (Gold)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="comparison-feature-cat" colspan="4">身份認同 (Identity)</td>
+                        </tr>
+                        <tr>
+                            <td>WalletWallet 專屬卡面</td>
+                            <td>古典銅 (磨砂)</td>
+                            <td>拉絲金屬鈦銀</td>
+                            <td>鏡面黑金流光</td>
+                        </tr>
+                        <tr>
+                            <td>社群/論壇 專屬頭像框</td>
+                            <td>❌ 無</td>
+                            <td>銀白微發光圈</td>
+                            <td>3D 黑曜石流金框</td>
+                        </tr>
+                        <tr>
+                            <td>全港車手名錄名字配色</td>
+                            <td>預設色</td>
+                            <td>亮麗鈦銀</td>
+                            <td>霓虹炫彩漸變金</td>
+                        </tr>
+                        <tr>
+                            <td class="comparison-feature-cat" colspan="4">安全導航 (Navigation)</td>
+                        </tr>
+                        <tr>
+                            <td>地圖引擎與渲染規格</td>
+                            <td>2D 向量標準 Leaflet</td>
+                            <td>2D + CYCPARKSPACE 泊位</td>
+                            <td>Mapbox GL 3D 霓虹巡航線</td>
+                        </tr>
+                        <tr>
+                            <td>自訂途經站點上限</td>
+                            <td>起點 ➡️ 終點</td>
+                            <td>最高 5 途經點</td>
+                            <td>無限途經點</td>
+                        </tr>
+                        <tr>
+                            <td class="comparison-feature-cat" colspan="4">數據與智慧 (Analytics & AI)</td>
+                        </tr>
+                        <tr>
+                            <td>里程幣結算永久乘數加成</td>
+                            <td>1.0x</td>
+                            <td>1.05x (+5% 永久加成)</td>
+                            <td>1.15x (+15% 永久超高加成)</td>
+                        </tr>
+                        <tr>
+                            <td>AI 騎行日誌與分析</td>
+                            <td>❌ 基礎統計</td>
+                            <td>每月份 AI 騎行簡報</td>
+                            <td>每星期 AI 深度教練總結</td>
+                        </tr>
+                        <tr>
+                            <td>3D 虛擬徽章展廳互動</td>
+                            <td>靜態 2D</td>
+                            <td>3D WebGL 旋轉檢視</td>
+                            <td>3D 互動 + AR 實體投影</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section style="display: flex; gap: 1em; flex-wrap: wrap; margin-top: 2em;">
+            <a class="ml-action" href="/routes" style="flex: 1; text-align: center;"><i class="fas fa-map-marked"></i> 開始規劃路線</a>
+            <a class="ml-action" href="/dashboard" style="flex: 1; text-align: center;"><i class="fas fa-columns"></i> 個人控制台</a>
+        </section>
     </main>
-    <footer><p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p></footer>
+
+    <footer>
+        <p>&copy; 2026 城市運輸單車 核心設計委員會. 版權所有。</p>
+    </footer>
 
     <script src="/js/main.js"></script>
     <script src="/js/pwa.js"></script>
     <script>
-    function renderMileageBenefits() {
-        const grid = document.getElementById('ml-benefits-grid');
-        const defs = Array.isArray(window.CTRCHK_PERMISSION_DEFS) ? window.CTRCHK_PERMISSION_DEFS : [];
-        if (!grid || !defs.length) return;
+        // 3D Card Tilt Effect Physics
+        const card = document.getElementById('membership-card');
+        const glare = document.getElementById('card-glare');
 
-        const groups = {
-            bronze: defs.filter(def => def.rank === 'bronze'),
-            silver: defs.filter(def => def.rank === 'silver'),
-            gold: defs.filter(def => def.rank === 'gold'),
-        };
-        const copy = {
-            bronze: { title: '銅卡｜穩健起步', desc: '打好基礎，先把導航、數據、海報與獎勵都準備好。' },
-            silver: { title: '銀卡｜進階加速', desc: '解鎖更順手的地圖、通知與加成，騎行體驗再升級。' },
-            gold: { title: '金卡｜旗艦禮遇', desc: '最高階支援與專屬體驗，讓每次出發都更有存在感。' },
-        };
+        if (card) {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
 
-        grid.innerHTML = ['bronze', 'silver', 'gold'].map(rank => {
-            const items = groups[rank].map(def => `<li>${def.label}</li>`).join('');
-            return `
-                <article class="ml-card ${rank}">
-                    <div class="ml-card-head">
-                        <div class="ml-tag ${rank}">${rank === 'gold' ? '金卡' : (rank === 'silver' ? '銀卡' : '銅卡')}</div>
-                        <h3>${copy[rank].title}</h3>
-                        <p>${copy[rank].desc}</p>
-                    </div>
-                    <ul>${items}</ul>
-                </article>
-            `;
-        }).join('');
-    }
+                const xc = rect.width / 2;
+                const yc = rect.height / 2;
 
-    function drawExpiryChart(schedule = [], totalExpiringKm = 0) {
-        const container = document.getElementById('ml-expiry-chart-container');
-        const totalDesc = document.getElementById('ml-expiry-total-desc');
-        const tooltip = document.getElementById('ml-expiry-chart-tooltip');
-        if (!container) return;
+                const angleX = (yc - y) / 10;
+                const angleY = (x - xc) / 10;
 
-        totalDesc.textContent = `未來 30 天累計失效：${totalExpiringKm.toFixed(1)} km`;
+                card.style.transform = `rotateX(${angleX}deg) rotateY(${angleY}deg)`;
 
-        if (totalExpiringKm === 0) {
-            container.innerHTML = `
-                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.85em; color: var(--app-accent, #6dba65); text-align: center; padding: 0 1em;">
-                    <i class="fas fa-check-circle" style="margin-right: 6px;"></i> 🎉 太棒了！未來 30 天內沒有任何即將過期的里程，您的里程非常穩固！
-                </div>
-            `;
-            tooltip.textContent = "點擊或懸停於上方圖表查看具體過期日期與里程";
-            return;
-        }
-
-        // Build map of expiry date -> distance
-        const scheduleMap = {};
-        schedule.forEach(item => {
-            scheduleMap[item.date] = item.distance_km;
-        });
-
-        // Find max value for scaling
-        let maxVal = 1; // avoid divide by zero
-        const dates_30 = [];
-        const now = new Date();
-        for (let i = 0; i < 30; i++) {
-            const d = new Date(now.getTime() + i * 86400000);
-            const dStr = d.toISOString().slice(0, 10);
-            const val = scheduleMap[dStr] || 0;
-            if (val > maxVal) maxVal = val;
-            dates_30.push({ dateStr: dStr, value: val });
-        }
-
-        // Render bars
-        container.innerHTML = "";
-        dates_30.forEach((item, index) => {
-            const bar = document.createElement('div');
-            bar.className = 'ml-expiry-bar' + (item.value > 0 ? ' has-val' : '');
-
-            // Tooltip interaction
-            const showTooltip = () => {
-                // Remove active from other bars
-                container.querySelectorAll('.ml-expiry-bar').forEach(b => b.classList.remove('active'));
-                if (item.value > 0) {
-                    bar.classList.add('active');
-                    tooltip.innerHTML = `<strong style="color: #e74c3c;">${item.dateStr}</strong>：將失效 <strong style="color: #e74c3c;">${item.value.toFixed(1)} km</strong>`;
-                } else {
-                    tooltip.innerHTML = `<strong>${item.dateStr}</strong>：無過期里程`;
-                }
-            };
-
-            bar.addEventListener('mouseenter', showTooltip);
-            bar.addEventListener('click', showTooltip);
-            bar.addEventListener('touchstart', (e) => {
-                showTooltip();
+                // glare movement
+                const glareX = (x / rect.width) * 100;
+                const glareY = (y / rect.height) * 100;
+                glare.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.18) 0%, transparent 60%)`;
             });
 
-            container.appendChild(bar);
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+                glare.style.background = 'none';
+            });
+        }
 
-            // Trigger animation height transition
-            const pctHeight = (item.value / maxVal) * 85; // cap at 85% for aesthetics
-            setTimeout(() => {
-                bar.style.height = (item.value > 0 ? Math.max(5, pctHeight) : 2) + '%';
-            }, 15 * index);
-        });
-    }
+        // Draw the zero-dependency chart
+        function drawExpiryChart(schedule = [], totalExpiringKm = 0) {
+            const container = document.getElementById('ml-expiry-chart-container');
+            const totalDesc = document.getElementById('ml-expiry-total-desc');
+            const tooltip = document.getElementById('ml-expiry-chart-tooltip');
+            if (!container) return;
 
-    (async function initMileagePage() {
-        const token = localStorage.getItem('accessToken');
-        renderMileageBenefits();
-        if (!token) return;
-        try {
-            const cached = JSON.parse(localStorage.getItem('user') || '{}');
-            const userId = cached.id || cached.user_id;
-            if (userId) {
-                // Configure dynamic wallet pass URLs
+            totalDesc.textContent = `未來 30 天累計失效：${totalExpiringKm.toFixed(1)} km`;
+
+            if (totalExpiringKm === 0) {
+                container.innerHTML = `
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.85em; color: var(--gold-color); text-align: center; padding: 0 1em;">
+                        <i class="fas fa-check-circle" style="margin-right: 6px;"></i> 🎉 太棒了！未來 30 天內沒有即將過期的里程，等級極其穩固！
+                    </div>
+                `;
+                return;
+            }
+
+            const scheduleMap = {};
+            schedule.forEach(item => {
+                scheduleMap[item.date] = item.distance_km;
+            });
+
+            let maxVal = 1;
+            const dates_30 = [];
+            const now = new Date();
+            for (let i = 0; i < 30; i++) {
+                const d = new Date(now.getTime() + i * 86400000);
+                const dStr = d.toISOString().slice(0, 10);
+                const val = scheduleMap[dStr] || 0;
+                if (val > maxVal) maxVal = val;
+                dates_30.push({ dateStr: dStr, value: val });
+            }
+
+            container.innerHTML = "";
+            dates_30.forEach((item, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'ml-expiry-bar' + (item.value > 0 ? ' has-val' : '');
+
+                const showTooltip = () => {
+                    container.querySelectorAll('.ml-expiry-bar').forEach(b => b.classList.remove('active'));
+                    if (item.value > 0) {
+                        bar.classList.add('active');
+                        tooltip.innerHTML = `<strong style="color: #f43f5e;">${item.dateStr}</strong>：將失效 <strong style="color: #f43f5e;">${item.value.toFixed(1)} km</strong>`;
+                    } else {
+                        tooltip.innerHTML = `<strong>${item.dateStr}</strong>：無過期里程`;
+                    }
+                };
+
+                bar.addEventListener('mouseenter', showTooltip);
+                bar.addEventListener('click', showTooltip);
+                bar.addEventListener('touchstart', showTooltip);
+
+                container.appendChild(bar);
+
+                const pctHeight = (item.value / maxVal) * 85;
+                setTimeout(() => {
+                    bar.style.height = (item.value > 0 ? Math.max(5, pctHeight) : 2) + '%';
+                }, 15 * index);
+            });
+        }
+
+        // Initialize state
+        (async function initPremiumPage() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                document.getElementById('es-eval-title').textContent = "請登入以查看您的評分";
+                document.getElementById('user-profile-name').textContent = "未登入訪客";
+                return;
+            }
+
+            try {
+                const cached = JSON.parse(localStorage.getItem('user') || '{}');
+                const userId = cached.id || cached.user_id;
+                if (!userId) return;
+
+                // Sync basic card details first
                 document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=apple`;
                 document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=google`;
-                document.getElementById('ml-wallet-section').style.display = 'block';
+                document.getElementById('ml-wallet-section').style.display = 'flex';
 
-                const userResp = await fetch('/api/user?user_id=' + userId, { headers: { Authorization: 'Bearer ' + token } });
-                if (userResp.ok) {
-                    const user = await userResp.json();
-                    const km = Number(user.mileage_rolling_km || user.mileage_km_365 || 0);
-                    const rides = Number(user.total_rides || 0);
-                    const card = user.mileage_card || '銅卡';
-                    renderMileage(card, km, rides, [], user.expiry_schedule || [], user.approaching_expiry_km || 0);
-                }
-            }
-            const histResp = await fetch('/api/getHistory', { headers: { Authorization: 'Bearer ' + token } });
-            if (histResp.ok) {
-                const data = await histResp.json();
-                const profile = data.gameProfile || {};
-                const history = Array.isArray(data.history) ? data.history : [];
-                const km = Number(profile.mileage_km_365 || profile.mileage_rolling_km || 0);
-                const card = profile.mileage_rank === 'gold' ? '金卡' : (profile.mileage_rank === 'silver' ? '銀卡' : '銅卡');
+                // Fetch fresh profile with Elite Score
+                const res = await fetch(`/api/user?user_id=${userId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const u = await res.json();
 
-                const finalUserId = profile.user_id || userId;
-                let expirySchedule = [];
-                let approachingExpiryKm = 0;
-                if (finalUserId) {
-                    const uResp = await fetch('/api/user?user_id=' + finalUserId, { headers: { Authorization: 'Bearer ' + token } });
-                    if (uResp.ok) {
-                        const u = await uResp.json();
-                        expirySchedule = u.expiry_schedule || [];
-                        approachingExpiryKm = u.approaching_expiry_km || 0;
+                    // Render 3D Card text
+                    document.getElementById('card-member-name').textContent = u.full_name || u.username || '單車愛好者';
+                    document.getElementById('card-member-serial').textContent = `GLD-000${u.id}`.slice(-14);
+
+                    const cardRank = String(u.mileage_rank || 'bronze').toLowerCase();
+                    const cardEl = document.getElementById('membership-card');
+                    cardEl.className = `physical-card ${cardRank}`;
+                    document.getElementById('card-tier-text').textContent = cardRank.toUpperCase();
+
+                    // Avatar & Profile Row
+                    document.getElementById('user-profile-name').textContent = u.full_name || u.username || '單車愛好者';
+                    document.getElementById('user-profile-tier-sub').textContent = `Lv.${u.level} ${u.cyclist_tier} ｜ ${u.membership_status}`;
+                    if (u.avatar_url) {
+                        document.getElementById('user-profile-avatar').style.backgroundImage = `url('${u.avatar_url}')`;
                     }
-                }
-                renderMileage(card, km, history.length, history, expirySchedule, approachingExpiryKm);
 
-                // Keep links synchronized if they are populated or update again if userId changes
-                if (finalUserId) {
-                    document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${finalUserId}&wallet=apple`;
-                    document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${finalUserId}&wallet=google`;
-                    document.getElementById('ml-wallet-section').style.display = 'block';
+                    // Score Hub Gauge
+                    const score = Number(u.elite_score || 0);
+                    document.getElementById('es-score-val').textContent = score;
+                    const fill = document.getElementById('es-circle-fill');
+                    const capScore = Math.min(1000, score);
+                    const pct = capScore / 1000;
+                    const offset = 440 - (440 * pct);
+                    fill.style.strokeDashoffset = offset;
+
+                    // Eval text
+                    const evalTitle = document.getElementById('es-eval-title');
+                    const evalPara = document.getElementById('es-eval-paragraph');
+                    if (score >= 600) {
+                        evalTitle.textContent = "🏆 低碳風馳領袖級";
+                        evalPara.textContent = `您的 Elite Score 達到極高水平。您是城市運輸騎行的重要領袖與推動者。您的爬升、通勤次數與累積里程在社群中具有無上的尊榮地位，享有頂級的 3D 車道霓虹導航與永久加成權益。`;
+                    } else if (score >= 250) {
+                        evalTitle.textContent = "🚴 進階風行先鋒";
+                        evalPara.textContent = `您已穩健度過初心階段，在日常通勤與海拔爬升中展現出高度的自律與毅力。請繼續保持通勤連勝與探索路網，爭取向 600+ 的金卡領袖評分發起衝擊！`;
+                    } else {
+                        evalTitle.textContent = "🌱 探索初心者";
+                        evalPara.textContent = `您剛剛在城市運輸中啟航。當前評分代表了極具彈性的上升空間。每次多騎一公里，多征服一個天橋坡道，或是每日穩定簽到，都能讓您的評分迅速成長！`;
+                    }
+
+                    // Score factors M, E, C, S, X, P
+                    document.getElementById('f-m').textContent = u.m_factor || 0;
+                    document.getElementById('f-e').textContent = u.e_factor || 0;
+                    document.getElementById('f-c').textContent = u.c_factor || 0;
+                    document.getElementById('f-s').textContent = u.s_factor || 0;
+                    document.getElementById('f-x').textContent = u.x_factor || 0;
+                    document.getElementById('f-p').textContent = u.p_factor || 0;
+
+                    // Expiration Warning
+                    drawExpiryChart(u.expiry_schedule || [], u.approaching_expiry_km || 0);
                 }
+
+            } catch (err) {
+                console.error(err);
             }
-        } catch (_) {}
-    })();
-
-    function renderMileage(card, km, rides, history = [], userExpirySchedule = [], userApproachingExpiryKm = 0) {
-        const cardEl = document.getElementById('ml-card');
-        const kmEl = document.getElementById('ml-km');
-        const ridesEl = document.getElementById('ml-rides');
-
-        const fillRank = document.getElementById('ml-progress-fill-rank');
-        const labelRank = document.getElementById('ml-progress-label-rank');
-        const valRank = document.getElementById('ml-progress-val-rank');
-
-        const fillExpiry = document.getElementById('ml-progress-fill-expiry');
-        const labelExpiry = document.getElementById('ml-progress-label-expiry');
-        const valExpiry = document.getElementById('ml-progress-val-expiry');
-
-        cardEl.textContent = card || '銅卡';
-        kmEl.textContent = (Number(km || 0)).toFixed(1) + ' km';
-        ridesEl.textContent = Number(rides || 0).toLocaleString();
-
-        const v = Number(km || 0);
-        let pctRank = 0;
-        let msgRank = '';
-
-        // Thresholds
-        const SILVER_THRESHOLD = 150;
-        const GOLD_THRESHOLD = 500;
-        const SILVER_MAINTAIN = 120;
-        const GOLD_MAINTAIN = 400;
-
-        if (v >= GOLD_THRESHOLD) {
-            pctRank = 100;
-            msgRank = `已達金卡 (保級線: ${GOLD_MAINTAIN} km)`;
-        } else if (v >= SILVER_THRESHOLD) {
-            // Progress towards Gold (from 150 to 500)
-            pctRank = ((v - SILVER_THRESHOLD) / (GOLD_THRESHOLD - SILVER_THRESHOLD)) * 100;
-            msgRank = `距離金卡還有 ${Math.max(0, GOLD_THRESHOLD - v).toFixed(1)} km`;
-        } else {
-            // Progress towards Silver (from 0 to 150)
-            pctRank = (v / SILVER_THRESHOLD) * 100;
-            msgRank = `距離銀卡還有 ${Math.max(0, SILVER_THRESHOLD - v).toFixed(1)} km`;
-        }
-
-        fillRank.style.width = Math.min(100, Math.max(3, pctRank)).toFixed(1) + '%';
-        valRank.textContent = Math.round(pctRank) + '%';
-        labelRank.textContent = msgRank;
-
-        // Expiry logic: calculate km from rides more than 335 days old (expiring in 30 days)
-        let expiringKm = Number(userApproachingExpiryKm || 0);
-        if (expiringKm === 0 && history && history.length > 0) {
-            const now = new Date();
-            const oneYearAgo = new Date(now.getTime() - 365 * 86400000);
-            const expiringSoonDate = new Date(now.getTime() - (365 - 30) * 86400000); // Rides older than this will expire in 30 days
-
-            history.forEach(h => {
-                const rDate = new Date(h.date || h.ride_date);
-                if (rDate > oneYearAgo && rDate <= expiringSoonDate) {
-                    expiringKm += Number(h.distance_km || 0);
-                }
-            });
-        }
-
-        const pctExpiry = v > 0 ? (expiringKm / v) * 100 : 0;
-        fillExpiry.style.width = Math.min(100, pctExpiry).toFixed(1) + '%';
-        valExpiry.textContent = Math.round(pctExpiry) + '%';
-        labelExpiry.textContent = `未來 30 天內將有 ${expiringKm.toFixed(1)} km 里程過期`;
-
-        if (pctExpiry > 50) fillExpiry.classList.add('danger');
-        else if (pctExpiry > 20) fillExpiry.classList.add('warning');
-        else fillExpiry.classList.remove('warning', 'danger');
-
-        // Draw the custom bar chart!
-        let finalSchedule = userExpirySchedule;
-        if ((!finalSchedule || finalSchedule.length === 0) && history && history.length > 0) {
-            const now = new Date();
-            const oneYearAgo = new Date(now.getTime() - 365 * 86400000);
-            const expiringSoonDate = new Date(now.getTime() - (365 - 30) * 86400000);
-            const scheduleMap = {};
-            history.forEach(h => {
-                const rDate = new Date(h.date || h.ride_date);
-                if (rDate > oneYearAgo && rDate <= expiringSoonDate) {
-                    const expDate = new Date(rDate.getTime() + 365 * 86400000);
-                    const expStr = expDate.toISOString().slice(0, 10);
-                    scheduleMap[expStr] = (scheduleMap[expStr] || 0) + Number(h.distance_km || 0);
-                }
-            });
-            finalSchedule = Object.keys(scheduleMap).map(d => ({ date: d, distance_km: scheduleMap[d] }));
-        }
-        drawExpiryChart(finalSchedule, expiringKm);
-    }
+        })();
     </script>
 </body>
 </html>
