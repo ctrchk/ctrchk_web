@@ -1,9 +1,9 @@
 // CTRC HK Service Worker — PWA 離線緩存
-// Version: 2.4.2
+// Version: 2.4.3
 
-const CACHE_NAME = 'ctrchk-v11';
-const STATIC_CACHE = 'ctrchk-static-v11';
-const DYNAMIC_CACHE = 'ctrchk-dynamic-v11';
+const CACHE_NAME = 'ctrchk-v12';
+const STATIC_CACHE = 'ctrchk-static-v12';
+const DYNAMIC_CACHE = 'ctrchk-dynamic-v12';
 
 // 預緩存的靜態資源（核心 shell）
 const PRECACHE_URLS = [
@@ -17,6 +17,8 @@ const PRECACHE_URLS = [
   '/tasks',
   '/forum',
   '/leaderboard',
+  '/mileage',
+  '/profile',
   '/verify-user.html',
   '/css/main.css',
   '/js/main.js',
@@ -132,14 +134,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 其他靜態資源（HTML/CSS/JS）：Stale-While-Revalidate
+  // 其他靜態資源與 HTML/導航頁面（HTML/CSS/JS）：全面採用極速 Stale-While-Revalidate (SWR) 策略
+  // 緩存存在時「立即返回」，並在背景更新快取，消除網絡延遲，徹底解決 PWA 反應慢和載入舊版問題
   event.respondWith(
     caches.match(request).then((cached) => {
-      // 如果緩存存在且不是導航請求，先返回緩存
-      if (cached && request.mode !== 'navigate') {
-          return cached;
-      }
-
       const networkFetch = fetch(request)
         .then((res) => {
           // 修復 Safari: "Response served by service worker has redirections"
@@ -154,9 +152,12 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => cached);
+        .catch((err) => {
+          console.warn('[SW] Fetch failed, fallback to cache:', err);
+          return cached;
+        });
 
-      return networkFetch || cached;
+      return cached || networkFetch;
     })
   );
 });
