@@ -1389,12 +1389,12 @@
 
         // Initialize state
         (async function initPremiumPage() {
-            const token = localStorage.getItem('accessToken');
-            const userStr = localStorage.getItem('user');
-            if (!token) {
+            if (!isLoggedIn()) {
                 fallbackToGuest();
                 return;
             }
+            const token = localStorage.getItem('accessToken');
+            const userStr = localStorage.getItem('user');
 
             let userId = null;
             if (userStr) {
@@ -1414,6 +1414,12 @@
                 });
                 if (res.ok) {
                     const u = await res.json();
+
+                    // Sync and merge fresh profile data back to localStorage user object
+                    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    const mergedUser = Object.assign({}, storedUser, u);
+                    localStorage.setItem('user', JSON.stringify(mergedUser));
+
                     const rollingKm = Number(u.mileage_rolling_km || u.rolling_distance_km || 0);
 
                     // Sync basic card details first with fallback to actual user id from database response
@@ -1573,6 +1579,11 @@
                     });
                 } else {
                     console.warn("API response not OK, falling back to guest mode visualization.");
+                    if (res.status === 401) {
+                        // Clear expired/invalid session if explicitly unauthorized
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('user');
+                    }
                     fallbackToGuest();
                 }
 
