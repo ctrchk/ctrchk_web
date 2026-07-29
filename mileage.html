@@ -1390,14 +1390,26 @@
         // Initialize state
         (async function initPremiumPage() {
             const token = localStorage.getItem('accessToken');
+            const userStr = localStorage.getItem('user');
             if (!token) {
                 fallbackToGuest();
                 return;
             }
 
+            let userId = null;
+            if (userStr) {
+                try {
+                    const parsedUser = JSON.parse(userStr);
+                    userId = parsedUser.id || parsedUser.userId;
+                } catch (e) {
+                    console.error("Failed to parse user from localStorage:", e);
+                }
+            }
+
             try {
-                // Fetch fresh profile with Elite Score
-                const res = await fetch(`/api/user`, {
+                // Fetch fresh profile with Elite Score (passing user_id as a query param for consistency with API expectations)
+                const apiUrl = userId ? `/api/user?user_id=${userId}` : `/api/user`;
+                const res = await fetch(apiUrl, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -1405,10 +1417,10 @@
                     const rollingKm = Number(u.mileage_rolling_km || u.rolling_distance_km || 0);
 
                     // Sync basic card details first with fallback to actual user id from database response
-                    const userId = u.id;
-                    if (userId) {
-                        document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=apple`;
-                        document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${userId}&wallet=google`;
+                    const resolvedUserId = u.id || userId;
+                    if (resolvedUserId) {
+                        document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${resolvedUserId}&wallet=apple`;
+                        document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${resolvedUserId}&wallet=google`;
                         document.getElementById('ml-wallet-section').style.display = 'flex';
                     }
 
@@ -1560,9 +1572,7 @@
                         });
                     });
                 } else {
-                    console.warn("API response not OK, falling back to guest mode.");
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('user');
+                    console.warn("API response not OK, falling back to guest mode visualization.");
                     fallbackToGuest();
                 }
 
