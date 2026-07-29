@@ -1369,23 +1369,29 @@
             });
         }
 
+        // Graceful fallback to guest status
+        function fallbackToGuest() {
+            document.getElementById('es-eval-title').textContent = "請登入以查看您的評分";
+            document.getElementById('user-profile-name').textContent = "未登入訪客";
+            document.getElementById('user-profile-tier-sub').textContent = "登入後即可解鎖等級、Elite Score 與特權進度";
+            renderDynamicPrivileges('bronze');
+
+            // Setup interactive privilege tabs for guests
+            document.querySelectorAll('.privilege-tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.privilege-tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentActiveFilter = btn.dataset.filter;
+                    renderDynamicPrivileges('bronze');
+                });
+            });
+        }
+
         // Initialize state
         (async function initPremiumPage() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
-                document.getElementById('es-eval-title').textContent = "請登入以查看您的評分";
-                document.getElementById('user-profile-name').textContent = "未登入訪客";
-                renderDynamicPrivileges('bronze');
-
-                // Setup interactive privilege tabs for guests
-                document.querySelectorAll('.privilege-tab-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.privilege-tab-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        currentActiveFilter = btn.dataset.filter;
-                        renderDynamicPrivileges('bronze');
-                    });
-                });
+                fallbackToGuest();
                 return;
             }
 
@@ -1553,10 +1559,16 @@
                             renderDynamicPrivileges(cardRank);
                         });
                     });
+                } else {
+                    console.warn("API response not OK, falling back to guest mode.");
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('user');
+                    fallbackToGuest();
                 }
 
             } catch (err) {
-                console.error(err);
+                console.error("Failed to load authenticated mileage profile:", err);
+                fallbackToGuest();
             }
         })();
     </script>
