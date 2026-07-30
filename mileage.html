@@ -1387,6 +1387,182 @@
             });
         }
 
+        // Helper to render user profile data into UI instantly
+        function renderUserProfile(u) {
+            const rollingKm = Number(u.mileage_rolling_km || u.rolling_distance_km || 0);
+            const resolvedUserId = u.id || u.userId;
+
+            if (resolvedUserId) {
+                const addAppleBtn = document.getElementById('btn-add-apple-wallet');
+                const addGoogleBtn = document.getElementById('btn-add-google-wallet');
+                const walletSec = document.getElementById('ml-wallet-section');
+                if (addAppleBtn) addAppleBtn.href = `/api/user?action=wallet-pass&user_id=${resolvedUserId}&wallet=apple`;
+                if (addGoogleBtn) addGoogleBtn.href = `/api/user?action=wallet-pass&user_id=${resolvedUserId}&wallet=google`;
+                if (walletSec) walletSec.style.display = 'flex';
+            }
+
+            // Render 3D Card text
+            const cardMemberName = document.getElementById('card-member-name');
+            const cardMemberSerial = document.getElementById('card-member-serial');
+            if (cardMemberName) cardMemberName.textContent = u.full_name || u.username || '單車愛好者';
+            if (cardMemberSerial) cardMemberSerial.textContent = `GLD-000${resolvedUserId || '0000'}`.slice(-14);
+
+            const cardRank = String(u.mileage_rank || 'bronze').toLowerCase();
+            const cardEl = document.getElementById('membership-card');
+            if (cardEl) {
+                cardEl.className = `physical-card ${cardRank}`;
+            }
+            const cardTierText = document.getElementById('card-tier-text');
+            if (cardTierText) cardTierText.textContent = cardRank.toUpperCase();
+
+            // Avatar & Profile Row
+            const userProfileName = document.getElementById('user-profile-name');
+            const userProfileTierSub = document.getElementById('user-profile-tier-sub');
+            if (userProfileName) userProfileName.textContent = u.full_name || u.username || '單車愛好者';
+            if (userProfileTierSub) {
+                const level = u.level || 1;
+                const getCyclistTier = window.getCyclistTier || function(l) { return '入門車手'; };
+                const cyclist_tier = u.cyclist_tier || getCyclistTier(level);
+                const membership_status = u.membership_status || '普通會員';
+                userProfileTierSub.textContent = `Lv.${level} ${cyclist_tier} ｜ ${membership_status}`;
+            }
+            const avatarEl = document.getElementById('user-profile-avatar');
+            if (avatarEl && u.avatar_url) {
+                avatarEl.style.backgroundImage = `url('${u.avatar_url}')`;
+            }
+
+            // Re-integrate Progression details UI rendering
+            const userProgressionSec = document.getElementById('user-progression-sec');
+            if (userProgressionSec) userProgressionSec.style.display = 'block';
+
+            // Level XP Calculations (XP required for next level is approx level * 1000)
+            const levelNum = u.level || 1;
+            const xpRequiredForNext = levelNum * 1000;
+            const xpCurrent = u.xp || 0;
+            const xpPct = Math.min(100, Math.max(0, (xpCurrent / xpRequiredForNext) * 100));
+            const progXpTxt = document.getElementById('prog-xp-txt');
+            if (progXpTxt) progXpTxt.textContent = `${xpCurrent} / ${xpRequiredForNext} XP`;
+            const xpFill = document.getElementById('prog-xp-fill');
+            if (xpFill) {
+                xpFill.style.width = `${xpPct}%`;
+                xpFill.className = `prog-bar-fill ${cardRank}`;
+            }
+            const progXpSubtext = document.getElementById('prog-xp-subtext');
+            if (progXpSubtext) progXpSubtext.textContent = `升級至 Lv.${levelNum + 1} 還需要 ${xpRequiredForNext - xpCurrent} XP。`;
+
+            // Rolling Mileage Target progression based on tiers - Split into Upgrade and Retention
+            let upgradeTarget = 150; // default bronze -> silver
+            let upgradeTitle = "365天滾動里程 ｜ 晉升銀卡進度";
+            let upgradeSub = `再累積 ${Math.max(0, 150 - rollingKm).toFixed(1)} km 解鎖銀卡。滾動里程每日結算更新。`;
+            let upgradePct = Math.min(100, Math.max(0, (rollingKm / 150) * 100));
+
+            let retentionTarget = 0; // bronze doesn't need retention (permanent)
+            let retentionTitle = "365天滾動里程 ｜ 銅卡免降級";
+            let retentionSub = `🌱 銅卡享有終身免降級保證，無任何保級里程壓力！`;
+            let retentionPct = 100;
+
+            if (cardRank === 'silver') {
+                upgradeTarget = 500; // silver -> gold
+                upgradeTitle = "365天滾動里程 ｜ 晉升金卡進度";
+                upgradeSub = `再累積 ${Math.max(0, 500 - rollingKm).toFixed(1)} km 晉升金卡。`;
+                upgradePct = Math.min(100, Math.max(0, (rollingKm / 500) * 100));
+
+                retentionTarget = 120;
+                retentionTitle = "365天滾動里程 ｜ 銀卡保級進度";
+                retentionSub = rollingKm >= 120
+                    ? `🎉 已達 120 km，成功保級銀卡！`
+                    : `需保持 120 km 以上以維持銀卡，還差 ${Math.max(0, 120 - rollingKm).toFixed(1)} km。`;
+                retentionPct = Math.min(100, Math.max(0, (rollingKm / 120) * 100));
+            } else if (cardRank === 'gold') {
+                upgradeTarget = 500;
+                upgradeTitle = "365天滾動里程 ｜ 已達最高卡級";
+                upgradeSub = `👑 您已解鎖最高榮譽金卡，無可再升級！`;
+                upgradePct = 100;
+
+                retentionTarget = 400;
+                retentionTitle = "365天滾動里程 ｜ 金卡保級進度";
+                retentionSub = rollingKm >= 400
+                    ? `🎉 已達 400 km，成功保級金卡！`
+                    : `需保持 400 km 以上以維持金卡，還差 ${Math.max(0, 400 - rollingKm).toFixed(1)} km。`;
+                retentionPct = Math.min(100, Math.max(0, (rollingKm / 400) * 100));
+            }
+
+            // Render Upgrade Progress Bar
+            const progUpgradeTitle = document.getElementById('prog-upgrade-title');
+            if (progUpgradeTitle) progUpgradeTitle.textContent = upgradeTitle;
+            const progUpgradeTxt = document.getElementById('prog-upgrade-txt');
+            if (progUpgradeTxt) progUpgradeTxt.textContent = `${rollingKm.toFixed(1)} / ${upgradeTarget} km`;
+            const upgradeFill = document.getElementById('prog-upgrade-fill');
+            if (upgradeFill) {
+                upgradeFill.style.width = `${upgradePct}%`;
+                upgradeFill.className = `prog-bar-fill ${cardRank}`;
+            }
+            const progUpgradeSubtext = document.getElementById('prog-upgrade-subtext');
+            if (progUpgradeSubtext) progUpgradeSubtext.textContent = upgradeSub;
+
+            // Render Retention Progress Bar
+            const progRetentionTitle = document.getElementById('prog-retention-title');
+            if (progRetentionTitle) progRetentionTitle.textContent = retentionTitle;
+            const progRetentionTxt = document.getElementById('prog-retention-txt');
+            if (progRetentionTxt) progRetentionTxt.textContent = retentionTarget > 0 ? `${rollingKm.toFixed(1)} / ${retentionTarget} km` : 'PERMANENT';
+            const retentionFill = document.getElementById('prog-retention-fill');
+            if (retentionFill) {
+                retentionFill.style.width = `${retentionPct}%`;
+                retentionFill.className = `prog-bar-fill ${cardRank}`;
+            }
+            const progRetentionSubtext = document.getElementById('prog-retention-subtext');
+            if (progRetentionSubtext) progRetentionSubtext.textContent = retentionSub;
+
+            // Numeric Mileage records indicators
+            const recRollingMileage = document.getElementById('rec-rolling-mileage');
+            if (recRollingMileage) recRollingMileage.textContent = `${rollingKm.toFixed(1)} km`;
+            const recTotalMileage = document.getElementById('rec-total-mileage');
+            if (recTotalMileage) recTotalMileage.textContent = `${(u.total_distance_km || 0).toFixed(1)} km`;
+            const recCommuteStreak = document.getElementById('rec-commute-streak');
+            if (recCommuteStreak) recCommuteStreak.textContent = `${u.commute_streak || 0} 天`;
+            const recCommunityScore = document.getElementById('rec-community-score');
+            if (recCommunityScore) recCommunityScore.textContent = `${u.community_contribution || 0}`;
+
+            // Dynamic privilege card generation
+            renderDynamicPrivileges(cardRank);
+
+            // Score Hub Gauge
+            const score = Number(u.elite_score || 0);
+            const esScoreVal = document.getElementById('es-score-val');
+            if (esScoreVal) esScoreVal.textContent = score;
+            const fill = document.getElementById('es-circle-fill');
+            if (fill) {
+                const capScore = Math.min(1000, score);
+                const pct = capScore / 1000;
+                const offset = 440 - (440 * pct);
+                fill.style.strokeDashoffset = offset;
+            }
+
+            // Eval text
+            const evalTitle = document.getElementById('es-eval-title');
+            const evalPara = document.getElementById('es-eval-paragraph');
+            if (evalTitle && evalPara) {
+                if (score >= 600) {
+                    evalTitle.textContent = "🏆 低碳風馳領袖級";
+                    evalPara.textContent = `您的 Elite Score 達到極高水平。您是城市運輸騎行的重要領袖與推動者。您的爬升、通勤次數與累積里程在社群中具有無上的尊榮地位，享有頂級的 3D 車道霓虹導航與永久加成權益。`;
+                } else if (score >= 250) {
+                    evalTitle.textContent = "🚴 進階風行先鋒";
+                    evalPara.textContent = `您已穩健度過初心階段，在日常通勤與海拔爬升中展現出高度的自律與毅力。請繼續保持通勤連勝與探索路網，爭取向 600+ 的金卡領袖評分發起衝擊！`;
+                } else {
+                    evalTitle.textContent = "🌱 探索初心者";
+                    evalPara.textContent = `您剛剛在城市運輸中啟航。當前評分代表了極具彈性的上升空間。每次多騎一公里，多征服一個天橋坡道，或是每日穩定簽到，都能讓您的評分迅速成長！`;
+                }
+            }
+
+            // Score factors M, E, C, S, X, P
+            const fm = document.getElementById('f-m'); if (fm) fm.textContent = u.m_factor || 0;
+            const fe = document.getElementById('f-e'); if (fe) fe.textContent = u.e_factor || 0;
+            const fc = document.getElementById('f-c'); if (fc) fc.textContent = u.c_factor || 0;
+            const fs = document.getElementById('f-s'); if (fs) fs.textContent = u.s_factor || 0;
+            const fx = document.getElementById('f-x'); if (fx) fx.textContent = u.x_factor || 0;
+            const fp = document.getElementById('f-p'); if (fp) fp.textContent = u.p_factor || 0;
+        }
+
         // Initialize state
         (async function initPremiumPage() {
             if (!isLoggedIn()) {
@@ -1397,10 +1573,14 @@
             const userStr = localStorage.getItem('user');
 
             let userId = null;
+            let cachedUser = null;
+
             if (userStr) {
                 try {
-                    const parsedUser = JSON.parse(userStr);
-                    userId = parsedUser.id || parsedUser.userId;
+                    cachedUser = JSON.parse(userStr);
+                    userId = cachedUser.id || cachedUser.userId;
+                    // Render cached profile instantly before fetch to avoid delay/flicker
+                    renderUserProfile(cachedUser);
                 } catch (e) {
                     console.error("Failed to parse user from localStorage:", e);
                 }
@@ -1420,137 +1600,8 @@
                     const mergedUser = Object.assign({}, storedUser, u);
                     localStorage.setItem('user', JSON.stringify(mergedUser));
 
-                    const rollingKm = Number(u.mileage_rolling_km || u.rolling_distance_km || 0);
-
-                    // Sync basic card details first with fallback to actual user id from database response
-                    const resolvedUserId = u.id || userId;
-                    if (resolvedUserId) {
-                        document.getElementById('btn-add-apple-wallet').href = `/api/user?action=wallet-pass&user_id=${resolvedUserId}&wallet=apple`;
-                        document.getElementById('btn-add-google-wallet').href = `/api/user?action=wallet-pass&user_id=${resolvedUserId}&wallet=google`;
-                        document.getElementById('ml-wallet-section').style.display = 'flex';
-                    }
-
-                    // Render 3D Card text
-                    document.getElementById('card-member-name').textContent = u.full_name || u.username || '單車愛好者';
-                    document.getElementById('card-member-serial').textContent = `GLD-000${u.id}`.slice(-14);
-
-                    const cardRank = String(u.mileage_rank || 'bronze').toLowerCase();
-                    const cardEl = document.getElementById('membership-card');
-                    cardEl.className = `physical-card ${cardRank}`;
-                    document.getElementById('card-tier-text').textContent = cardRank.toUpperCase();
-
-                    // Avatar & Profile Row
-                    document.getElementById('user-profile-name').textContent = u.full_name || u.username || '單車愛好者';
-                    document.getElementById('user-profile-tier-sub').textContent = `Lv.${u.level} ${u.cyclist_tier} ｜ ${u.membership_status}`;
-                    if (u.avatar_url) {
-                        document.getElementById('user-profile-avatar').style.backgroundImage = `url('${u.avatar_url}')`;
-                    }
-
-                    // Re-integrate Progression details UI rendering
-                    document.getElementById('user-progression-sec').style.display = 'block';
-
-                    // Level XP Calculations (XP required for next level is approx level * 1000)
-                    const xpRequiredForNext = (u.level || 1) * 1000;
-                    const xpCurrent = u.xp || 0;
-                    const xpPct = Math.min(100, Math.max(0, (xpCurrent / xpRequiredForNext) * 100));
-                    document.getElementById('prog-xp-txt').textContent = `${xpCurrent} / ${xpRequiredForNext} XP`;
-                    const xpFill = document.getElementById('prog-xp-fill');
-                    xpFill.style.width = `${xpPct}%`;
-                    xpFill.className = `prog-bar-fill ${cardRank}`;
-                    document.getElementById('prog-xp-subtext').textContent = `升級至 Lv.${(u.level || 1) + 1} 還需要 ${xpRequiredForNext - xpCurrent} XP。`;
-
-                    // Rolling Mileage Target progression based on tiers - Split into Upgrade and Retention
-                    let upgradeTarget = 150; // default bronze -> silver
-                    let upgradeTitle = "365天滾動里程 ｜ 晉升銀卡進度";
-                    let upgradeSub = `再累積 ${Math.max(0, 150 - rollingKm).toFixed(1)} km 解鎖銀卡。滾動里程每日結算更新。`;
-                    let upgradePct = Math.min(100, Math.max(0, (rollingKm / 150) * 100));
-
-                    let retentionTarget = 0; // bronze doesn't need retention (permanent)
-                    let retentionTitle = "365天滾動里程 ｜ 銅卡免降級";
-                    let retentionSub = `🌱 銅卡享有終身免降級保證，無任何保級里程壓力！`;
-                    let retentionPct = 100;
-
-                    if (cardRank === 'silver') {
-                        upgradeTarget = 500; // silver -> gold
-                        upgradeTitle = "365天滾動里程 ｜ 晉升金卡進度";
-                        upgradeSub = `再累積 ${Math.max(0, 500 - rollingKm).toFixed(1)} km 晉升金卡。`;
-                        upgradePct = Math.min(100, Math.max(0, (rollingKm / 500) * 100));
-
-                        retentionTarget = 120;
-                        retentionTitle = "365天滾動里程 ｜ 銀卡保級進度";
-                        retentionSub = rollingKm >= 120
-                            ? `🎉 已達 120 km，成功保級銀卡！`
-                            : `需保持 120 km 以上以維持銀卡，還差 ${Math.max(0, 120 - rollingKm).toFixed(1)} km。`;
-                        retentionPct = Math.min(100, Math.max(0, (rollingKm / 120) * 100));
-                    } else if (cardRank === 'gold') {
-                        upgradeTarget = 500;
-                        upgradeTitle = "365天滾動里程 ｜ 已達最高卡級";
-                        upgradeSub = `👑 您已解鎖最高榮譽金卡，無可再升級！`;
-                        upgradePct = 100;
-
-                        retentionTarget = 400;
-                        retentionTitle = "365天滾動里程 ｜ 金卡保級進度";
-                        retentionSub = rollingKm >= 400
-                            ? `🎉 已達 400 km，成功保級金卡！`
-                            : `需保持 400 km 以上以維持金卡，還差 ${Math.max(0, 400 - rollingKm).toFixed(1)} km。`;
-                        retentionPct = Math.min(100, Math.max(0, (rollingKm / 400) * 100));
-                    }
-
-                    // Render Upgrade Progress Bar
-                    document.getElementById('prog-upgrade-title').textContent = upgradeTitle;
-                    document.getElementById('prog-upgrade-txt').textContent = `${rollingKm.toFixed(1)} / ${upgradeTarget} km`;
-                    const upgradeFill = document.getElementById('prog-upgrade-fill');
-                    upgradeFill.style.width = `${upgradePct}%`;
-                    upgradeFill.className = `prog-bar-fill ${cardRank}`;
-                    document.getElementById('prog-upgrade-subtext').textContent = upgradeSub;
-
-                    // Render Retention Progress Bar
-                    document.getElementById('prog-retention-title').textContent = retentionTitle;
-                    document.getElementById('prog-retention-txt').textContent = retentionTarget > 0 ? `${rollingKm.toFixed(1)} / ${retentionTarget} km` : 'PERMANENT';
-                    const retentionFill = document.getElementById('prog-retention-fill');
-                    retentionFill.style.width = `${retentionPct}%`;
-                    retentionFill.className = `prog-bar-fill ${cardRank}`;
-                    document.getElementById('prog-retention-subtext').textContent = retentionSub;
-
-                    // Numeric Mileage records indicators
-                    document.getElementById('rec-rolling-mileage').textContent = `${rollingKm.toFixed(1)} km`;
-                    document.getElementById('rec-total-mileage').textContent = `${(u.total_distance_km || 0).toFixed(1)} km`;
-                    document.getElementById('rec-commute-streak').textContent = `${u.commute_streak || 0} 天`;
-                    document.getElementById('rec-community-score').textContent = `${u.community_contribution || 0}`;
-
-                    // Dynamic privilege card generation
-                    renderDynamicPrivileges(cardRank);
-
-                    // Score Hub Gauge
-                    const score = Number(u.elite_score || 0);
-                    document.getElementById('es-score-val').textContent = score;
-                    const fill = document.getElementById('es-circle-fill');
-                    const capScore = Math.min(1000, score);
-                    const pct = capScore / 1000;
-                    const offset = 440 - (440 * pct);
-                    fill.style.strokeDashoffset = offset;
-
-                    // Eval text
-                    const evalTitle = document.getElementById('es-eval-title');
-                    const evalPara = document.getElementById('es-eval-paragraph');
-                    if (score >= 600) {
-                        evalTitle.textContent = "🏆 低碳風馳領袖級";
-                        evalPara.textContent = `您的 Elite Score 達到極高水平。您是城市運輸騎行的重要領袖與推動者。您的爬升、通勤次數與累積里程在社群中具有無上的尊榮地位，享有頂級的 3D 車道霓虹導航與永久加成權益。`;
-                    } else if (score >= 250) {
-                        evalTitle.textContent = "🚴 進階風行先鋒";
-                        evalPara.textContent = `您已穩健度過初心階段，在日常通勤與海拔爬升中展現出高度的自律與毅力。請繼續保持通勤連勝與探索路網，爭取向 600+ 的金卡領袖評分發起衝擊！`;
-                    } else {
-                        evalTitle.textContent = "🌱 探索初心者";
-                        evalPara.textContent = `您剛剛在城市運輸中啟航。當前評分代表了極具彈性的上升空間。每次多騎一公里，多征服一個天橋坡道，或是每日穩定簽到，都能讓您的評分迅速成長！`;
-                    }
-
-                    // Score factors M, E, C, S, X, P
-                    document.getElementById('f-m').textContent = u.m_factor || 0;
-                    document.getElementById('f-e').textContent = u.e_factor || 0;
-                    document.getElementById('f-c').textContent = u.c_factor || 0;
-                    document.getElementById('f-s').textContent = u.s_factor || 0;
-                    document.getElementById('f-x').textContent = u.x_factor || 0;
-                    document.getElementById('f-p').textContent = u.p_factor || 0;
+                    // Re-render completely with fresh database results
+                    renderUserProfile(mergedUser);
 
                     // Expiration Warning
                     drawExpiryChart(u.expiry_schedule || [], u.approaching_expiry_km || 0);
@@ -1574,7 +1625,7 @@
                             document.querySelectorAll('.privilege-tab-btn').forEach(b => b.classList.remove('active'));
                             btn.classList.add('active');
                             currentActiveFilter = btn.dataset.filter;
-                            renderDynamicPrivileges(cardRank);
+                            renderDynamicPrivileges(String(mergedUser.mileage_rank || 'bronze').toLowerCase());
                         });
                     });
                 } else {
@@ -1583,13 +1634,20 @@
                         // Clear expired/invalid session if explicitly unauthorized
                         localStorage.removeItem('accessToken');
                         localStorage.removeItem('user');
+                        fallbackToGuest();
+                    } else {
+                        // For transient non-401 backend errors, retain cached logged-in UI
+                        if (!cachedUser) {
+                            fallbackToGuest();
+                        }
                     }
-                    fallbackToGuest();
                 }
 
             } catch (err) {
                 console.error("Failed to load authenticated mileage profile:", err);
-                fallbackToGuest();
+                if (!cachedUser) {
+                    fallbackToGuest();
+                }
             }
         })();
     </script>
