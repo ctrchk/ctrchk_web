@@ -331,21 +331,21 @@
          │                         │                         │
          ├─────────────────────────┼─────────────────────────┤
          ▼                         ▼                         ▼
-   [ 連勝因子 (S) ]          [ 探索因子 (X) ]          [ 貢獻因子 (P) ]
-   目前通勤連勝天數 $\times 5$  新路線/置灰路網解鎖比例    討論區與路況舉報加分
+   [ 成就因子 (A) ]          [ 探索因子 (X) ]          [ 貢獻因子 (P) ]
+   已解鎖勳章數量 $\times 25$  新路線/置灰路網解鎖比例    討論區與路況舉報加分
          │                         │                         │
          └─────────────────────────┴─────────────────────────┘
                                    ▼
                        ┌───────────────────────┐
                        │   Elite Score 總分    │
-                       │   $M + E + C + S + X + P$ │
+                       │   $M + E + C + A + X + P$ │
                        └───────────────────────┘
 ```
 
 ### 6.1 Elite Score 算法架構
 Elite Score 是一個綜合考量體能、毅力、探索度與社群貢獻的加權指數。公式定義如下：
 
-$$\text{Elite Score} = \mathbf{M} + \mathbf{E} + \mathbf{C} + \mathbf{S} + \mathbf{X} + \mathbf{P}$$
+$$\text{Elite Score} = \mathbf{M} + \mathbf{E} + \mathbf{C} + \mathbf{A} + \mathbf{X} + \mathbf{P}$$
 
 * **1. 里程因子 ($\mathbf{M}$ — Mileage)**：
   $$\mathbf{M} = \text{近 30 天累積里程 (km)} \times 10$$
@@ -355,8 +355,8 @@ $$\text{Elite Score} = \mathbf{M} + \mathbf{E} + \mathbf{C} + \mathbf{S} + \math
 * **3. 頻次與規律因子 ($\mathbf{C}$ — Consistency)**：
   $$\mathbf{C} = \text{近 30 天內有 active 騎行的天數} \times 15$$
   * *設計意圖*：鼓勵高頻通勤，即使每天只踩 $2\text{ km}$ 的地鐵接駁，也能獲得極高的 Consistency 評分。
-* **4. 連勝因子 ($\mathbf{S}$ — Streak)**：
-  $$\mathbf{S} = \text{當前通勤連勝天數 (Streak)} \times 5 \quad (\text{上限 } 150\text{ 分})$$
+* **4. 成就因子 ($\mathbf{A}$ — Achievements)**：
+  $$\mathbf{A} = \text{已解鎖勳章/成就數量} \times 25 \quad (\text{上限 } 150\text{ 分})$$
 * **5. 探索因子 ($\mathbf{X}$ — Exploration)**：
   $$\mathbf{X} = \text{本市已解鎖單車徑網絡比例} \times 200$$
   * *設計意圖*：激勵用戶走不同的路，解鎖地圖上的「置灰未征服路網」。

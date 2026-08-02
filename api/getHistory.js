@@ -1065,6 +1065,41 @@ export default async function handler(req, res) {
           }
       }
 
+      let isDoubleEventActive = false;
+      if (route_id && normalizedRideMode !== 'free') {
+          try {
+              const { rows: routeTagsRows } = await query(
+                  `SELECT tags FROM routes WHERE route_number = $1 OR (dept || '-' || route_number) = $1 LIMIT 1`,
+                  [route_id]
+              );
+              if (routeTagsRows.length > 0) {
+                  let tags = routeTagsRows[0].tags || [];
+                  if (typeof tags === 'string') {
+                      try { tags = JSON.parse(tags); } catch(_) { tags = []; }
+                  }
+                  if (Array.isArray(tags) && tags.includes('雙倍里程')) {
+                      const hktDay = new Date(new Date().getTime() + 8 * 3600000).getUTCDay();
+                      const isWeekend = hktDay === 0 || hktDay === 6;
+                      const isFriday = hktDay === 5;
+                      const { rows: rankRows } = await query(
+                          'SELECT mileage_rank FROM user_game_profile WHERE user_id = $1',
+                          [userData.userId]
+                      );
+                      const isGold = rankRows[0]?.mileage_rank === 'gold';
+                      if (isWeekend || (isFriday && isGold)) {
+                          isDoubleEventActive = true;
+                      }
+                  }
+              }
+          } catch(e) {
+              console.warn('[getHistory] Failed to check double event:', e.message);
+          }
+      }
+
+      if (isDoubleEventActive) {
+          xpReward *= 2;
+      }
+
       // Apply ride mode multiplier:
       // tourism x1.5, commuter/DRT x1.0, free x0.8 (rounded to nearest integer)
       // 0.1 Check for active user multiplier
@@ -1166,8 +1201,12 @@ export default async function handler(req, res) {
         const consistencyDays = Number(c30Rows[0]?.c30 || 0) + 1;
         const cFactor = consistencyDays * 15;
 
-        const esCommuteStreak = Number(profile.commute_streak || 0);
-        const sFactor = Math.min(150, esCommuteStreak * 5);
+        // 4. Achievement Factor (A): number of unlocked badges * 25 (cap at 150)
+        const { rows: badgeCountRows } = await query(
+          `SELECT COUNT(*)::int AS cnt FROM user_badges WHERE user_id = $1`, [userData.userId]
+        );
+        const badgeCount = Number(badgeCountRows[0]?.cnt || 0);
+        const aFactor = Math.min(150, badgeCount * 25);
 
         // Fetch user routes
         const { rows: routesCountRows } = await query('SELECT COUNT(*) AS total_count FROM routes');
@@ -1184,7 +1223,7 @@ export default async function handler(req, res) {
         const communityContribution = Number(forumCountRows[0]?.cnt || 0) + Number(replyCountRows[0]?.cnt || 0);
         const pFactor = communityContribution * 20;
 
-        const totalEliteScore = Math.round(mFactor + eFactor + cFactor + sFactor + xFactor + pFactor);
+        const totalEliteScore = Math.round(mFactor + eFactor + cFactor + aFactor + xFactor + pFactor);
 
         await query(
           `UPDATE user_game_profile
@@ -1219,6 +1258,10 @@ export default async function handler(req, res) {
             mileageReward = miles_reward_override;
         } else {
             mileageReward = distKmVal * 0.8;
+        }
+
+        if (isDoubleEventActive) {
+            mileageReward *= 2;
         }
 
         if (bonusCoinsEarned > 0 && isValidRide) {

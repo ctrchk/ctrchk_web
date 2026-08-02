@@ -262,6 +262,16 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
+    if (action === 'get-obstacles') {
+        const { rows } = await query(
+            `SELECT o.*, u.email, u.full_name, gp.mileage_rank
+             FROM road_obstacles o
+             JOIN users u ON u.id = o.user_id
+             LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+             ORDER BY CASE WHEN o.priority = 'priority' THEN 0 ELSE 1 END, o.created_at DESC`
+        );
+        return res.status(200).json({ obstacles: rows });
+    }
     if (action === 'get-challenge-stations') {
         const { rows } = await query(`SELECT * FROM hk_challenge_stations ORDER BY id`);
         return res.status(200).json(rows);
@@ -308,6 +318,13 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const b = req.body;
+    if (action === 'audit-obstacle') {
+        await query(
+            `UPDATE road_obstacles SET status = $1 WHERE id = $2`,
+            [b.status, b.obstacle_id]
+        );
+        return res.status(200).json({ success: true });
+    }
     if (action === 'create-badge' || action === 'update-badge') {
         if (action === 'create-badge') {
             await query(
