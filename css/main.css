@@ -1203,8 +1203,36 @@ body.liquid-glass .history-card {
 }
 /* ── Mileage rank themes (Silver / Gold) ───────────────────────────── */
 body.rank-silver {
-  --app-accent: #c0c0c0;
-  --app-accent-light: #e0e0e0;
+  --app-accent: #D1D9DF;
+  --app-accent-light: #E2E8F0;
+  --app-accent-bright: #3a86ff; /* Silicon dynamic blue bias */
+  --app-bg-primary: #0f141c; /* Cold mechanical steel grey */
+  --app-bg-secondary: #151c27;
+  --app-bg-card: #1d2633;
+  --app-bg-card2: #253142;
+  --app-border: #38475a;
+  --app-text-primary: #D1D9DF;
+  --app-text-secondary: #8a9bb0;
+}
+body.rank-silver .app-ride-cta,
+body.rank-silver .app-start-ride-btn,
+body.rank-silver .active-filter-chip,
+body.rank-silver .cta-button,
+body.rank-silver button:not(.lang-switcher-btn):not(.wx-btn):not(.btn-cancel),
+body.rank-silver .ml-action {
+  background: linear-gradient(135deg, #7f8c8d 0%, #D1D9DF 100%) !important;
+  color: #0f141c !important;
+  border: 1px solid #ffffff !important;
+  box-shadow: 0 0 12px rgba(209, 217, 223, 0.45) !important;
+  font-weight: 800 !important;
+}
+body.rank-silver .card,
+body.rank-silver [class$="-card"],
+body.rank-silver [class*="-card "],
+body.rank-silver .glass-panel,
+body.rank-silver .modal-box {
+  border: 1px solid rgba(209, 217, 223, 0.25) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 body.rank-gold {
   --app-accent: #d4af37;

@@ -625,6 +625,7 @@
     <button class="float-btn" id="btn-zoom-in" title="放大"><i class="fas fa-plus"></i></button>
     <button class="float-btn" id="btn-zoom-out" title="縮小"><i class="fas fa-minus"></i></button>
     <button class="float-btn active" id="btn-toggle-park" title="顯示/隱藏泊位"><i class="fas fa-parking"></i></button>
+    <button class="float-btn active" id="btn-toggle-ramp" title="顯示/隱藏斜坡"><i class="fas fa-mountain"></i></button>
     <button class="float-btn active" id="btn-recenter" title="跟隨我"><i class="fas fa-crosshairs"></i></button>
     <button class="float-btn active" id="btn-orient" title="切換航向模式"><i class="fas fa-compass"></i></button>
   </div>
@@ -785,6 +786,7 @@
         this.initSearch();
         this.loadStations();
         this.loadParkingSpaces();
+        this.loadCycRamps();
 
         // Load local TKO tracks and pedestrian paths
         try {
@@ -953,6 +955,65 @@
 
         } catch (e) {
           console.warn('[Nav] Failed to load parking spaces', e);
+        }
+      },
+
+      async loadCycRamps() {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const isSenior = user.user_role === 'senior' || user.user_role === 'admin';
+        if (!window.hasPermission('map_cycramp') && !isSenior) {
+          // Hide button if no permission
+          const btn = document.getElementById('btn-toggle-ramp');
+          if (btn) btn.style.display = 'none';
+          return;
+        }
+
+        try {
+          const resp = await fetch('/CYCFACI.gdb_CYCRAMP_converted.geojson');
+          const data = await resp.json();
+          this.map.addSource('cyc-ramps', { type: 'geojson', data });
+          const beforeId = this.map.getLayer('route-symbols') ? 'route-symbols' : undefined;
+          this.map.addLayer({
+            id: 'ramps-layer',
+            type: 'line',
+            source: 'cyc-ramps',
+            paint: {
+              'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.5, 16, 4.5],
+              'line-color': '#e67e22', // Warnings/slopes orange
+              'line-opacity': 0.85
+            }
+          }, beforeId);
+
+          // Click Handler for Ramps
+          this.map.on('click', 'ramps-layer', (e) => {
+            const feature = e.features[0];
+            const name = feature.properties.AliasNameTC || '無障礙斜道';
+            const gradient = (Number(feature.properties.Gradient || 0) * 100).toFixed(1);
+            const direction = feature.properties.Direction || '雙向';
+            const location = feature.properties.Location || '室外';
+
+            const html = `
+              <div class="parking-info">
+                <div class="parking-info-title" style="color:#e67e22;"><i class="fas fa-mountain"></i> ${name}</div>
+                <div class="parking-info-count" style="font-size: 20px;">${gradient}%</div>
+                <div class="parking-info-label">坡度 (Gradient)</div>
+                <div style="font-size: 11px; margin-top: 5px; opacity:0.8;">
+                  方向：${direction} | 位置：${location}
+                </div>
+              </div>
+            `;
+
+            new mapboxgl.Popup({ className: 'parking-popup' })
+              .setLngLat(e.lngLat)
+              .setHTML(html)
+              .addTo(this.map);
+          });
+
+          this.map.on('mouseenter', 'ramps-layer', () => { this.map.getCanvas().style.cursor = 'pointer'; });
+          this.map.on('mouseleave', 'ramps-layer', () => { this.map.getCanvas().style.cursor = ''; });
+
+        } catch (e) {
+          console.warn('[Nav] Failed to load cyc ramps', e);
         }
       },
 
@@ -1295,6 +1356,16 @@
           const visible = this.map.getLayoutProperty('parking-layer', 'visibility') !== 'none';
           this.map.setLayoutProperty('parking-layer', 'visibility', visible ? 'none' : 'visible');
           document.getElementById('btn-toggle-park').classList.toggle('active', !visible);
+        };
+
+        document.getElementById('btn-toggle-ramp').onclick = () => {
+          if (!this.map.getLayer('ramps-layer')) {
+            alert('斜坡圖層尚未載入或無權限。');
+            return;
+          }
+          const visible = this.map.getLayoutProperty('ramps-layer', 'visibility') !== 'none';
+          this.map.setLayoutProperty('ramps-layer', 'visibility', visible ? 'none' : 'visible');
+          document.getElementById('btn-toggle-ramp').classList.toggle('active', !visible);
         };
       },
 
@@ -1867,13 +1938,15 @@
             }
           });
 
+          const isGold = window.hasPermission('map_3d_gold');
+
           // 2. Surface (Mid)
           this.map.addLayer({
             id: 'route-line-green',
             type: 'line',
             source: 'route',
             paint: {
-              'line-color': ['match', ['get', 'type'], 'pedestrian', '#e67e22', '#2ecc71'],
+              'line-color': isGold ? '#00f0ff' : ['match', ['get', 'type'], 'pedestrian', '#e67e22', '#2ecc71'],
               'line-width': ['interpolate', ['linear'], ['zoom'], 14, 6, 18, 14],
               'line-opacity': 0.8,
               'line-cap': 'round',
@@ -1924,12 +1997,28 @@
             type: 'line',
             source: 'route',
             paint: {
-              'line-color': ['match', ['get', 'type'], 'pedestrian', '#e67e22', '#2ecc71'],
+              'line-color': isGold ? '#00f0ff' : ['match', ['get', 'type'], 'pedestrian', '#e67e22', '#2ecc71'],
               'line-width': 30,
               'line-opacity': 0.15,
               'line-blur': 15
             }
           });
+
+          if (isGold) {
+            let breatheDir = 1;
+            let breatheVal = 0.15;
+            const animateBreathe = () => {
+              breatheVal += breatheDir * 0.005;
+              if (breatheVal > 0.3) { breatheVal = 0.3; breatheDir = -1; }
+              if (breatheVal < 0.1) { breatheVal = 0.1; breatheDir = 1; }
+              if (this.map && this.map.getLayer('route-glow')) {
+                this.map.setPaintProperty('route-glow', 'line-opacity', breatheVal);
+              }
+              this.breatheAnimFrame = requestAnimationFrame(animateBreathe);
+            };
+            if (this.breatheAnimFrame) cancelAnimationFrame(this.breatheAnimFrame);
+            animateBreathe();
+          }
         }
       },
 
@@ -2144,6 +2233,7 @@
       },
 
       cleanup() {
+        if (this.breatheAnimFrame) { cancelAnimationFrame(this.breatheAnimFrame); this.breatheAnimFrame = null; }
         if (this.heartbeatInterval) { clearInterval(this.heartbeatInterval); this.heartbeatInterval = null; }
         if (this.watchId) { navigator.geolocation.clearWatch(this.watchId); this.watchId = null; }
         if (this.wakeLock) {

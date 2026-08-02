@@ -686,7 +686,19 @@
         <div class="db-poster-card" id="db-poster-card" style="display:none;">
             <h3>📸 IG Story 數據海報</h3>
             <p id="db-poster-desc">生成可分享戰績海報，先預覽再保存或分享。</p>
+            <div id="db-gold-custom-text-container" style="display:none; margin-bottom: 12px; margin-top: 10px; text-align: left;">
+                <label style="display:block; font-size:12px; color:#d4af37; font-weight:bold; margin-bottom:4px;">🔑 金卡專屬 - 自定義海報文字：</label>
+                <input type="text" id="db-gold-custom-text" placeholder="今日通勤也完成了高效綠色出行" value="今日通勤也完成了高效綠色出行" style="width:100%; padding:8px; border:1px solid #d4af37; border-radius:6px; background:#121212; color:#fff; font-size:13px; box-sizing:border-box;">
+            </div>
             <button class="db-poster-btn" id="db-poster-btn">預覽並匯出海報</button>
+        </div>
+
+        <!-- AI Riding Coach Analysis Card -->
+        <div class="db-poster-card" id="db-ai-coach-card" style="display:none; margin-top: 1.5em; background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(18, 31, 20, 0.45) 100%); border: 1px solid #d4af37;">
+            <h3 style="color:#d4af37;"><i class="fas fa-robot"></i> 🤖 AI 智能騎行狀態分析報告</h3>
+            <p id="db-ai-coach-desc" style="color:var(--app-text-secondary, #aac2ad); font-size:0.85em; text-align: left; line-height: 1.4;">🔑 <b>金卡專屬特權：</b>AI 智能教練將深度評估你過去 7 天的通勤數據、有氧耐力與減碳貢獻，產出專屬的指導報告。</p>
+            <div id="db-ai-coach-result" style="display:none; margin-top:12px; padding:12px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:13px; text-align:left; line-height:1.6; white-space:pre-wrap; border-left:3px solid #d4af37;"></div>
+            <button class="db-poster-btn" id="db-ai-coach-btn" style="background:#d4af37; color:#000; margin-top:10px; border: none; font-weight: bold;">生成 AI 分析報告</button>
         </div>
 
         <div class="db-poster-modal" id="db-poster-modal" aria-hidden="true">
@@ -878,6 +890,53 @@
         if (savedFare > 0) text += `，已省車資 $${parseFloat(savedFare).toFixed(1)}`;
         text += `，立即生成你的戰績海報。`;
         desc.textContent = text;
+
+        const goldInputContainer = document.getElementById('db-gold-custom-text-container');
+        if (goldInputContainer) {
+            goldInputContainer.style.display = (context.permissions && context.permissions.poster_gold_copy) ? 'block' : 'none';
+        }
+    }
+
+    function setupAiCoachCard(context) {
+        const card = document.getElementById('db-ai-coach-card');
+        if (!card) return;
+        const isGold = context.permissions && context.permissions.poster_gold_copy;
+        card.style.display = isGold ? 'block' : 'none';
+        if (!isGold) return;
+
+        const btn = document.getElementById('db-ai-coach-btn');
+        const result = document.getElementById('db-ai-coach-result');
+        if (!btn || !result) return;
+
+        btn.onclick = async () => {
+            btn.disabled = true;
+            btn.textContent = '🤖 AI 導師深度分析中...';
+            result.style.display = 'none';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/user?action=ai-report', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    result.textContent = data.report || '未能生成報告';
+                    result.style.display = 'block';
+                    btn.textContent = '重新生成分析報告';
+                } else {
+                    result.textContent = '❌ 分析失敗：暫時無法連接 AI 服務。';
+                    result.style.display = 'block';
+                    btn.textContent = '重試生成報告';
+                }
+            } catch (err) {
+                console.error(err);
+                result.textContent = '❌ 分析失敗：網路連線異常。';
+                result.style.display = 'block';
+                btn.textContent = '重試生成報告';
+            } finally {
+                btn.disabled = false;
+            }
+        };
     }
 
     function exportPoster(totalKm, context, history, savedFare) {
@@ -1122,7 +1181,9 @@
             ctx2d.fillStyle = '#d4af37';
             ctx2d.font = 'bold 42px sans-serif';
             ctx2d.textAlign = 'center';
-            ctx2d.fillText('今日通勤也完成了高效綠色出行', cx, statsY + 220);
+            const customTextEl = document.getElementById('db-gold-custom-text');
+            const slogan = (customTextEl && customTextEl.value.trim()) ? customTextEl.value.trim() : '今日通勤也完成了高效綠色出行';
+            ctx2d.fillText(slogan, cx, statsY + 220);
         }
 
         // ── Watermark ──
@@ -1470,6 +1531,7 @@
             var savedFare = data.gameProfile ? Number(data.gameProfile.total_saved_fare || 0) : 0;
             var permCtx = window.CTRCHK_PERMISSION_CONTEXT || getPermissionContext();
             renderPosterCard(totalKm, permCtx, savedFare);
+            setupAiCoachCard(permCtx);
             var posterBtn = document.getElementById('db-poster-btn');
             if (posterBtn) {
                 posterBtn.onclick = function () {

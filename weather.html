@@ -77,6 +77,16 @@
         </section>
         <div class="wx-warning" id="wx-warning-list"></div>
 
+        <!-- Gold Member Storm Radar Map -->
+        <section class="wx-card" id="wx-radar-card" style="display:none; margin-top:0.75em;">
+            <h2 style="margin-top:0; font-size:1.15em; color:var(--app-accent, #BFE340);"><i class="fas fa-satellite-dish"></i> 連接香港天文台 暴雨雷達圖 (即時雨量監測)</h2>
+            <p style="font-size:0.85em; color:var(--app-text-secondary, #aac2ad); margin-bottom:0.85em;">🔑 <b>金卡專屬特權：</b>實時對接香港天文台 128 公里高解析度多普勒天氣雷達，每 6 分鐘動態更新雨雲動向。</p>
+            <div style="background:#08080c; padding:0.5em; border-radius:10px; border:1px solid var(--app-border, #2f4c36); text-align:center; position:relative;">
+                <img id="wx-radar-img" src="" alt="暴雨雷達圖" style="max-width:100%; height:auto; display:inline-block; border-radius:6px; box-shadow:0 0 15px rgba(191,227,64,0.15);">
+                <div style="font-size:0.75em; color:#888; margin-top:5px;" id="wx-radar-time">雷達數據載入中...</div>
+            </div>
+        </section>
+
         <section class="wx-actions">
             <a class="wx-btn" href="/routes"><i class="fas fa-biking"></i> 開始騎行</a>
             <a class="wx-btn" href="/mileage"><i class="fas fa-road"></i> 查看里程計劃</a>
@@ -108,6 +118,11 @@
             : (rank === 'silver'
                 ? '銀卡：可優先獲得天氣提醒相關功能更新。'
                 : '銅卡：你可在本頁快速查看出發前所需的天氣重點。');
+
+        if (rank === 'gold') {
+            document.getElementById('wx-radar-card').style.display = 'block';
+            initStormRadar();
+        }
         let userPos = null;
         let localCurrent = null;
 
@@ -226,6 +241,35 @@
             if (raw.includes('silver') || raw.includes('銀')) return 'silver';
         } catch (_) {}
         return 'bronze';
+    }
+
+    async function initStormRadar() {
+        try {
+            const resp = await fetch('/api/_weather/radar');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const range1Images = data?.radar?.range1?.image || [];
+            if (range1Images.length > 0) {
+                const latestString = range1Images[range1Images.length - 1];
+                const match = latestString.match(/="([^"]+)"/);
+                if (match && match[1]) {
+                    const imgPath = match[1];
+                    const fullImgUrl = `https://www.hko.gov.hk/wxinfo/radars/${imgPath}`;
+                    document.getElementById('wx-radar-img').src = fullImgUrl;
+
+                    const timeMatch = imgPath.match(/_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
+                    if (timeMatch) {
+                        const [_, y, m, d, hh, mm] = timeMatch;
+                        document.getElementById('wx-radar-time').textContent = `雷達最新觀測時間：${y}-${m}-${d} ${hh}:${mm} HKT`;
+                    } else {
+                        document.getElementById('wx-radar-time').textContent = `已實時連接香港天文台雷達數據`;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load storm radar', e);
+            document.getElementById('wx-radar-time').textContent = '雷達圖像暫時無法載入，請稍候重試';
+        }
     }
 
     function renderWeather(rhrData, warnData, localCurrent) {

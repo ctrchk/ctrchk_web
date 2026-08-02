@@ -350,6 +350,9 @@
                 <button class="tab-btn" onclick="showTab('route-mgmt'); loadRouteMgmt();">
                     <i class="fas fa-route"></i> 路線管理
                 </button>
+                <button class="tab-btn" onclick="showTab('obstacles'); loadObstacles();">
+                    <i class="fas fa-exclamation-triangle"></i> 路面障礙審核
+                </button>
                 <button class="tab-btn" onclick="showTab('ai-dev');">
                     <i class="fas fa-robot"></i> AI 開發
                 </button>
@@ -758,6 +761,12 @@
                         <label><input type="radio" name="rm-type" value="Two-way"> 雙向</label>
                         <label><input type="radio" name="rm-type" value="Circular"> 循環</label>
                     </div>
+                    <div style="margin-top:0.8em; display:flex; gap:1.5em; flex-wrap:wrap; align-items:center;">
+                        <label style="display:inline-flex; align-items:center; gap:0.5em; font-weight:bold; color:#e67e22;">
+                            <input type="checkbox" id="rm-is-double-mileage" onchange="toggleDoubleMileageTag(this.checked)">
+                            <span>⚡ 設為週末雙倍里程推薦路線</span>
+                        </label>
+                    </div>
                     <div style="margin-top:1em;">
                         <strong>中途站</strong>
                         <div id="rm-stops-list" style="margin-top:0.5em;"></div>
@@ -809,6 +818,37 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 路面障礙審核標籤 -->
+            <div id="tab-obstacles" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-exclamation-triangle"></i> 路面障礙審核</h3>
+                <p style="color:#555; font-size:0.9em;">審核用戶回報的路面障礙物（如塌樹、爆水喉、違泊等）。<b>銀卡與金卡會員回報的障礙將標記為優先審核，列於最上方。</b></p>
+
+                <div id="obstacles-loading" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入路面障礙資料...</p>
+                </div>
+
+                <div id="obstacles-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>回報者</th>
+                                <th>標題</th>
+                                <th>描述</th>
+                                <th>位置 (Lat, Lon)</th>
+                                <th>優先級</th>
+                                <th>狀態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="obstacles-tbody">
+                            <tr><td colspan="7" style="text-align:center; color:#888;">暫無任何回報障礙。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="tab-email-admin" style="display:none;">
                 <!-- CTRCHK Mail Entry Button -->
                 <div style="margin-bottom: 2em; display: flex; gap: 1em;">
@@ -2546,6 +2586,8 @@
             ['rm-dept', 'rm-route-number', 'rm-alias', 'rm-bg-color', 'rm-estimated-minutes', 'rm-route-fare', 'rm-unlock-value', 'rm-tags',
              'rm-reward-per-stop', 'rm-reward-cross-district', 'rm-reward-completion', 'rm-reward-time-limit', 'rm-length-text']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const doubleChk = document.getElementById('rm-is-double-mileage');
+            if (doubleChk) doubleChk.checked = false;
             document.getElementById('rm-start-station').value = '';
             document.getElementById('rm-end-station').value = '';
             document.getElementById('rm-unlock-type').value = 'level';
@@ -2605,6 +2647,9 @@
             document.getElementById('rm-unlock-type').value = route.unlock_type || 'level';
             document.getElementById('rm-unlock-value').value = route.unlock_value ?? '';
             document.getElementById('rm-tags').value = Array.isArray(route.tags) ? route.tags.join(', ') : '';
+            const isDouble = Array.isArray(route.tags) && route.tags.includes('雙倍里程');
+            const doubleChk = document.getElementById('rm-is-double-mileage');
+            if (doubleChk) doubleChk.checked = isDouble;
             document.getElementById('rm-start-station').value = route.start_station_id || '';
             document.getElementById('rm-end-station').value = route.end_station_id || '';
             document.getElementById('rm-length-text').value = route.length_text || '';
@@ -3000,6 +3045,102 @@
                 statusEl.textContent = `❌ 連線失敗: ${error.message}`;
             } finally {
                 btn.disabled = false;
+            }
+        }
+
+        function toggleDoubleMileageTag(checked) {
+            const tagsInput = document.getElementById('rm-tags');
+            if (!tagsInput) return;
+            let tags = tagsInput.value.split(',').map(t => t.trim()).filter(Boolean);
+            if (checked) {
+                if (!tags.includes('雙倍里程')) tags.push('雙倍里程');
+            } else {
+                tags = tags.filter(t => t !== '雙倍里程');
+            }
+            tagsInput.value = tags.join(', ');
+        }
+
+        async function loadObstacles() {
+            const loading = document.getElementById('obstacles-loading');
+            const tbody = document.getElementById('obstacles-tbody');
+            if (!loading || !tbody) return;
+
+            loading.style.display = 'block';
+            tbody.innerHTML = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin?action=get-obstacles', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+
+                loading.style.display = 'none';
+                const list = data.obstacles || [];
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">暫無任何回報障礙。</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = list.map(o => {
+                    const dateStr = new Date(o.created_at).toLocaleDateString('zh-HK');
+                    const priorityClass = o.priority === 'priority' ? 'role-badge role-vip' : 'role-badge role-junior';
+                    const priorityText = o.priority === 'priority' ? '🚨 優先審核 (Priority)' : '標準';
+
+                    const statusClass = o.status === 'approved' ? 'verified-badge' : (o.status === 'rejected' ? 'unverified-badge' : '');
+                    const statusText = o.status === 'approved' ? '已批准' : (o.status === 'rejected' ? '已拒絕' : '待審核');
+
+                    return `
+                        <tr>
+                            <td>
+                                <div><strong>${escapeHtml(o.full_name || '用戶')}</strong></div>
+                                <div style="font-size:0.8em; color:#888;">${escapeHtml(o.email)}</div>
+                                <div style="font-size:0.75em; color:#BFE340;">${o.mileage_rank === 'gold' ? '👑 金卡' : (o.mileage_rank === 'silver' ? '✨ 銀卡' : '🌱 銅卡')}</div>
+                            </td>
+                            <td><strong>${escapeHtml(o.title)}</strong></td>
+                            <td>${escapeHtml(o.description || '-')}</td>
+                            <td>${o.latitude && o.longitude ? `${o.latitude.toFixed(5)}, ${o.longitude.toFixed(5)}` : '—'}</td>
+                            <td><span class="${priorityClass}" style="font-size: 0.8em; padding: 4px 8px;">${priorityText}</span></td>
+                            <td><span class="${statusClass}" style="font-weight: bold;">${statusText}</span></td>
+                            <td>
+                                ${o.status === 'pending' ? `
+                                    <button class="action-btn btn-promote" onclick="auditObstacle(${o.id}, 'approved')">批准</button>
+                                    <button class="action-btn btn-delete" onclick="auditObstacle(${o.id}, 'rejected')">拒絕</button>
+                                ` : `
+                                    <span style="font-size: 0.8em; color: #888;">已於 ${dateStr} 處理</span>
+                                `}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                loading.style.display = 'none';
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function auditObstacle(id, status) {
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'audit-obstacle', obstacle_id: id, status: status })
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                if (resp.ok) {
+                    alert('審核操作成功！');
+                    loadObstacles();
+                } else {
+                    alert('審核失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
             }
         }
     </script>

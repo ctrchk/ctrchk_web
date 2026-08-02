@@ -347,6 +347,67 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── GET → ai-report ──────────────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'ai-report') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      const userId = userData.userId;
+      const { rows: rides } = await query(
+        `SELECT distance_km, duration_minutes, avg_speed_kmh, ride_date, route_name
+         FROM cycling_history
+         WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '7 days'
+         ORDER BY ride_date DESC`,
+        [userId]
+      );
+
+      const totalKm = rides.reduce((sum, r) => sum + Number(r.distance_km || 0), 0);
+      const totalMin = rides.reduce((sum, r) => sum + Number(r.duration_minutes || 0), 0);
+      const avgSpeed = rides.length > 0 ? (rides.reduce((sum, r) => sum + Number(r.avg_speed_kmh || 0), 0) / rides.length) : 0;
+
+      let reportText = "";
+
+      if (process.env.GEMINI_API_KEY) {
+        try {
+          const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+          const prompt = `您是一位專業的城市單車教練（繁體中文/香港用語）。請根據用戶過去7天的騎行數據生成一份精簡有深度的騎行狀態分析報告（250字內），包含體能評價、安全提示、改進建議。
+數據如下：
+- 總騎行次數：${rides.length}次
+- 總里程：${totalKm.toFixed(1)}公里
+- 總騎行時間：${totalMin}分鐘
+- 平均時速：${avgSpeed.toFixed(1)}公里/小時`;
+
+          const aiResp = await fetch(aiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          if (aiResp.ok) {
+            const aiData = await aiResp.json();
+            reportText = aiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          }
+        } catch (e) {
+          console.warn('Gemini API call failed, falling back to dynamic generator:', e.message);
+        }
+      }
+
+      if (!reportText) {
+        if (rides.length === 0) {
+          reportText = `🚴 **CTRC 智慧 AI 騎行教練報告** 🚴\n\n「嗨，破風手！上週你還沒有記錄任何單車行程。將軍澳與跨灣大橋的單車徑正在呼喚你！不論是 2 公里的地鐵接駁，還是海濱長廊的晚風漫遊，開始你的第一踩吧！建議下週給自己訂個小目標，在安全車道完成一次 3 公里的舒展騎行，建立低碳習慣。」`;
+        } else {
+          const speedStatus = avgSpeed >= 20 ? "飛馳破風型" : (avgSpeed >= 12 ? "穩健通勤型" : "休閒漫步型");
+          const hydrationTip = totalKm >= 15 ? "長途體能消耗較大，請務必隨身補充足夠電解質與水份。" : "短途通勤良好，保持呼吸節奏。";
+          reportText = `🚴 **CTRC 智慧 AI 騎行教練報告** 🚴\n\n「做得好！過去7天你完成了 **${rides.length} 次**騎行，累計里程達 **${totalKm.toFixed(1)} 公里**，平均時速 **${avgSpeed.toFixed(1)} km/h**，屬於典型的**${speedStatus}**。\n\n**體能分析**：你在有氧耐力上展現出卓越的規律性。總行駛時長 **${totalMin} 分鐘** 相當於為地球減碳 **${(totalKm * 0.21).toFixed(1)} kg CO₂**。平均時速非常勻稱，心肺負荷適中，踏頻配合極佳。\n\n**安全與建議**：${hydrationTip} 近期將軍澳海濱風向有些變化，逆風段建議身體微前傾降低風阻，維持 80-90 踏頻，把體力留給跨灣大橋的緩坡段。下週期待看到你解鎖更長的新路網！」`;
+        }
+      }
+
+      return res.status(200).json({ success: true, report: reportText });
+    } catch (error) {
+      console.error('AI Report error:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+  }
+
   // ── GET → get-verify-token ──────────────────────────────────────────────
   if (req.method === 'GET' && req.query.action === 'get-verify-token') {
     const userData = await authenticate(req, res);
@@ -845,9 +906,12 @@ export default async function handler(req, res) {
         const consistencyDays = Number(c30Rows[0]?.c30 || 0);
         const cFactor = consistencyDays * 15;
 
-        // 4. Streak Factor (S): current commute streak * 5 (cap at 150)
-        const commuteStreak = Number(user.commute_streak || 0);
-        const sFactor = Math.min(150, commuteStreak * 5);
+        // 4. Achievement Factor (A): number of unlocked badges * 25 (cap at 150)
+        const { rows: badgeCountRows } = await query(
+          `SELECT COUNT(*)::int AS cnt FROM user_badges WHERE user_id = $1`, [userId]
+        );
+        const badgeCount = Number(badgeCountRows[0]?.cnt || 0);
+        const aFactor = Math.min(150, badgeCount * 25);
 
         // 5. Exploration Factor (X): ratio of conquered route ids / total routes (capping or mock representing route conquest)
         const conqueredCount = user.conquered_route_ids ? user.conquered_route_ids.length : 1;
@@ -869,7 +933,7 @@ export default async function handler(req, res) {
         const communityContribution = forumTopicsCount + forumRepliesCount;
         const pFactor = communityContribution * 20;
 
-        const totalEliteScore = Math.round(mFactor + eFactor + cFactor + sFactor + xFactor + pFactor);
+        const totalEliteScore = Math.round(mFactor + eFactor + cFactor + aFactor + xFactor + pFactor);
 
         // Update DB
         await query(
@@ -888,7 +952,7 @@ export default async function handler(req, res) {
         user.m_factor = Math.round(mFactor);
         user.e_factor = Math.round(eFactor);
         user.c_factor = Math.round(cFactor);
-        user.s_factor = Math.round(sFactor);
+        user.a_factor = Math.round(aFactor);
         user.x_factor = Math.round(xFactor);
         user.p_factor = Math.round(pFactor);
       } catch (scoreErr) {
@@ -1082,6 +1146,47 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+
+    if (req.body.action === 'report-obstacle') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS road_obstacles (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            latitude DOUBLE PRECISION,
+            longitude DOUBLE PRECISION,
+            status VARCHAR(20) DEFAULT 'pending',
+            priority VARCHAR(20) DEFAULT 'standard',
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        const { title, description, latitude, longitude } = req.body;
+        if (!title) return res.status(400).json({ message: 'Title is required' });
+
+        const { rows: rankRows } = await query(
+          'SELECT mileage_rank FROM user_game_profile WHERE user_id = $1',
+          [userData.userId]
+        );
+        const rank = rankRows[0]?.mileage_rank || 'bronze';
+        const hasPriority = rank === 'silver' || rank === 'gold';
+        const priority = hasPriority ? 'priority' : 'standard';
+
+        await query(
+          `INSERT INTO road_obstacles (user_id, title, description, latitude, longitude, priority)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [userData.userId, title, description, latitude || null, longitude || null, priority]
+        );
+
+        return res.status(200).json({ success: true, priority });
+      } catch(e) {
+        console.error('Report obstacle error:', e);
+        return res.status(500).json({ message: e.message });
+      }
+    }
 
     if (req.body.action === 'add_friend') {
       try {

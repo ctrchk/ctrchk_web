@@ -10,9 +10,9 @@ export default async function handler(req, res) {
     }
     
     const { dataType } = req.query;
-    const lang = req.query.lang || 'en';
+    const lang = req.query.lang || 'tc';
     
-    const validTypes = ['rhrread', 'warnsum', 'swt', 'fnd', 'flw', 'warningInfo'];
+    const validTypes = ['rhrread', 'warnsum', 'swt', 'fnd', 'flw', 'warningInfo', 'radar'];
     
     if (!validTypes.includes(dataType)) {
         return res.status(400).json({ error: 'Invalid dataType' });
@@ -21,7 +21,13 @@ export default async function handler(req, res) {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10000);
-        const hkoUrl = `https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=${dataType}&lang=${encodeURIComponent(lang)}`;
+
+        let hkoUrl;
+        if (dataType === 'radar') {
+            hkoUrl = 'https://www.hko.gov.hk/wxinfo/radars/temp_json/nradar_img.json';
+        } else {
+            hkoUrl = `https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=${dataType}&lang=${encodeURIComponent(lang)}`;
+        }
         const response = await fetch(hkoUrl, {
             headers: {
                 // Some gateways need an explicit accept for JSON.

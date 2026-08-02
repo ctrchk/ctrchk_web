@@ -1373,6 +1373,12 @@ function renderRoutes() {
 
         card.dataset.routeId = route.id;
 
+        const hktDay = new Date(new Date().getTime() + 8 * 3600000).getUTCDay();
+        const isWeekend = hktDay === 0 || hktDay === 6;
+        const isFriday = hktDay === 5;
+        const hasDoublePermission = window.hasPermission && window.hasPermission('weekend_double_preview');
+        const showDoubleBadge = route.tags && route.tags.includes('雙倍里程') && (isWeekend || (isFriday && hasDoublePermission));
+
         let statusBadge = '';
         if (deptLocked) {
             statusBadge = `<span class="app-route-lock-badge">🔒 需解鎖部門</span>`;
@@ -1386,10 +1392,16 @@ function renderRoutes() {
             statusBadge = `<span class="app-route-xp">+${xp} XP</span>`;
         }
 
+        let doubleBadgeHtml = '';
+        if (showDoubleBadge) {
+            doubleBadgeHtml = `<span class="app-route-double-badge" style="background:#f1c40f; color:#000; font-size:11px; font-weight:900; padding:2px 6px; border-radius:10px; margin-left:5px; box-shadow:0 0 10px #f1c40f; display:inline-flex; align-items:center; gap:3px; animation: pulse 1.5s infinite;"><i class="fas fa-bolt"></i> 雙倍里程</span>`;
+        }
+
         card.innerHTML = `
             <div class="app-route-header">
                 <span class="app-route-id" style="background:${route.color||'#4caf50'}; color:${getContrastColor(route.color||'#4caf50')}">${route.id}</span>
                 <span class="app-route-alias">${route.alias && route.alias.trim() ? route.alias : route.id}</span>
+                ${doubleBadgeHtml}
                 ${statusBadge}
             </div>
             <div class="app-route-meta">
