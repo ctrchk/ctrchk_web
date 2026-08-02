@@ -135,6 +135,7 @@ async function ensureRideTables() {
 
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64) UNIQUE;`); } catch(e) {}
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS wallet_serial VARCHAR(64);`); } catch(e) {}
+      try { await query(`ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS client_uuid VARCHAR(36) UNIQUE;`); } catch(e) {}
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;

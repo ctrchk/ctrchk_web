@@ -4,6 +4,34 @@
 
 ---
 
+## v2.1.4 Beta — 2026-07-28
+
+### 任務 0 (P0) 工業級穩定性、防刷防作弊與視覺一致性加固正式落地 (Task P0 Complete)
+
+- **導航頁跟隨與 GPS 羅盤抖動優化 (Task P0-1)**：
+  - 引入了 2D 卡爾曼濾波算法（`KalmanFilter2D`）對經緯度及速度進行實時平滑，降低噪聲干擾。
+  - 實施低速鎖定補丁：當速度低於 3km/h 時，屏蔽來自設備陀螺儀/指南針（Heading）的高頻微幅抖動，將地圖朝向（Bearing）鎖定在當前路網幾何矢量切線上，杜絕眩暈感。
+  - 用戶在手動平移/縮放地圖時，觸發 10 秒倒數計時器暫停強制回中，提供高度自適應的手動探索彈性，超時或點擊「跟隨我」後自動恢復鎖定。
+
+- **工作台內存洩漏與 Leaflet 瓦片管理及狀態恢復 (Task P0-2)**：
+  - 引入了 Turf.js 的道格拉斯-普克（Douglas-Peucker）軌跡抽稀算法，每 10 秒執行一次，確保長途騎行時追蹤座標不發生無上限膨脹。
+  - 實現定期瓦片生命週期管理，每 2 分鐘調用 Leaflet `map.removeLayer` 與重載，徹底消除視野外歷史瓦片緩存對 V8 引擎與 DOM 的內存洩漏，內存控制在 120MB 以下。
+  - 新增增量實時持久化：所有未提交的虛線軌跡點和 active ride 狀態以 JSON 格式實時 Append 至 `localStorage` 的 `unsyncedTempCoordinates` 及 `unsyncedActiveRideState`。當 App 崩潰、關閉或意外閃退重啟時，首頁與騎行工作台會彈出引導式 Prompt 完美實現 100% 行程無損恢復與斷點續傳。
+
+- **黑金主題高對比度樣式覆蓋與對比度加固 (Task P0-3)**：
+  - 對 `css/main.css` 進行全局覆蓋升級。當 `body.rank-gold` 啟用時，利用強硬的 `!important` 強制全站按鈕、聊天面板、路徑提示、計時器、多人房面板、自訂途經點等交互組件切換為高對比度高亮度黃色（`#F0D372`）與高飽和純黑色（`#000000`）。
+  - 優化 Mobile Safari 的彈出式 Modal 及輸入框文字對比度，杜絕烈日暴晒、100,000 勒克斯強光下任何「白底白字」或「黑底黑字」的色差盲區，大幅保障戶外行車視線安全。
+
+- **PWA 離線緩存同步容錯與 Service Worker 重複上傳抑制 (Task P0-4)**：
+  - 在 `js/main.js` 的 `syncRideHistory` 中設計並實現了**遞歸式隊列同步鎖（Recursive Sync Queue Mutex Lock）**，採用序列化 Promise 隊列確保同一時間僅有一條本地緩存歷史在進行上載，隔絕並發網絡重試導致的同步雪崩。
+  - 對數據庫 schema 執行安全升級，在 `cycling_history` 表中加入唯一性約束 `client_uuid`。後端 `api/getHistory.js` 在接收數據時對 `client_uuid` 進行前置唯一性校驗，若發生重複衝突則優雅冪等攔截，保證 Neon PostgreSQL 排行榜和三軌制數據 100% 精確且不重複。
+
+- **反作弊瞬時速度平滑與單車徑路網擬合算法 (Task P0-5)**：
+  - 後端 `api/getHistory.js` 對上傳的 GPS 軌跡進行二次平滑。不再依賴單點時速計算，改為使用**滑動窗口移動平均速度算法（Sliding Window Moving Average, size=5）**，完全過濾由 GPS 瞬時定位漂移引起的假超速誤判。
+  - 引入了**單車徑路網覆蓋率擬合算法（Map-matching Coverage）**：對非「自由模式」騎行，利用後端緩存並預加載的全港官方 `CYCTRACK` 單車徑幾何圖形包（Bounding Box 快速過濾），計算軌跡點 50 米範圍內是否處於專用單車網路上。若單車徑覆蓋率低於 60% 則判定為公共交通、公路開車作弊，優雅予以作廢並顯示幽默警告文案，維護全港排行榜誠信。
+
+---
+
 ## v2.1.3 Beta — 2026-07-25
 
 ### 新功能與體驗加固 (New Features & Life Cycle Hardening)

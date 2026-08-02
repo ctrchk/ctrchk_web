@@ -635,10 +635,38 @@
     // Default Mapbox Token fallback
     mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
 
+    // 2D Kalman Filter for smooth GPS tracking (Task P0-1)
+    class KalmanFilter2D {
+      constructor(processNoise = 0.000005, measurementNoise = 0.00005) {
+        this.q = processNoise; // Process covariance
+        this.r = measurementNoise; // Measurement covariance
+        this.p = 1.0; // Estimation error covariance
+        this.lastX = null;
+        this.lastY = null;
+      }
+      filter(x, y) {
+        if (this.lastX === null || this.lastY === null) {
+          this.lastX = x;
+          this.lastY = y;
+          return [x, y];
+        }
+        this.p = this.p + this.q;
+        const k = this.p / (this.p + this.r);
+        const filteredX = this.lastX + k * (x - this.lastX);
+        const filteredY = this.lastY + k * (y - this.lastY);
+        this.p = (1.0 - k) * this.p;
+        this.lastX = filteredX;
+        this.lastY = filteredY;
+        return [filteredX, filteredY];
+      }
+    }
+
     /**
      * CTRCHK 3D Navigation Engine v2.0
      */
     const NavEngine = {
+      gpsFilter: null,
+      followTimer: null,
       map: null,
       graph: null, // Local routing graph
       stations: [], // Local stations from routes.json
@@ -1261,16 +1289,38 @@
         document.getElementById('btn-end-nav').onclick = () => this.endNavigation();
         document.getElementById('btn-exit-nav').onclick = () => this.exitNavigation();
         document.getElementById('btn-pause-nav').onclick = () => this.pauseNavigation();
+        this.resetFollowTimer = () => {
+          if (this.followTimer) clearTimeout(this.followTimer);
+          if (this.isNavigating) {
+            this.followTimer = setTimeout(() => {
+              if (!this.isFollowing) {
+                this.isFollowing = true;
+                const recenterBtn = document.getElementById('btn-recenter');
+                if (recenterBtn) recenterBtn.classList.add('active');
+                this.recenter();
+              }
+            }, 10000); // 10 seconds manual-follow timer
+          }
+        };
+
+        const handleUserInteraction = () => {
+          this.isFollowing = false;
+          const recenterBtn = document.getElementById('btn-recenter');
+          if (recenterBtn) recenterBtn.classList.remove('active');
+          this.resetFollowTimer();
+        };
+
         document.getElementById('btn-recenter').onclick = () => {
+          if (this.followTimer) clearTimeout(this.followTimer);
           this.isFollowing = !this.isFollowing;
           document.getElementById('btn-recenter').classList.toggle('active', this.isFollowing);
           if (this.isFollowing) this.recenter();
         };
 
-        this.map.on('dragstart', () => {
-          this.isFollowing = false;
-          document.getElementById('btn-recenter').classList.remove('active');
-        });
+        this.map.on('dragstart', handleUserInteraction);
+        this.map.on('zoomstart', handleUserInteraction);
+        this.map.on('rotatestart', handleUserInteraction);
+        this.map.on('pitchstart', handleUserInteraction);
         document.getElementById('btn-orient').onclick = () => {
           this.headingUp = !this.headingUp;
           document.getElementById('btn-orient').classList.toggle('active', this.headingUp);
@@ -1353,7 +1403,15 @@
       },
 
       handlePositionUpdate(pos) {
-        const coords = [pos.coords.longitude, pos.coords.latitude];
+        let rawLon = pos.coords.longitude;
+        let rawLat = pos.coords.latitude;
+
+        // Initialize and apply 2D Kalman filter for smooth tracking
+        if (!this.gpsFilter) {
+          this.gpsFilter = new KalmanFilter2D(0.000005, 0.00005);
+        }
+        const [lon, lat] = this.gpsFilter.filter(rawLon, rawLat);
+        const coords = [lon, lat];
         const rawHeading = pos.coords.heading;
         const speedKmh = (pos.coords.speed || 0) * 3.6;
 
@@ -1374,18 +1432,22 @@
           if (snapped.properties.dist < 30) {
             activeCoords = snapped.geometry.coordinates;
           }
-          this.trackingCoords.push(activeCoords);
+
+          // Capture Date.now() timestamp alongside coordinate points for anti-cheat
+          this.trackingCoords.push([activeCoords[0], activeCoords[1], Date.now()]);
           this.updateNavHUD(activeCoords, speedKmh);
 
           // 1.1 Cycle Track / Lane Level Check
           this.checkLaneLevel(activeCoords);
         }
 
-        // 2. Heading Logic (GPS + Path-Stable)
+        // 2. Heading Logic (GPS + Path-Stable) (Task P0-1 low-speed lock patch)
         let finalHeading = rawHeading;
-        if (this.isNavigating && (rawHeading === null || speedKmh < 3)) {
-          // Stable heading from path when stationary or no GPS heading
-          finalHeading = this.getStableHeading(activeCoords);
+        if (this.isNavigating) {
+          if (speedKmh < 3 || rawHeading === null) {
+            // Speed < 3km/h or heading is null: lock bearing to path's tangent, absolutely ignore raw heading
+            finalHeading = this.getStableHeading(activeCoords);
+          }
         }
 
         // 3. Update UI & Marker

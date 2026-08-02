@@ -1413,3 +1413,134 @@ main,
 #app-bottom-nav {
   -webkit-overflow-scrolling: touch;
 }
+
+/* ── Task P0-3: Black Gold Theme High-Contrast Overrides ── */
+body.rank-gold {
+  background-color: #000000 !important;
+  color: #F0D372 !important;
+}
+
+body.rank-gold button,
+body.rank-gold .btn-action,
+body.rank-gold .btn-end-nav,
+body.rank-gold .btn-exit-nav,
+body.rank-gold .btn-pause-nav,
+body.rank-gold .btn-start-nav,
+body.rank-gold .checkin-btn,
+body.rank-gold .ml-action,
+body.rank-gold .app-ride-cta,
+body.rank-gold .app-start-ride-btn,
+body.rank-gold .app-filter-chip.active,
+body.rank-gold #btn-start-room,
+body.rank-gold #btn-resume-yes,
+body.rank-gold .app-dept-unlock-btn,
+body.rank-gold .app-login-btn {
+  background-color: #F0D372 !important;
+  background-image: none !important;
+  color: #000000 !important;
+  border: 2px solid #F0D372 !important;
+  box-shadow: 0 0 10px rgba(240, 211, 114, 0.4) !important;
+}
+
+body.rank-gold button *,
+body.rank-gold .btn-action *,
+body.rank-gold .btn-end-nav *,
+body.rank-gold .btn-start-nav *,
+body.rank-gold .checkin-btn *,
+body.rank-gold .ml-action *,
+body.rank-gold .app-ride-cta *,
+body.rank-gold .app-start-ride-btn *,
+body.rank-gold .app-filter-chip.active *,
+body.rank-gold #btn-start-room *,
+body.rank-gold #btn-resume-yes *,
+body.rank-gold .app-login-btn * {
+  color: #000000 !important;
+}
+
+/* Secondary or cancel buttons use pure black background with gold borders and text */
+body.rank-gold button:not(.btn-action):not(.btn-start-nav):not(.checkin-btn):not(#btn-start-room):not(#btn-resume-yes):not(.app-ride-cta):not(.app-start-ride-btn):not(.app-login-btn),
+body.rank-gold .btn-exit,
+body.rank-gold .btn-resume-cancel,
+body.rank-gold #btn-resume-cancel,
+body.rank-gold #btn-pause-close,
+body.rank-gold .app-filter-chip:not(.active) {
+  background-color: #000000 !important;
+  color: #F0D372 !important;
+  border: 1px solid #F0D372 !important;
+}
+
+body.rank-gold button:not(.btn-action):not(.btn-start-nav):not(.checkin-btn):not(#btn-start-room):not(#btn-resume-yes):not(.app-ride-cta):not(.app-start-ride-btn):not(.app-login-btn) *,
+body.rank-gold .btn-exit *,
+body.rank-gold .btn-resume-cancel *,
+body.rank-gold #btn-resume-cancel *,
+body.rank-gold .app-filter-chip:not(.active) * {
+  color: #F0D372 !important;
+}
+
+/* Form fields, inputs, selects, and textareas */
+body.rank-gold input,
+body.rank-gold select,
+body.rank-gold textarea,
+body.rank-gold #room-route-select,
+body.rank-gold #room-dir-select,
+body.rank-gold #room-password {
+  background-color: #000000 !important;
+  color: #F0D372 !important;
+  border: 1px solid #F0D372 !important;
+}
+
+body.rank-gold input::placeholder,
+body.rank-gold textarea::placeholder {
+  color: rgba(240, 211, 114, 0.6) !important;
+}
+
+/* Modals and Cards */
+body.rank-gold .card,
+body.rank-gold [class$="-card"],
+body.rank-gold [class*="-card "],
+body.rank-gold .modal-box,
+body.rank-gold .catalog-modal-content,
+body.rank-gold #setup-panel,
+body.rank-gold .setup-panel,
+body.rank-gold .app-stat-pill,
+body.rank-gold .task-card,
+body.rank-gold .medal-card,
+body.rank-gold .checkin-card,
+body.rank-gold #custom-pause-modal > div,
+body.rank-gold #resume-modal > div,
+body.rank-gold .parking-popup .mapboxgl-popup-content,
+body.rank-gold #room-members-panel {
+  background-color: #000000 !important;
+  background-image: none !important;
+  border: 1px solid #F0D372 !important;
+  color: #F0D372 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Ensure headings/texts inside cards/modals are gold */
+body.rank-gold .card *,
+body.rank-gold [class$="-card"] *,
+body.rank-gold .modal-box *,
+body.rank-gold .catalog-modal-content *,
+body.rank-gold #setup-panel *,
+body.rank-gold .setup-panel *,
+body.rank-gold .app-stat-pill *,
+body.rank-gold .task-card *,
+body.rank-gold .medal-card *,
+body.rank-gold .checkin-card *,
+body.rank-gold #custom-pause-modal *,
+body.rank-gold #resume-modal * {
+  color: #F0D372 !important;
+}
+
+/* Exception for level/xp badges which must be black on gold background */
+body.rank-gold .db-level-badge,
+body.rank-gold .tasks-hero-level-badge,
+body.rank-gold .app-level-badge,
+body.rank-gold #levelup-badge,
+body.rank-gold #tasks-levelup-badge,
+body.rank-gold .badge-value,
+body.rank-gold .badge-count {
+  background-color: #F0D372 !important;
+  color: #000000 !important;
+}

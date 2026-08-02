@@ -1118,16 +1118,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initGlobalData();
 
-    // Auto-sync offline ride history to server
-    (async function syncRideHistory() {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-        const unsynced = JSON.parse(localStorage.getItem('unsyncedRides') || '[]');
-        if (!unsynced.length) return;
+    // Auto-sync offline ride history to server with a recursive sequential sync lock (Mutex Lock) (Task P0-4)
+    let isSyncingRides = false;
+    async function syncRideHistory() {
+        if (isSyncingRides) return;
+        isSyncingRides = true;
 
-        console.log(`[Sync] Found ${unsynced.length} unsynced rides, attempting to upload...`);
-        const remaining = [];
-        for (const ride of unsynced) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            isSyncingRides = false;
+            return;
+        }
+
+        let unsynced = [];
+        try {
+            unsynced = JSON.parse(localStorage.getItem('unsyncedRides') || '[]');
+        } catch (e) {
+            unsynced = [];
+        }
+        if (!unsynced.length) {
+            isSyncingRides = false;
+            return;
+        }
+
+        // Ensure all unsynced rides have a client_uuid and save back to localStorage immediately (Task P0-4)
+        let needsSave = false;
+        unsynced.forEach(ride => {
+            if (!ride.client_uuid) {
+                ride.client_uuid = 'client-uuid-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now();
+                needsSave = true;
+            }
+        });
+        if (needsSave) {
+            localStorage.setItem('unsyncedRides', JSON.stringify(unsynced));
+        }
+
+        console.log(`[Sync] Found ${unsynced.length} unsynced rides, attempting sequential locked upload...`);
+
+        async function uploadNext(index) {
+            if (index >= unsynced.length) {
+                // All successfully synced!
+                localStorage.setItem('unsyncedRides', JSON.stringify([]));
+                isSyncingRides = false;
+                return;
+            }
+
+            const ride = unsynced[index];
+
             try {
                 const res = await fetch('/api/getHistory', {
                     method: 'POST',
@@ -1135,14 +1172,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify(ride),
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                console.log(`[Sync] Successfully synced ride: ${ride.route_id}`);
+                console.log(`[Sync] Successfully synced ride index ${index}: ${ride.route_id}`);
+
+                // Instantly remove from localStorage to maintain atomicity and avoid double upload on reload
+                let currentUnsynced = [];
+                try {
+                    currentUnsynced = JSON.parse(localStorage.getItem('unsyncedRides') || '[]');
+                } catch(e) {}
+                const filtered = currentUnsynced.filter(r => r.client_uuid !== ride.client_uuid && r.start_time !== ride.start_time);
+                localStorage.setItem('unsyncedRides', JSON.stringify(filtered));
+
+                // Process next item
+                await uploadNext(index + 1);
             } catch (e) {
-                console.warn(`[Sync] Failed to sync ride ${ride.route_id}:`, e);
-                remaining.push(ride);
+                console.warn(`[Sync] Failed to sync ride ${ride.route_id} at index ${index}:`, e);
+                // Pause recursion upon failure to prevent continuous retry loop during bad network
+                isSyncingRides = false;
             }
         }
-        localStorage.setItem('unsyncedRides', JSON.stringify(remaining));
-    })();
+
+        await uploadNext(0);
+    }
+
+    // Run sync on startup and listen for online event
+    syncRideHistory();
+    window.addEventListener('online', syncRideHistory);
 
     // =========================================================================
     // 其他全域腳本 (Dark mode, Modal 等) (你原有的程式碼)

@@ -560,6 +560,9 @@
     const roomCode = params.get('room') || null;
 
     let map = null;
+    let tileLayer = null;
+    let dpSimplifyInterval = null;
+    let tileRecycleInterval = null;
     let userMarker = null;
     let watchId = null;
     let rideStarted = false;
@@ -614,7 +617,7 @@
         window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
         const tiles = isLight ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-        L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
+        tileLayer = L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
 
         if (routeData && gpxCoords.length > 0) {
             L.polyline(gpxCoords, { color: routeData.color || '#BFE340', weight: 6, opacity: 0.8 }).addTo(map);
@@ -662,11 +665,13 @@
                 const d = haversineM(lastLat, lastLon, lat, lon);
                 if (d >= 2 && d < 500 && accuracy <= 50) {
                     totalDistM += d;
-                    trackingCoords.push([lat, lon]);
+                    trackingCoords.push([lat, lon, Date.now()]);
                     if (breadcrumbLine) breadcrumbLine.addLatLng([lat, lon]);
+                    localStorage.setItem('unsyncedTempCoordinates', JSON.stringify(trackingCoords));
                 }
             } else {
-                trackingCoords.push([lat, lon]);
+                trackingCoords.push([lat, lon, Date.now()]);
+                localStorage.setItem('unsyncedTempCoordinates', JSON.stringify(trackingCoords));
             }
 
             // Off-route Warning logic
@@ -832,6 +837,50 @@
             if (timeTop) timeTop.textContent = timeStr;
         }, 1000);
         heartbeatInterval = setInterval(syncActiveRide, 5000);
+
+        // DP simplification interval to prevent memory bloat (Task P0-2)
+        dpSimplifyInterval = setInterval(() => {
+            if (rideStarted && trackingCoords.length > 5) {
+                try {
+                    // Turf simplify takes coordinates in [lng, lat] format
+                    const geojsonLine = turf.lineString(trackingCoords.map(c => [c[1], c[0]]));
+                    const simplified = turf.simplify(geojsonLine, { tolerance: 0.00001, highQuality: true }); // ~1 meter tolerance
+
+                    // Match each simplified point back to its original coordinate to preserve original timestamps
+                    const newCoords = simplified.geometry.coordinates.map(c => {
+                        const originalPoint = trackingCoords.find(orig => {
+                            return Math.abs(orig[0] - c[1]) < 0.000001 && Math.abs(orig[1] - c[0]) < 0.000001;
+                        });
+                        return [c[1], c[0], originalPoint ? originalPoint[2] : Date.now()];
+                    });
+
+                    if (newCoords.length > 1) {
+                        trackingCoords = newCoords;
+                        if (breadcrumbLine) {
+                            breadcrumbLine.setLatLngs(trackingCoords.map(c => [c[0], c[1]]));
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[DP Simplify] Error:', e);
+                }
+            }
+        }, 10000);
+
+        // Tile layer recycling interval to purge memory from out-of-view tiles (Task P0-2)
+        tileRecycleInterval = setInterval(() => {
+            if (map && tileLayer) {
+                try {
+                    map.removeLayer(tileLayer);
+                    const isLight = document.body.classList.contains('app-light-theme');
+                    const tiles = isLight ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+                    tileLayer = L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
+                    if (breadcrumbLine) breadcrumbLine.bringToFront();
+                } catch (e) {
+                    console.warn('[Tile Recycle] Error:', e);
+                }
+            }
+        }, 120000); // 2 minutes
+
         updateStopsOverview();
         renderRouteStops();
     }
@@ -850,8 +899,11 @@
             lastLat,
             lastLon,
             routeAlias: routeData?.alias || routeId,
-            roomCode: roomCode
+            roomCode: roomCode,
+            trackingCoords: trackingCoords
         };
+        // Backup incrementally to local storage (Task P0-2)
+        localStorage.setItem('unsyncedActiveRideState', JSON.stringify(state));
         try {
             const res = await fetch('/api/user', {
                 method: 'POST',
@@ -1007,6 +1059,10 @@
 
         const result = await res.json();
 
+        // Clear local storage recovery backup (Task P0-2)
+        localStorage.removeItem('unsyncedActiveRideState');
+        localStorage.removeItem('unsyncedTempCoordinates');
+
         // Check for new badges
         if (result.challenge_completed) {
             showBadgeEarned(result.challenge_completed);
@@ -1118,7 +1174,13 @@
         link.click();
     };
 
-    window.confirmLeave = () => { if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) location.href = '/dashboard'; };
+    window.confirmLeave = () => {
+        if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) {
+            localStorage.removeItem('unsyncedActiveRideState');
+            localStorage.removeItem('unsyncedTempCoordinates');
+            location.href = '/dashboard';
+        }
+    };
 
     async function showBadgeEarned(tierOrId) {
         try {
@@ -1166,7 +1228,9 @@
         };
 
         const btnDelete = document.getElementById('btn-pause-delete');
-        btnDelete.style.display = 'none'; // Only show delete for resumes
+        if (btnDelete) {
+            btnDelete.style.display = 'none'; // Only show delete for resumes
+        }
 
         modal.style.display = 'flex';
     }
@@ -1188,8 +1252,73 @@
         if (mode === 'free') {
             // Free mode: Instant start under 3s by skipping network fetches
             await initMap([22.3143, 114.2697]);
-            beginRide();
-            hideLoader();
+
+            // Check for local resumption backup (Task P0-2)
+            const savedStateStr = localStorage.getItem('unsyncedActiveRideState');
+            let hasResumed = false;
+            if (savedStateStr) {
+                try {
+                    const savedState = JSON.parse(savedStateStr);
+                    if (savedState && String(savedState.routeId) === String(routeId)) {
+                        hasResumed = true;
+                        hideLoader();
+                        // Show custom resumption confirmation modal
+                        const modal = document.getElementById('custom-pause-modal');
+                        const msg = document.getElementById('pause-modal-msg');
+                        msg.innerHTML = `系統偵測到一段未完成的「${savedState.routeAlias || '自由模式'}」騎行記錄，要繼續上次的行程嗎？`;
+
+                        const btnResume = document.getElementById('btn-pause-resume');
+                        if (btnResume) {
+                            btnResume.textContent = "繼續行程";
+                            btnResume.onclick = () => {
+                                modal.style.display = 'none';
+                                // Restore state values
+                                totalDistM = savedState.totalDistM || 0;
+                                reachedStops = new Set(Array.isArray(savedState.reachedStops) ? savedState.reachedStops : []);
+                                startTime = savedState.startTime || Date.now();
+                                sessionXp = savedState.sessionXp || 0;
+                                trackingCoords = savedState.trackingCoords || JSON.parse(localStorage.getItem('unsyncedTempCoordinates') || '[]');
+
+                                if (breadcrumbLine && trackingCoords.length > 0) {
+                                    breadcrumbLine.setLatLngs(trackingCoords.map(c => [c[0], c[1]]));
+                                }
+                                beginRide();
+                            };
+                        }
+
+                        const btnClose = document.getElementById('btn-pause-close');
+                        if (btnClose) {
+                            btnClose.textContent = "重新開始";
+                            btnClose.onclick = () => {
+                                modal.style.display = 'none';
+                                localStorage.removeItem('unsyncedActiveRideState');
+                                localStorage.removeItem('unsyncedTempCoordinates');
+                                beginRide();
+                            };
+                        }
+
+                        const btnDelete = document.getElementById('btn-pause-delete');
+                        if (btnDelete) {
+                            btnDelete.style.display = 'block';
+                            btnDelete.onclick = () => {
+                                modal.style.display = 'none';
+                                localStorage.removeItem('unsyncedActiveRideState');
+                                localStorage.removeItem('unsyncedTempCoordinates');
+                                beginRide();
+                            };
+                        }
+
+                        modal.style.display = 'flex';
+                    }
+                } catch (e) {
+                    console.warn('[Resumption] Error parsing state:', e);
+                }
+            }
+
+            if (!hasResumed) {
+                beginRide();
+                hideLoader();
+            }
 
             // Fetch routes/routeData in the background asynchronously just in case
             try {
@@ -1229,7 +1358,74 @@
                 }
                 await initMap(routeStops.length > 0 ? [routeStops[0].lat, routeStops[0].lon] : [22.3143, 114.2697]);
                 buildStopsUI();
-                hideLoader();
+
+                // Check for local resumption backup (Task P0-2)
+                const savedStateStr = localStorage.getItem('unsyncedActiveRideState');
+                let hasResumed = false;
+                if (savedStateStr) {
+                    try {
+                        const savedState = JSON.parse(savedStateStr);
+                        if (savedState && String(savedState.routeId) === String(routeId)) {
+                            hasResumed = true;
+                            hideLoader();
+                            // Show custom resumption confirmation modal
+                            const modal = document.getElementById('custom-pause-modal');
+                            const msg = document.getElementById('pause-modal-msg');
+                            msg.innerHTML = `系統偵測到一段未完成的「${savedState.routeAlias || routeId}」騎行記錄，要繼續上次的行程嗎？`;
+
+                            const btnResume = document.getElementById('btn-pause-resume');
+                            if (btnResume) {
+                                btnResume.textContent = "繼續行程";
+                                btnResume.onclick = () => {
+                                    modal.style.display = 'none';
+                                    // Restore state values
+                                    totalDistM = savedState.totalDistM || 0;
+                                    reachedStops = new Set(Array.isArray(savedState.reachedStops) ? savedState.reachedStops : []);
+                                    startTime = savedState.startTime || Date.now();
+                                    sessionXp = savedState.sessionXp || 0;
+                                    trackingCoords = savedState.trackingCoords || JSON.parse(localStorage.getItem('unsyncedTempCoordinates') || '[]');
+
+                                    const stopText = `${reachedStops.size}/${routeStops.length}`;
+                                    const stopTop = document.getElementById('stat-stops-top');
+                                    if (stopTop) stopTop.textContent = stopText;
+
+                                    if (breadcrumbLine && trackingCoords.length > 0) {
+                                        breadcrumbLine.setLatLngs(trackingCoords.map(c => [c[0], c[1]]));
+                                    }
+                                    beginRide();
+                                };
+                            }
+
+                            const btnClose = document.getElementById('btn-pause-close');
+                            if (btnClose) {
+                                btnClose.textContent = "重新開始";
+                                btnClose.onclick = () => {
+                                    modal.style.display = 'none';
+                                    localStorage.removeItem('unsyncedActiveRideState');
+                                    localStorage.removeItem('unsyncedTempCoordinates');
+                                };
+                            }
+
+                            const btnDelete = document.getElementById('btn-pause-delete');
+                            if (btnDelete) {
+                                btnDelete.style.display = 'block';
+                                btnDelete.onclick = () => {
+                                    modal.style.display = 'none';
+                                    localStorage.removeItem('unsyncedActiveRideState');
+                                    localStorage.removeItem('unsyncedTempCoordinates');
+                                };
+                            }
+
+                            modal.style.display = 'flex';
+                        }
+                    } catch (e) {
+                        console.warn('[Resumption] Error parsing state:', e);
+                    }
+                }
+
+                if (!hasResumed) {
+                    hideLoader();
+                }
             } else {
                 location.href = '/routes';
             }
@@ -1243,6 +1439,8 @@
     function cleanupAllResources() {
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+        if (dpSimplifyInterval) { clearInterval(dpSimplifyInterval); dpSimplifyInterval = null; }
+        if (tileRecycleInterval) { clearInterval(tileRecycleInterval); tileRecycleInterval = null; }
         if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         if (wakeLock) {
             try { wakeLock.release(); } catch(e) {}

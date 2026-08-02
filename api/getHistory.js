@@ -3,6 +3,8 @@ import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 import { triggerWalletPassUpdate } from '../lib/wallet-helper.js';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 // Maximum bonus coins a client can claim per ride (prevents abuse)
 const MAX_BONUS_COINS_PER_RIDE = 20;
@@ -227,6 +229,202 @@ async function triggerDiscordBotSyncForUser(userId) {
   } catch (e) {
     console.warn('[getHistory] Failed to trigger Discord bot sync:', e.message);
   }
+}
+
+// --- Task P0-5: Anti-Cheat Map-Matching and Sliding Window Speed Helpers ---
+let cycTrackGeojson = null;
+
+function parseCoord(pt) {
+  if (!pt || pt.length < 2) return null;
+  let lat, lon, time = null;
+  // If coordinates are in [lng, lat] (like GeoJSON / nav.html) or [lat, lng] (like ride.html)
+  if (pt[0] > 110) {
+    lon = pt[0];
+    lat = pt[1];
+  } else {
+    lat = pt[0];
+    lon = pt[1];
+  }
+  if (pt.length >= 3) {
+    time = pt[2];
+  }
+  return { lat, lon, time };
+}
+
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function checkSlidingWindowSpeed(coords) {
+  if (!coords || coords.length < 5) return { exceeds: false };
+
+  const normalized = coords.map(parseCoord).filter(Boolean);
+  if (normalized.length < 5) return { exceeds: false };
+
+  const hasTimestamps = normalized.every(p => p.time !== null);
+  if (!hasTimestamps) return { exceeds: false };
+
+  for (let i = 0; i <= normalized.length - 5; i++) {
+    let windowDist = 0;
+    for (let j = i; j < i + 4; j++) {
+      windowDist += calculateHaversineDistance(
+        normalized[j].lat, normalized[j].lon,
+        normalized[j + 1].lat, normalized[j + 1].lon
+      );
+    }
+    const windowTimeMs = normalized[i + 4].time - normalized[i].time;
+    if (windowTimeMs > 0) {
+      const windowSpeedKmh = windowDist / (windowTimeMs / 3600000);
+      if (windowSpeedKmh > MAX_AVG_SPEED_KMH) {
+        return { exceeds: true, speed: windowSpeedKmh };
+      }
+    }
+  }
+  return { exceeds: false };
+}
+
+function getFeatureBbox(feature) {
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+  const processCoord = (c) => {
+    const lon = c[0], lat = c[1];
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  };
+
+  if (feature.geometry.type === 'LineString') {
+    feature.geometry.coordinates.forEach(processCoord);
+  } else if (feature.geometry.type === 'MultiLineString') {
+    feature.geometry.coordinates.forEach(line => line.forEach(processCoord));
+  } else if (feature.geometry.type === 'Point') {
+    processCoord(feature.geometry.coordinates);
+  }
+  return { minLat, maxLat, minLon, maxLon };
+}
+
+async function getCycTrackGeojson() {
+  if (cycTrackGeojson) return cycTrackGeojson;
+  try {
+    const filePath = path.join(process.cwd(), 'CYCFACI.gdb_CYCTRACK_converted.geojson');
+    const content = await readFile(filePath, 'utf8');
+    const geojson = JSON.parse(content);
+
+    // Pre-calculate bboxes for fast filtering
+    geojson.features.forEach(f => {
+      f.bbox = getFeatureBbox(f);
+    });
+
+    cycTrackGeojson = geojson;
+    return cycTrackGeojson;
+  } catch (err) {
+    console.error('Failed to load CYCTRACK geojson:', err);
+    return null;
+  }
+}
+
+function getDistanceToSegment(py, px, lat1, lon1, lat2, lon2) {
+  const latToMeters = 111000;
+  const lonToMeters = 111000 * Math.cos(py * Math.PI / 180);
+
+  const py_m = py * latToMeters;
+  const px_m = px * lonToMeters;
+  const y1 = lat1 * latToMeters;
+  const x1 = lon1 * lonToMeters;
+  const y2 = lat2 * latToMeters;
+  const x2 = lon2 * lonToMeters;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const l2 = dx * dx + dy * dy;
+
+  if (l2 === 0) {
+    return Math.sqrt((px_m - x1) * (px_m - x1) + (py_m - y1) * (py_m - y1));
+  }
+
+  let t = ((px_m - x1) * dx + (py_m - y1) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+
+  const proj_x = x1 + t * dx;
+  const proj_y = y1 + t * dy;
+
+  return Math.sqrt((px_m - proj_x) * (px_m - proj_x) + (py_m - proj_y) * (py_m - proj_y));
+}
+
+function getDistanceToLineString(py, px, coords) {
+  let minD = Infinity;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const d = getDistanceToSegment(py, px, coords[i][1], coords[i][0], coords[i+1][1], coords[i+1][0]);
+    if (d < minD) minD = d;
+  }
+  return minD;
+}
+
+function getDistanceToFeature(py, px, feature) {
+  if (feature.geometry.type === 'LineString') {
+    return getDistanceToLineString(py, px, feature.geometry.coordinates);
+  } else if (feature.geometry.type === 'MultiLineString') {
+    let minD = Infinity;
+    feature.geometry.coordinates.forEach(line => {
+      const d = getDistanceToLineString(py, px, line);
+      if (d < minD) minD = d;
+    });
+    return minD;
+  }
+  return Infinity;
+}
+
+async function calculateMapMatchingCoverage(coords) {
+  const normalized = coords.map(parseCoord).filter(Boolean);
+  if (normalized.length === 0) return 1.0;
+
+  const cycTrack = await getCycTrackGeojson();
+  if (!cycTrack) return 1.0;
+
+  let trackMinLat = Infinity, trackMaxLat = -Infinity, trackMinLon = Infinity, trackMaxLon = -Infinity;
+  normalized.forEach(p => {
+    if (p.lat < trackMinLat) trackMinLat = p.lat;
+    if (p.lat > trackMaxLat) trackMaxLat = p.lat;
+    if (p.lon < trackMinLon) trackMinLon = p.lon;
+    if (p.lon > trackMaxLon) trackMaxLon = p.lon;
+  });
+
+  const margin = 0.005; // ~500m padding
+  const limitMinLat = trackMinLat - margin;
+  const limitMaxLat = trackMaxLat + margin;
+  const limitMinLon = trackMinLon - margin;
+  const limitMaxLon = trackMaxLon + margin;
+
+  const candidateFeatures = cycTrack.features.filter(f => {
+    return f.bbox.maxLat >= limitMinLat && f.bbox.minLat <= limitMaxLat &&
+           f.bbox.maxLon >= limitMinLon && f.bbox.minLon <= limitMaxLon;
+  });
+
+  if (candidateFeatures.length === 0) return 0.0;
+
+  let closeCount = 0;
+  normalized.forEach(pt => {
+    let minD = Infinity;
+    for (const f of candidateFeatures) {
+      const d = getDistanceToFeature(pt.lat, pt.lon, f);
+      if (d < minD) {
+        minD = d;
+        if (minD <= 50) break; // within 50m of any cycle track segment
+      }
+    }
+    if (minD <= 50) {
+      closeCount++;
+    }
+  });
+
+  return closeCount / normalized.length;
 }
 
 async function tableExists(tableName) {
@@ -719,17 +917,69 @@ export default async function handler(req, res) {
         miles_reward_override, // new mileage coin reward: km * 0.8
         anti_bus_flag,
         anti_bus_reason,
+        client_uuid,          // Task P0-4 unique client_uuid
       } = req.body || {};
 
       if (!ride_date) {
         return res.status(400).json({ message: 'ride_date is required' });
       }
 
+      // Check if client_uuid has already been successfully synced to prevent duplicates (Task P0-4)
+      if (client_uuid) {
+        const { rows: existingUUID } = await query(
+          'SELECT id, xp_earned, random_bonus_coins FROM cycling_history WHERE client_uuid = $1',
+          [client_uuid]
+        );
+        if (existingUUID.length > 0) {
+          const profile = await ensureGameProfile(userData.userId);
+          return res.status(200).json({
+            success: true,
+            already_synced: true,
+            ride_id: existingUUID[0].id,
+            xp_earned: existingUUID[0].xp_earned,
+            coins: profile.coins,
+            level: profile.level,
+            xp: profile.xp,
+          });
+        }
+      }
+
       const avgSpeedValue = parseFloat(avg_speed_kmh) || 0;
-      const antiCheatReason = anti_bus_flag
-        ? (anti_bus_reason || '偵測到疑似高速公路/隧道軌跡重合')
-        : (avgSpeedValue > MAX_AVG_SPEED_KMH ? `偵測到均速 ${avgSpeedValue} km/h（超過 ${MAX_AVG_SPEED_KMH} km/h）` : '');
-      if (antiCheatReason) {
+      let isCheat = false;
+      let antiCheatReason = '';
+
+      // 1. Sliding window speed check (Task P0-5)
+      if (gpx_track && Array.isArray(gpx_track)) {
+        const windowSpeed = checkSlidingWindowSpeed(gpx_track);
+        if (windowSpeed.exceeds) {
+          isCheat = true;
+          antiCheatReason = `偵測到瞬時/滑動時速達 ${windowSpeed.speed.toFixed(1)} km/h（超過限速 ${MAX_AVG_SPEED_KMH} km/h）`;
+        }
+      }
+
+      // 2. Average speed check
+      if (!isCheat && avgSpeedValue > MAX_AVG_SPEED_KMH) {
+        isCheat = true;
+        antiCheatReason = `偵測到均速 ${avgSpeedValue} km/h（超過 ${MAX_AVG_SPEED_KMH} km/h）`;
+      }
+
+      // 3. Map-matching coverage check (Task P0-5)
+      const normMode = normalizeRideMode(ride_mode);
+      const isFree = normMode === 'free';
+      if (!isCheat && !isFree && gpx_track && Array.isArray(gpx_track) && gpx_track.length > 5) {
+        const coverage = await calculateMapMatchingCoverage(gpx_track);
+        if (coverage < 0.60) {
+          isCheat = true;
+          antiCheatReason = `軌跡與全港單車徑偏離過大（覆蓋率僅 ${(coverage * 100).toFixed(1)}%，低於 60% 限值），疑似公路開車或搭乘公共交通`;
+        }
+      }
+
+      if (!isCheat && anti_bus_flag) {
+        isCheat = true;
+        antiCheatReason = anti_bus_reason || '偵測到疑似高速公路/隧道軌跡重合';
+      }
+
+      if (isCheat && antiCheatReason) {
         let profile = { level: 1, xp: 0, coins: 0, mileage_rank: 'bronze', mileage_km_365: 0 };
         try { profile = await ensureGameProfile(userData.userId); } catch (e) {}
         return res.status(200).json({
@@ -758,7 +1008,6 @@ export default async function handler(req, res) {
 
       // 0. 計算已省車資 (Saved Fare)
       let savedFare = 0;
-      const normMode = normalizeRideMode(ride_mode);
       if (normMode === 'free') {
           savedFare = distKmVal;
       } else if (route_id) {
@@ -842,8 +1091,8 @@ export default async function handler(req, res) {
             (user_id, ride_date, distance_km, route_name, route_id,
              start_time, end_time, duration_minutes, avg_speed_kmh,
              stops_reached, stops_count, all_stops, districts_count, xp_earned, gpx_track, source,
-             anti_cheat, anti_cheat_reason, random_bonus_xp, random_bonus_coins)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+             anti_cheat, anti_cheat_reason, random_bonus_xp, random_bonus_coins, client_uuid)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
           RETURNING id`,
         [
           userData.userId,
@@ -866,6 +1115,7 @@ export default async function handler(req, res) {
           null,
           randomBonusXp,
           randomBonusCoins,
+          client_uuid || null,
         ]
       );
       const rideId = newRide[0].id;
