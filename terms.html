@@ -91,6 +91,25 @@
             background: #f9fafb !important;
             border-color: #e5e7eb !important;
         }
+
+        /* Beta Callout Theme Customizations */
+        .beta-callout-box {
+            background: rgba(191, 227, 64, 0.12) !important;
+            border-left: 4px solid #BFE340 !important;
+            padding: 1.2em 1.5em;
+            border-radius: 8px;
+            margin-bottom: 1.5em;
+            font-size: 0.92em;
+            line-height: 1.6;
+            color: inherit !important;
+        }
+
+        /* Light Theme override for Beta Callout Text Color to ensure contrast */
+        body.app-light-theme .beta-callout-box {
+            color: #1e3a1e !important;
+            background: rgba(191, 227, 64, 0.15) !important;
+            border-color: #BFE340 !important;
+        }
     </style>
 </head>
 <body>
@@ -116,7 +135,7 @@
                 <!-- 第一部分：條款及細則 -->
                 <div class="terms-card" id="terms">
                     <h2><i class="fas fa-file-contract" style="color:#04D93C;"></i> 一、服務使用條款及細則</h2>
-                    <div style="background: rgba(191, 227, 64, 0.1); border-left: 4px solid #BFE340; padding: 1em 1.2em; border-radius: 4px; margin-bottom: 1.5em; font-size: 0.92em; line-height: 1.6; color: #1e3a1e;">
+                    <div class="beta-callout-box">
                         <strong>【全平台公開測試階段 (Public Beta) 特別聲明】</strong><br>
                         本平台「城市運輸單車」當前正處於全平台公開測試階段（Public Beta Phase）。本平台所提供之單車路線導航、路障回報、里程結算、多站行程規劃及遊戲化代幣與等級經濟系統，仍在持續進行優化、修復及測試中。所有系統數據（包括但不限於等級、XP、里程幣、滾動里程、數位卡包憑證）在測試期間皆可能因系統調試而進行非預期之修正、重置、或數據庫維護。車手在使用平台導航或進行線下騎行時，務必以實地現場最新交通法規與個人人身安全為絕對最高優先指引。
                     </div>
@@ -261,7 +280,7 @@
                     <h3>3.6 豁免起訴承諾、責任排外與最大損害賠償上限</h3>
                     <ul>
                         <li><strong>豁免起訴 (Waiver of Liability)：</strong>在香港法律允許的最大範圍內，<strong>您同意完全免除、放棄、並承諾永不起訴本平台、核心委員會、開發團隊、管理員及相關誌願者，因您參與單車活動、使用導航服務、參考路障回報、使用 3D 車道或多人組隊所造成的任何財產損失、摔車損壞、設備丟失或任何人身損害。</strong></li>
-                        <li><strong>《管制免責條款條例》（香港法例第47章）特別條款：</strong>為嚴格符合香港法例第47章《管制免責條款條例》之法規要求，<strong>本文件（包括本條款及免責聲明）中任何內容均無意且絕不限制或免除本平台因自身重大過失或疏忽（Negligence）而直接導致之任何人身傷害或死亡之法律責任。</strong></li>
+                        <li><strong>《管制免責條款條例》（香港法例第71章）特別條款：</strong>為嚴格符合香港法例第71章《管制免責條款條例》(Control of Exemption Clauses Ordinance) 之法規要求，<strong>本文件（包括本條款及免責聲明）中任何內容均無意且絕不限制或免除本平台因自身重大過失或疏忽（Negligence）而直接導致之任何人身傷害或死亡之法律責任。</strong></li>
                         <li><strong>最大損害賠償上限：</strong>如不論上述免責條款，香港特別行政區法院最終裁定本平台仍須就財產損壞、資訊延遲或其非因重大過失/疏忽所引起之法律事件承擔損害賠償責任，雙方在此一致同意並確認：<strong>本平台向您承擔之最高、單次且累計之總損害賠償上限，在任何情況下均不得超過港幣 $100 元整 (HKD $100.00)。</strong></li>
                     </ul>
 

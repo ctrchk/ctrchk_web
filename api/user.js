@@ -1240,6 +1240,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
 
     if (req.body.action === 'agree-terms') {
+      await ensureRideTables();
       const userData = await authenticate(req, res);
       if (!userData) return;
       const { version } = req.body;
