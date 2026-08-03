@@ -768,6 +768,103 @@
             .wallet-banner { flex-direction: column; text-align: center; }
             .wallet-btns { justify-content: center; }
         }
+
+        /* Benefit Detail Modal */
+        .benefit-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(8, 8, 12, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            align-items: center;
+            justify-content: center;
+            padding: 1.5em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .benefit-modal.show {
+            display: flex;
+            opacity: 1;
+        }
+        .benefit-modal-content {
+            background: rgba(20, 20, 30, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            max-width: 480px;
+            width: 100%;
+            padding: 2.2em;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+        .benefit-modal.show .benefit-modal-content {
+            transform: scale(1) translateY(0);
+        }
+        .benefit-modal-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            margin: 0 auto 1.2em;
+        }
+        .benefit-modal-icon.bronze { background: rgba(216, 165, 107, 0.15); color: var(--bronze-color); border: 1px solid rgba(216, 165, 107, 0.3); }
+        .benefit-modal-icon.silver { background: rgba(209, 217, 223, 0.15); color: var(--silver-color); border: 1px solid rgba(209, 217, 223, 0.3); }
+        .benefit-modal-icon.gold { background: rgba(240, 211, 114, 0.15); color: var(--gold-color); border: 1px solid rgba(240, 211, 114, 0.3); }
+
+        .benefit-modal-title {
+            font-size: 1.35em;
+            font-weight: 900;
+            text-align: center;
+            margin: 0 0 0.8em;
+            color: #fff;
+        }
+        .benefit-modal-desc {
+            font-size: 0.9em;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 2em;
+            text-align: center;
+        }
+        .benefit-modal-actions {
+            display: flex;
+            gap: 1em;
+        }
+        .benefit-modal-btn {
+            flex: 1;
+            padding: 1em;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 0.95em;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            text-decoration: none;
+        }
+        .benefit-modal-btn.try {
+            background: var(--gold-color);
+            color: #000;
+            box-shadow: 0 8px 24px rgba(240, 211, 114, 0.25);
+        }
+        .benefit-modal-btn.try:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(240, 211, 114, 0.35);
+        }
+        .benefit-modal-btn.close {
+            background: rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-sizing: border-box;
+        }
+        .benefit-modal-btn.close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -1106,6 +1203,19 @@
         </section>
     </main>
 
+    <!-- Benefit Details Modal -->
+    <div id="benefit-detail-modal" class="benefit-modal">
+        <div class="benefit-modal-content">
+            <div id="bm-icon" class="benefit-modal-icon gold"><i class="fas fa-gem"></i></div>
+            <h3 id="bm-title" class="benefit-modal-title">特權名稱</h3>
+            <p id="bm-desc" class="benefit-modal-desc">特權介紹詳情...</p>
+            <div class="benefit-modal-actions">
+                <button id="bm-close-btn" class="benefit-modal-btn close" onclick="closeBenefitModal()">關閉</button>
+                <a id="bm-try-btn" class="benefit-modal-btn try" href="#">立即嘗試</a>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2026 城市運輸單車 核心設計委員會. 版權所有。</p>
     </footer>
@@ -1268,6 +1378,166 @@
 
         let currentActiveFilter = 'all';
 
+        const BENEFIT_DETAILS = {
+            // Bronze 1-7
+            'nav_2d_basic': {
+                detail: '為大眾單車出行設計的標準 2D 地圖導航。整合了全港單車徑、公共行人路以及過路天橋信息。系統基於高響應的 Leaflet 開源引擎，在低配置甚至離線弱網環境下依然能極速流暢載入，是您通勤漫遊不可或缺的貼心伴侶。',
+                url: '/nav'
+            },
+            'ride_basic_stats': {
+                detail: '提供完整的有氧里程、平均速度、累計爬升與每日通勤連勝（Commute Streak）分析。系統利用 2D 歷史卡片展示您每次的減碳貢獻，並支援在完成騎行時直接發布至官方論壇與社群分享。',
+                url: '/dashboard'
+            },
+            'weather_basic': {
+                detail: '整合香港天文台（HKO）官方即時天氣數據。為您提供當前騎行地區的即時溫度、相對濕度、風速以及日出日落時間。支持離線降級緩存，即使身處深山郊野依然能掌握氣候大局，確保出行安全。',
+                url: '/weather'
+            },
+            'poster_basic': {
+                detail: '完成行程後，一鍵生成極具設計感的 IG Story 高清分享海報。海報內嵌您的本次騎行里程、平均速度及時間，並配有經典城市減碳浮水印，讓您隨時隨地在社群媒體曬出您的低碳生活足跡。',
+                url: '/dashboard'
+            },
+            'discord_basic': {
+                detail: '加入我們的 CTRC HK 官方 Discord 車友伺服器！解鎖大眾公共頻道，在這裡您可以與全港數千名單車愛好者自由交流、分享日常通勤路線、尋找同城騎友，並第一時間獲取系統維護與版本更新公告。',
+                url: '/dashboard'
+            },
+            'reward_variable': {
+                detail: '每次騎行達標結算時，系統會自動在區塊鏈上為您分發「多巴胺盲盒」。盲盒內含隨機的 1 至 10 個里程幣（Coins）與額外 XP 獎勵。您的每次踩踏都是實實在在的財富累積，激發無限運動樂趣！',
+                url: '/routes'
+            },
+            'map_cycparkspace': {
+                detail: '專為城市停放痛點開發。在導航地圖中實時標註全港官方公共單車泊位（CYCPARKSPACE）與安全私人停泊點。一鍵查詢泊位富餘狀態與周邊監控覆蓋情況，讓您的愛車停得放心，出行無憂。',
+                url: '/nav'
+            },
+
+            // Silver 8-15, 26
+            'theme_silver': {
+                detail: '為銀卡破風手專屬打造的鈦銀閃耀主題。啟用後，全系統介面、頭像框及論壇名字配色均會升級為拉絲金屬鈦銀微發光圈。彰顯進階身份，在社群互動中獨樹一幟。',
+                url: '/dashboard'
+            },
+            'nav_multistop': {
+                detail: '突破點對點導航限制！銀卡及以上會員支持在 A 點到 B 點之間任意加插高達 5 個中途停留站點（Via Stops）。系統會自動優化全段路徑與海拔坡度，讓您輕鬆串聯超商、補給站與景點。',
+                url: '/nav'
+            },
+            'weather_heavy_rain_alert': {
+                detail: '結合地理围欄技術，當您即將騎入的天氣區域出現突發局部暴雨、雷暴或強風時，系統將通過 PWA 推送發出優先震動警告，爭取在暴雨降臨前 10 分鐘提醒您尋找就近遮蔽處。',
+                url: '/weather'
+            },
+            'poster_no_watermark': {
+                detail: '解鎖 1080x1350 縱向超清無浮水印社交海報生成特權。去除干擾性的官方浮水印，支持更乾淨的版面視覺，完美適合在 Instagram、小紅書等平台進行高質量排版與個人運動日誌發布。',
+                url: '/dashboard'
+            },
+            'coin_bonus_silver': {
+                detail: '享有永久性、非過期性「里程幣收益 1.05 倍」全局加成。無論是常規路線挑戰、自由導航，還是盲盒分發，每次結算均自動享有額外 5% 加成，讓您的里程積分累積快人一步！',
+                url: '/routes'
+            },
+            'map_issue_report': {
+                detail: '當您在路面上回報任何障礙物（例如塌樹、道路施工、違泊佔道、積水等）時，您的舉報將自動被標記為高優先級，並直接推送至管理員審核後台，以最快速度發布至全港路網，造福車友。',
+                url: '/nav'
+            },
+            'weekly_efficiency_report': {
+                detail: '每週一凌晨為您自動生成上週騎行效率深度報告。包含您的每公里配速曲線、踩踏踏頻估算、卡路里真實消耗以及通勤碳減排。為您的體能精進與科學運動提供完備數據支撐。',
+                url: '/dashboard'
+            },
+            'discord_silver_role': {
+                detail: '在綁定 Discord 帳戶後，官方伺服器將自動同步您的銀卡權限，為您頒發「銀色破風手」尊屬身份組與專屬頭像框。在 Discord 社群中彰顯領先與自律。',
+                url: '/dashboard'
+            },
+            'map_cycramp': {
+                detail: '地圖導航無障礙斜坡與 Ramp 圖層。實時渲染路網上的台階、天橋斜坡、Ramp 迴旋段、推車通道。完美避開需要抬車的尷尬路段，為公路車、折疊車車友提供極致平順的導航路徑。',
+                url: '/nav'
+            },
+
+            // Gold 16-25
+            'map_3d_gold': {
+                detail: '基於 WebGL / Mapbox GL 引擎渲染的極致 3D 霓虹巡航線地圖。支持 3D 建築、山體起伏與精準車道級（Lane-Level）視角。流暢的動態呼吸路徑，帶給您彷彿置身賽博朋克世界的奢華駕駛感。',
+                url: '/nav'
+            },
+            'theme_gold': {
+                detail: '專為金卡領袖設計的極簡「黑金」烈日高對比安全皮膚。所有關鍵 UI 元件、CTA 按鈕與提示框均強制啟用全黑背景與高飽和度燙金文字，解決強烈陽光直射下的手機反光閱讀障礙。',
+                url: '/dashboard'
+            },
+            'poster_gold_copy': {
+                detail: '海報生成功能解鎖金卡領袖專屬文案庫。您可以自行輸入或解鎖霸氣尊榮的燙金字體與自豪宣傳口號，如「今日破風，征服香港」、「世界級低碳先鋒」等，盡顯領袖魅力。',
+                url: '/dashboard'
+            },
+            'coin_bonus_gold': {
+                detail: '享有最高規格的「里程幣收益 1.15 倍」全局加成！金卡專屬權益，所有騎行結算、里程累積、活動盲盒與特殊任務，一律直接加成 +15%，讓您的財富增長享受無上特權。',
+                url: '/routes'
+            },
+            'route_naming_rights': {
+                detail: '當您完成了一段全新的自訂軌跡，或者對現有推薦路線有更好的優化建議時，您可以向核心委員會提交「路線命名/更名提案」。審核通過後，該路線將在全港推薦目錄中永久署名您為作者！',
+                url: '/dashboard'
+            },
+            'weather_radar_5min': {
+                detail: '金卡專屬即時 5 分鐘級 HKO 降雨雷達動態投影圖層。可在導航地圖上直接疊加雷達雲圖，精確預測未来 30 分鐘內的雨帶飄向與強度，實現精準避雨規劃，優雅掌控天氣。',
+                url: '/weather'
+            },
+            'beta_priority': {
+                detail: 'CTRC HK 新功能 Gray-scale 優先體驗權。您將提前至少 14 天受邀參與開發中的核心黑科技（如 AR 車道投影、多人實時房間語音等）的公測體驗，與核心委員會共同決定系統迭代方向。',
+                url: '/dashboard'
+            },
+            'discord_emergency': {
+                detail: '金卡車手專屬安全屏障。在遭遇爆胎、斷鏈或意外摔車等緊急情況下，可在 Discord 應急求助頻道一鍵呼援，系统會即時向周邊 2 公里內的所有金/銀卡會員及志願團隊發出互助信號。',
+                url: '/dashboard'
+            },
+            'weekend_double_preview': {
+                detail: '週末雙倍推薦活動專屬搶先通道。在每週五 00:00，搶先 24 小時為您揭週末即將開啟雙倍 XP 和雙倍里程推薦路線名單，讓您得以提前規劃、搶先佈局最佳有氧刷分線路。',
+                url: '/routes'
+            },
+            'discord_gold_role': {
+                detail: '綁定 Discord 後，官方社群伺服器將自動同步為您加冕「黃金領騎」至高稱號、3D 互動徽章、金色流沙名字特效，並解鎖僅限金卡大佬參與的核心策劃闭門會議頻道。',
+                url: '/dashboard'
+            }
+        };
+
+        function openBenefitModal(item, isUnlocked) {
+            const modal = document.getElementById('benefit-detail-modal');
+            const iconBox = document.getElementById('bm-icon');
+            const titleEl = document.getElementById('bm-title');
+            const descEl = document.getElementById('bm-desc');
+            const tryBtn = document.getElementById('bm-try-btn');
+
+            if (!modal) return;
+
+            iconBox.className = `benefit-modal-icon ${item.rank}`;
+            iconBox.innerHTML = `<i class="fas ${item.icon}"></i>`;
+
+            titleEl.textContent = item.label;
+            const extra = BENEFIT_DETAILS[item.key] || { detail: item.desc, url: '#' };
+            descEl.textContent = extra.detail;
+
+            if (isUnlocked) {
+                tryBtn.textContent = '立即嘗試';
+                tryBtn.href = extra.url;
+            } else {
+                tryBtn.textContent = '了解升級條件';
+                tryBtn.href = '/routes';
+            }
+
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeBenefitModal() {
+            const modal = document.getElementById('benefit-detail-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Handle modal background click to close
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('benefit-detail-modal');
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeBenefitModal();
+                    }
+                });
+            }
+        });
+
         function renderDynamicPrivileges(userRank) {
             const container = document.getElementById('dynamic-privileges-container');
             if (!container) return;
@@ -1287,6 +1557,7 @@
 
                 const card = document.createElement('div');
                 card.className = `privilege-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+                card.style.cursor = 'pointer';
 
                 card.innerHTML = `
                     <div>
@@ -1300,6 +1571,11 @@
                         ${item.rank === 'gold' ? '👑 金卡專屬' : (item.rank === 'silver' ? '✨ 銀卡專屬' : '🌱 銅卡標配')}
                     </div>
                 `;
+
+                card.addEventListener('click', () => {
+                    openBenefitModal(item, isUnlocked);
+                });
+
                 container.appendChild(card);
             });
         }
@@ -1450,8 +1726,12 @@
                 const level = u.level || 1;
                 const getCyclistTier = window.getCyclistTier || function(l) { return '入門車手'; };
                 const cyclist_tier = u.cyclist_tier || getCyclistTier(level);
-                const membership_status = u.membership_status || '普通會員';
-                userProfileTierSub.textContent = `Lv.${level} ${cyclist_tier} ｜ ${membership_status}`;
+
+                // Map membership card rank to Traditional Chinese label
+                const cardRank = String(u.mileage_rank || 'bronze').toLowerCase();
+                const cardRankLabel = cardRank === 'gold' ? '金卡會員' : (cardRank === 'silver' ? '銀卡會員' : '銅卡會員');
+
+                userProfileTierSub.textContent = `Lv.${level} ${cyclist_tier} ｜ ${cardRankLabel}`;
             }
             const avatarEl = document.getElementById('user-profile-avatar');
             if (avatarEl && u.avatar_url) {

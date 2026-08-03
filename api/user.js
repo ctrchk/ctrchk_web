@@ -840,6 +840,35 @@ export default async function handler(req, res) {
         }
       }
 
+      // Early resolve target user_id if we have google_id or email
+      let targetUserIdForGameProfile = user_id;
+      if (!targetUserIdForGameProfile) {
+        try {
+          if (google_id) {
+            const { rows } = await query('SELECT id FROM users WHERE google_id = $1', [google_id]);
+            if (rows.length > 0) targetUserIdForGameProfile = rows[0].id;
+          } else if (email) {
+            const { rows } = await query('SELECT id FROM users WHERE email = $1', [email]);
+            if (rows.length > 0) targetUserIdForGameProfile = rows[0].id;
+          }
+        } catch (dbErr) {
+          console.error('[User GET] failed to look up user ID:', dbErr.message);
+        }
+      }
+
+      if (targetUserIdForGameProfile) {
+        try {
+          await query(
+            `INSERT INTO user_game_profile (user_id, level, xp, coins, mileage_km_365, mileage_rank, commute_streak, commute_streak_pending)
+             VALUES ($1, 1, 0, 0, 0, 'bronze', 0, 0)
+             ON CONFLICT (user_id) DO NOTHING`,
+            [targetUserIdForGameProfile]
+          );
+        } catch (dbErr) {
+          console.error('[User GET] failed to ensure game profile exists:', dbErr.message);
+        }
+      }
+
       let result;
       const SELECT = `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.phone, u.profile_completed,
                              u.auth_provider, u.created_at, u.email_verified, u.avatar_url,
@@ -876,74 +905,111 @@ export default async function handler(req, res) {
         const userId = user.id;
 
         // 1. Mileage Factor (M): 30-day rolling mileage km * 10
-        const { rows: m30Rows } = await query(
-          `SELECT COALESCE(SUM(distance_km), 0) AS m30
-           FROM cycling_history
-           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
-          [userId]
-        );
-        const distance30 = Number(m30Rows[0]?.m30 || 0);
+        let distance30 = 0;
+        try {
+          const { rows: m30Rows } = await query(
+            `SELECT COALESCE(SUM(distance_km), 0) AS m30
+             FROM cycling_history
+             WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+            [userId]
+          );
+          distance30 = Number(m30Rows[0]?.m30 || 0);
+        } catch (mErr) {
+          console.error('[Elite Score] M factor calc error:', mErr.message);
+        }
         const mFactor = distance30 * 10;
 
         // 2. Elevation Factor (E): Mock/calculate vertical climbing meters / 5
-        // We'll calculate a mock elevation based on the route or distance (e.g. 15m elevation gain per km as average, or fetch actual if routes populated)
-        // Let's write a robust formula: sum of duration/distance-based elevation
-        const { rows: e30Rows } = await query(
-          `SELECT COALESCE(SUM(distance_km * 18.5), 0) AS e30
-           FROM cycling_history
-           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
-          [userId]
-        );
-        const elevation30 = Number(e30Rows[0]?.e30 || 0);
+        let elevation30 = 0;
+        try {
+          const { rows: e30Rows } = await query(
+            `SELECT COALESCE(SUM(distance_km * 18.5), 0) AS e30
+             FROM cycling_history
+             WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+            [userId]
+          );
+          elevation30 = Number(e30Rows[0]?.e30 || 0);
+        } catch (eErr) {
+          console.error('[Elite Score] E factor calc error:', eErr.message);
+        }
         const eFactor = elevation30 / 5;
 
         // 3. Consistency Factor (C): Days with active rides in last 30 days * 15
-        const { rows: c30Rows } = await query(
-          `SELECT COUNT(DISTINCT ride_date) AS c30
-           FROM cycling_history
-           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
-          [userId]
-        );
-        const consistencyDays = Number(c30Rows[0]?.c30 || 0);
+        let consistencyDays = 0;
+        try {
+          const { rows: c30Rows } = await query(
+            `SELECT COUNT(DISTINCT ride_date) AS c30
+             FROM cycling_history
+             WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+            [userId]
+          );
+          consistencyDays = Number(c30Rows[0]?.c30 || 0);
+        } catch (cErr) {
+          console.error('[Elite Score] C factor calc error:', cErr.message);
+        }
         const cFactor = consistencyDays * 15;
 
         // 4. Achievement Factor (A): number of unlocked badges * 25 (cap at 150)
-        const { rows: badgeCountRows } = await query(
-          `SELECT COUNT(*)::int AS cnt FROM user_badges WHERE user_id = $1`, [userId]
-        );
-        const badgeCount = Number(badgeCountRows[0]?.cnt || 0);
+        let badgeCount = 0;
+        try {
+          const { rows: badgeCountRows } = await query(
+            `SELECT COUNT(*)::int AS cnt FROM user_badges WHERE user_id = $1`, [userId]
+          );
+          badgeCount = Number(badgeCountRows[0]?.cnt || 0);
+        } catch (aErr) {
+          console.error('[Elite Score] A factor calc error:', aErr.message);
+        }
         const aFactor = Math.min(150, badgeCount * 25);
 
-        // 5. Exploration Factor (X): ratio of conquered route ids / total routes (capping or mock representing route conquest)
-        const conqueredCount = user.conquered_route_ids ? user.conquered_route_ids.length : 1;
-        // Mocking exploration ratio based on conquered routes over total routes
-        const { rows: routesCountRows } = await query('SELECT COUNT(*) AS total_count FROM routes');
-        const totalRoutesCount = Math.max(1, Number(routesCountRows[0]?.total_count || 12));
+        // 5. Exploration Factor (X): ratio of conquered route ids / total routes
+        let conqueredCount = 0;
+        let totalRoutesCount = 12;
+        try {
+          const { rows: conqueredRows } = await query(
+            `SELECT DISTINCT route_id FROM cycling_history WHERE user_id = $1 AND route_id IS NOT NULL`,
+            [userId]
+          );
+          conqueredCount = conqueredRows.length;
+          const { rows: routesCountRows } = await query('SELECT COUNT(*) AS total_count FROM routes');
+          totalRoutesCount = Math.max(1, Number(routesCountRows[0]?.total_count || 12));
+        } catch (xErr) {
+          console.error('[Elite Score] X factor calc error:', xErr.message);
+        }
         const explorationRatio = Math.min(1.0, conqueredCount / totalRoutesCount);
         const xFactor = explorationRatio * 200;
 
         // 6. Community Factor (P): Forum/Feedback contribution score (posts/replies/likes count * 20)
-        const { rows: forumCountRows } = await query(
-          `SELECT COUNT(*) AS cnt FROM forum_topics WHERE user_id = $1`, [userId]
-        );
-        const { rows: replyCountRows } = await query(
-          `SELECT COUNT(*) AS cnt FROM forum_replies WHERE user_id = $1`, [userId]
-        );
-        const forumTopicsCount = Number(forumCountRows[0]?.cnt || 0);
-        const forumRepliesCount = Number(replyCountRows[0]?.cnt || 0);
+        let forumTopicsCount = 0;
+        let forumRepliesCount = 0;
+        try {
+          const { rows: forumCountRows } = await query(
+            `SELECT COUNT(*) AS cnt FROM forum_topics WHERE user_id = $1`, [userId]
+          );
+          const { rows: replyCountRows } = await query(
+            `SELECT COUNT(*) AS cnt FROM forum_replies WHERE user_id = $1`, [userId]
+          );
+          forumTopicsCount = Number(forumCountRows[0]?.cnt || 0);
+          forumRepliesCount = Number(replyCountRows[0]?.cnt || 0);
+        } catch (pErr) {
+          console.error('[Elite Score] P factor calc error:', pErr.message);
+        }
         const communityContribution = forumTopicsCount + forumRepliesCount;
         const pFactor = communityContribution * 20;
 
         const totalEliteScore = Math.round(mFactor + eFactor + cFactor + aFactor + xFactor + pFactor);
 
         // Update DB
-        await query(
-          `UPDATE user_game_profile
-           SET elite_score = $1, elevation_gain_30 = $2, consistency_days_30 = $3,
-               exploration_ratio = $4, community_contribution = $5
-           WHERE user_id = $6`,
-          [totalEliteScore, elevation30, consistencyDays, explorationRatio, communityContribution, userId]
-        );
+        try {
+          await query(
+            `UPDATE user_game_profile
+             SET elite_score = $1, elevation_gain_30 = $2, consistency_days_30 = $3,
+                 exploration_ratio = $4, community_contribution = $5
+             WHERE user_id = $6`,
+            [totalEliteScore, elevation30, consistencyDays, explorationRatio, communityContribution, userId]
+          );
+        } catch (dbErr) {
+          console.error('[Elite Score] failed to update user profile elite stats:', dbErr.message);
+        }
 
         user.elite_score = totalEliteScore;
         user.elevation_gain_30 = elevation30;
