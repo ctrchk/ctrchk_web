@@ -18,65 +18,78 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         .terms-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 2em auto;
             padding: 0 1em;
         }
         .terms-card {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            padding: 2.5em;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 3em;
             margin-bottom: 2em;
+            border: 1px solid #e0f2f1;
         }
         .terms-card h2 {
-            color: #2c3e50;
-            border-left: 4px solid #04D93C;
+            color: #1e3a1e;
+            border-left: 5px solid #04D93C;
             padding-left: 0.75em;
             margin-top: 0;
+            font-size: 1.6em;
         }
         .terms-card h3 {
-            color: #2c3e50;
-            margin-top: 1.5em;
+            color: #2c4c2c;
+            margin-top: 1.8em;
+            font-size: 1.25em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.3em;
         }
         .terms-card p, .terms-card li {
-            color: #444;
+            color: #374151;
             line-height: 1.8;
-            font-size: 0.95em;
+            font-size: 0.98em;
+            text-align: justify;
         }
         .terms-card ul, .terms-card ol {
             padding-left: 1.5em;
         }
+        .terms-card li {
+            margin-bottom: 0.6em;
+        }
         .last-updated {
-            color: #888;
-            font-size: 0.85em;
+            color: #6b7280;
+            font-size: 0.9em;
             margin-bottom: 1.5em;
+            font-weight: bold;
         }
         .section-divider {
             border: none;
-            border-top: 1px solid #e0e0e0;
-            margin: 2em 0;
+            border-top: 1px solid #e5e7eb;
+            margin: 2.5em 0;
         }
         .toc {
-            background: #f9f9f9;
-            border-radius: 8px;
-            padding: 1.2em 1.5em;
-            margin-bottom: 2em;
+            background: #f4fbf4;
+            border: 1px solid #dcedc8;
+            border-radius: 12px;
+            padding: 1.5em 2em;
+            margin-bottom: 2.5em;
         }
-        .toc h4 { margin-top: 0; color: #2c3e50; }
-        .toc a { color: #04D93C; text-decoration: none; }
+        .toc h4 { margin-top: 0; color: #1e3a1e; font-size: 1.1em; display: flex; align-items: center; gap: 0.5em; }
+        .toc a { color: #04D93C; text-decoration: none; font-weight: bold; }
         .toc a:hover { text-decoration: underline; }
 
         /* Light/Dark Mode Compatibility */
         body.app-light-theme .terms-card {
             background: white !important;
-            color: #334155 !important;
+            color: #1f2937 !important;
+            border-color: #e5e7eb !important;
         }
         body.app-light-theme .terms-card h2, body.app-light-theme .terms-card h3 {
-            color: #1e293b !important;
+            color: #111827 !important;
         }
         body.app-light-theme .toc {
-            background: #f1f5f9 !important;
+            background: #f9fafb !important;
+            border-color: #e5e7eb !important;
         }
     </style>
 </head>
@@ -87,129 +100,169 @@
         <section class="content animated-element">
             <div class="terms-container">
 
-                <h1 style="color:#2c3e50; text-align:center; margin-bottom:0.2em;">條款及細則、隱私條例與免責聲明</h1>
-                <p class="last-updated" style="text-align:center;">最後更新日期：2026年3月</p>
+                <h1 style="color:#1e3a1e; text-align:center; margin-bottom:0.2em; font-size:2em; font-weight:900;">條款及細則、隱私條例與免責聲明</h1>
+                <p class="last-updated" style="text-align:center;">版本編號：v2.2.0 &nbsp;|&nbsp; 最後更新及生效日期：2026年3月20日</p>
 
                 <!-- 目錄 -->
                 <div class="toc">
-                    <h4><i class="fas fa-list"></i> 目錄</h4>
-                    <ol>
-                        <li><a href="#terms">使用條款及細則</a></li>
-                        <li><a href="#privacy">隱私條例</a></li>
-                        <li><a href="#disclaimer">免責聲明</a></li>
+                    <h4><i class="fas fa-list"></i> 法律文件快速目錄索引</h4>
+                    <ol style="margin: 0; padding-left: 1.2em;">
+                        <li><a href="#terms">服務使用條款及細則 (Terms and Conditions)</a></li>
+                        <li><a href="#privacy">用戶隱私與個人資料保障條例 (Privacy Policy)</a></li>
+                        <li><a href="#disclaimer">完全免責聲明與風險承擔承諾 (Disclaimer)</a></li>
                     </ol>
                 </div>
 
                 <!-- 第一部分：條款及細則 -->
                 <div class="terms-card" id="terms">
-                    <h2><i class="fas fa-file-contract" style="color:#04D93C;"></i> 一、使用條款及細則</h2>
-                    <p>歡迎使用城市運輸單車（城市運輸單車，英文：City Transport Cycle，下稱「本平台」）網站、應用程式及相關 PWA 服務。請在使用本平台前仔細閱讀以下條款。一旦登記帳戶、使用本平台、提交騎行數據或進行任何互動，即表示您同意受以下條款約束。</p>
+                    <h2><i class="fas fa-file-contract" style="color:#04D93C;"></i> 一、服務使用條款及細則</h2>
+                    <p>歡迎使用城市運輸單車（Traditional Chinese: 城市運輸單車，下稱「本平台」）所提供的網站、Progressive Web App (PWA) 行動應用程式、地圖導航引擎及相關數位服務。本平台由核心委員會（下稱「我們」）運營。請在使用、註冊、登入或點擊同意前，務必逐字仔細閱讀以下所有條款。<strong>一旦您註冊帳戶、同意本條款、使用本平台、或提交任何騎行紀錄，即視為您已完全理解、接受並同意受本文件之約束。如果您不同意本文件之任何條款，請立即停止使用本平台、登出並註銷您的帳戶。</strong></p>
 
-                    <h3>1.1 服務描述與帳戶分級</h3>
-                    <p>本平台提供香港單車路線資訊、GPX 導航地圖引擎、3D 車道渲染線、路面障礙回報、即時氣象警報、車手身份卡包（如 Apple/Google 數字錢包卡面）及騎行數據歷史紀錄等。系統實行以下分級機制：</p>
+                    <h3>1.1 平台法律定位與條款約束力</h3>
+                    <p>本文件構成您（下稱「用戶」或「車手」）與本平台之間具法律約束力之合約。本合約之適用範圍涵蓋本平台之全部模組。本平台有權隨時在符合香港法律之前提下，修訂本條款、隱私條例及免責聲明，並透過更新本頁面及彈出重新同意視窗之方式通知用戶。新版本條款一經發布並經用戶點擊同意，即替代舊有版本，對雙方產生完全法律效力。</p>
+
+                    <h3>1.2 帳戶註冊、安全與 Progressive Web App (PWA) 規範</h3>
                     <ul>
-                        <li><strong>銅卡會員 (Bronze)：</strong>註冊即可免費解鎖。提供基礎 2D 單車徑導航、基礎數據紀錄、泊位圖層與盲盒結算。</li>
-                        <li><strong>銀卡會員 (Silver)：</strong>365天滾動里程達到 150 km 晉升，或享有 120 km 保級底線。解鎖多站點規劃、無障礙斜坡與 Ramp 圖層、路障回報優先審核權。</li>
-                        <li><strong>金卡會員 (Gold)：</strong>365天滾動里程達到 500 km 晉升，或享有 400 km 保級底線。解鎖 Mapbox 3D 高精度車道導航、黑金高對比面板、5分鐘雷達雲圖、新功能優先體驗權、雙倍里程早鳥預覽。</li>
+                        <li><strong>資料真實性：</strong>用戶在註冊帳戶時，必須提供真實、準確、最新的個人資料（包括但不限於全名、電子郵件、用戶名、電話等）。嚴禁冒用他人身份註冊。如因提供虛假資料導致帳戶爭議或法律責任，由用戶自行承擔。</li>
+                        <li><strong>帳戶密碼防護：</strong>用戶之密碼均採用業界強加密標準（Bcrypt 12輪鹽值不可逆雜湊）存儲於伺服器中，惟用戶仍有義務保管個人帳戶密碼，不得洩露予任何第三方。凡使用該帳戶進行之操作，均視為用戶本人之行為。</li>
+                        <li><strong>PWA Standalone 專屬體驗：</strong>本平台部分高精度 3D 導航、Wake Lock 亮屏及實時背景軌跡同步功能專為 PWA 獨立運行模式 (Standalone Mode) 最佳化。用戶知悉並同意，於普通瀏覽器運行時可能因系統沙盒限制而導致定位頻率降低或中斷，本平台不就此等運行限制承擔任何技術連帶責任。</li>
                     </ul>
 
-                    <h3>1.2 三軌遊戲化經濟體系之虛擬資產規範</h3>
-                    <p>本平台引入了由車手等級（Level）、經驗值（XP）與里程幣（Coins）組成的三軌經濟系統：</p>
+                    <h3>1.3 階梯式會員身份、保級底線與特權規範</h3>
+                    <p>本平台實行基於 365 天滾動里程（365-Day Rolling Mileage）及多因子綜合菁英分（Elite Score）之會員身份體系：</p>
                     <ul>
-                        <li>經驗值（XP）與等級（Level）用於展現個人低碳聲譽與榮譽。</li>
-                        <li>里程幣（Coins）可通過低碳出行結算（每公里獲取比例代幣、升級獎勵、簽到盲盒）獲得，用於解鎖特別版路線或部門。</li>
-                        <li><strong>所有虛擬資產（包括但不限於等級、XP、里程幣、已解鎖勳章、數字卡包）均不具備任何現實貨幣價值或兌換功能。</strong></li>
-                        <li>本平台嚴禁任何資產的線下交易、轉讓、買賣。一經發現，本平台有權永久清空或重置該帳戶資產而不作任何賠償。</li>
+                        <li><strong>銅卡會員 (Bronze Tier)：</strong>註冊且完成電郵驗證即可免費取得。享有基礎 2D 單車徑導航、基礎行車紀錄、公共單車泊位圖層以及簽到盲盒結算特權。</li>
+                        <li><strong>銀卡會員 (Silver Tier)：</strong>365 天滾動里程達 150 km 即可晉升，並享有 120 km 之滚動保級底線。解鎖多站點行程規劃、 cycle ramps 專用單車斜坡及 Ramp 安全圖層、以及路障回報優先管理員審核權限。</li>
+                        <li><strong>金卡會員 (Gold Tier)：</strong>365 天滾動里程達 500 km 即可晉升，並享有 400 km 之滚動保級底線。解鎖 Mapbox 3D 高精度車道導航（呼吸發光線）、黑金高對比極簡面板、香港天文台 (HKO) 5分鐘實時 Storm 雷達雲圖、週末雙倍里程/XP 推薦線早鳥預覽特權（逢星期五 00:00 HKT 提早解鎖）、專屬無浮水印高畫質海報生成以及 AI 智能騎行狀態分析教練服務。</li>
+                        <li><strong>降級機制：</strong>用戶同意並接受，若其滾動里程因時間流逝（超過365天之歷史行程自動滑出滚動窗口）而低於保級底線時，系統將於每日結算時自動執行無補償降級。</li>
                     </ul>
 
-                    <h3>1.3 嚴格反作弊（Anti-Cheat）與數據審計條款</h3>
-                    <p>為維護全港低碳排行榜之公正性與榮譽體系，本平台配備實時數據軌跡審計系統：</p>
+                    <h3>1.4 三軌遊戲化經濟體系與虛擬資產歸屬</h3>
+                    <p>本平台引入了由車手等級（Level）、經驗值（XP）與里程幣（Coins）組成的三軌遊戲化虛擬經濟系統：</p>
                     <ul>
-                        <li><strong>滑動窗口速檢：</strong>歷史記錄審核將進行連續滑動窗口速檢（Window Size 5）。若檢測到瞬時時速或區段速度超過 45 km/h，該次活動將被判定為作弊。</li>
-                        <li><strong>路網地圖匹配：</strong>提交的 GPS 坐標將與本平台緩存的政府 CYCTRACK GIS 數據進行 50 米閾值平底地圖匹配（Map Matching Coverage）。覆蓋匹配率低於 60% 則判定為汽車、地鐵等非自行車出行。</li>
-                        <li><strong>作弊後果：</strong>反作弊系統判定不合格的行程將直接作廢、無法獲得任何獎勵。對於惡意篡改代碼、刷接口或重覆提交 UUID 的用戶，本平台保留封禁其帳戶、封鎖 IP、永久重置進度的權利。</li>
+                        <li>經驗值（XP）與車手等級（Level）為純粹的榮譽與聲譽象徵，無現實貨幣價值。</li>
+                        <li>里程幣（Coins）為平台內部的積分獎勵，僅可用於解鎖特定關卡路線、部門、或特別版功能，<strong>在任何情況下均不具備任何現實貨幣價值，亦不可兌換為任何國家之法定貨幣或實物資產。</strong></li>
+                        <li><strong>禁止線下交易：</strong>本平台嚴格禁止任何虛擬資產（等級、XP、里程幣、已解鎖勳章、數字卡包）在線下進行交易、轉讓、買賣、租借或贈與。一經發現，我們有權立即採取清空虛擬資產、永久封禁相關帳戶、以及封鎖作弊 IP 之懲罰措施，且無需承擔任何賠償義務。</li>
+                        <li>我們保留隨時調整、重置、變更或終止三軌經濟之獲取比例、解鎖費用及算法公式之權力。</li>
                     </ul>
 
-                    <h3>1.4 多人實時房間 (Ride with Friends) 規範</h3>
-                    <p>用戶可建立或加入實時多人騎行房間進行同途導航，地圖會同步顯示房友位置。用戶須同意：</p>
+                    <h3>1.5 嚴格反作弊（Anti-Cheat）與軌跡數據審計條款</h3>
+                    <p>為維護低碳出行及全港車手排行榜之嚴肅性、榮譽感與公平秩序，本平台採用實時 GPS 軌跡多因子審計機制：</p>
                     <ul>
-                        <li>嚴禁創立包含違法、不雅或侵犯他人隱私之房間名稱及密碼。</li>
-                        <li>線下相約騎行純屬個人社交行為，用戶須自行核實對方身份並評估人身安全。本平台不對線下互動產生的任何安全事故、纠紛、損害承擔責任。</li>
+                        <li><strong>滑動窗口速檢算法 (Sliding Window Speed Audit)：</strong>系統會對用戶提交的 GPX 定位序列進行滾動窗口（Window Size = 5）速度審查。一旦檢測到瞬時時速或區段移動均速超過 45 km/h，該次骑行紀錄將被直接判斷為作弊。</li>
+                        <li><strong>CYCTRACK 地圖匹配算法 (Map Matching Coverage)：</strong>提交的 GPS 定位軌跡會與緩存的香港政府官方 CYCTRACK GIS 單車徑地理網絡進行 50 米半徑平底匹配（Coverage Filter）。匹配重合率低於 60% 之行程將被自動判斷為汽車、地鐵或非自行車通勤。</li>
+                        <li><strong>作弊處理後果：</strong>對於被反作弊機制判定不合格之行程，本平台將自動將其作廢，不予發放任何 XP 及代幣獎勵。對於惡意修改前端 JS 腳本、刷 API 接口、重複提交 client_uuid 或以模擬器虛擬定位 (Mock Location) 進行刷單之用戶，我們有權永久註銷其帳戶、抹除全部歷史進度，並將其 IP 地址與電子郵箱列入永久封禁黑名單。</li>
                     </ul>
 
-                    <h3>1.5 準據法及管轄權</h3>
-                    <p>本條款受中華人民共和國香港特別行政區法律管轄。因本條款、平台服務或任何虛擬代幣爭議引起的任何糾紛，雙方同意提交香港特別行政區法院進行專屬管轄與審理。</p>
+                    <h3>1.6 多人實時房間 (Ride with Friends / Room-Based Multiplayer)</h3>
+                    <p>本平台提供多人實時房間功能，允許車手建立或加入公開/加密房間，地圖會基於 Heartbeat API 實時動態同步房友位置：</p>
+                    <ul>
+                        <li>房主擁有鎖定房間、啟動行程及選擇推薦導航路線之專屬權限。</li>
+                        <li>用戶同意，線下組隊騎行純屬個人自由社交行為。用戶必須對同房成員之身份進行自我核實，並自主評估人身、設備與交通安全。<strong>我們對任何線下約騎、社交互動、糾紛、損害、或交通事故不承擔任何法律、經濟或道義責任。</strong></li>
+                    </ul>
+
+                    <h3>1.7 數位卡包憑證（Apple / Google Wallet Pass）與 WalletWallet API 同步</h3>
+                    <ul>
+                        <li>本平台透過 WalletWallet API 向金卡及銀卡會員發行專屬數位卡包憑證，並將其 serialNumber 綁定至 user_game_profile 中之 `wallet_serial` 欄位。</li>
+                        <li>用戶理解並同意，數位卡包憑證之背景同步與實時更新依賴於第三方服務商 WalletWallet 之網絡通訊。若因第三方伺服器維護、網絡波動或手機系統卡包（Apple Wallet/Google Wallet）本身之通訊協定問題導致卡包數據未能及時更新里程，本平台不承擔技術故障之過失責任。</li>
+                    </ul>
+
+                    <h3>1.8 週末雙倍里程/XP 推薦線早鳥預覽與金卡權益</h3>
+                    <ul>
+                        <li>金卡會員享有於星期五 00:00 HKT 提前解鎖並預覽週末雙倍推薦線路之早鳥權利。</li>
+                        <li>週末雙倍推薦線路僅在香港時間（HKT）星期六 00:00 至星期日 23:59 內完成提交且通過反作弊審計時，方可獲得雙倍 XP、雙倍里程幣及雙倍里程累積計算。</li>
+                    </ul>
+
+                    <h3>1.9 準據法及管轄權</h3>
+                    <p>服務使用條款、隱私條例與免責聲明之訂立、效力、解釋、履行及爭議解決，均受<strong>中華人民共和國香港特別行政區法律</strong>管轄。因本平台服務、虛擬代幣、帳戶封禁或騎行數據引起的任何及所有爭議、糾紛或索賠，雙方應首先友好協商解決；協商不成時，<strong>雙方同意無條件提交香港特別行政區法院進行專屬管轄與審理。</strong></p>
                 </div>
 
                 <!-- 第二部分：隱私條例 -->
                 <div class="terms-card" id="privacy">
-                    <h2><i class="fas fa-user-shield" style="color:#04D93C;"></i> 二、隱私條例</h2>
-                    <p>城市運輸單車（下稱「本平台」）重視您的隱私權。本隱私條例說明我們如何收集、使用及保護您的個人資料與精確定位軌跡數據。</p>
+                    <h2><i class="fas fa-user-shield" style="color:#04D93C;"></i> 二、用戶隱私與個人資料保障條例</h2>
+                    <p>我們高度重視您的隱私權與個人敏感資料。本隱私條例旨在向您說明我們如何遵循香港特別行政區法例第486章《個人資料（私隱）條例》之規範，收集、處理、儲存、共享及刪除您的個人資料與高頻精確位置數據。</p>
 
-                    <h3>2.1 精確位置數據（Geolocation）收集與後台運行</h3>
-                    <p>在您主動開啟「開始騎行」或「地圖導航」功能時：</p>
+                    <h3>2.1 精確地理位置數據（Geolocation）收集與後台通訊</h3>
                     <ul>
-                        <li>本平台會請求您的瀏覽器或設備授予「精確位置權限（Geolocation API）」，在騎行期間實時高頻獲取您的緯度、經度、海拔及時間戳。</li>
-                        <li>上述軌跡數據會臨時積累於本地緩存並上傳至伺服器作為 `gpx_track` 欄位，以進行反作弊審計和生成數據分享海報。</li>
-                        <li>在多人實時房間（Heartbeat API）中，您的位置將動態同步給同房成員。房間關閉或退出後，實時廣播即刻停止。</li>
+                        <li><strong>收集目的與頻率：</strong>當您主動點擊「開始騎行」或「地圖導航」功能時，本平台會請求您的設備授予「精確位置權限 (High Accuracy Geolocation)」。在騎行期間，平台會以高達每 1-3 秒一次的頻率收集您的緯度、經度、精確海拔、方向角及移動速度，並於本地緩存中累積生成包含時間戳之 GPX 歷史軌跡。</li>
+                        <li><strong>後台上傳：</strong>當您提交騎行時，上述軌跡數據會以 JSON 加密形式上傳至後端伺服器（存儲於 `cycling_history` 表之 `gpx_track` 欄位），以用於反作弊多因子審核、計算已省車資、更新 Elite Score 因子，以及為您導出專屬 IG Story 海報。</li>
+                        <li><strong>多人房間同步：</strong>在多人實時房間運行時，系統會調用 Heartbeat API，每 5 秒一次將您的實時坐標廣播給該房間內的其他成員。一旦您主動退出房間、關閉導航、暫停或結束騎行，上述坐標廣播將立即終止。</li>
                     </ul>
 
-                    <h3>2.2 收集的個人資料</h3>
+                    <h3>2.2 我們收集的個人資料類別</h3>
                     <ul>
-                        <li><strong>帳戶資料：</strong>電子郵件地址、姓名、用戶名、聯絡電話、頭像等。</li>
-                        <li><strong>遊戲數據：</strong>個人等級、經驗值、代幣數額、歷史騎行里程、障礙舉報記錄、Discord 绑定 ID、Apple/Google 錢包序號。</li>
-                        <li><strong>技術日誌：</strong>IP 地址、設備 User Agent、登入歷史（用於保護帳戶免受惡意攻擊）。</li>
+                        <li><strong>帳戶基本資料：</strong>電子郵件地址、姓名、用戶名、頭像、註冊來源（Email 或 Google OAuth）、電子郵件驗證狀態。</li>
+                        <li><strong>高級會員補充資料：</strong>聯絡電話（電話號碼）、騎行經驗（如初心者/專家）、主要騎行地區、出生日期、主要使用單車類型（公路車/山地車等）。</li>
+                        <li><strong>技術日誌數據：</strong>用戶 IP 地址（包括同意本條款時的 IP 地址）、設備 User Agent 瀏覽器指紋、登入日誌、接口調用歷史、 client_uuid 離線同步識別碼。</li>
                     </ul>
 
-                    <h3>2.3 資料儲存、防洩密與第三方服務</h3>
+                    <h3>2.3 資料存儲、防洩密技術與安全防護</h3>
                     <ul>
-                        <li>本平台絕不會向任何第三方出售、租借、批發您的個人資料或位置軌跡。</li>
-                        <li>所有用戶密碼均通過強加密算法（Bcrypt 12輪鹽值）進行不可逆雜湊存儲。</li>
-                        <li>本平台整合 Google 登入、Gemini AI 分析教練、WalletWallet 數字卡包。當您調用這些接口時，數據傳輸均經 HTTPS 加密，且您同意受相關第三方隱私條款約束。</li>
+                        <li><strong>不可逆加密：</strong>用戶註冊時設定的密碼在傳輸至後台後，均通過不可逆的 Bcrypt 12輪鹽值加密算法轉為雜湊值存儲。任何管理員、開發人員或外部駭客均無法讀取您的原始密碼。</li>
+                        <li><strong>絕不外洩：</strong>本平台承諾<strong>絕不</strong>向任何第三方出售、出租、租借、批發或轉讓您的個人資料、聯絡電話、或歷史定位軌跡數據。</li>
+                        <li><strong>第三方API整合：</strong>本平台整合了 Google OAuth 登入、Gemini AI 騎行狀態教練分析接口、以及 WalletWallet 數字卡面接口。數據在傳遞至上述第三方服務時均經過 SSL/TLS 1.3 高強度加密通道傳輸。</li>
                     </ul>
 
-                    <h3>2.4 您的私隱權利</h3>
-                    <p>根據香港《個人資料（私隱）條例》（Cap. 486），您有權查閱本平台持有的您的個人數據，要求更正錯誤資料，或隨時在控制台申請完全註銷帳戶並永久抹除所有歷史軌跡記錄。如有疑問請透過聯絡頁面聯繫核心委員會。</p>
+                    <h3>2.4 您的隱私權利與自主註銷</h3>
+                    <p>根據香港《個人資料（私隱）條例》（Cap. 486），您對本平台持有的個人資料享有以下權利：</p>
+                    <ul>
+                        <li>有權隨時查閱、複製、要求更正或補填您的個人資料。</li>
+                        <li><strong>完全忘記權 (Right to be Forgotten)：</strong>您有權在個人控制台或設定頁面中點擊「註銷帳戶」。一旦確認，系統將立即執行物理刪除，於資料庫中永久抹除您的用戶檔案、聯絡電話、全部歷史 GPS 騎行軌跡、以及相關虛擬資產進度，不留任何備份，且無法逆轉。</li>
+                    </ul>
                 </div>
 
                 <!-- 第三部分：免責聲明 -->
                 <div class="terms-card" id="disclaimer">
-                    <h2><i class="fas fa-exclamation-triangle" style="color:#04D93C;"></i> 三、免責聲明</h2>
+                    <h2><i class="fas fa-exclamation-triangle" style="color:#04D93C;"></i> 三、完全免責聲明與風險承擔承諾</h2>
 
-                    <h3>3.1 路障回報（Road Obstacles）之完全免責</h3>
-                    <p>本平台提供的「路面障礙物（如塌樹、施工、違泊等）」回報圖層，所有數據均來自用戶之自發回報。雖然銀卡/金卡用戶回報享有優先審核權，但：</p>
+                    <h3>3.1 香港《道路交通條例》（第374章）與交通法規絕對遵守責任</h3>
+                    <p>本平台僅為輔助性的單車導航及遊戲化記錄工具，不具備任何官方交通指揮或交通執法效力。<strong>用戶在騎行過程中，必須自負完全責任、時刻且無條件遵守香港特別行政區《道路交通條例》（第374章）及其附屬法例、以及運輸署發布的《道路使用者守則》。</strong></p>
                     <ul>
-                        <li><strong>本平台無法保證所有障礙報告的實時準確性、真實性、完整性或安全覆蓋。</strong></li>
-                        <li>道路狀況瞬息萬變，用戶在進入特定區域時，必須以現場官方警示牌及肉眼觀察為準。</li>
-                        <li>本平台不對因信賴障礙圖層、偏離原有車道、撞擊障礙物所造成的任何財產損失、摔車、或人身傷亡承擔任何直接、間接或附帶責任。</li>
+                        <li><strong>安全防護要求：</strong>用戶必須時刻配備並戴上符合國際安全規格（如 CE/EN 1078）的單車安全防護頭盔、護膝、護肘。</li>
+                        <li><strong>照明設備要求：</strong>在夜間、深夜、或能見度低的情況下，用戶在香港道路上騎行單車時，<strong>必須</strong>配備且開啟單車前置白光燈及後置紅光尾燈。</li>
+                        <li>本平台不就因用戶違反《道路交通條例》（如非法在行人路上騎行、衝紅燈、逆線騎行、拒絕佩戴防護裝備、未開啟車燈）而導致的任何定罪、罰款、民事賠償或行政處罰承擔任何形式之法律或經濟責任。</li>
                     </ul>
 
-                    <h3>3.2 導航路線與 GPX 指引免責</h3>
-                    <p>本平台提供的 GPX 文件、2D 推薦線路及 3D 車道指示僅供輔助參考：</p>
+                    <h3>3.2 導航路線、3D 車道指引與 GPX 數據之完全免責</h3>
+                    <p>本平台所顯示的 2D 單車徑推薦線、金卡 3D 虛擬車道渲染線、Ramp 斜坡起伏數據以及供下載的 GPX 軌跡文件僅供粗略的路線規劃輔助參考：</p>
                     <ul>
-                        <li>實際單車徑狀況可能因香港城市規劃、突發修路、交通管制、天雨路滑或深夜照明不足而發生變化。</li>
-                        <li>用戶在騎行過程中，必須時刻遵守香港《道路交通條例》（第374章）及單車徑安全指引。</li>
-                        <li>本平台不就因 GPX 文件引導或地圖計算路徑偏失而導致的罰款、違章、迷路或事故負責。</li>
+                        <li>實際道路狀況可能因香港政府城市規劃變更、突發修路工程、警方交通管制、深夜照明不足、天雨路滑或路面雜物堆積而與地圖顯示完全不符。</li>
+                        <li>用戶在騎行時，<strong>必須以現場官方實地設立的警示牌、現場交警指揮以及自身肉眼即時觀察為最高且唯一的判斷標準</strong>，切勿盲目信賴手機導航指引。</li>
+                        <li>我們不保證任何導航路線、GPX 文件、3D 車道渲染的實時準確性、安全覆蓋性、或可行性。因信賴導航引導而導致的逆行、違章、迷路、車禍、或財產損害，本平台概不負責。</li>
                     </ul>
 
-                    <h3>3.3 騎行安全與人身責任</h3>
-                    <p>單車運動存在固有的人身安全風險。<strong>所有使用本平台的騎行者，均須自行評估並承擔活動的所有風險：</strong></p>
+                    <h3>3.3 路面障礙（Road Obstacles）回報圖層之不保證與免責</h3>
+                    <p>本平台提供的「路障回報」功能（包括施工、塌樹、違泊、地面積水等圖層）係基於眾包（Crowdsourcing）用戶自發回報：</p>
                     <ul>
-                        <li>請務必佩戴符合安全規格的防護頭盔、護膝、配備車燈（白前燈及紅尾燈）。</li>
-                        <li>在酷熱天氣警告、雷暴警告、暴雨警告、強烈颱風信號或寒冷天氣下，應立即停止一切戶外騎行。</li>
-                        <li><strong>本平台不就因參與任何單車活動、導航通勤、長途挑戰、多人同行活動所造成的人身傷亡、致殘或財產損失承擔任何法律責任。</strong></li>
+                        <li>雖然銀卡及金卡會員之回報享有優先審核特權，但本平台對於路障圖層中任何數據的<strong>真實性、實時有效性、完整性或安全覆蓋性不做任何形式之明示或默示保證。</strong></li>
+                        <li>道路障礙瞬息萬變，我們無法保證管理員審核通過時該障礙依然存在，或未被審核的危險區域皆已標出。</li>
+                        <li><strong>用戶因參考路障回報圖層而偏離原定單車徑、或是因圖層未顯示障礙而撞擊路面雜物、摔車、致殘、受傷或死亡，本平台不承擔任何直接、間接、連帶、附帶或衍生性之損害賠償責任。</strong></li>
                     </ul>
 
-                    <h3>3.4 螢幕喚醒（Wake Lock）與電池能耗限制</h3>
-                    <p>為保持騎行時地圖持續亮屏，導航與騎行模塊調用了螢幕喚醒鎖 API（Wake Lock API）：</p>
+                    <h3>3.4 螢幕喚醒（Wake Lock API）與設備能耗、發熱及求救失效免責</h3>
+                    <p>為避免車手在騎行過程中频繁手動解鎖手機，導航及騎行模組調用了 HTML5 Screen Wake Lock API 以保持設備屏幕持續高亮：</p>
                     <ul>
-                        <li>這會導致移動設備電量消耗急劇加速，並可能引起設備發熱。</li>
-                        <li>用戶有責任隨時監控自身設備之殘餘電量，並攜帶移動電源，以免因電量耗盡失聯或丟失導航定位。本平台不對因此引起的斷電或求救失效承擔連帶責任。</li>
+                        <li>這會導致移動設備之電池消耗大幅加速，並可能引起部分設備出現嚴重發熱、Lag、定位漂移、或自動保護關機。</li>
+                        <li>用戶有責任隨時監控手機殘餘電量，自行攜帶充足的移動電源（尿袋）。</li>
+                        <li>本平台不對因 Wake Lock API 導致的手機過熱損壞、屏幕燒屏、電池提前老化、中途電量耗盡失聯、或因電量耗盡導致緊急求救失效承擔任何法律及賠償責任。</li>
+                    </ul>
+
+                    <h3>3.5 惡劣天氣、氣象警告與活動強制暫停責任</h3>
+                    <p>戶外單車騎行存在固有之高風險。本平台對天氣警告實行以下強制性規範：</p>
+                    <ul>
+                        <li><strong>天文台警告生效：</strong>當香港天文台 (HKO) 發布<strong>酷熱天氣警告、寒冷天氣警告、雷暴警告、暴雨警告信號（黃/紅/黑）、強烈季候風信號、強烈颱風信號（三號或以上）</strong>時，用戶必須立即停止一切戶外騎行、導航、通勤、長途挑戰、或多人房間約騎活動。</li>
+                        <li>若用戶在上述惡劣天氣警告生效期間執意騎行，所造成的一切財產損失、人身摔傷、溺水、雷擊、致殘、甚至死亡，<strong>均屬於用戶個人故意承擔極端風險之行為。本平台對此不承擔任何形式之民事、刑事或民事連帶賠償責任。</strong></li>
+                    </ul>
+
+                    <h3>3.6 豁免起訴承諾、責任排外與最大損害賠償上限</h3>
+                    <ul>
+                        <li><strong>豁免起訴 (Waiver of Liability)：</strong>在香港法律允許的最大範圍內（並符合香港法例第47章《管制免責條款條例》關於「不排除因疏忽導致之人身傷亡責任」之規定），<strong>您同意完全免除、放棄、並承諾永不起訴本平台、核心委員會、開發團隊、管理員及相關誌願者，因您參與單車活動、使用導航服務、參考路障回報、使用 3D 車道或多人組隊所造成的任何財產損失、摔車損壞、設備丟失或人身傷害。</strong></li>
+                        <li><strong>最大損害賠償上限：</strong>如不論上述免責條款，香港特別行政區法院最終裁定本平台仍須承擔某些責任，雙方一致同意並確認：<strong>本平台在任何情況下向您承擔的最高且累計之損害賠償金，均不得超過港幣 $100 元 (HKD $100)。</strong></li>
                     </ul>
 
                     <hr class="section-divider">
-                    <p style="color:#888; font-size:0.85em; text-align:center;">
-                        如對以上條款有任何疑問，歡迎隨時透過 <a href="/contact" style="color:#04D93C;">聯絡頁面</a> 與我們聯繫。
+                    <p style="color:#6b7280; font-size:0.85em; text-align:center;">
+                        如果您對本服務使用條款、隱私條例或免責聲明有任何疑問，歡迎隨時透過本平台之 <a href="/contact" style="color:#04D93C; font-weight:bold;">聯絡頁面</a> 與核心委員會取得聯繫並獲得官方說明。
                     </p>
                 </div>
 

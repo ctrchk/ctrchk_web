@@ -359,6 +359,9 @@
                 <button class="tab-btn" onclick="showTab('email-admin');">
                     <i class="fas fa-envelope"></i> 郵件管理
                 </button>
+                <button class="tab-btn" onclick="showTab('terms-log'); loadTermsLog();">
+                    <i class="fas fa-file-signature"></i> 條款同意記錄
+                </button>
             </div>
 
             <!-- 用戶管理標籤 -->
@@ -888,6 +891,34 @@
                     </button>
 
                     <div id="email-admin-status" style="margin-top:1.2em; font-size:0.95em; text-align:center; min-height:1.2em;"></div>
+                </div>
+            </div>
+
+            <!-- 條款同意記錄標籤 -->
+            <div id="tab-terms-log" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-file-signature"></i> 條款及免責聲明同意記錄</h3>
+                <p style="color:#555; font-size:0.9em;">此表格記錄所有用戶對各版本條款與細則及免責聲明的同意歷史（IP 位址、精確同意時間及版本）。</p>
+                <div id="terms-log-loading" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入同意記錄...</p>
+                </div>
+                <div id="terms-log-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>用戶 ID</th>
+                                <th>電郵</th>
+                                <th>姓名</th>
+                                <th>用戶名</th>
+                                <th>同意版本</th>
+                                <th>IP 位址</th>
+                                <th>同意時間 (精確到秒)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="terms-log-tbody">
+                            <tr><td colspan="7" style="text-align:center; color:#888;">暫無同意記錄。</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -3165,6 +3196,58 @@
                 }
             } catch (err) {
                 alert('錯誤: ' + err.message);
+            }
+        }
+
+        async function loadTermsLog() {
+            const loading = document.getElementById('terms-log-loading');
+            const tbody = document.getElementById('terms-log-tbody');
+            if (!loading || !tbody) return;
+
+            loading.style.display = 'block';
+            tbody.innerHTML = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin-users?action=get-terms-log', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+
+                loading.style.display = 'none';
+                const list = data.logs || [];
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">暫無同意記錄。</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = list.map(log => {
+                    let dateStr = '—';
+                    if (log.agreed_at) {
+                        try {
+                            const d = new Date(log.agreed_at);
+                            const pad = n => String(n).padStart(2, '0');
+                            dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                        } catch (e) {
+                            dateStr = log.agreed_at;
+                        }
+                    }
+                    return `
+                        <tr>
+                            <td>${log.user_id}</td>
+                            <td><strong>${escapeHtml(log.email)}</strong></td>
+                            <td>${escapeHtml(log.full_name || '—')}</td>
+                            <td>${escapeHtml(log.username || '—')}</td>
+                            <td><span class="role-badge role-senior" style="font-size:0.8em; padding:3px 8px;">${escapeHtml(log.version)}</span></td>
+                            <td><code style="font-family:monospace; background:#f4f4f4; padding:2px 5px; border-radius:4px;">${escapeHtml(log.ip_address)}</code></td>
+                            <td><strong>${dateStr}</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                loading.style.display = 'none';
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
             }
         }
     </script>

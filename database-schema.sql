@@ -661,3 +661,19 @@ CREATE TABLE IF NOT EXISTS room_members (
 
 CREATE INDEX IF NOT EXISTS idx_ride_rooms_code ON ride_rooms(room_code);
 CREATE INDEX IF NOT EXISTS idx_room_members_user ON room_members(user_id);
+
+-- =========================================================
+-- 用戶條款與免責聲明同意歷史記錄表
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS terms_agreements (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  version VARCHAR(20) NOT NULL,
+  agreed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  ip_address VARCHAR(45) NOT NULL,
+  UNIQUE(user_id, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_terms_agreements_user_id ON terms_agreements(user_id);
+CREATE INDEX IF NOT EXISTS idx_terms_agreements_version ON terms_agreements(version);

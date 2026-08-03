@@ -1271,5 +1271,231 @@ document.addEventListener('DOMContentLoaded', function() {
     window.showNotification = showNotification;
     window.NotificationManager = NotificationManager;
 
+    // =========================================================================
+    // 全域條款同意強制執行機制
+    // =========================================================================
+    async function enforceTermsAgreement() {
+        if (!isLoggedIn()) return;
+
+        const CURRENT_TERMS_VERSION = 'v2.2.0';
+
+        // Don't enforce on terms or contact or policy pages themselves to allow viewing
+        const bypassPages = ['/terms', '/about', '/contact', '/verify-email', '/login', '/register', '/reset-password', '/forgot-password'];
+        const currentPath = window.location.pathname;
+        if (bypassPages.some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+            return;
+        }
+
+        const cachedUserStr = localStorage.getItem('user');
+        if (!cachedUserStr) return;
+        let cachedUser = {};
+        try {
+            cachedUser = JSON.parse(cachedUserStr);
+        } catch(e) { return; }
+
+        if (cachedUser.terms_agreed && cachedUser.terms_version === CURRENT_TERMS_VERSION) {
+            return;
+        }
+
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        try {
+            const resp = await fetch(`/api/user?user_id=${cachedUser.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (resp.ok) {
+                const freshUser = await resp.json();
+                const mergedUser = { ...cachedUser, ...freshUser };
+                localStorage.setItem('user', JSON.stringify(mergedUser));
+
+                if (freshUser.terms_agreed && freshUser.terms_version === CURRENT_TERMS_VERSION) {
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to verify terms agreement with server:', e);
+        }
+
+        displayTermsAgreementModal(CURRENT_TERMS_VERSION);
+    }
+
+    function displayTermsAgreementModal(version) {
+        if (document.getElementById('global-terms-agreement-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'global-terms-agreement-modal';
+        modal.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            background: rgba(10, 22, 12, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5em;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: rgba(30, 56, 32, 0.85);
+            border: 1px solid rgba(109, 186, 101, 0.35);
+            color: #e8f5e9;
+            width: min(94vw, 680px);
+            max-height: 85vh;
+            border-radius: 16px;
+            padding: 2em;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        `;
+
+        content.innerHTML = `
+            <h2 style="margin-top:0; color:#BFE340; text-align:center; font-size:1.4em; display:flex; align-items:center; justify-content:center; gap:0.4em;">
+                <i class="fas fa-file-contract"></i> 城市運輸單車 條款及免責聲明重要更新
+            </h2>
+            <p style="font-size:0.9em; line-height:1.5; color:#a8d8a0; margin-bottom:1em; text-align:center;">
+                為維護系統公平及騎手安全，我們已全面重新編寫並更新了服務條款、隱私條例及免責聲明 (版本 ${version})。所有用戶必須重新閱讀並表示同意，方可繼續使用平台功能。
+            </p>
+            <div id="global-terms-scroll-area" style="flex:1; overflow-y:auto; background:rgba(0,0,0,0.3); border:1px solid rgba(109, 186, 101, 0.2); border-radius:8px; padding:1.2em; margin-bottom:1.2em; font-size:0.88em; line-height:1.6; color:#e0f2f1;">
+                <div style="text-align:center; padding:1em;"><i class="fas fa-spinner fa-spin" style="font-size:2em; color:#BFE340;"></i><p>正在載入最新條款...</p></div>
+            </div>
+            <div style="margin-bottom:1.2em;">
+                <label style="display:flex; align-items:flex-start; gap:0.6em; cursor:pointer; font-size:0.9em; color:#e8f5e9;">
+                    <input type="checkbox" id="global-terms-checkbox" disabled style="width:auto; margin-top:0.25em; cursor:not-allowed;">
+                    <span>我已滾動閱讀至底部，且確認已詳細閱讀、理解並無條件同意接受上述所有服務條款及免責聲明。 *</span>
+                </label>
+            </div>
+            <div style="display:flex; gap:1em;">
+                <button id="global-terms-btn-disagree" style="flex:1; padding:0.8em; border:1px solid rgba(231, 76, 60, 0.4); background:rgba(231, 76, 60, 0.1); color:#ff8a80; border-radius:8px; font-weight:bold; cursor:pointer;">拒絕並登出</button>
+                <button id="global-terms-btn-agree" disabled style="flex:2; padding:0.8em; border:none; background:#555; color:#888; border-radius:8px; font-weight:bold; cursor:not-allowed;">請滾動閱讀至底部</button>
+            </div>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        document.getElementById('global-terms-btn-disagree').onclick = () => {
+            document.body.style.overflow = originalOverflow;
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+            window.location.replace('/login');
+        };
+
+        const scrollArea = document.getElementById('global-terms-scroll-area');
+        fetch('/terms.html')
+            .then(r => r.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const termsContent = doc.querySelector('.terms-container');
+                if (termsContent) {
+                    const tHeader = termsContent.querySelector('h1');
+                    if (tHeader) tHeader.remove();
+                    const tUpdated = termsContent.querySelector('.last-updated');
+                    if (tUpdated) tUpdated.remove();
+                    const tToc = termsContent.querySelector('.toc');
+                    if (tToc) tToc.remove();
+                    scrollArea.innerHTML = termsContent.innerHTML;
+                } else {
+                    scrollArea.innerHTML = `<p style="color:red; text-align:center;">條款載入失敗，請刷新頁面或聯絡管理員。</p>`;
+                }
+            })
+            .catch(err => {
+                scrollArea.innerHTML = `<p style="color:red; text-align:center;">條款載入失敗: ${err.message}</p>`;
+            });
+
+        const checkbox = document.getElementById('global-terms-checkbox');
+        const agreeBtn = document.getElementById('global-terms-btn-agree');
+
+        scrollArea.onscroll = () => {
+            const reachedBottom = scrollArea.scrollHeight - scrollArea.scrollTop <= scrollArea.clientHeight + 15;
+            if (reachedBottom) {
+                checkbox.disabled = false;
+                checkbox.style.cursor = 'pointer';
+                if (checkbox.checked) {
+                    enableAgreeButton();
+                } else {
+                    disableAgreeButton();
+                }
+            }
+        };
+
+        checkbox.onchange = () => {
+            if (checkbox.checked) {
+                enableAgreeButton();
+            } else {
+                disableAgreeButton();
+            }
+        };
+
+        function enableAgreeButton() {
+            agreeBtn.disabled = false;
+            agreeBtn.style.background = '#BFE340';
+            agreeBtn.style.color = '#121f14';
+            agreeBtn.style.cursor = 'pointer';
+            agreeBtn.textContent = '同意並繼續';
+        }
+
+        function disableAgreeButton() {
+            agreeBtn.disabled = true;
+            agreeBtn.style.background = '#555';
+            agreeBtn.style.color = '#888';
+            agreeBtn.style.cursor = 'not-allowed';
+            agreeBtn.textContent = '請勾選同意框';
+        }
+
+        agreeBtn.onclick = async () => {
+            if (agreeBtn.disabled) return;
+
+            agreeBtn.disabled = true;
+            agreeBtn.textContent = '處理中...';
+
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action: 'agree-terms', version: version })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        modal.remove();
+                        document.body.style.overflow = originalOverflow;
+                        alert('條款及免責聲明同意成功！感謝您對 城市運輸單車 的支持。');
+                        window.location.reload();
+                    } else {
+                        alert('操作失敗: ' + (data.message || '未知錯誤'));
+                        agreeBtn.disabled = false;
+                        enableAgreeButton();
+                    }
+                } else {
+                    alert('網路錯誤，無法提交，請稍後再試。');
+                    agreeBtn.disabled = false;
+                    enableAgreeButton();
+                }
+            } catch (e) {
+                alert('連線失敗: ' + e.message);
+                agreeBtn.disabled = false;
+                enableAgreeButton();
+            }
+        };
+    }
+
+    // 啟動條款同意檢查
+    enforceTermsAgreement();
+
     // ------------------- 所有程式碼都在這裡結束 -------------------
 });
