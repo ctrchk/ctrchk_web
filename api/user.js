@@ -1245,7 +1245,7 @@ export default async function handler(req, res) {
       const { version } = req.body;
       if (!version) return res.status(400).json({ message: 'Version is required' });
 
-      let ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || '127.0.0.1';
+      let ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || (req.socket && req.socket.remoteAddress) || '127.0.0.1';
       if (ip.includes(',')) {
           ip = ip.split(',')[0].trim();
       }

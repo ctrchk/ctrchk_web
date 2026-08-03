@@ -1272,6 +1272,65 @@ document.addEventListener('DOMContentLoaded', function() {
     window.NotificationManager = NotificationManager;
 
     // =========================================================================
+    // 全域公開測試版提示及 Bug 回報
+    // =========================================================================
+    function showBetaWelcomeModal() {
+        const hasNotified = localStorage.getItem('ctrchk_beta_notified') === 'true';
+        if (hasNotified) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'ctrchk-beta-welcome-modal';
+        modal.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 1000000;
+            background: rgba(10, 22, 12, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5em;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: rgba(30, 56, 32, 0.95);
+            border: 2px solid #BFE340;
+            color: #e8f5e9;
+            width: min(90vw, 480px);
+            border-radius: 16px;
+            padding: 2.2em;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            text-align: center;
+        `;
+
+        content.innerHTML = `
+            <div style="font-size: 3.5em; margin-bottom: 0.3em;">⚠️</div>
+            <h3 style="margin-top:0; color:#BFE340; font-size:1.35em; font-weight:900; letter-spacing:0.5px;">
+                城市運輸單車 公開測試 (Open Beta) 提示
+            </h3>
+            <p style="font-size:0.92em; line-height:1.6; color:#e0f2f1; margin: 1.2em 0 1.8em; text-align: justify;">
+                本平台「城市運輸單車」正處於早期公開測試階段。地圖導航、3D車道指引、滾動里程與數據結算系統仍在持續修復與對接優化中。<br><br>
+                在進行戶外騎行時，<strong>請務必將實地道路交通法規、路面指示與個人安全視為第一且絕對優先</strong>。測試期間如遇到任何程式錯誤（Bug）或軌跡計算偏差，歡迎前往設定頁面點擊「回報 Bug」隨時向我們反饋！
+            </p>
+            <button id="ctrchk-beta-modal-btn" style="width:100%; padding:0.9em; border:none; background:#BFE340; color:#121f14; border-radius:10px; font-weight:bold; font-size:1em; cursor:pointer; transition: transform 0.1s;">
+                我已知悉並開始體驗
+            </button>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        const btn = document.getElementById('ctrchk-beta-modal-btn');
+        btn.onclick = () => {
+            localStorage.setItem('ctrchk_beta_notified', 'true');
+            modal.remove();
+        };
+    }
+
+    // =========================================================================
     // 全域條款同意強制執行機制
     // =========================================================================
     async function enforceTermsAgreement() {
@@ -1294,6 +1353,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { return; }
 
         if (cachedUser.terms_agreed && cachedUser.terms_version === CURRENT_TERMS_VERSION) {
+            showBetaWelcomeModal();
             return;
         }
 
@@ -1310,6 +1370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('user', JSON.stringify(mergedUser));
 
                 if (freshUser.terms_agreed && freshUser.terms_version === CURRENT_TERMS_VERSION) {
+                    showBetaWelcomeModal();
                     return;
                 }
             }
@@ -1457,7 +1518,11 @@ document.addEventListener('DOMContentLoaded', function() {
             agreeBtn.disabled = true;
             agreeBtn.textContent = '處理中...';
 
-            const token = localStorage.getItem('accessToken');
+            let token = localStorage.getItem('accessToken');
+            if (token) {
+                token = token.replace(/^["']+|["']$/g, '').trim();
+            }
+
             try {
                 const resp = await fetch('/api/user', {
                     method: 'POST',
@@ -1475,14 +1540,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         modal.remove();
                         document.body.style.overflow = originalOverflow;
                         alert('條款及免責聲明同意成功！感謝您對 城市運輸單車 的支持。');
-                        window.location.reload();
+                        showBetaWelcomeModal();
                     } else {
                         alert('操作失敗: ' + (data.message || '未知錯誤'));
                         agreeBtn.disabled = false;
                         enableAgreeButton();
                     }
                 } else {
-                    alert('網路錯誤，無法提交，請稍後再試。');
+                    const errText = await resp.text().catch(() => '');
+                    let errMsg = '';
+                    try {
+                        const errJson = JSON.parse(errText);
+                        errMsg = errJson.message || errJson.error || errText;
+                    } catch(e) {
+                        errMsg = errText || `HTTP ${resp.status}`;
+                    }
+                    alert(`網絡提交失敗 (狀態碼: ${resp.status}):\n${errMsg}\n請確認您已登入或嘗試重新登入。`);
                     agreeBtn.disabled = false;
                     enableAgreeButton();
                 }
