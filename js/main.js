@@ -1457,7 +1457,11 @@ document.addEventListener('DOMContentLoaded', function() {
             agreeBtn.disabled = true;
             agreeBtn.textContent = '處理中...';
 
-            const token = localStorage.getItem('accessToken');
+            let token = localStorage.getItem('accessToken');
+            if (token) {
+                token = token.replace(/^["']+|["']$/g, '').trim();
+            }
+
             try {
                 const resp = await fetch('/api/user', {
                     method: 'POST',
@@ -1482,7 +1486,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         enableAgreeButton();
                     }
                 } else {
-                    alert('網路錯誤，無法提交，請稍後再試。');
+                    const errText = await resp.text().catch(() => '');
+                    let errMsg = '';
+                    try {
+                        const errJson = JSON.parse(errText);
+                        errMsg = errJson.message || errJson.error || errText;
+                    } catch(e) {
+                        errMsg = errText || `HTTP ${resp.status}`;
+                    }
+                    alert(`網絡提交失敗 (狀態碼: ${resp.status}):\n${errMsg}\n請確認您已登入或嘗試重新登入。`);
                     agreeBtn.disabled = false;
                     enableAgreeButton();
                 }
