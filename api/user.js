@@ -136,6 +136,18 @@ async function ensureRideTables() {
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64) UNIQUE;`); } catch(e) {}
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS wallet_serial VARCHAR(64);`); } catch(e) {}
       try { await query(`ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS client_uuid VARCHAR(36) UNIQUE;`); } catch(e) {}
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS terms_agreements (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            version VARCHAR(20) NOT NULL,
+            agreed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ip_address VARCHAR(45) NOT NULL,
+            UNIQUE(user_id, version)
+          );
+        `);
+      } catch(e) {}
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -1131,6 +1143,19 @@ export default async function handler(req, res) {
           user.badges = [];
       }
 
+      // Fetch if user has agreed to the latest terms
+      try {
+        const { rows: taRows } = await query(
+          "SELECT agreed_at FROM terms_agreements WHERE user_id = $1 AND version = $2",
+          [user.id, 'v2.2.0']
+        );
+        user.terms_agreed = taRows.length > 0;
+        user.terms_version = 'v2.2.0';
+      } catch (taErr) {
+        user.terms_agreed = false;
+        user.terms_version = 'v2.2.0';
+      }
+
       return res.status(200).json(user);
     } catch (error) {
       console.error('Get user error:', error);
@@ -1213,6 +1238,57 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+
+    if (req.body.action === 'agree-terms') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      const { version } = req.body;
+      if (!version) return res.status(400).json({ message: 'Version is required' });
+
+      let ip = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || '127.0.0.1';
+      if (ip.includes(',')) {
+          ip = ip.split(',')[0].trim();
+      }
+
+      try {
+        await query(
+          `INSERT INTO terms_agreements (user_id, version, ip_address, agreed_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (user_id, version) DO UPDATE SET ip_address = EXCLUDED.ip_address, agreed_at = NOW()`,
+          [userData.userId, version, ip]
+        );
+
+        const { rows } = await query(
+          `SELECT u.id, u.email, u.username, u.user_role, u.full_name, u.profile_completed, u.email_verified, u.avatar_url, gp.mileage_rank
+           FROM users u
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+           WHERE u.id = $1`,
+          [userData.userId]
+        );
+        const userObj = rows[0];
+
+        return res.status(200).json({
+          success: true,
+          user: {
+            id: userObj.id,
+            email: userObj.email,
+            username: userObj.username || '',
+            full_name: userObj.full_name || '',
+            user_role: userObj.user_role || 'junior',
+            role: userObj.user_role || 'junior',
+            mileage_rank: userObj.mileage_rank || 'bronze',
+            profile_completed: userObj.profile_completed || false,
+            email_verified: userObj.email_verified || false,
+            avatar_url: userObj.avatar_url || null,
+            terms_agreed: true,
+            terms_version: version
+          }
+        });
+      } catch (err) {
+        console.error('Failed to agree terms:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
 
     if (req.body.action === 'report-obstacle') {
       const userData = await authenticate(req, res);

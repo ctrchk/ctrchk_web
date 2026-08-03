@@ -262,6 +262,22 @@ export default async function handler(req, res) {
   if (auth.error) return res.status(auth.status).json({ message: auth.error });
 
   if (req.method === 'GET') {
+    if (action === 'get-terms-log') {
+      try {
+        const { rows } = await query(
+          `SELECT ta.user_id, ta.version, ta.agreed_at, ta.ip_address,
+                  u.email, u.full_name, u.username
+           FROM terms_agreements ta
+           JOIN users u ON u.id = ta.user_id
+           ORDER BY ta.agreed_at DESC`
+        );
+        return res.status(200).json({ logs: rows });
+      } catch (err) {
+        console.error('get-terms-log error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
     if (action === 'get-obstacles') {
         const { rows } = await query(
             `SELECT o.*, u.email, u.full_name, gp.mileage_rank
