@@ -306,7 +306,7 @@
           bubbleLeft = Math.max(0, Math.min(bubbleLeft, navRect.width - bubbleWidth));
 
           bubble.style.transition = 'none';
-          bubble.style.transform = `translate3d(${bubbleLeft}px, 0, 0)`;
+          bubble.style.transform = `translate3d(${bubbleLeft}px, 0, 0) scale(1.16)`;
           bubble.style.opacity = '1';
         }
 
