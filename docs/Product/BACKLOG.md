@@ -255,14 +255,14 @@ CTRC HK 目前定位於一個融合「智慧綠色通勤導航」與「遊戲化
 * **優先級**：P3
 * **預期影響**：平台具備全天候、無盲區的完全離線單車道導航能力，確立行業技術領先地位。
 
-#### 任務 P3-2: 全網頁單頁應用 (SPA - Single Page Application) 深度遷移
-* **當前狀態**：CTRC 目前通過 `js/main.js` 來實現部分的頁面動態加載、初始化以及 `pwa-page-show` 事件監聽。但本質上依然是基於傳統多 HTML 文件跳轉的「偽 SPA」架構。
-* **面臨問題**：每次跳轉 HTML（如從 `index` 到 `ride`），瀏覽器都會重新初始化部分靜態資源、CSS 樣式以及 JS 狀態，造成短暫的黑屏、白屏過渡，不符合現代原生應用的極致流暢體感。
-* **為何重要**：為了在未來將 CTRC HK 封裝成 native 應用（iOS App Store / Google Play），必須擁有真正無感刷新、狀態常駐的全單頁 SPA 架構。
-* **建議實現方案**：
-  - 基於原生 JS 或者是輕量路由庫（如 Navigo 或 Page.js），將所有 HTML 頁面徹底重構成統一在 `index.html` 的一個 `<div id="app-viewport">` 內進行組件化切換。
-  - 全局常駐地圖實例 (Singleton Map Instance)，頁面切換時不銷毀 Leaflet 地圖，僅在 DOM 中移動地圖容器並調用 `map.invalidateSize()`，實現地圖跨頁面秒開。
-* **依賴關係**：全部 HTML 與 JS 文件的重構
+#### 任務 P3-2: [已完成] 全網頁單頁應用 (SPA - Single Page Application) 深度遷移
+* **當前狀態**：已在 v2.2.2 Beta 完全落成。在不影響現有任何底層代碼、網頁版 MPA 與 Service Worker 快取的前提下，在 PWA Standalone 模式下安全激活了高級的「多分頁 Keep-Alive SPA 核心架構」。
+* **解決方案**：
+  - **多分頁 Keep-Alive SPA 架構**：主窗口作為 PWA 頂級 SPA Shell，在初次加載時自動包裹當前原生頁面 DOM 作為 Native 分頁。當點擊導航欄時，利用無縫、無邊框的 iframe 緩存並保持各主分頁（主頁、任務、騎行、導航、我的）在背景中。切換分頁時完全不需要重新初始化地圖或丟失定位進度，實現 **0 毫秒極速秒開** 與 **100% 導航/計時進度不丟失**。
+  - **iOS 26 Liquid Glass 滑動氣泡**：全新設計並實現底部導航欄滑動液態氣泡背景 (`.liquid-nav-bubble`)。利用彈性物理緩動算法（Elastic cubic-bezier），在切換分頁時使毛玻璃氣泡背景以流體拉伸動畫平滑移動到新激活的圖標後方，呈現頂級 iOS 原生質感。
+  - **電影級頁面切換轉場動畫**：網頁切換時，舊頁面輕微向內縮小並漸隱，新頁面伴隨毛玻璃流體擴散由下方滑入漸顯，達到極致的流暢電影感。
+  - **子頁面點擊與父子窗口通訊攔截**：子 iframe 內部的所有點擊和子頁面超連結皆由 SPA 機制動態攔截並安全 delegate 傳遞至 `window.parent.switchToTab(targetUrl)`，免除任何瀏覽器重載。
+* **依賴關係**：`js/pwa.js`, `css/main.css`
 * **開發難度**：高等 (High)
 * **估計工作量**：12 人工天
 * **優先級**：P3

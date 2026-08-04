@@ -231,7 +231,260 @@
     });
 
     document.body.appendChild(nav);
+
+    // Animate active liquid bubble on load
+    setTimeout(updateLiquidBubble, 50);
   }
+
+  // ── SPA (Single Page Application) Keep-Alive Core ─────────────────────────
+  const spaTabs = {}; // url -> { element: HTMLElement, type: 'native'|'iframe' }
+
+  function initPwaSpaSystem() {
+    if (!isStandalone) return;
+
+    // Check if we are inside an iframe (child page of the SPA)
+    if (window.parent !== window) {
+      document.documentElement.classList.add('in-spa-iframe');
+      document.body.classList.add('in-spa-iframe');
+
+      // Intercept any clicks on main tab links inside the iframe and delegate to parent
+      document.addEventListener('click', function(e) {
+        const a = e.target.closest('a');
+        if (!a) return;
+
+        const href = a.getAttribute('href');
+        if (!href) return;
+
+        // Handle only same-origin/internal links
+        let targetUrl = href;
+        if (href.startsWith('http://') || href.startsWith('https://')) {
+          const urlObj = new URL(href);
+          if (urlObj.origin === window.location.origin) {
+            targetUrl = urlObj.pathname + urlObj.search + urlObj.hash;
+          } else {
+            return; // external
+          }
+        }
+
+        const cleanUrl = targetUrl.split('#')[0].split('?')[0].replace(/\/$/, '') || '/';
+        const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+
+        if (mainTabs.includes(cleanUrl)) {
+          e.preventDefault();
+          try {
+            window.parent.switchToTab(targetUrl);
+          } catch (err) {
+            window.parent.location.href = targetUrl;
+          }
+        }
+      });
+      return; // child iframes do not need the shell logic below
+    }
+
+    // --- Parent (Shell) Logic ---
+    const initialUrl = window.location.pathname.replace(/\/$/, '') || '/';
+
+    // Create viewport container
+    const viewport = document.createElement('div');
+    viewport.id = 'spa-viewport';
+
+    // Create initial native content wrapper
+    const initialTab = document.createElement('div');
+    initialTab.id = 'spa-tab-initial';
+    initialTab.className = 'spa-tab-content active';
+    initialTab.dataset.url = initialUrl;
+
+    // Move existing body content into the initial native tab wrapper
+    const children = Array.from(document.body.childNodes);
+    children.forEach(child => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const id = child.id;
+        const tag = child.tagName.toLowerCase();
+        if (
+          id === 'app-bottom-nav' ||
+          id === 'app-splash' ||
+          id === 'notificationModal' ||
+          id === 'global-terms-agreement-modal' ||
+          id === 'ctrchk-beta-welcome-modal' ||
+          tag === 'script' ||
+          tag === 'link' ||
+          tag === 'style'
+        ) {
+          return; // preserve these elements in the parent root body
+        }
+      }
+      initialTab.appendChild(child);
+    });
+
+    viewport.appendChild(initialTab);
+    document.body.insertBefore(viewport, document.getElementById('app-bottom-nav'));
+
+    // Register the initial tab as 'native' type so we don't reload it!
+    spaTabs[initialUrl] = {
+      element: initialTab,
+      type: 'native'
+    };
+
+    // Expose switchToTab on parent window for children to call
+    window.switchToTab = function(targetUrl, isPopState = false) {
+      const cleanUrl = targetUrl.split('#')[0].split('?')[0].replace(/\/$/, '') || '/';
+
+      const activeTabEl = document.querySelector('.spa-tab-content.active');
+      let targetTabObj = spaTabs[cleanUrl];
+
+      // If we don't have this tab registered yet, dynamically create a Keep-Alive iframe
+      if (!targetTabObj) {
+        const iframeTab = document.createElement('div');
+        iframeTab.className = 'spa-tab-content';
+        iframeTab.dataset.url = cleanUrl;
+
+        // Resolve Clean URLs (e.g. /tasks) to physical .html files for local servers
+        let iframeSrc = targetUrl;
+        const pathParts = cleanUrl.split('/');
+        const lastPart = pathParts[pathParts.length - 1];
+        if (lastPart && !lastPart.includes('.')) {
+          const mainPages = ['/tasks', '/routes', '/nav', '/dashboard', '/login', '/en/routes', '/mileage', '/weather', '/chat', '/profile', '/leaderboard'];
+          if (mainPages.includes(cleanUrl)) {
+            iframeSrc = cleanUrl + '.html' + (targetUrl.includes('?') ? '?' + targetUrl.split('?')[1] : '');
+          }
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.src = iframeSrc;
+        iframe.className = 'spa-page-iframe';
+        iframe.style.cssText = 'width:100%; height:100%; border:none; display:block;';
+
+        iframeTab.appendChild(iframe);
+        document.getElementById('spa-viewport').appendChild(iframeTab);
+
+        targetTabObj = {
+          element: iframeTab,
+          type: 'iframe',
+          iframe: iframe
+        };
+        spaTabs[cleanUrl] = targetTabObj;
+      }
+
+      const targetTabEl = targetTabObj.element;
+      if (activeTabEl === targetTabEl) return;
+
+      // Animate transition between outgoing and incoming tabs (iOS 26 cinematic transition)
+      if (activeTabEl) {
+        activeTabEl.classList.remove('active');
+        activeTabEl.classList.add('spa-tab-exit');
+        activeTabEl.style.display = 'block';
+        activeTabEl.style.zIndex = '5';
+      }
+
+      targetTabEl.style.display = 'block';
+      targetTabEl.style.zIndex = '10';
+      targetTabEl.classList.add('spa-tab-enter');
+
+      // Trigger browser style recalculation
+      targetTabEl.offsetHeight;
+
+      targetTabEl.classList.add('active');
+
+      setTimeout(() => {
+        if (activeTabEl) {
+          activeTabEl.style.display = 'none';
+          activeTabEl.classList.remove('spa-tab-exit');
+        }
+        targetTabEl.classList.remove('spa-tab-enter');
+      }, 380);
+
+      // Update browser history/address bar URL (unless called from back/forward popstate)
+      if (!isPopState) {
+        history.pushState(null, '', targetUrl);
+      }
+
+      // Sync bottom navigation active states and bubble indicator
+      updateAppBottomNavActiveState(cleanUrl);
+    };
+
+    // Listen to browser Back and Forward navigation events
+    window.addEventListener('popstate', function() {
+      const currentUrl = window.location.pathname + window.location.search + window.location.hash;
+      window.switchToTab(currentUrl, true);
+    });
+
+    // Intercept clicks on links globally
+    document.addEventListener('click', function(e) {
+      const a = e.target.closest('a');
+      if (!a) return;
+
+      const href = a.getAttribute('href');
+      if (!href) return;
+
+      // Internal links only
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        const urlObj = new URL(href);
+        if (urlObj.origin !== window.location.origin) {
+          return; // external
+        }
+      }
+
+      if (a.hasAttribute('download') || a.getAttribute('target') === '_blank') {
+        return; // skip special behaviors
+      }
+
+      e.preventDefault();
+      const targetUrl = a.pathname + a.search + a.hash;
+      window.switchToTab(targetUrl);
+    });
+  }
+
+  // Update bottom navigation elements
+  function updateAppBottomNavActiveState(activeUrl) {
+    const nav = document.getElementById('app-bottom-nav');
+    if (!nav) return;
+
+    const links = nav.querySelectorAll('a');
+    links.forEach(a => {
+      a.classList.remove('active');
+      const href = a.getAttribute('href');
+      const normalised = href.replace(/\/$/, '') || '/';
+      if (activeUrl === normalised || (normalised !== '/' && activeUrl.startsWith(normalised))) {
+        a.classList.add('active');
+      }
+    });
+
+    updateLiquidBubble();
+  }
+
+  // Sliding glass bubble indicator
+  function updateLiquidBubble() {
+    const nav = document.getElementById('app-bottom-nav');
+    if (!nav) return;
+
+    let bubble = nav.querySelector('.liquid-nav-bubble');
+    if (!bubble) {
+      bubble = document.createElement('div');
+      bubble.className = 'liquid-nav-bubble';
+      nav.appendChild(bubble);
+    }
+
+    const activeLink = nav.querySelector('a.active');
+    if (!activeLink) {
+      bubble.style.opacity = '0';
+      return;
+    }
+
+    const activeRect = activeLink.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+
+    const left = activeRect.left - navRect.left;
+    const width = activeRect.width;
+    const height = activeRect.height;
+    const top = activeRect.top - navRect.top;
+
+    bubble.style.opacity = '1';
+    bubble.style.width = width + 'px';
+    bubble.style.height = height + 'px';
+    bubble.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+  }
+
+  window.addEventListener('resize', updateLiquidBubble);
 
   // ── iOS Liquid Glass detection ──────────────────────────────────────────
   // iOS 26+ introduces "Liquid Glass" as the system design language.
@@ -339,6 +592,9 @@
       if (themeColorMeta) themeColorMeta.setAttribute('content', '#121f14');
       // Apply iOS Liquid Glass if applicable
       detectLiquidGlass();
+
+      // Initialize PWA-only Keep-Alive SPA System
+      initPwaSpaSystem();
     }
     // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();
