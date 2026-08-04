@@ -81,6 +81,14 @@ self.addEventListener('fetch', (event) => {
             const clone = res.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
           }
+          // 修復 Safari: "Response served by service worker has redirections"
+          if (res.redirected) {
+            return new Response(res.body, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers
+            });
+          }
           return res;
         })
         .catch(() =>
@@ -103,6 +111,13 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
+          if (res.redirected) {
+            return new Response(res.body, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers
+            });
+          }
           if (res.ok && !res.redirected) {
             const clone = res.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
@@ -123,6 +138,13 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
+          if (res.redirected) {
+            return new Response(res.body, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers
+            });
+          }
           if (res.ok && !res.redirected) {
             const clone = res.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, clone));
@@ -141,9 +163,13 @@ self.addEventListener('fetch', (event) => {
       const networkFetch = fetch(request)
         .then((res) => {
           // 修復 Safari: "Response served by service worker has redirections"
-          // 如果是導航請求且發生重定向，必須直接返回原始響應，絕不能從 Service Worker 服務重定向
+          // 如果是導航請求且發生重定向，必須重新構建響應以清除重定向標誌，否則 Safari 會報錯
           if (res.redirected) {
-            return res;
+            return new Response(res.body, {
+              status: res.status,
+              statusText: res.statusText,
+              headers: res.headers
+            });
           }
 
           if (res.ok) {
