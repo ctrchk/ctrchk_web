@@ -4,6 +4,29 @@
 
 ---
 
+## v2.2.1 Beta — 2026-07-29
+
+### 任務系統數據庫化每週任務正式落地與 Onboarding 閉環流程優化 (Task P1-3 & P1-4 Complete)
+
+- **每週任務落地與動態配置數據庫化 (Task P1-3)**：
+  - **後端 API 實現**：
+    - 在 `api/user.js` 新增了 `GET?action=get-tasks` 接口，從 `task_definitions` 表動態獲取所有活躍的任務定義，並結合 Neon PostgreSQL 中的 `cycling_history` 實時計算用戶當前的任務完成進度，提供 100% 後端硬核安全保障與降級 fallback。
+    - 新增了 `POST?action=claim-task` 接口，驗證用戶的任務進度是否達成。若達成則安全記錄至 `user_task_progress` 避免重複領取，並更新 `user_game_profile` 獎勵 XP 與里程幣（按卡級乘區加成計算），一鍵領取更具爽快感。
+  - **前台重構與 bug 修正**：
+    - `tasks.html` 徹底廢除前端硬編碼的 `DAILY_TASKS` 與每週任務即將推出的「🚧 置灰卡片」，統一從後端 API 動態讀取渲染每日與每週任務。
+    - 任務卡片新增了互動式「領取 (Claim)」按鈕（當進度達成時出現），點擊時呼叫後端 API 完成獎勵劃撥，領取後播放炫麗的彩帶紙屑特效與升級彈窗。
+    - 修復了 `tasks.html` 中獲取 `summary-medals` 數量時，因 `ACHIEVEMENTS` 全域變量未定義而產生 `ReferenceError` 導致初始化卡住的嚴重 Bug，改用 `EARNED_BADGE_IDS.length` 完美替代。
+
+- **用戶註冊與個人資料修補流程（Onboarding）閉環優化 (Task P1-4)**：
+  - **流暢導引與引導向導 (Interactive Wizard)**：
+    - 驗證成功頁 `verify-email.html` 驗證成功後直接跳轉引導用戶前往 `/profile-setup.html` 免費升級，形成更順暢的 Onboarding 閉環。
+    - 將 `profile-setup.html` 的普通單頁表單重構為精美的 **3 步引導式向導 (Interactive 3-Step Wizard)**（第一步：基本資料、第二步：騎行經驗、第三步：地區偏好），在每步點擊下一步前進行嚴格的前置必填表單輸入驗證，並結合 CSS 變量使介面完美適配 Light / Dark / Gold 三套主題。
+    - 在 `dashboard.html` 頂部增設亮麗高對比度常駐「高級特權未鎖定 🔓」引導卡片（僅限 `junior` 普通會員展示），點擊後引導至 `profile-setup.html`。
+  - **頭像裁剪壓縮優化**：
+    - 在 `profile.html` 與 `profile-setup.html` 的頭像上傳處理程序中加入了 **HTML5 Canvas 圖片中心裁剪與高質量壓縮算法**：上傳時在前端自動將圖片中心裁剪為 200x200 像素的正方形，並壓縮為 JPEG 0.7 質量，把檔案體積從數 MB 驟降至 15KB 左右，杜絕用戶直接上傳原始相片造成 Vercel 頻寬超限過載。
+
+---
+
 ## v2.2.0 Beta — 2026-07-28
 
 ### 里程計劃與特權功能群重構落實 (Comprehensive Redesign of Privilege Ecosystem)

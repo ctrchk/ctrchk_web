@@ -166,6 +166,141 @@ function getCyclistTierByLevel(level) {
   return '入門車手';
 }
 
+function getTodayAndMondayStr() {
+  const now = new Date();
+  const hkt = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+  const todayStr = hkt.toISOString().slice(0, 10);
+
+  const day = hkt.getUTCDay();
+  const diff = hkt.getUTCDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(Date.UTC(hkt.getUTCFullYear(), hkt.getUTCMonth(), diff));
+  const mondayStr = monday.toISOString().slice(0, 10);
+
+  return { todayStr, mondayStr };
+}
+
+async function getTaskCurrentValue(userId, task, todayStr, mondayStr) {
+  const periodDate = task.task_type === 'daily' ? todayStr : mondayStr;
+  const isDaily = task.task_type === 'daily';
+
+  if (task.task_key === 'daily_ride_once') {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS val FROM cycling_history WHERE user_id = $1 AND ride_date = $2`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+  if (task.task_key === 'daily_ride_5km') {
+    const { rows } = await query(
+      `SELECT COALESCE(SUM(distance_km), 0) AS val FROM cycling_history WHERE user_id = $1 AND ride_date = $2`,
+      [userId, periodDate]
+    );
+    return Math.floor(Number(rows[0]?.val || 0));
+  }
+  if (task.task_key === 'daily_reach_5stops') {
+    const { rows } = await query(
+      `SELECT COALESCE(SUM(stops_count), 0) AS val FROM cycling_history WHERE user_id = $1 AND ride_date = $2`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+  if (task.task_key === 'daily_route_900') {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS val FROM cycling_history WHERE user_id = $1 AND ride_date = $2 AND (route_id = '900' OR route_id = 'tko-900') AND all_stops = TRUE`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+
+  // Weekly tasks
+  if (task.task_key === 'weekly_ride_3times') {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS val FROM cycling_history WHERE user_id = $1 AND ride_date >= $2`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+  if (task.task_key === 'weekly_ride_20km') {
+    const { rows } = await query(
+      `SELECT COALESCE(SUM(distance_km), 0) AS val FROM cycling_history WHERE user_id = $1 AND ride_date >= $2`,
+      [userId, periodDate]
+    );
+    return Math.floor(Number(rows[0]?.val || 0));
+  }
+  if (task.task_key === 'weekly_3routes') {
+    const { rows } = await query(
+      `SELECT COUNT(DISTINCT route_id)::int AS val FROM cycling_history WHERE user_id = $1 AND ride_date >= $2 AND route_id IS NOT NULL`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+  if (task.task_key === 'weekly_45min_bonus') {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS val FROM cycling_history WHERE user_id = $1 AND ride_date >= $2 AND duration_minutes <= 45 AND all_stops = TRUE`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+
+  // Fallbacks:
+  if (task.task_key.includes('ride')) {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS val FROM cycling_history WHERE user_id = $1 AND ${isDaily ? 'ride_date = $2' : 'ride_date >= $2'}`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+  if (task.task_key.includes('km') || task.task_key.includes('dist')) {
+    const { rows } = await query(
+      `SELECT COALESCE(SUM(distance_km), 0) AS val FROM cycling_history WHERE user_id = $1 AND ${isDaily ? 'ride_date = $2' : 'ride_date >= $2'}`,
+      [userId, periodDate]
+    );
+    return Math.floor(Number(rows[0]?.val || 0));
+  }
+  if (task.task_key.includes('stops') || task.task_key.includes('reach')) {
+    const { rows } = await query(
+      `SELECT COALESCE(SUM(stops_count), 0) AS val FROM cycling_history WHERE user_id = $1 AND ${isDaily ? 'ride_date = $2' : 'ride_date >= $2'}`,
+      [userId, periodDate]
+    );
+    return rows[0]?.val || 0;
+  }
+
+  return 0;
+}
+
+function calcCoinMultiplier(rankKey) {
+  const r = String(rankKey || 'bronze').toLowerCase();
+  if (r === 'gold') return 1.15;
+  if (r === 'silver') return 1.05;
+  return 1.0;
+}
+
+function calcLevel(xp) {
+  const thresholds = [
+    0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+    4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
+    28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
+    98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
+    267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
+  ];
+  const BASE_GAP = 61000;
+  const GROWTH   = 1.10;
+  const BASE_XP  = 654000;
+  const BASE_LVL = 50;
+
+  if (xp < BASE_XP) {
+    let lo = 0, hi = thresholds.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (thresholds[mid] <= xp) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+
+  const n = BASE_LVL + Math.log(1 + (xp - BASE_XP) * (GROWTH - 1) / BASE_GAP) / Math.log(GROWTH);
+  return Math.floor(n) + 1;
+}
+
 function getMileageCardByRank(rankKey) {
   return MILEAGE_RANK_LABELS[normalizeMileageRank(rankKey)] || '銅卡';
 }
@@ -370,6 +505,60 @@ export default async function handler(req, res) {
       return res.end();
     } catch (error) {
       console.error('WalletPass generation error:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+  }
+
+  // ── GET → get-tasks ──────────────────────────────────────────────────────
+  if (req.method === 'GET' && req.query.action === 'get-tasks') {
+    const userData = await authenticate(req, res);
+    if (!userData) return;
+    try {
+      const userId = userData.userId;
+      const { todayStr, mondayStr } = getTodayAndMondayStr();
+
+      // Query active task definitions
+      const { rows: definitions } = await query(
+        `SELECT id, task_type, task_key, title_zh, title_en, description_zh, description_en, target_value, xp_reward, coin_reward
+         FROM task_definitions
+         WHERE is_active = TRUE`
+      );
+
+      // Query user's claimed progress
+      const { rows: progressRows } = await query(
+        `SELECT task_key, period_date, completed, reward_claimed
+         FROM user_task_progress
+         WHERE user_id = $1 AND (
+           (period_date = $2 AND task_key LIKE 'daily_%') OR
+           (period_date = $3 AND task_key LIKE 'weekly_%')
+         )`,
+        [userId, todayStr, mondayStr]
+      );
+
+      const progressMap = new Map();
+      progressRows.forEach(r => progressMap.set(r.task_key, r));
+
+      const tasksWithProgress = [];
+      for (const task of definitions) {
+        const key = task.task_key;
+        const pRecord = progressMap.get(key);
+
+        const curVal = await getTaskCurrentValue(userId, task, todayStr, mondayStr);
+        const targetVal = task.target_value;
+        const isCompleted = curVal >= targetVal || !!pRecord?.completed;
+        const isClaimed = !!pRecord?.reward_claimed;
+
+        tasksWithProgress.push({
+          ...task,
+          current_value: curVal,
+          completed: isCompleted,
+          reward_claimed: isClaimed
+        });
+      }
+
+      return res.status(200).json(tasksWithProgress);
+    } catch (error) {
+      console.error('get-tasks error:', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
   }
@@ -1253,6 +1442,92 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+
+    if (req.body.action === 'claim-task') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+
+      const { task_key } = req.body;
+      if (!task_key) return res.status(400).json({ message: 'Missing task_key' });
+
+      // Fetch task definition
+      const { rows: taskRows } = await query(
+        `SELECT task_type, target_value, xp_reward, coin_reward FROM task_definitions WHERE task_key = $1 AND is_active = TRUE`,
+        [task_key]
+      );
+      if (taskRows.length === 0) {
+        return res.status(404).json({ message: 'Task definition not found or inactive' });
+      }
+      const task = taskRows[0];
+
+      const { todayStr, mondayStr } = getTodayAndMondayStr();
+      const periodDate = task.task_type === 'daily' ? todayStr : mondayStr;
+
+      // Compute current value dynamically
+      const curVal = await getTaskCurrentValue(userData.userId, task, todayStr, mondayStr);
+      if (curVal < task.target_value) {
+        return res.status(400).json({ message: 'Task not completed yet' });
+      }
+
+      // Check if already claimed
+      const { rows: existingProgress } = await query(
+        `SELECT reward_claimed FROM user_task_progress WHERE user_id = $1 AND task_key = $2 AND period_date = $3`,
+        [userData.userId, task_key, periodDate]
+      );
+      if (existingProgress.length > 0 && existingProgress[0].reward_claimed) {
+        return res.status(400).json({ message: 'Reward already claimed' });
+      }
+
+      // Record claim in user_task_progress
+      await query(
+        `INSERT INTO user_task_progress (user_id, task_key, period_date, current_value, completed, completed_at, reward_claimed)
+         VALUES ($1, $2, $3, $4, TRUE, NOW(), TRUE)
+         ON CONFLICT (user_id, task_key, period_date)
+         DO UPDATE SET completed = TRUE, completed_at = NOW(), reward_claimed = TRUE`,
+        [userData.userId, task_key, periodDate, curVal]
+      );
+
+      // Award XP and Coins
+      const profile = await query(
+        `SELECT level, xp, coins, mileage_rank FROM user_game_profile WHERE user_id = $1`,
+        [userData.userId]
+      );
+      if (profile.rows.length === 0) {
+        return res.status(500).json({ message: 'User game profile not found' });
+      }
+      const oldProfile = profile.rows[0];
+      const oldLevel = oldProfile.level;
+
+      // Apply rank multiplier if any
+      const coinMultiplier = calcCoinMultiplier(oldProfile.mileage_rank);
+      const adjustedCoins = Math.floor(task.coin_reward * coinMultiplier);
+
+      const newXp = oldProfile.xp + task.xp_reward;
+      const newCoins = oldProfile.coins + adjustedCoins;
+      const newLevel = calcLevel(newXp);
+      const levelUp = newLevel > oldLevel;
+
+      await query(
+        `UPDATE user_game_profile
+         SET level = $1, xp = $2, coins = $3, updated_at = NOW()
+         WHERE user_id = $4`,
+        [newLevel, newXp, newCoins, userData.userId]
+      );
+
+      // Get updated game profile
+      const { rows: updatedProfile } = await query(
+        `SELECT level, xp, coins, mileage_rank FROM user_game_profile WHERE user_id = $1`,
+        [userData.userId]
+      );
+
+      return res.status(200).json({
+        success: true,
+        xp_earned: task.xp_reward,
+        coins_earned: adjustedCoins,
+        level_up: levelUp,
+        gameProfile: updatedProfile[0]
+      });
+    }
 
     if (req.body.action === 'agree-terms') {
       await ensureRideTables();
