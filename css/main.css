@@ -1108,6 +1108,126 @@ body.liquid-glass.app-light-theme #app-bottom-nav a.active {
     box-shadow: 0 4px 12px rgba(46,125,50,0.08) !important;
 }
 
+/* ── PWA Standalone Mode SPA Layout & Animations ── */
+body.is-pwa #app-bottom-nav a.active {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#app-bottom-nav {
+    position: fixed;
+    z-index: 1000000 !important; /* Ensure it is always floating above the SPA iframe viewport */
+}
+
+/* Sliding liquid glass navigation bubble background */
+.liquid-nav-bubble {
+    position: absolute;
+    background: rgba(191, 227, 64, 0.18) !important;
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+    border-radius: 16px !important;
+    z-index: -1 !important;
+    box-shadow: 0 4px 12px rgba(191, 227, 64, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    transition: transform 0.42s cubic-bezier(0.25, 1.25, 0.5, 1),
+                width 0.42s cubic-bezier(0.25, 1.25, 0.5, 1),
+                height 0.42s cubic-bezier(0.25, 1.25, 0.5, 1),
+                opacity 0.25s ease !important;
+    pointer-events: none !important;
+}
+
+body.app-light-theme .liquid-nav-bubble {
+    background: rgba(46, 125, 50, 0.12) !important;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Keep-Alive SPA Viewport & Tab Layout */
+#spa-viewport {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 100;
+}
+
+.spa-tab-content {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: none;
+    opacity: 0;
+}
+
+.spa-tab-content.active {
+    display: block;
+    opacity: 1;
+    z-index: 10;
+}
+
+.spa-page-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* Cinematic SPA Page Transition Animations (iOS 26 Liquid Glass style) */
+.spa-tab-enter {
+    animation: spaTabEnter 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.spa-tab-exit {
+    animation: spaTabExit 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes spaTabEnter {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(1.02);
+        filter: blur(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1.0);
+        filter: blur(0);
+    }
+}
+
+@keyframes spaTabExit {
+    from {
+        opacity: 1;
+        transform: scale(1.0);
+        filter: blur(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.97);
+        filter: blur(6px);
+    }
+}
+
+/* Child page adjustments when loaded inside a child SPA iframe */
+html.in-spa-iframe {
+    overflow: hidden !important;
+}
+
+body.in-spa-iframe {
+    padding-bottom: 0 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+}
+
+/* Hide top header and bottom navigation inside child iframe to prevent duplicate elements */
+body.in-spa-iframe #header-placeholder,
+body.in-spa-iframe header,
+body.in-spa-iframe #app-bottom-nav {
+    display: none !important;
+}
+
 /* More sheet: glass effect */
 body.liquid-glass #app-more-sheet {
     background: var(--lg-glass-bg) !important;

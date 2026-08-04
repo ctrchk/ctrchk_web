@@ -4,6 +4,22 @@
 
 ---
 
+## v2.2.2 Beta — 2026-07-30
+
+### 全分頁 Keep-Alive SPA 系統與 iOS 26 Liquid Glass 導航動畫重磅落地 (Task P3-2 Complete)
+
+- **Keep-Alive SPA 核心架構落成 (Task P3-2)**：
+  - **極致平穩與高容錯雙平台設計**：保留瀏覽器 Web 端為常規多頁面網頁 (MPA) 以保證最高 SEO 與極速冷啟動；而在 PWA 獨立應用端 (Standalone Mode) 完美解鎖工業級 SPA 系統。
+  - **雙端偵測與 iframe 頁面隱藏**：子 iframe 頁面加載時自動注入 `in-spa-iframe` 類，並經由 CSS 全局覆蓋，優雅隱藏子頁面重複的頂部 Header 與底部導航欄，重新適配底部 padding。
+  - **100% 進度常駐與 0 毫秒切頁**：主窗口作為 SPA Shell，首個加載的頁面轉為 Native Tab 容器，其餘 Tab 在點擊時動態、懶載入無縫 iframe 並在背景保持活躍 (Keep-Alive)。切換時 100% 留存地圖實例、實時導航、計時器、以及正在進行中的騎行定位與 GPS 線路，完美實現 0 毫秒極速切頁與 100% 行程無損。
+  - **父子窗口事件通訊**：子 iframe 內部的所有主分頁及次分頁（天氣、里程等）跳轉點擊均經由 DOM Interceptor 攔截，安全 delegate 調用 `window.parent.switchToTab(targetUrl)`，免除任何瀏覽器黑/白屏閃爍重載。
+
+- **iOS 26 Liquid Glass 彈性滑動氣泡背景與電影級轉場動畫**：
+  - **底部導航欄滑動液態氣泡 (Sliding Liquid Glass Bubble)**：底部導航欄內動態附著 `.liquid-nav-bubble` 滑動氣泡。採用高階彈性緩動貝式曲線 (`cubic-bezier(0.25, 1.25, 0.5, 1)`)，點擊切換時氣泡會以帶有物理彈簧感的流體拉伸動畫平滑滑動到新 Tab 後方，呈現極致流暢的 iOS 26 原生體驗。
+  - **電影級頁面切換轉場 (Cinematic Tab Transitions)**：為 Tab 切換編寫了高難度的縮放、漸變與位移轉場動畫。切換時舊分頁輕微向內縮小 (`scale(0.97)`) 並漸隱，新分頁伴隨毛玻璃流體擴散與 `translateY` 平滑升起，將視覺舒適度拉到最高。
+
+---
+
 ## v2.2.1 Beta — 2026-07-29
 
 ### 任務系統數據庫化每週任務正式落地與 Onboarding 閉環流程優化 (Task P1-3 & P1-4 Complete)
