@@ -1116,7 +1116,13 @@ body.is-pwa #app-bottom-nav a.active {
 
 #app-bottom-nav {
     position: fixed;
-    z-index: 1000000 !important; /* Ensure it is always floating above the SPA iframe viewport */
+    z-index: 9999 !important; /* Ensure it is always floating above the SPA iframe viewport, but below Google One-Tap/System menus */
+}
+
+#app-bottom-nav a {
+    -webkit-touch-callout: none !important; /* Disable native iOS link hold popup menu / magnifier */
+    -webkit-user-select: none !important;
+    user-select: none !important;
 }
 
 /* Sliding liquid glass navigation bubble background */
@@ -1460,6 +1466,12 @@ body.rank-gold .app-start-ride-btn *,
 body.rank-gold .wx-btn *,
 body.rank-gold .ml-action *,
 body.rank-gold .app-filter-chip.active * {
+  color: #000000 !important;
+}
+
+/* Explicit specificity override to prevent collision / invisible golden text on gold background on home page */
+body.rank-gold .app-quick-item i,
+body.rank-gold .app-quick-item span {
   color: #000000 !important;
 }
 body.rank-gold input,
