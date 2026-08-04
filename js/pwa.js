@@ -234,10 +234,161 @@
     nav.addEventListener('contextmenu', e => e.preventDefault());
     nav.addEventListener('dragstart', e => e.preventDefault());
 
+    // Setup interactive smooth dragging/sliding with a magnifier feel (iOS Liquid Glass design)
+    setupBottomNavDragging(nav);
+
     document.body.appendChild(nav);
 
     // Animate active liquid bubble on load
     setTimeout(updateLiquidBubble, 50);
+  }
+
+  function setupBottomNavDragging(nav) {
+    if (!nav) return;
+
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let originalActiveLink = null;
+    let currentHoveredLink = null;
+    let isPointerDown = false;
+
+    function getPointerX(e) {
+      if (e.touches && e.touches.length > 0) {
+        return e.touches[0].clientX;
+      }
+      return e.clientX;
+    }
+
+    function getPointerY(e) {
+      if (e.touches && e.touches.length > 0) {
+        return e.touches[0].clientY;
+      }
+      return e.clientY;
+    }
+
+    function onStart(e) {
+      if (e.button && e.button !== 0) return; // ignore right click
+      isPointerDown = true;
+      originalActiveLink = nav.querySelector('a.active');
+      startX = getPointerX(e);
+      startY = getPointerY(e);
+      isDragging = false;
+      currentHoveredLink = originalActiveLink;
+    }
+
+    function onMove(e) {
+      if (!isPointerDown) return;
+
+      const clientX = getPointerX(e);
+      const clientY = getPointerY(e);
+
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      const distance = Math.hypot(dx, dy);
+
+      if (!isDragging && distance > 8) {
+        isDragging = true;
+        nav.classList.add('dragging');
+      }
+
+      if (isDragging) {
+        if (e.cancelable) e.preventDefault();
+
+        const bubble = nav.querySelector('.liquid-nav-bubble');
+        const navRect = nav.getBoundingClientRect();
+        let localX = clientX - navRect.left;
+        localX = Math.max(0, Math.min(localX, navRect.width));
+
+        if (bubble) {
+          const bubbleWidth = bubble.getBoundingClientRect().width || (navRect.width / 5);
+          let bubbleLeft = localX - bubbleWidth / 2;
+          bubbleLeft = Math.max(0, Math.min(bubbleLeft, navRect.width - bubbleWidth));
+
+          bubble.style.transition = 'none';
+          bubble.style.transform = `translate3d(${bubbleLeft}px, 0, 0)`;
+          bubble.style.opacity = '1';
+        }
+
+        const links = Array.from(nav.querySelectorAll('a'));
+        let closestLink = null;
+        let minDistance = Infinity;
+
+        links.forEach(link => {
+          const rect = link.getBoundingClientRect();
+          const center = rect.left + rect.width / 2;
+          const dist = Math.abs(clientX - center);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestLink = link;
+          }
+        });
+
+        if (closestLink && closestLink !== currentHoveredLink) {
+          links.forEach(link => {
+            link.classList.remove('drag-hover');
+            link.classList.remove('active');
+          });
+          currentHoveredLink = closestLink;
+          currentHoveredLink.classList.add('drag-hover');
+          currentHoveredLink.classList.add('active');
+        }
+      }
+    }
+
+    function onEnd(e) {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+
+      if (isDragging) {
+        if (e.cancelable) e.preventDefault();
+        nav.classList.remove('dragging');
+
+        const links = Array.from(nav.querySelectorAll('a'));
+        links.forEach(link => {
+          link.classList.remove('drag-hover');
+        });
+
+        if (currentHoveredLink) {
+          const href = currentHoveredLink.getAttribute('href');
+          if (href) {
+            if (window.switchToTab) {
+              window.switchToTab(href);
+            } else {
+              currentHoveredLink.click();
+            }
+          }
+        } else if (originalActiveLink) {
+          originalActiveLink.classList.add('active');
+        }
+
+        const bubble = nav.querySelector('.liquid-nav-bubble');
+        if (bubble) {
+          bubble.style.transition = '';
+        }
+        setTimeout(updateLiquidBubble, 30);
+      } else {
+        const bubble = nav.querySelector('.liquid-nav-bubble');
+        if (bubble) {
+          bubble.style.transition = '';
+        }
+        nav.classList.remove('dragging');
+        const links = nav.querySelectorAll('a');
+        links.forEach(link => link.classList.remove('drag-hover'));
+      }
+      isDragging = false;
+    }
+
+    // Touch events for mobile support (cancelable on touchmove to prevent scroll/magnifier)
+    nav.addEventListener('touchstart', onStart, { passive: true });
+    nav.addEventListener('touchmove', onMove, { passive: false });
+    nav.addEventListener('touchend', onEnd, { passive: false });
+    nav.addEventListener('touchcancel', onEnd, { passive: false });
+
+    // Desktop mouse events
+    nav.addEventListener('mousedown', onStart);
+    window.addEventListener('mousemove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
   }
 
   // ── SPA (Single Page Application) Keep-Alive Core ─────────────────────────
