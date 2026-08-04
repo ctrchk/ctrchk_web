@@ -1057,23 +1057,44 @@
         if (removeBtn) removeBtn.style.display = '';
     }
 
+    function cropAndCompressAvatar(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const size = 200; // Optimal avatar size (compact & beautiful)
+                canvas.width = size;
+                canvas.height = size;
+
+                let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
+                if (img.width > img.height) {
+                    sWidth = img.height;
+                    sx = (img.width - img.height) / 2;
+                } else {
+                    sHeight = img.width;
+                    sy = (img.height - img.width) / 2;
+                }
+
+                ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); // compress to 0.7 quality
+                callback(compressedDataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
     window.onAvatarFileChange = function(input) {
         const file = input.files && input.files[0];
         if (!file) return;
-        if (file.size > 3145728) {
-            const errEl = document.getElementById('avatar-alert-error');
-            errEl.textContent = '圖片太大，請選擇 3MB 以下的圖片。';
-            errEl.style.display = 'block';
-            input.value = '';
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const dataUrl = e.target.result;
-            renderAvatarPreview(dataUrl);
-            saveAvatar(dataUrl);
-        };
-        reader.readAsDataURL(file);
+
+        cropAndCompressAvatar(file, function(compressedDataUrl) {
+            renderAvatarPreview(compressedDataUrl);
+            saveAvatar(compressedDataUrl);
+        });
     };
 
     window.removeAvatar = function() {
