@@ -728,10 +728,15 @@
         </div>
 
         <!-- Upgrade notice -->
-        <div id="upgrade-notice" style="display:none;">
-            <h3><i class="fas fa-star"></i> 升級為高級會員</h3>
-            <p>完善你的個人資料即可升級，解鎖所有功能！</p>
-            <a href="/profile" class="db-cta-btn"><i class="fas fa-arrow-right"></i> 立即完善資料</a>
+        <div id="upgrade-notice" style="display:none; background: linear-gradient(135deg, #1e3820, #2c4d2c); border: 1px solid var(--app-border, #2d4d2d); border-radius: 12px; padding: 1.1em 1.3em; margin: 0 1em 1em; cursor: pointer; text-align: left;" onclick="window.location.href='/profile-setup.html'">
+            <div style="display:flex; align-items:center; gap:0.9em;">
+                <div style="font-size:1.8em; color:var(--app-accent, #6dba65); flex-shrink:0;"><i class="fas fa-unlock-alt"></i></div>
+                <div style="flex:1;">
+                    <h3 style="color:var(--app-accent, #6dba65); margin: 0 0 0.3em; font-size: 0.95em; font-weight:700;">高級特權未鎖定 🔓</h3>
+                    <p style="font-size: 0.82em; color: var(--app-text-secondary, #a8d8a0); margin: 0; line-height: 1.45;">您目前是普通會員。只需完善您的個人資料設定，即可免費升級為<strong>高級會員</strong>，解鎖 GPX 下載與多站自訂導航等核心高級權益！</p>
+                </div>
+                <div style="color:var(--app-accent, #6dba65); font-size:1.1em; flex-shrink:0;"><i class="fas fa-chevron-right"></i></div>
+            </div>
         </div>
 
         <!-- Ride history -->
@@ -1439,6 +1444,10 @@
         var verifyBtn = document.getElementById('db-verify-user-btn');
         if (verifyBtn) verifyBtn.style.display = 'none';
 
+        // Hide upgrade notice by default
+        var upNotice = document.getElementById('upgrade-notice');
+        if (upNotice) upNotice.style.display = 'none';
+
         if (role === 'senior_admin') {
             badge.classList.add('db-role-senior-admin');
             badge.innerHTML = '<i class="fas fa-crown"></i> 高級管理員';
@@ -1460,7 +1469,8 @@
         } else {
             badge.classList.add('db-role-junior');
             badge.innerHTML = '<i class="fas fa-user"></i> 普通會員';
-            document.getElementById('upgrade-notice').style.display = '';
+            var upNotice = document.getElementById('upgrade-notice');
+            if (upNotice) upNotice.style.display = 'block';
             document.getElementById('admin-section').style.display = 'none';
         }
 

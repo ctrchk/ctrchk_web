@@ -793,11 +793,7 @@
         <!-- Weekly tasks -->
         <div class="tab-content" id="tab-weekly">
             <div class="tasks-section">
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon">🚧</div>
-                    <div class="coming-soon-title" data-i18n="weekly_soon_title">每週任務即將推出</div>
-                    <div class="coming-soon-desc" data-i18n="weekly_soon_desc">由於路線數量仍在持續增加，<br>每週任務將於更多路線上線後開放。<br>敬請期待！</div>
-                </div>
+                <div id="weekly-tasks-list"></div>
             </div>
         </div>
 
@@ -829,51 +825,98 @@
     const isEn = () => localStorage.getItem('appLang') === 'en';
 
     // ── Task and achievement definitions ──────────────────────────────
-    const DAILY_TASKS = [
+    const DEFAULT_DB_TASKS = [
         {
-            id: 'daily_full_route',
-            icon: '🚴',
-            name: '出發！',
-            desc: '完成一條完整路線（到達所有站點）',
-            reward_xp: 40,
-            reward_coins: 0,
-            type: 'full_routes_completed',
-            target: 1,
+            task_type: 'daily',
+            task_key: 'daily_ride_once',
+            title_zh: '完成一次騎行',
+            title_en: 'Complete One Ride',
+            description_zh: '今日完成任意一條路線騎行',
+            description_en: 'Complete any route ride today',
+            target_value: 1,
+            xp_reward: 20,
+            coin_reward: 0
         },
         {
-            id: 'daily_20_stops',
-            icon: '📍',
-            name: '站點打卡',
-            desc: '今日到達 20 個站點',
-            reward_xp: 30,
-            reward_coins: 0,
-            type: 'stops_visited',
-            target: 20,
+            task_type: 'daily',
+            task_key: 'daily_ride_5km',
+            title_zh: '今日騎行達5公里',
+            title_en: 'Ride 5 km Today',
+            description_zh: '今日累計騎行距離達5公里',
+            description_en: 'Accumulate 5 km of riding today',
+            target_value: 5,
+            xp_reward: 30,
+            coin_reward: 5
         },
         {
-            id: 'daily_ride_1hr',
-            icon: '⏱️',
-            name: '持續騎行',
-            desc: '今日累積騎行 1 小時',
-            reward_xp: 50,
-            reward_coins: 0,
-            type: 'total_ride_duration_min',
-            target: 60,
+            task_type: 'daily',
+            task_key: 'daily_reach_5stops',
+            title_zh: '到達5個站點',
+            title_en: 'Reach 5 Stops',
+            description_zh: '今日累計到達5個不同站點',
+            description_en: 'Reach 5 different stops today',
+            target_value: 5,
+            xp_reward: 15,
+            coin_reward: 0
         },
         {
-            id: 'daily_3_routes',
-            icon: '🏆',
-            name: '進階車手',
-            desc: '今日完成三條完整路線',
-            reward_xp: 0,
-            reward_coins: 10,
-            type: 'full_routes_completed',
-            target: 3,
+            task_type: 'daily',
+            task_key: 'daily_route_900',
+            title_zh: '騎行900線',
+            title_en: 'Ride Route 900',
+            description_zh: '完成900線（市區海濱線）的騎行',
+            description_en: 'Complete a ride on Route 900',
+            target_value: 1,
+            xp_reward: 30,
+            coin_reward: 10
         },
+        {
+            task_type: 'weekly',
+            task_key: 'weekly_ride_3times',
+            title_zh: '本週完成3次騎行',
+            title_en: 'Complete 3 Rides This Week',
+            description_zh: '本週完成任意3次路線騎行',
+            description_en: 'Complete any 3 route rides this week',
+            target_value: 3,
+            xp_reward: 80,
+            coin_reward: 20
+        },
+        {
+            task_type: 'weekly',
+            task_key: 'weekly_ride_20km',
+            title_zh: '本週騎行達20公里',
+            title_en: 'Ride 20 km This Week',
+            description_zh: '本週累計騎行距離達20公里',
+            description_en: 'Accumulate 20 km of riding this week',
+            target_value: 20,
+            xp_reward: 100,
+            coin_reward: 30
+        },
+        {
+            task_type: 'weekly',
+            task_key: 'weekly_3routes',
+            title_zh: '本週騎行3條不同路線',
+            title_en: 'Ride 3 Different Routes',
+            description_zh: '本週騎行至少3條不同路線',
+            description_en: 'Ride at least 3 different routes',
+            target_value: 3,
+            xp_reward: 120,
+            coin_reward: 40
+        },
+        {
+            task_type: 'weekly',
+            task_key: 'weekly_45min_bonus',
+            title_zh: '45分鐘內完成路線',
+            title_en: 'Finish Route Within 45 Min',
+            description_zh: '本週至少一次在45分鐘內完成路線',
+            description_en: 'Finish any route within 45 minutes',
+            target_value: 1,
+            xp_reward: 50,
+            coin_reward: 15
+        }
     ];
 
-    const WEEKLY_TASKS = [];  // 每週任務即將推出
-
+    let DB_TASKS = [];
     let ALL_BADGES = [];
     let EARNED_BADGE_IDS = [];
     let _badgesLoaded = false;
@@ -936,10 +979,32 @@
         localStorage.setItem('dailyCheckins', JSON.stringify(data));
     }
 
+    async function loadTasksFromApi() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            DB_TASKS = DEFAULT_DB_TASKS;
+            return;
+        }
+        try {
+            const resp = await fetch('/api/user?action=get-tasks', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (resp.ok) {
+                DB_TASKS = await resp.json();
+            } else {
+                DB_TASKS = DEFAULT_DB_TASKS;
+            }
+        } catch (e) {
+            console.warn('[Tasks] loadTasksFromApi failed, falling back to defaults:', e);
+            DB_TASKS = DEFAULT_DB_TASKS;
+        }
+    }
+
     async function syncProgressFromServer() {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
         try {
+            await loadTasksFromApi();
             // Fetch all badges
             try {
                 const bResp = await fetch('/api/admin?action=badges', {
@@ -1239,52 +1304,78 @@
     }
 
     // ── Task completion logic (from rideHistory) ──────────────────────
-    function computeDailyProgress(task) {
-        const today = getTodayKey();
-        const history = getRideHistory().filter(r => r.date === today);
-
-        switch (task.type) {
-            case 'full_routes_completed': {
-                const count = history.filter(r => r.all_stops).length;
-                return { progress: count, done: count >= task.target };
-            }
-            case 'stops_visited': {
-                const total = history.reduce((s, r) => s + (r.stops_count || 0), 0);
-                return { progress: total, done: total >= task.target };
-            }
-            case 'total_ride_duration_min': {
-                const total = history.reduce((s, r) => s + (r.duration_minutes || 0), 0);
-                return { progress: total, done: total >= task.target };
-            }
-            default:
-                return { progress: 0, done: false };
+    function getTaskProgress(task) {
+        if (task.current_value !== undefined) {
+            return {
+                progress: task.current_value,
+                done: task.completed,
+                reward_claimed: task.reward_claimed
+            };
         }
-    }
 
-    function computeWeeklyProgress(task) {
+        const today = getTodayKey();
         const weekStart = getWeekKey();
-        const history = getRideHistory().filter(r => r.date >= weekStart);
+        const history = getRideHistory();
 
-        switch (task.type) {
-            case 'rides_completed':
-                return { progress: history.length, done: history.length >= task.target };
-            case 'specific_route': {
-                const done = history.some(r => r.route_id === task.route_id && r.all_stops);
+        const dailyHistory = history.filter(r => r.date === today);
+        const weeklyHistory = history.filter(r => r.date >= weekStart);
+
+        if (task.task_type === 'daily') {
+            if (task.task_key === 'daily_ride_once') {
+                return { progress: dailyHistory.length, done: dailyHistory.length >= task.target_value };
+            }
+            if (task.task_key === 'daily_ride_5km') {
+                const dist = dailyHistory.reduce((s, r) => s + (r.distance_km || 0), 0);
+                return { progress: Math.round(dist * 10) / 10, done: dist >= task.target_value };
+            }
+            if (task.task_key === 'daily_reach_5stops') {
+                const stops = dailyHistory.reduce((s, r) => s + (r.stops_count || 0), 0);
+                return { progress: stops, done: stops >= task.target_value };
+            }
+            if (task.task_key === 'daily_route_900') {
+                const done = dailyHistory.some(r => (r.route_id === '900' || r.route_id === 'tko-900') && r.all_stops);
                 return { progress: done ? 1 : 0, done };
             }
-            case 'district_stops': {
-                const stops = new Set();
-                history.forEach(r => (r.tik_stops || []).forEach(s => stops.add(s)));
-                return { progress: stops.size, done: stops.size >= task.target };
+            if (task.task_key.includes('ride')) {
+                return { progress: dailyHistory.length, done: dailyHistory.length >= task.target_value };
             }
-            case 'total_distance_km': {
-                const total = history.reduce((s, r) => s + (r.distance_km || 0), 0);
-                const rounded = Math.round(total * 10) / 10;
-                return { progress: rounded, done: rounded >= task.target };
+            if (task.task_key.includes('km') || task.task_key.includes('dist')) {
+                const dist = dailyHistory.reduce((s, r) => s + (r.distance_km || 0), 0);
+                return { progress: Math.round(dist * 10) / 10, done: dist >= task.target_value };
             }
-            default:
-                return { progress: 0, done: false };
+            if (task.task_key.includes('stops') || task.task_key.includes('reach')) {
+                const stops = dailyHistory.reduce((s, r) => s + (r.stops_count || 0), 0);
+                return { progress: stops, done: stops >= task.target_value };
+            }
+        } else {
+            if (task.task_key === 'weekly_ride_3times') {
+                return { progress: weeklyHistory.length, done: weeklyHistory.length >= task.target_value };
+            }
+            if (task.task_key === 'weekly_ride_20km') {
+                const dist = weeklyHistory.reduce((s, r) => s + (r.distance_km || 0), 0);
+                return { progress: Math.round(dist * 10) / 10, done: dist >= task.target_value };
+            }
+            if (task.task_key === 'weekly_3routes') {
+                const routes = new Set(weeklyHistory.map(r => r.route_id).filter(Boolean));
+                return { progress: routes.size, done: routes.size >= task.target_value };
+            }
+            if (task.task_key === 'weekly_45min_bonus') {
+                const done = weeklyHistory.some(r => r.all_stops && r.duration_minutes <= 45);
+                return { progress: done ? 1 : 0, done };
+            }
+            if (task.task_key.includes('ride')) {
+                return { progress: weeklyHistory.length, done: weeklyHistory.length >= task.target_value };
+            }
+            if (task.task_key.includes('km') || task.task_key.includes('dist')) {
+                const dist = weeklyHistory.reduce((s, r) => s + (r.distance_km || 0), 0);
+                return { progress: Math.round(dist * 10) / 10, done: dist >= task.target_value };
+            }
+            if (task.task_key.includes('stops') || task.task_key.includes('reach')) {
+                const stops = weeklyHistory.reduce((s, r) => s + (r.stops_count || 0), 0);
+                return { progress: stops, done: stops >= task.target_value };
+            }
         }
+        return { progress: 0, done: false };
     }
 
     function computeAchievementProgress(ach) {
@@ -1341,39 +1432,115 @@
     }
 
     // ── Render helpers ────────────────────────────────────────────────
-    function renderTaskCard(task, progress, isDaily) {
+    function renderTaskCard(task, progress) {
         const done = progress.done;
+        const claimed = progress.reward_claimed;
         const card = document.createElement('div');
-        card.className = 'task-card' + (done ? ' completed' : '');
+        card.className = 'task-card' + (claimed ? ' completed' : '');
 
         let progressHtml = '';
-        if (task.target && task.target > 1 && !done) {
-            const pct = Math.min(100, Math.round((progress.progress / task.target) * 100));
+        if (task.target_value && task.target_value > 1 && !done) {
+            const pct = Math.min(100, Math.round((progress.progress / task.target_value) * 100));
             progressHtml = `
                 <div class="task-progress">
                     <div class="task-progress-bar">
                         <div class="task-progress-fill" style="width:${pct}%"></div>
                     </div>
-                    <div class="task-progress-text">${progress.progress} / ${task.target}</div>
+                    <div class="task-progress-text">${progress.progress} / ${task.target_value}</div>
                 </div>`;
         }
 
+        const name = isEn() ? (task.title_en || task.title_zh) : task.title_zh;
+        const desc = isEn() ? (task.description_en || task.description_zh) : task.description_zh;
+
         const rewardParts = [];
-        if (task.reward_xp) rewardParts.push(`+${task.reward_xp} XP`);
-        if (task.reward_coins) rewardParts.push(`+${task.reward_coins} 🪙`);
+        if (task.xp_reward) rewardParts.push(`+${task.xp_reward} XP`);
+        if (task.coin_reward) rewardParts.push(`+${task.coin_reward} 🪙`);
+
+        let icon = '🚴';
+        if (task.task_key.includes('stops') || task.task_key.includes('reach')) icon = '📍';
+        else if (task.task_key.includes('km') || task.task_key.includes('dist')) icon = '⏱️';
+        else if (task.task_key.includes('weekly')) icon = '🏆';
+
+        let actionHtml = '';
+        if (claimed) {
+            actionHtml = `<div class="task-check">✅</div>`;
+        } else if (done) {
+            actionHtml = `
+                <button class="checkin-btn" style="margin: 0; padding: 0.35em 0.85em; font-size: 0.78em;" onclick="claimTaskReward('${task.task_key}')">
+                    ${isEn() ? 'Claim' : '領取'}
+                </button>`;
+        } else {
+            actionHtml = `<div class="task-check">⬜</div>`;
+        }
 
         card.innerHTML = `
-            <div class="task-icon">${task.icon}</div>
+            <div class="task-icon">${icon}</div>
             <div class="task-info">
-                <div class="task-name">${task.name}</div>
-                <div class="task-desc">${task.desc}</div>
+                <div class="task-name">${name}</div>
+                <div class="task-desc">${desc}</div>
                 ${progressHtml}
             </div>
             <div class="task-reward">${rewardParts.join(' ')}</div>
-            <div class="task-check">${done ? '✅' : '⬜'}</div>
+            ${actionHtml}
         `;
         return card;
     }
+
+    window.claimTaskReward = async function(taskKey) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        try {
+            const resp = await fetch('/api/user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    action: 'claim-task',
+                    task_key: taskKey
+                })
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                showCheckinToast(err.message || '領取失敗 ❌');
+                return;
+            }
+
+            const res = await resp.json();
+            const xp = res.xp_earned || 0;
+            const coins = res.coins_earned || 0;
+            const coinsMsg = coins > 0 ? ` + ${coins} 🪙` : '';
+
+            showCheckinToast(`🎁 領取成功！+${xp} XP${coinsMsg}`);
+            launchCheckinConfetti();
+
+            if (res.gameProfile) {
+                localStorage.setItem('gameProfile', JSON.stringify(res.gameProfile));
+                // Update user object as well for consistency
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                user.level = res.gameProfile.level;
+                user.xp = res.gameProfile.xp;
+                user.coins = res.gameProfile.coins;
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+
+            if (res.level_up && res.gameProfile) {
+                setTimeout(() => showTasksLevelUp(res.gameProfile.level, coins), 600);
+            }
+
+            // Reload tasks list
+            await loadTasksFromApi();
+            render();
+            updateHero();
+        } catch (e) {
+            console.warn('[Tasks] claimTaskReward failed:', e);
+            showCheckinToast('領取失敗，請稍後再試 ❌');
+        }
+    };
 
     function renderMedalCard(badge) {
         const isEarned = EARNED_BADGE_IDS.includes(badge.id);
@@ -1514,6 +1681,10 @@
     // ── Main render ───────────────────────────────────────────────────
     function render() {
         const isLoggedIn = !!localStorage.getItem('accessToken');
+        const tasksList = DB_TASKS.length > 0 ? DB_TASKS : DEFAULT_DB_TASKS;
+
+        const dailyTasks = tasksList.filter(t => t.task_type === 'daily');
+        const weeklyTasks = tasksList.filter(t => t.task_type === 'weekly');
 
         // Daily tasks
         const dailyList = document.getElementById('daily-tasks-list');
@@ -1521,13 +1692,13 @@
         if (!isLoggedIn) {
             dailyList.innerHTML = '<div class="login-prompt"><i class="fas fa-lock"></i>請先登入以查看每日任務<br><a href="/login">登入</a></div>';
         } else {
-            DAILY_TASKS.forEach(task => {
-                const progress = computeDailyProgress(task);
-                dailyList.appendChild(renderTaskCard(task, progress, true));
+            dailyTasks.forEach(task => {
+                const progress = getTaskProgress(task);
+                dailyList.appendChild(renderTaskCard(task, progress));
             });
 
             // All-tasks bonus card
-            const allDone = DAILY_TASKS.every(t => computeDailyProgress(t).done);
+            const allDone = dailyTasks.every(t => getTaskProgress(t).done);
             const bonusKey = 'allTasksBonusClaimed_' + getTodayKey();
             const bonusClaimed = !!localStorage.getItem(bonusKey);
             const bonusDiv = document.createElement('div');
@@ -1536,7 +1707,7 @@
                 <div class="atb-icon">🎁</div>
                 <div class="atb-info">
                     <div class="atb-name">${isEn() ? 'Complete All Tasks' : '完成所有任務'}</div>
-                    <div class="atb-desc">${isEn() ? 'Complete all 4 daily tasks for bonus rewards' : '完成今日全部四個任務即可獲得額外獎勵'}</div>
+                    <div class="atb-desc">${isEn() ? 'Complete all daily tasks for bonus rewards' : '完成今日全部每日任務即可獲得額外獎勵'}</div>
                 </div>
                 <div class="atb-reward">+80 XP +5 🪙</div>
                 <div class="atb-check">${(allDone || bonusClaimed) ? '✅' : '⬜'}</div>
@@ -1546,6 +1717,20 @@
                 bonusDiv.querySelector('.atb-check').textContent = '✅';
             }
             dailyList.appendChild(bonusDiv);
+        }
+
+        // Weekly tasks
+        const weeklyList = document.getElementById('weekly-tasks-list');
+        if (weeklyList) {
+            weeklyList.innerHTML = '';
+            if (!isLoggedIn) {
+                weeklyList.innerHTML = '<div class="login-prompt"><i class="fas fa-lock"></i>請先登入以查看每週任務<br><a href="/login">登入</a></div>';
+            } else {
+                weeklyTasks.forEach(task => {
+                    const progress = getTaskProgress(task);
+                    weeklyList.appendChild(renderTaskCard(task, progress));
+                });
+            }
         }
 
         // Exclusive Badges
@@ -1565,10 +1750,13 @@
 
         // Summary bar
         if (isLoggedIn) {
-            const dailyDone = DAILY_TASKS.filter(t => computeDailyProgress(t).done).length;
-            document.getElementById('summary-daily-done').textContent = `${dailyDone}/${DAILY_TASKS.length}`;
-            document.getElementById('summary-weekly-done').textContent = isEn() ? 'Coming Soon' : '即將推出';
-            const medalCount = ACHIEVEMENTS.filter(a => computeAchievementProgress(a).earned).length;
+            const dailyDone = dailyTasks.filter(t => getTaskProgress(t).done).length;
+            document.getElementById('summary-daily-done').textContent = `${dailyDone}/${dailyTasks.length || 1}`;
+
+            const weeklyDone = weeklyTasks.filter(t => getTaskProgress(t).done).length;
+            document.getElementById('summary-weekly-done').textContent = `${weeklyDone}/${weeklyTasks.length || 1}`;
+
+            const medalCount = EARNED_BADGE_IDS.length;
             document.getElementById('summary-medals').textContent = medalCount;
             document.getElementById('tasks-summary').style.display = '';
         }

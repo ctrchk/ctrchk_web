@@ -13,7 +13,8 @@
 
     <meta charset="UTF-8">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#121f14">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="城市運輸單車">
@@ -23,29 +24,25 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Dark theme for app (PWA) mode only */
-        body.is-pwa {
+        body {
             background: var(--app-bg-primary, #121f14);
             color: var(--app-text-primary, #e8f5e9);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', sans-serif;
-        }
-        body.is-pwa footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
-        @media (display-mode: standalone) {
-            body { background: var(--app-bg-primary, #121f14); color: var(--app-text-primary, #e8f5e9); }
-            footer { background: var(--app-bg-primary, #121f14); color: var(--app-text-secondary, #a8d8a0); border-top: 1px solid #2d4d2d; }
+            min-height: 100vh;
         }
         .profile-setup-container {
             max-width: 600px;
             margin: 2em auto;
             padding: 2em;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: var(--app-bg-card, #1a2d1c);
+            border: 1px solid var(--app-border, #2d4d2d);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
         }
         .progress-bar {
             width: 100%;
             height: 8px;
-            background: #f0f0f0;
+            background: rgba(255,255,255,0.1);
             border-radius: 4px;
             margin-bottom: 2em;
             overflow: hidden;
@@ -53,44 +50,121 @@
         .progress-fill {
             height: 100%;
             background: linear-gradient(to right, #BFE340, #04D93C);
-            width: 30%;
-            transition: width 0.3s ease;
+            width: 33.33%;
+            transition: width 0.35s ease;
         }
         .form-section {
-            margin-bottom: 2em;
+            display: none;
+            animation: pwaPageEnter 0.4s ease both;
+        }
+        .form-section.active {
+            display: block;
         }
         .form-section h3 {
-            color: #04D93C;
+            color: var(--app-accent, #6dba65);
             margin-bottom: 1em;
+            font-size: 1.15em;
+            border-bottom: 1px solid var(--app-border, #2d4d2d);
+            padding-bottom: 0.4em;
         }
         .benefits-card {
-            background: #f9f9f9;
-            padding: 1.5em;
+            background: var(--app-bg-card2, rgba(255,255,255,0.05));
+            padding: 1.2em;
             border-radius: 8px;
-            margin-bottom: 2em;
-            border-left: 4px solid #04D93C;
+            margin-bottom: 1.5em;
+            border-left: 4px solid var(--app-accent, #6dba65);
+            color: var(--app-text-primary, #e8f5e9);
         }
         .benefits-card h4 {
-            color: #2c3e50;
+            color: var(--app-accent, #6dba65);
             margin-bottom: 0.5em;
+            font-size: 0.95em;
+        }
+        .benefits-card ul {
+            margin: 0;
+            padding-left: 1.2em;
+            font-size: 0.82em;
+            line-height: 1.45;
         }
         .required-notice {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 1em;
-            border-radius: 4px;
-            margin-bottom: 2em;
+            background: rgba(255, 243, 205, 0.1);
+            border: 1px solid rgba(255, 234, 167, 0.2);
+            color: #ffeaa7;
+            padding: 0.8em 1em;
+            border-radius: 6px;
+            margin-bottom: 1.5em;
+            font-size: 0.84em;
+        }
+        .wizard-buttons {
+            display: flex;
+            gap: 1em;
+            margin-top: 2em;
+        }
+        .wizard-btn-prev {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--app-border, #2d4d2d);
+            color: var(--app-text-secondary, #a8d8a0);
+            border-radius: 8px;
+            padding: 0.65em;
+            font-size: 0.9em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .wizard-btn-prev:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .wizard-btn-next {
+            flex: 1.5;
+            background: var(--app-accent, #6dba65);
+            color: #121f14;
+            border: none;
+            border-radius: 8px;
+            padding: 0.65em;
+            font-size: 0.9em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .wizard-btn-next:hover {
+            opacity: 0.9;
+        }
+        /* Light Theme overrides */
+        body.app-light-theme .profile-setup-container {
+            background: #ffffff;
+            border-color: #c8e6c9;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        }
+        body.app-light-theme .benefits-card {
+            background: #f1f8e9;
+            border-left-color: #2e7d32;
+        }
+        body.app-light-theme .benefits-card h4 {
+            color: #2e7d32;
+        }
+        body.app-light-theme .required-notice {
+            background: #fff8e1;
+            border-color: #ffe082;
+            color: #b78103;
+        }
+        body.app-light-theme .wizard-btn-prev {
+            border-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        body.app-light-theme .wizard-btn-next {
+            background: #2e7d32;
+            color: white;
         }
     </style>
 </head>
 <body>
-    <div id="header-placeholder"></div>
+    <div id="header-placeholder" class="web-only"></div>
 
     <main>
         <section class="content animated-element">
             <div class="profile-setup-container">
-                <h2 style="text-align: center; color: #2c3e50;">完善您的個人資料</h2>
+                <h2 style="text-align: center; color: var(--app-text-primary, #e8f5e9); margin-top: 0;">完善您的個人資料</h2>
                 
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill"></div>
@@ -98,41 +172,61 @@
                 
                 <div class="required-notice">
                     <i class="fas fa-info-circle"></i> 
-                    完成以下資料即可升級為<strong>高級用戶</strong>，享受更多功能！
+                    完成以下資料即可升級為<strong>高級用戶</strong>，解鎖全部核心高級特權！
                 </div>
 
                 <div class="benefits-card">
-                    <h4><i class="fas fa-star"></i> 高級用戶權益</h4>
+                    <h4><i class="fas fa-star"></i> 高級用戶專享權益</h4>
                     <ul>
-                        <li>查看所有單車路線詳細資訊</li>
-                        <li>下載 GPX 路線文件</li>
-                        <li>個人騎行歷史記錄</li>
-                        <li>參與社群活動</li>
+                        <li>解鎖全部 30+ 條單車通勤與觀光路線詳細圖籍</li>
+                        <li>下載無浮水印之高品質 JPG 軌跡海報與 GPX 檔案</li>
+                        <li>無限次數使用「多人房」與好友異步實時位置同步</li>
+                        <li>特權優先：路面障礙回報自動標記為優先審核</li>
                     </ul>
                 </div>
 
                 <form id="profile-setup-form">
-                    <div class="form-section">
-                        <h3><i class="fas fa-user"></i> 基本資料</h3>
-                        <div class="form-group">
-                            <label for="full-name">姓名 *</label>
-                            <input type="text" id="full-name" name="full_name" required>
+                    <!-- STEP 1: Basic Info -->
+                    <div class="form-section active" id="step-section-1">
+                        <h3><i class="fas fa-user"></i> 第一步：基本資料</h3>
+
+                        <div class="form-group" style="margin-bottom:1.2em;">
+                            <label>個人頭像 (選擇性)</label>
+                            <div style="display:flex; align-items:center; gap:1.2em; margin-top:0.5em;">
+                                <div id="avatar-setup-preview" style="width:68px; height:68px; border-radius:50%; background:var(--app-bg-card2, rgba(255,255,255,0.08)); border:2px solid var(--app-border, #2d4d2d); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:1.6em; color:var(--app-accent, #6dba65); flex-shrink:0;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:0.4em;">
+                                    <label class="cta-button" style="margin:0; padding:0.4em 0.9em; font-size:0.8em; background-color:var(--app-bg-card2, rgba(255,255,255,0.08)); border:1px solid var(--app-border, #2d4d2d); color:var(--app-text-primary, #e8f5e9); cursor:pointer;" for="avatar-setup-file">
+                                        <i class="fas fa-camera"></i> 選擇相片
+                                    </label>
+                                    <input type="file" id="avatar-setup-file" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="onAvatarFileChange(this)">
+                                    <span style="font-size:0.72em; color:var(--app-text-secondary, #a8d8a0);">相片會自動於前端完成裁剪與高畫質壓縮</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="avatar-url-hidden" name="avatar_url" value="">
                         </div>
-                        <div class="form-group">
+
+                        <div class="form-group" style="margin-bottom:1.2em;">
+                            <label for="full-name">真實姓名 *</label>
+                            <input type="text" id="full-name" name="full_name" required placeholder="請輸入姓名" style="width:100%; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:1.2em;">
                             <label for="phone">聯絡電話 *</label>
-                            <input type="tel" id="phone" name="phone" required>
+                            <input type="tel" id="phone" name="phone" required placeholder="例如：91234567" style="width:100%; box-sizing:border-box;">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:1.2em;">
                             <label for="birthdate">出生日期</label>
-                            <input type="date" id="birthdate" name="birthdate">
+                            <input type="date" id="birthdate" name="birthdate" style="width:100%; box-sizing:border-box;">
                         </div>
                     </div>
 
-                    <div class="form-section">
-                        <h3><i class="fas fa-bicycle"></i> 騎行經驗</h3>
-                        <div class="form-group">
-                            <label for="experience">騎行經驗 *</label>
-                            <select id="experience" name="experience" required>
+                    <!-- STEP 2: Cycling Experience -->
+                    <div class="form-section" id="step-section-2">
+                        <h3><i class="fas fa-bicycle"></i> 第二步：騎行經驗</h3>
+                        <div class="form-group" style="margin-bottom:1.2em;">
+                            <label for="experience">您的騎行背景 *</label>
+                            <select id="experience" name="experience" required style="width:100%; box-sizing:border-box;">
                                 <option value="">請選擇</option>
                                 <option value="beginner">初學者 (1年以下)</option>
                                 <option value="intermediate">中級 (1-3年)</option>
@@ -140,24 +234,25 @@
                                 <option value="expert">專家級 (5年以上)</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="bike-type">主要使用單車類型</label>
-                            <select id="bike-type" name="bike_type">
+                        <div class="form-group" style="margin-bottom:1.2em;">
+                            <label for="bike-type">常踩的單車類型</label>
+                            <select id="bike-type" name="bike_type" style="width:100%; box-sizing:border-box;">
                                 <option value="">請選擇</option>
-                                <option value="road">公路車</option>
-                                <option value="mountain">山地車</option>
-                                <option value="hybrid">混合車</option>
-                                <option value="electric">電動單車</option>
-                                <option value="folding">摺疊車</option>
+                                <option value="road">公路車 (Road Bike)</option>
+                                <option value="mountain">山地車 (MTB)</option>
+                                <option value="hybrid">城市混合車 (Hybrid)</option>
+                                <option value="electric">電動輔助單車 (e-Bike)</option>
+                                <option value="folding">摺疊單車 (Folding)</option>
                             </select>
                         </div>
                     </div>
 
-                    <div class="form-section">
-                        <h3><i class="fas fa-map-marker-alt"></i> 地區偏好</h3>
+                    <!-- STEP 3: Geographic Preference -->
+                    <div class="form-section" id="step-section-3">
+                        <h3><i class="fas fa-map-marker-alt"></i> 第三步：偏好地區</h3>
                         <div class="form-group">
-                            <label>主要騎行地區（可多選） *</label>
-                            <div class="area-checkboxes" id="preferred-area-checkboxes" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:0.5em; margin-top:0.5em;">
+                            <label style="font-weight:bold; margin-bottom:0.6em; display:block;">主要騎行地區（可多選） *</label>
+                            <div class="area-checkboxes" id="preferred-area-checkboxes" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:0.6em; margin-top:0.5em;">
                                 <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="港島海濱"> 港島海濱</label>
                                 <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="九龍東"> 九龍東</label>
                                 <label style="display:flex; align-items:center; gap:0.4em; font-weight:normal; cursor:pointer;"><input type="checkbox" name="preferred_area" value="將軍澳"> 將軍澳</label>
@@ -173,9 +268,18 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="cta-button" style="width: 100%; background-color: #04D93C; color: white;">
-                        <i class="fas fa-check"></i> 完成設定，升級為高級用戶
-                    </button>
+                    <!-- Wizard Buttons -->
+                    <div class="wizard-buttons">
+                        <button type="button" id="wizard-btn-prev" class="wizard-btn-prev" style="display:none;">
+                            <i class="fas fa-chevron-left"></i> 上一步
+                        </button>
+                        <button type="button" id="wizard-btn-next" class="wizard-btn-next">
+                            下一步 <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button type="submit" id="wizard-btn-submit" class="wizard-btn-next" style="display:none; background-color: #04D93C; color: white;">
+                            <i class="fas fa-check"></i> 立即完成，免費升級高級會員
+                        </button>
+                    </div>
                 </form>
             </div>
         </section>
@@ -186,40 +290,127 @@
     </footer>
 
     <script src="/js/main.js"></script>
+    <script src="/js/pwa.js"></script>
     <script>
-        // 等待所有東西載入完成
-        document.addEventListener('DOMContentLoaded', function() {
-            // 更新進度條
-            function updateProgress() {
-                const form = document.getElementById('profile-setup-form');
-                const requiredInputs = form.querySelectorAll('input[required], select[required]');
-                const hasAreaChecked = form.querySelectorAll('input[name="preferred_area"]:checked').length > 0;
-                let filledCount = 0;
-                
-                requiredInputs.forEach(input => {
-                    if (input.value.trim()) filledCount++;
-                });
-                if (hasAreaChecked) filledCount++;
+        // Front-end canvas crop and compression helper (Task P1-4 & Step 7)
+        function cropAndCompressAvatar(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
 
-                const totalRequired = requiredInputs.length + 1; // +1 for area checkboxes
-                const progress = (filledCount / totalRequired) * 100;
-                document.getElementById('progress-fill').style.width = Math.min(progress, 100) + '%';
+                    const size = 200; // Optimal avatar size (compact & beautiful)
+                    canvas.width = size;
+                    canvas.height = size;
+
+                    let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
+                    if (img.width > img.height) {
+                        sWidth = img.height;
+                        sx = (img.width - img.height) / 2;
+                    } else {
+                        sHeight = img.width;
+                        sy = (img.height - img.width) / 2;
+                    }
+
+                    ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); // compress to 0.7 quality
+                    callback(compressedDataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.onAvatarFileChange = function(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            cropAndCompressAvatar(file, function(compressedDataUrl) {
+                const preview = document.getElementById('avatar-setup-preview');
+                if (preview) {
+                    preview.innerHTML = `<img src="${compressedDataUrl}" alt="Avatar Preview" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                }
+                const hiddenInput = document.getElementById('avatar-url-hidden');
+                if (hiddenInput) {
+                    hiddenInput.value = compressedDataUrl;
+                }
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentStep = 1;
+            const totalSteps = 3;
+
+            const btnPrev = document.getElementById('wizard-btn-prev');
+            const btnNext = document.getElementById('wizard-btn-next');
+            const btnSubmit = document.getElementById('wizard-btn-submit');
+            const progressFill = document.getElementById('progress-fill');
+
+            function showStep(step) {
+                for (let i = 1; i <= totalSteps; i++) {
+                    const sec = document.getElementById('step-section-' + i);
+                    if (sec) {
+                        sec.style.display = (i === step) ? 'block' : 'none';
+                    }
+                }
+
+                btnPrev.style.display = (step > 1) ? 'block' : 'none';
+                btnNext.style.display = (step < totalSteps) ? 'block' : 'none';
+                btnSubmit.style.display = (step === totalSteps) ? 'block' : 'none';
+
+                const pct = (step / totalSteps) * 100;
+                progressFill.style.width = pct + '%';
             }
 
-            // 監聽表單變化
-            const form = document.getElementById('profile-setup-form');
-            const inputs = form.querySelectorAll('input, select');
-            
-            inputs.forEach(input => {
-                input.addEventListener('input', updateProgress);
-                input.addEventListener('change', updateProgress);
+            function validateStep(step) {
+                if (step === 1) {
+                    const name = document.getElementById('full-name').value.trim();
+                    const phone = document.getElementById('phone').value.trim();
+                    if (!name || !phone) {
+                        alert('請填寫姓名及聯絡電話。');
+                        return false;
+                    }
+                } else if (step === 2) {
+                    const exp = document.getElementById('experience').value;
+                    if (!exp) {
+                        alert('請選擇您的騎行背景經驗。');
+                        return false;
+                    }
+                } else if (step === 3) {
+                    const checked = document.querySelectorAll('input[name="preferred_area"]:checked');
+                    if (checked.length === 0) {
+                        alert('請至少勾選一個主要騎行地區偏好。');
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            btnNext.addEventListener('click', function() {
+                if (validateStep(currentStep)) {
+                    if (currentStep < totalSteps) {
+                        currentStep++;
+                        showStep(currentStep);
+                    }
+                }
             });
-            
-            // 處理表單提交
+
+            btnPrev.addEventListener('click', function() {
+                if (currentStep > 1) {
+                    currentStep--;
+                    showStep(currentStep);
+                }
+            });
+
+            // Handle submission
+            const form = document.getElementById('profile-setup-form');
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                
-                // 從 localStorage 取得已登入的用戶資料
+
+                if (!validateStep(3)) return;
+
                 const storedUser = localStorage.getItem('user');
                 if (!storedUser) {
                     alert('用戶未登入，請先登入。');
@@ -228,35 +419,32 @@
                 }
 
                 const currentUser = JSON.parse(storedUser);
-                
-                // 獲取並驗證所選騎行地區
                 const selectedAreas = Array.from(
-                    form.querySelectorAll('input[name="preferred_area"]:checked')
+                    document.querySelectorAll('input[name="preferred_area"]:checked')
                 ).map(cb => cb.value);
-                if (selectedAreas.length === 0) {
-                    alert('請至少選擇一個主要騎行地區。');
-                    return;
-                }
-                
+
                 const formData = new FormData(form);
                 const profileData = {};
-                
                 formData.forEach((value, key) => {
                     if (key !== 'preferred_area') {
                         profileData[key] = value;
                     }
                 });
                 profileData.preferred_area = selectedAreas.join(',');
-                
+
+                // Avatar URL hidden value
+                const avatarUrl = document.getElementById('avatar-url-hidden').value;
+                if (avatarUrl) {
+                    profileData.avatar_url = avatarUrl;
+                }
+
                 try {
-                    // 準備更新數據
                     const updateData = {
                         user_id: currentUser.id,
                         email: currentUser.email,
                         ...profileData
                     };
-                    
-                    // 調用後端 API 更新數據庫
+
                     const token = localStorage.getItem('accessToken');
                     const response = await fetch('/api/user', {
                         method: 'POST',
@@ -266,31 +454,29 @@
                         },
                         body: JSON.stringify(updateData)
                     });
-                    
+
                     const result = await response.json();
-                    
                     if (!response.ok) {
                         throw new Error(result.message || '更新失敗');
                     }
-                    
-                    // 更新 localStorage 中的用戶資料
+
+                    // Update local storage
                     currentUser.user_role = 'senior';
                     currentUser.profile_completed = true;
+                    if (avatarUrl) currentUser.avatar_url = avatarUrl;
                     localStorage.setItem('user', JSON.stringify(currentUser));
-                    
-                    alert('恭喜！您已成功升級為高級用戶！');
+
+                    alert('恭喜！您的個人資料已成功建立並已晉升為「高級會員」，解鎖全套核心高级權益！');
                     window.location.href = '/dashboard.html';
-                    
+
                 } catch (error) {
                     console.error('Profile setup error:', error);
-                    alert(`資料更新失敗: ${error.message}`);
+                    alert(`設定失敗: ${error.message}`);
                 }
             });
-            
-            // 初始化進度
-            updateProgress();
+
+            showStep(1);
         });
     </script>
-    <script src="/js/pwa.js"></script>
 </body>
 </html>
