@@ -13,9 +13,11 @@
   - **雙端偵測與 iframe 頁面隱藏**：子 iframe 頁面加載時自動注入 `in-spa-iframe` 類，並經由 CSS 全局覆蓋，優雅隱藏子頁面重複的頂部 Header 與底部導航欄，重新適配底部 padding。
   - **100% 進度常駐與 0 毫秒切頁**：主窗口作為 SPA Shell，首個加載的頁面轉為 Native Tab 容器，其餘 Tab 在點擊時動態、懶載入無縫 iframe 並在背景保持活躍 (Keep-Alive)。切換時 100% 留存地圖實例、實時導航、計時器、以及正在進行中的騎行定位與 GPS 線路，完美實現 0 毫秒極速切頁與 100% 行程無損。
   - **父子窗口事件通訊**：子 iframe 內部的所有主分頁及次分頁（天氣、里程等）跳轉點擊均經由 DOM Interceptor 攔截，安全 delegate 調用 `window.parent.switchToTab(targetUrl)`，免除任何瀏覽器黑/白屏閃爍重載。
+  - **滑動縮放與手勢滾動恢復**：修復了 iframe 子頁面中 `overflow` 屬性被誤設為 hidden 阻礙手勢滑動與縮放的重大 Bug，重新覆蓋為 `overflow-y: auto !important`，完全解鎖並恢復了長列表（如任務、騎行和進度）在觸控下的原生物理阻尼滾動與縮放。
 
 - **iOS 26 Liquid Glass 彈性滑動氣泡背景與電影級轉場動畫**：
-  - **底部導航欄滑動液態氣泡 (Sliding Liquid Glass Bubble)**：底部導航欄內動態附著 `.liquid-nav-bubble` 滑動氣泡。採用高階彈性緩動貝式曲線 (`cubic-bezier(0.25, 1.25, 0.5, 1)`)，點擊切換時氣泡會以帶有物理彈簧感的流體拉伸動畫平滑滑動到新 Tab 後方，呈現極致流暢的 iOS 26 原生體驗。
+  - **全 Standalone 實例覆蓋**：優化了 Liquid Glass 啟用邏輯，為所有 PWA standalone 用戶強制注入 `liquid-glass` 樣式類，保證全部 Android 與 iOS standalone 安裝實例皆能 100% 解鎖、正確顯示極致流光玻璃導航欄。
+  - **底部導航欄滑動液態氣泡 (Sliding Liquid Glass Bubble)**：底部導航欄內動態附著 `.liquid-nav-bubble` 滑動氣泡。採用高階彈性緩動貝式曲線 (`cubic-bezier(0.25, 1.25, 0.5, 1)`) 並顯式鎖定 `top: 0 !important; left: 0 !important;` 絕對原點，點擊切換時氣泡會以帶有物理彈簧感的流體拉伸動畫平滑滑動到新 Tab 後方，呈現極致流暢且對齊精準的 iOS 26 原生體驗。
   - **電影級頁面切換轉場 (Cinematic Tab Transitions)**：為 Tab 切換編寫了高難度的縮放、漸變與位移轉場動畫。切換時舊分頁輕微向內縮小 (`scale(0.97)`) 並漸隱，新分頁伴隨毛玻璃流體擴散與 `translateY` 平滑升起，將視覺舒適度拉到最高。
 
 ---

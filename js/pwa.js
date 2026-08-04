@@ -586,6 +586,7 @@
     // Ensure body class is set (body is now definitely available)
     if (isStandalone) {
       document.body.classList.add('is-pwa');
+      document.body.classList.add('liquid-glass'); // Always enable liquid-glass in Standalone App Mode!
       injectAppBottomNav();
       // Update theme-color meta tag to dark app theme
       const themeColorMeta = document.querySelector('meta[name="theme-color"]');
