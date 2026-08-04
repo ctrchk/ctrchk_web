@@ -254,7 +254,7 @@ export default async function handler(req, res) {
 
       const { rows } = await query(
         `SELECT u.id, u.full_name, u.username,
-                gp.level, gp.mileage_rank,
+                gp.level, gp.mileage_rank, gp.verification_token,
                 COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                 COALESCE((SELECT SUM(ch.distance_km)
                           FROM cycling_history ch
@@ -274,6 +274,20 @@ export default async function handler(req, res) {
       const rank = normalizeMileageRank(user.mileage_rank || 'bronze');
       const mileage = Number(user.rolling_distance_km || 0);
       const name = user.full_name || user.username || '單車愛好者';
+
+      // Generate or retrieve the unique secure verification token
+      let token = user.verification_token;
+      if (!token) {
+        token = crypto.randomBytes(24).toString('hex');
+        try {
+          await query(
+            `UPDATE user_game_profile SET verification_token = $1 WHERE user_id = $2`,
+            [token, user.id]
+          );
+        } catch (dbErr) {
+          console.error('Error generating verification token in wallet-pass:', dbErr);
+        }
+      }
 
       let templateId = TEMPLATE_BRONZE;
       let colorPreset = 'orange';
@@ -308,7 +322,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           template: templateId,
-          barcodeValue: `CTRC-USER-${user.id}`,
+          barcodeValue: `CTRC_VERIFY:${token}`,
           barcodeFormat: 'QR',
           logoText: 'CTRC HK',
           logoURL: logoURL,
@@ -468,6 +482,7 @@ export default async function handler(req, res) {
       if (!token) {
         return res.status(400).json({ message: 'Token is required' });
       }
+      const cleanToken = String(token).trim().toLowerCase();
 
       // Query the user corresponding to the token
       const { rows: userRows } = await query(
@@ -480,8 +495,8 @@ export default async function handler(req, res) {
                             AND ch.ride_date >= (CURRENT_DATE - INTERVAL '365 days')), 0) AS rolling_distance_km
          FROM user_game_profile gp
          JOIN users u ON u.id = gp.user_id
-         WHERE gp.verification_token = $1`,
-        [token]
+         WHERE LOWER(TRIM(gp.verification_token)) = $1`,
+        [cleanToken]
       );
 
       if (userRows.length === 0) {

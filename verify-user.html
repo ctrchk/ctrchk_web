@@ -230,7 +230,14 @@
 
         function startScanner() {
             html5QrcodeScanner = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = {
+                fps: 15,
+                qrbox: (width, height) => {
+                    const side = Math.min(width, height) * 0.75;
+                    return { width: Math.floor(side), height: Math.floor(side) };
+                },
+                aspectRatio: 1.0
+            };
 
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
@@ -250,8 +257,9 @@
         async function onScanSuccess(decodedText, decodedResult) {
             if (!scanningActive) return;
 
-            // Check signature prefix
-            if (!decodedText.startsWith('CTRC_VERIFY:')) {
+            const trimmedText = decodedText.trim();
+            // Case-insensitive check for prefix
+            if (!trimmedText.toUpperCase().startsWith('CTRC_VERIFY:')) {
                 return; // Ignore other QR codes
             }
 
@@ -260,10 +268,10 @@
             document.getElementById('sc-status').style.color = "#a8d8a0";
 
             try {
-                const tokenVal = decodedText.split(':')[1];
+                const tokenVal = trimmedText.substring('CTRC_VERIFY:'.length).trim().toLowerCase();
                 const bearerToken = localStorage.getItem('accessToken');
 
-                const res = await fetch('/api/user?action=verify-user-token&token=' + tokenVal, {
+                const res = await fetch('/api/user?action=verify-user-token&token=' + encodeURIComponent(tokenVal), {
                     headers: bearerToken ? { 'Authorization': 'Bearer ' + bearerToken } : {}
                 });
 
