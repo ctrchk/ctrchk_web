@@ -539,6 +539,17 @@
                         </a>
                     </div>
 
+                    <!-- 條款與免責聲明連結 (Task Beta Update) -->
+                    <div class="notif-setting-row" style="margin-bottom: 1.1em; border-bottom: 1px dashed var(--app-border, #2d4d2d); padding-bottom: 0.9em;">
+                        <div class="notif-setting-info">
+                            <strong style="color: #BFE340;"><i class="fas fa-file-contract"></i> 服務條款與免責聲明</strong>
+                            <span>隨時查閱最新版本的平台使用規範、隱私條例及法律免責聲明 (v2.2.0)</span>
+                        </div>
+                        <a href="/terms.html" class="cta-button" style="font-size: 0.82em; padding: 0.5em 1.2em; border-radius: 8px; font-weight: bold; background: none; border: 1px solid var(--app-accent, #6dba65); color: var(--app-accent, #6dba65); text-decoration: none; text-align: center; white-space: nowrap;">
+                            查看條款
+                        </a>
+                    </div>
+
                     <div class="notif-setting-row">
                         <div class="notif-setting-info">
                             <strong data-i18n="light_mode">亮色模式</strong>
@@ -1074,23 +1085,44 @@
         }
     }
 
+    function cropAndCompressAvatar(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const size = 200; // Optimal avatar size (compact & beautiful)
+                canvas.width = size;
+                canvas.height = size;
+
+                let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
+                if (img.width > img.height) {
+                    sWidth = img.height;
+                    sx = (img.width - img.height) / 2;
+                } else {
+                    sHeight = img.width;
+                    sy = (img.height - img.width) / 2;
+                }
+
+                ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, size, size);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); // compress to 0.7 quality
+                callback(compressedDataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
     window.onAvatarFileChange = function(input) {
         const file = input.files && input.files[0];
         if (!file) return;
-        if (file.size > 3145728) {
-            const errEl = document.getElementById('avatar-alert-error');
-            errEl.textContent = '圖片太大，請選擇 3MB 以下的圖片。';
-            errEl.style.display = 'block';
-            input.value = '';
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const dataUrl = e.target.result;
-            renderAvatarPreview(dataUrl);
-            saveAvatar(dataUrl);
-        };
-        reader.readAsDataURL(file);
+
+        cropAndCompressAvatar(file, function(compressedDataUrl) {
+            renderAvatarPreview(compressedDataUrl);
+            saveAvatar(compressedDataUrl);
+        });
     };
 
     window.removeAvatar = function() {

@@ -858,6 +858,61 @@
             </div>
         </div>
 
+        <!-- Email verify notice -->
+        <div id="email-verify-notice" style="display:none;">
+            <i class="fas fa-envelope" style="color:#ff9800;"></i>
+            <span><strong>請驗證你的電子郵件！</strong> 我們已發送了驗證連結，請查收並點擊連結完成驗證。</span>
+        </div>
+
+        <!-- Upgrade notice -->
+        <div id="upgrade-notice" style="display:none; background: linear-gradient(135deg, #1e3820, #2c4d2c); border: 1px solid var(--app-border, #2d4d2d); border-radius: 12px; padding: 1.1em 1.3em; margin: 0 1em 1em; cursor: pointer; text-align: left;" onclick="window.location.href='/profile-setup.html'">
+            <div style="display:flex; align-items:center; gap:0.9em;">
+                <div style="font-size:1.8em; color:var(--app-accent, #6dba65); flex-shrink:0;"><i class="fas fa-unlock-alt"></i></div>
+                <div style="flex:1;">
+                    <h3 style="color:var(--app-accent, #6dba65); margin: 0 0 0.3em; font-size: 0.95em; font-weight:700;">高級特權未鎖定 🔓</h3>
+                    <p style="font-size: 0.82em; color: var(--app-text-secondary, #a8d8a0); margin: 0; line-height: 1.45;">您目前是普通會員。只需完善您的個人資料設定，即可免費升級為<strong>高級會員</strong>，解鎖 GPX 下載與多站自訂導航等核心高級權益！</p>
+                </div>
+                <div style="color:var(--app-accent, #6dba65); font-size:1.1em; flex-shrink:0;"><i class="fas fa-chevron-right"></i></div>
+            </div>
+        </div>
+
+        <!-- Ride history -->
+        <div class="db-section-title" style="margin-top:0.4em;">騎行記錄</div>
+        <div class="db-history-list" id="db-history-list">
+            <div id="db-history-empty" style="display:none;">
+                <i class="fas fa-biking"></i>
+                尚無騎行記錄，<a href="/routes" style="color:var(--app-accent,#6dba65);">去選一條路線</a>出發吧！
+            </div>
+        </div>
+        <button class="db-show-more-btn" id="db-history-more-btn" style="display:none;">查看更多騎行</button>
+
+        <!-- Gold Support -->
+        <div id="gold-support-section" class="db-admin-card" style="display:none; border-color:#d4af37; background:rgba(212,175,55,0.1);">
+            <h3 style="color:#d4af37;"><i class="fas fa-headset"></i> 金卡客服快速協助通道</h3>
+            <p>金卡會員專屬：你的諮詢將被優先處理。</p>
+            <a href="/chat?priority=gold" class="db-admin-btn" style="background:#d4af37; color:#000;">立即聯絡專屬客服</a>
+        </div>
+
+        <!-- Admin panel -->
+        <div id="admin-section" class="db-admin-card" style="display:none;">
+            <h3><i class="fas fa-shield-alt"></i> 管理員面板</h3>
+            <p>你可以管理網站用戶及查看資料。</p>
+            <a href="/admin" class="db-admin-btn"><i class="fas fa-tools"></i> 前往管理員後台</a>
+        </div>
+
+        <!-- Discord link card -->
+        <div id="discord-section" class="db-discord-card" style="display:none;">
+            <h3>
+                <svg style="width:1em;height:1em;vertical-align:-0.1em;margin-right:0.3em;" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.201 13.201 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028z"/>
+                </svg>
+                Discord 連結
+            </h3>
+            <div id="discord-status-area">
+                <p>載入中…</p>
+            </div>
+        </div>
+
         <!-- More links (app only) -->
         <div class="db-section-title app-only" style="margin-top:1em;">更多</div>
         <div class="db-more-grid app-only">
@@ -1541,6 +1596,10 @@
         var verifyBtn = document.getElementById('db-verify-user-btn');
         if (verifyBtn) verifyBtn.style.display = 'none';
 
+        // Hide upgrade notice by default
+        var upNotice = document.getElementById('upgrade-notice');
+        if (upNotice) upNotice.style.display = 'none';
+
         if (role === 'senior_admin') {
             badge.classList.add('db-role-senior-admin');
             badge.innerHTML = '<i class="fas fa-crown"></i> 高級管理員';
@@ -1562,7 +1621,8 @@
         } else {
             badge.classList.add('db-role-junior');
             badge.innerHTML = '<i class="fas fa-user"></i> 普通會員';
-            document.getElementById('upgrade-notice').style.display = '';
+            var upNotice = document.getElementById('upgrade-notice');
+            if (upNotice) upNotice.style.display = 'block';
             document.getElementById('admin-section').style.display = 'none';
         }
 

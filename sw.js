@@ -70,6 +70,23 @@ self.addEventListener('fetch', (event) => {
   // 只處理同源請求（跳過第三方 CDN 等）
   if (url.origin !== self.location.origin) return;
 
+  // 導航請求 (HTML 頁面)：Network-first with offline fallback
+  // 徹底解決 iOS Safari "Response served by service worker has redirections" 報錯
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok && !res.redirected) {
+            const clone = res.clone();
+            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
   // API 請求：Network-first，失敗時返回錯誤提示
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
