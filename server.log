@@ -1,3 +1,35 @@
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /terms.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:33:29] code 404, message File not found
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [03/Aug/2026 09:33:29] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:55:44] "GET /terms.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:55:44] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:55:44] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:55:44] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:55:44] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 09:55:45] code 404, message File not found
+127.0.0.1 - - [03/Aug/2026 09:55:45] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [03/Aug/2026 09:55:45] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 10:01:52] "GET /terms.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 10:01:52] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 10:01:52] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 10:01:53] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 10:01:53] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [03/Aug/2026 10:01:53] code 404, message File not found
+127.0.0.1 - - [03/Aug/2026 10:01:53] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [03/Aug/2026 10:01:53] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [04/Aug/2026 07:11:11] "GET /terms.html HTTP/1.1" 200 -
+127.0.0.1 - - [04/Aug/2026 07:11:11] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [04/Aug/2026 07:11:11] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [04/Aug/2026 07:11:11] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [04/Aug/2026 07:11:11] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [04/Aug/2026 07:11:12] code 404, message File not found
+127.0.0.1 - - [04/Aug/2026 07:11:12] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [04/Aug/2026 07:11:12] "GET /images/icon-192.png HTTP/1.1" 200 -
 127.0.0.1 - - [04/Aug/2026 07:07:06] "GET /profile-setup.html HTTP/1.1" 200 -
 127.0.0.1 - - [04/Aug/2026 07:07:07] "GET /css/main.css HTTP/1.1" 200 -
 127.0.0.1 - - [04/Aug/2026 07:07:07] "GET /js/main.js HTTP/1.1" 200 -

@@ -1572,3 +1572,31 @@ body.rank-gold .badge-count {
   background-color: #F0D372 !important;
   color: #000000 !important;
 }
+
+/* --- Global Terms Agreement Modal Scroll Area Text Color Lock --- */
+#global-terms-scroll-area,
+#global-terms-scroll-area div,
+#global-terms-scroll-area p,
+#global-terms-scroll-area li,
+#global-terms-scroll-area span,
+#global-terms-scroll-area strong,
+#global-terms-scroll-area h2,
+#global-terms-scroll-area h3,
+#global-terms-scroll-area ol,
+#global-terms-scroll-area ul,
+#global-terms-scroll-area a {
+  color: #e0f2f1 !important;
+  background-color: transparent !important;
+  border-color: rgba(109, 186, 101, 0.2) !important;
+}
+
+#global-terms-scroll-area .beta-callout-box {
+  background: rgba(191, 227, 64, 0.12) !important;
+  border-left: 4px solid #BFE340 !important;
+  color: #e8f5e9 !important;
+  padding: 1.2em 1.5em !important;
+  border-radius: 8px !important;
+  margin-bottom: 1.5em !important;
+  font-size: 0.92em !important;
+  line-height: 1.6 !important;
+}
