@@ -1116,7 +1116,22 @@ body.is-pwa #app-bottom-nav a.active {
 
 #app-bottom-nav {
     position: fixed;
-    z-index: 9999 !important; /* Ensure it is always floating above the SPA iframe viewport, but below Google One-Tap/System menus */
+    z-index: 999 !important; /* Ensure it is always floating above the SPA iframe viewport, but below Google One-Tap/System menus */
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Ensure Google Sign-In and One-Tap prompt overlay is absolutely on top of everything and not blocked by any liquid glass components */
+#credential_picker_container,
+iframe[src^="https://accounts.google.com/gsi/"] {
+    z-index: 2147483647 !important;
+}
+
+/* Hide bottom navigation bar during app splash screen loading */
+body.app-loading #app-bottom-nav {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(100px) !important;
+    transition: none !important;
 }
 
 #app-bottom-nav a {
@@ -1146,6 +1161,40 @@ body.is-pwa #app-bottom-nav a.active {
 body.app-light-theme .liquid-nav-bubble {
     background: rgba(46, 125, 50, 0.12) !important;
     box-shadow: 0 4px 12px rgba(46, 125, 50, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Dragging / Magnifier state for Liquid Glass Bottom Navigation */
+#app-bottom-nav.dragging .liquid-nav-bubble {
+    background: rgba(191, 227, 64, 0.35) !important;
+    box-shadow: 0 8px 24px rgba(191, 227, 64, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+    transform: scale(1.16) !important;
+    filter: brightness(1.2) !important;
+}
+
+#app-bottom-nav.dragging a {
+    transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.15s ease !important;
+}
+
+#app-bottom-nav.dragging a.drag-hover {
+    transform: scale(1.22) translateY(-6px) !important;
+    color: #BFE340 !important;
+    opacity: 1 !important;
+    z-index: 10 !important;
+}
+
+#app-bottom-nav.dragging a:not(.drag-hover) {
+    transform: scale(0.88) !important;
+    opacity: 0.5 !important;
+}
+
+body.app-light-theme #app-bottom-nav.dragging .liquid-nav-bubble {
+    background: rgba(46, 125, 50, 0.22) !important;
+    box-shadow: 0 8px 24px rgba(46, 125, 50, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+    filter: brightness(1.1) !important;
+}
+
+body.app-light-theme #app-bottom-nav.dragging a.drag-hover {
+    color: #2e7d32 !important;
 }
 
 /* Keep-Alive SPA Viewport & Tab Layout */
@@ -1708,6 +1757,27 @@ body.rank-gold #tasks-levelup-badge,
 body.rank-gold .badge-value,
 body.rank-gold .badge-count {
   background-color: #F0D372 !important;
+  color: #000000 !important;
+}
+
+/* Ensure the quick action items on the homepage have high contrast black icons and text on gold background */
+body.rank-gold .app-quick-item,
+body.rank-gold a.app-quick-item,
+body.rank-gold button.app-quick-item {
+  background-color: #F0D372 !important;
+  color: #000000 !important;
+  border: 1px solid #000000 !important;
+}
+
+body.rank-gold .app-quick-item *,
+body.rank-gold .app-quick-item i,
+body.rank-gold .app-quick-item span,
+body.rank-gold a.app-quick-item *,
+body.rank-gold a.app-quick-item i,
+body.rank-gold a.app-quick-item span,
+body.rank-gold button.app-quick-item *,
+body.rank-gold button.app-quick-item i,
+body.rank-gold button.app-quick-item span {
   color: #000000 !important;
 }
 

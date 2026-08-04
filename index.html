@@ -988,6 +988,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
 
         if (!silent && isColdStart && splashEl) {
             splashEl.style.display = 'flex';
+            document.body.classList.add('app-loading');
             sessionStorage.setItem('appSplashShown', '1');
         }
 
@@ -1071,6 +1072,7 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
     function _hideSplash(splashEl) {
         if (!splashEl || splashEl.style.display === 'none') return;
         splashEl.classList.add('splash-fade-out');
+        document.body.classList.remove('app-loading');
         setTimeout(() => { splashEl.style.display = 'none'; splashEl.classList.remove('splash-fade-out'); }, 420);
     }
 
