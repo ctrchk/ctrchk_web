@@ -253,6 +253,12 @@
     let currentHoveredLink = null;
     let isPointerDown = false;
 
+    // Cache variables to prevent layout thrashing during drag gestures
+    let cachedNavRect = null;
+    let cachedBubbleWidth = 0;
+    let cachedLinksData = [];
+    let bubbleEl = null;
+
     function getPointerX(e) {
       if (e.touches && e.touches.length > 0) {
         return e.touches[0].clientX;
@@ -275,6 +281,24 @@
       startY = getPointerY(e);
       isDragging = false;
       currentHoveredLink = originalActiveLink;
+
+      // Cache layout geometry on start to prevent layout thrashing during onMove
+      cachedNavRect = nav.getBoundingClientRect();
+      bubbleEl = nav.querySelector('.liquid-nav-bubble');
+      if (bubbleEl) {
+        cachedBubbleWidth = bubbleEl.getBoundingClientRect().width || (cachedNavRect.width / 5);
+      } else {
+        cachedBubbleWidth = cachedNavRect.width / 5;
+      }
+
+      const links = Array.from(nav.querySelectorAll('a'));
+      cachedLinksData = links.map(link => {
+        const rect = link.getBoundingClientRect();
+        return {
+          element: link,
+          center: rect.left + rect.width / 2
+        };
+      });
     }
 
     function onMove(e) {
@@ -295,39 +319,37 @@
       if (isDragging) {
         if (e.cancelable) e.preventDefault();
 
-        const bubble = nav.querySelector('.liquid-nav-bubble');
-        const navRect = nav.getBoundingClientRect();
-        let localX = clientX - navRect.left;
-        localX = Math.max(0, Math.min(localX, navRect.width));
-
-        if (bubble) {
-          const bubbleWidth = bubble.getBoundingClientRect().width || (navRect.width / 5);
-          let bubbleLeft = localX - bubbleWidth / 2;
-          bubbleLeft = Math.max(0, Math.min(bubbleLeft, navRect.width - bubbleWidth));
-
-          bubble.style.transition = 'none';
-          bubble.style.transform = `translate3d(${bubbleLeft}px, 0, 0) scale(1.16)`;
-          bubble.style.opacity = '1';
+        if (!cachedNavRect) {
+          cachedNavRect = nav.getBoundingClientRect();
         }
 
-        const links = Array.from(nav.querySelectorAll('a'));
+        let localX = clientX - cachedNavRect.left;
+        localX = Math.max(0, Math.min(localX, cachedNavRect.width));
+
+        if (bubbleEl) {
+          let bubbleLeft = localX - cachedBubbleWidth / 2;
+          bubbleLeft = Math.max(0, Math.min(bubbleLeft, cachedNavRect.width - cachedBubbleWidth));
+
+          bubbleEl.style.transition = 'none';
+          bubbleEl.style.transform = `translate3d(${bubbleLeft}px, 0, 0) scale(1.16)`;
+          bubbleEl.style.opacity = '1';
+        }
+
         let closestLink = null;
         let minDistance = Infinity;
 
-        links.forEach(link => {
-          const rect = link.getBoundingClientRect();
-          const center = rect.left + rect.width / 2;
-          const dist = Math.abs(clientX - center);
+        cachedLinksData.forEach(item => {
+          const dist = Math.abs(clientX - item.center);
           if (dist < minDistance) {
             minDistance = dist;
-            closestLink = link;
+            closestLink = item.element;
           }
         });
 
         if (closestLink && closestLink !== currentHoveredLink) {
-          links.forEach(link => {
-            link.classList.remove('drag-hover');
-            link.classList.remove('active');
+          cachedLinksData.forEach(item => {
+            item.element.classList.remove('drag-hover');
+            item.element.classList.remove('active');
           });
           currentHoveredLink = closestLink;
           currentHoveredLink.classList.add('drag-hover');
@@ -344,9 +366,8 @@
         if (e.cancelable) e.preventDefault();
         nav.classList.remove('dragging');
 
-        const links = Array.from(nav.querySelectorAll('a'));
-        links.forEach(link => {
-          link.classList.remove('drag-hover');
+        cachedLinksData.forEach(item => {
+          item.element.classList.remove('drag-hover');
         });
 
         if (currentHoveredLink) {
@@ -362,21 +383,24 @@
           originalActiveLink.classList.add('active');
         }
 
-        const bubble = nav.querySelector('.liquid-nav-bubble');
-        if (bubble) {
-          bubble.style.transition = '';
+        if (bubbleEl) {
+          bubbleEl.style.transition = '';
         }
         setTimeout(updateLiquidBubble, 30);
       } else {
-        const bubble = nav.querySelector('.liquid-nav-bubble');
-        if (bubble) {
-          bubble.style.transition = '';
+        if (bubbleEl) {
+          bubbleEl.style.transition = '';
         }
         nav.classList.remove('dragging');
-        const links = nav.querySelectorAll('a');
-        links.forEach(link => link.classList.remove('drag-hover'));
+        cachedLinksData.forEach(item => item.element.classList.remove('drag-hover'));
       }
       isDragging = false;
+
+      // Clean up cached references
+      cachedNavRect = null;
+      cachedBubbleWidth = 0;
+      cachedLinksData = [];
+      bubbleEl = null;
     }
 
     // Touch events for mobile support (cancelable on touchmove to prevent scroll/magnifier)
