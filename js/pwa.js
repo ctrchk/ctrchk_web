@@ -230,6 +230,10 @@
       nav.appendChild(a);
     });
 
+    // Disable long-press menus, link dragging, and magnifiers on the bottom nav to feel completely native
+    nav.addEventListener('contextmenu', e => e.preventDefault());
+    nav.addEventListener('dragstart', e => e.preventDefault());
+
     document.body.appendChild(nav);
 
     // Animate active liquid bubble on load
