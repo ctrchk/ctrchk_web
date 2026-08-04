@@ -569,12 +569,28 @@ export default async function handler(req, res) {
     if (!userData) return;
     try {
       const userId = userData.userId;
+
+      // Look up user mileage rank
+      const { rows: rankRows } = await query(
+        `SELECT mileage_rank FROM user_game_profile WHERE user_id = $1`,
+        [userId]
+      );
+      const rank = normalizeMileageRank(rankRows[0]?.mileage_rank || 'bronze');
+
+      if (rank !== 'gold' && rank !== 'silver') {
+        return res.status(403).json({ message: '此功能僅限銀卡或金卡會員使用' });
+      }
+
+      const isGold = rank === 'gold';
+      const days = isGold ? 7 : 30;
+      const titleText = isGold ? "每星期 AI 深度教練總結" : "每月份 AI 騎行簡報";
+
       const { rows: rides } = await query(
         `SELECT distance_km, duration_minutes, avg_speed_kmh, ride_date, route_name
          FROM cycling_history
-         WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '7 days'
+         WHERE user_id = $1 AND ride_date >= CURRENT_DATE - (INTERVAL '1 day' * $2)
          ORDER BY ride_date DESC`,
-        [userId]
+        [userId, days]
       );
 
       const totalKm = rides.reduce((sum, r) => sum + Number(r.distance_km || 0), 0);
@@ -586,7 +602,7 @@ export default async function handler(req, res) {
       if (process.env.GEMINI_API_KEY) {
         try {
           const aiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-          const prompt = `您是一位專業的城市單車教練（繁體中文/香港用語）。請根據用戶過去7天的騎行數據生成一份精簡有深度的騎行狀態分析報告（250字內），包含體能評價、安全提示、改進建議。
+          const prompt = `您是一位專業的城市單車教練（繁體中文/香港用語）。請根據用戶過去 ${days} 天的騎行數據生成一份【${titleText}】（250字內），包含體能評價、安全提示、改進建議。
 數據如下：
 - 總騎行次數：${rides.length}次
 - 總里程：${totalKm.toFixed(1)}公里
@@ -609,11 +625,11 @@ export default async function handler(req, res) {
 
       if (!reportText) {
         if (rides.length === 0) {
-          reportText = `🚴 **CTRC 智慧 AI 騎行教練報告** 🚴\n\n「嗨，破風手！上週你還沒有記錄任何單車行程。將軍澳與跨灣大橋的單車徑正在呼喚你！不論是 2 公里的地鐵接駁，還是海濱長廊的晚風漫遊，開始你的第一踩吧！建議下週給自己訂個小目標，在安全車道完成一次 3 公里的舒展騎行，建立低碳習慣。」`;
+          reportText = `🚴 **CTRC 智慧 AI 騎行教練 - ${titleText}** 🚴\n\n「嗨，破風手！過去 ${days} 天你還沒有記錄任何單車行程。將軍澳與跨灣大橋的單車徑正在呼喚你！不論是 2 公里的地鐵接駁，還是海濱長廊的晚風漫遊，開始你的第一踩吧！建議下週給自己訂個小目標，在安全車道完成一次 3 公里的舒展騎行，建立低碳習慣。」`;
         } else {
           const speedStatus = avgSpeed >= 20 ? "飛馳破風型" : (avgSpeed >= 12 ? "穩健通勤型" : "休閒漫步型");
           const hydrationTip = totalKm >= 15 ? "長途體能消耗較大，請務必隨身補充足夠電解質與水份。" : "短途通勤良好，保持呼吸節奏。";
-          reportText = `🚴 **CTRC 智慧 AI 騎行教練報告** 🚴\n\n「做得好！過去7天你完成了 **${rides.length} 次**騎行，累計里程達 **${totalKm.toFixed(1)} 公里**，平均時速 **${avgSpeed.toFixed(1)} km/h**，屬於典型的**${speedStatus}**。\n\n**體能分析**：你在有氧耐力上展現出卓越的規律性。總行駛時長 **${totalMin} 分鐘** 相當於為地球減碳 **${(totalKm * 0.21).toFixed(1)} kg CO₂**。平均時速非常勻稱，心肺負荷適中，踏頻配合極佳。\n\n**安全與建議**：${hydrationTip} 近期將軍澳海濱風向有些變化，逆風段建議身體微前傾降低風阻，維持 80-90 踏頻，把體力留給跨灣大橋的緩坡段。下週期待看到你解鎖更長的新路網！」`;
+          reportText = `🚴 **CTRC 智慧 AI 騎行教練 - ${titleText}** 🚴\n\n「做得好！過去 ${days} 天你完成了 **${rides.length} 次**騎行，累計里程達 **${totalKm.toFixed(1)} 公里**，平均時速 **${avgSpeed.toFixed(1)} km/h**，屬於典型的**${speedStatus}**。\n\n**體能分析**：你在有氧耐力上展現出卓越的規律性。總行駛時長 **${totalMin} 分鐘** 相當於為地球減碳 **${(totalKm * 0.21).toFixed(1)} kg CO₂**。平均時速非常勻稱，心肺負荷適中，踏頻配合極佳。\n\n**安全與建議**：${hydrationTip} 近期將軍澳海濱風向有些變化，逆風段建議身體微前傾降低風阻，維持 80-90 踏頻，把體力留給跨灣大橋的緩坡段。期待看到你解鎖更長的新路網！」`;
         }
       }
 

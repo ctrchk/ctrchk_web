@@ -1066,6 +1066,23 @@
         preview.appendChild(img);
         const removeBtn = document.getElementById('btn-avatar-remove');
         if (removeBtn) removeBtn.style.display = '';
+
+        // Apply Avatar Frame classes based on user's mileage rank
+        try {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const userObj = JSON.parse(userData);
+                const rank = String(userObj.mileage_rank || userObj.mileage_card || 'bronze').toLowerCase();
+                preview.classList.remove('rank-silver-avatar', 'rank-gold-avatar');
+                if (rank.includes('silver') || rank.includes('銀')) {
+                    preview.classList.add('rank-silver-avatar');
+                } else if (rank.includes('gold') || rank.includes('金')) {
+                    preview.classList.add('rank-gold-avatar');
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to apply avatar frame in profile preview:', e);
+        }
     }
 
     function cropAndCompressAvatar(file, callback) {
