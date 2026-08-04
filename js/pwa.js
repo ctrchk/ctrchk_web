@@ -16,17 +16,17 @@
     { id: 5, key: 'discord_basic', rank: 'bronze', label: 'Discord 基礎頻道訪問權' },
     { id: 6, key: 'reward_variable', rank: 'bronze', label: '騎行完成隨機獎勵（XP/里程幣）' },
     { id: 7, key: 'map_cycparkspace', rank: 'bronze', label: 'CYCPARKSPACE 單車泊位圖層' },
-    { id: 8, key: 'theme_silver', rank: 'silver', label: '銀卡專屬介面主題' },
+    { id: 8, key: 'theme_silver', rank: 'silver', label: '銀卡專屬介面主題與動態頭像框（銀白微發光圈）' },
     { id: 9, key: 'nav_multistop', rank: 'silver', label: '多站點自訂路線規劃（最多 5 站）' },
     { id: 10, key: 'weather_heavy_rain_alert', rank: 'silver', label: '惡劣天氣提醒與暴雨警告' },
     { id: 11, key: 'poster_no_watermark', rank: 'silver', label: '高清海報（減少水印）' },
     { id: 12, key: 'coin_bonus_silver', rank: 'silver', label: '里程幣收益永久加成 +5%' },
     { id: 13, key: 'map_issue_report', rank: 'silver', label: '路面障礙優先審核權' },
-    { id: 14, key: 'weekly_efficiency_report', rank: 'silver', label: '週度騎行效率分析' },
+    { id: 14, key: 'monthly_ai_report', rank: 'silver', label: '每月份 AI 騎行簡報' },
     { id: 15, key: 'discord_silver_role', rank: 'silver', label: 'Discord「銀色破風手」身分組' },
     { id: 26, key: 'map_cycramp', rank: 'silver', label: '無障礙斜坡與Ramp圖層' },
     { id: 16, key: 'map_3d_gold', rank: 'gold', label: '進階地圖視覺' },
-    { id: 17, key: 'theme_gold', rank: 'gold', label: '金卡專屬介面主題' },
+    { id: 17, key: 'theme_gold', rank: 'gold', label: '金卡專屬介面主題與 3D 黑曜石流金框' },
     { id: 18, key: 'poster_gold_copy', rank: 'gold', label: '海報進階文案樣式' },
     { id: 19, key: 'coin_bonus_gold', rank: 'gold', label: '里程幣收益永久加成 +15%' },
     { id: 20, key: 'route_naming_rights', rank: 'gold', label: '路線建議命名提案（提交審核）' },
@@ -35,6 +35,7 @@
     { id: 23, key: 'discord_emergency', rank: 'gold', label: '客服快速協助通道（規劃中）' },
     { id: 24, key: 'weekend_double_preview', rank: 'gold', label: '週末雙倍里程活動優先通知' },
     { id: 25, key: 'discord_gold_role', rank: 'gold', label: 'Discord「黃金領騎」稱號及身份組' },
+    { id: 27, key: 'weekly_ai_report', rank: 'gold', label: '每星期 AI 深度教練總結' },
   ];
 
   function normalizeRank(rankInput) {

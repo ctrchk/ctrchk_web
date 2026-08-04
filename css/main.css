@@ -1572,3 +1572,55 @@ body.rank-gold .badge-count {
   background-color: #F0D372 !important;
   color: #000000 !important;
 }
+
+/* ── Task: Exclusive Avatar Frames (Silver Dynamic Glow & Gold 3D Obsidian Gold Frame) ── */
+@keyframes silver-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.4), 0 0 12px rgba(209, 217, 223, 0.2);
+    border-color: rgba(209, 217, 223, 0.8) !important;
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.75), 0 0 20px rgba(209, 217, 223, 0.55);
+    border-color: #ffffff !important;
+  }
+}
+
+.rank-silver-avatar {
+  position: relative !important;
+  border: 3px solid rgba(209, 217, 223, 0.8) !important;
+  animation: silver-glow 3s infinite ease-in-out !important;
+}
+
+@keyframes gold-obsidian-flow {
+  0% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 8px rgba(240, 211, 114, 0.4), 0 0 15px rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    background-position: 100% 50%;
+    box-shadow: 0 0 16px rgba(240, 211, 114, 0.75), 0 0 25px rgba(0, 0, 0, 0.95);
+  }
+  100% {
+    background-position: 0% 50%;
+    box-shadow: 0 0 8px rgba(240, 211, 114, 0.4), 0 0 15px rgba(0, 0, 0, 0.8);
+  }
+}
+
+.rank-gold-avatar {
+  position: relative !important;
+  border: 3px solid transparent !important;
+  background: linear-gradient(135deg, #0d0d0d, #2a2a2a, #F0D372, #0d0d0d) !important;
+  background-size: 300% 300% !important;
+  animation: gold-obsidian-flow 4s ease infinite !important;
+  padding: 3px !important;
+  box-sizing: border-box !important;
+}
+
+.rank-gold-avatar img,
+.rank-gold-avatar .profile-avatar-inner {
+  border-radius: 50% !important;
+  border: 1px solid #000000 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
