@@ -1167,7 +1167,6 @@ body.app-light-theme .liquid-nav-bubble {
 #app-bottom-nav.dragging .liquid-nav-bubble {
     background: rgba(191, 227, 64, 0.35) !important;
     box-shadow: 0 8px 24px rgba(191, 227, 64, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
-    transform: scale(1.16) !important;
     filter: brightness(1.2) !important;
 }
 
@@ -1763,7 +1762,9 @@ body.rank-gold .badge-count {
 /* Ensure the quick action items on the homepage have high contrast black icons and text on gold background */
 body.rank-gold .app-quick-item,
 body.rank-gold a.app-quick-item,
-body.rank-gold button.app-quick-item {
+body.rank-gold button.app-quick-item,
+body.rank-gold #app-home .app-quick-item,
+body.rank-gold #app-home .app-quick-grid .app-quick-item {
   background-color: #F0D372 !important;
   color: #000000 !important;
   border: 1px solid #000000 !important;
@@ -1777,7 +1778,11 @@ body.rank-gold a.app-quick-item i,
 body.rank-gold a.app-quick-item span,
 body.rank-gold button.app-quick-item *,
 body.rank-gold button.app-quick-item i,
-body.rank-gold button.app-quick-item span {
+body.rank-gold button.app-quick-item span,
+body.rank-gold #app-home .app-quick-item i,
+body.rank-gold #app-home .app-quick-item span,
+body.rank-gold #app-home .app-quick-grid .app-quick-item i,
+body.rank-gold #app-home .app-quick-grid .app-quick-item span {
   color: #000000 !important;
 }
 
