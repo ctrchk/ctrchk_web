@@ -1459,6 +1459,25 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
 
+    if (req.body.action === 'submit-bug-report') {
+      const userData = await authenticate(req, res, false);
+      const { description, screenshot, page_url } = req.body;
+      if (!description) {
+        return res.status(400).json({ message: 'Missing description' });
+      }
+      try {
+        await query(
+          `INSERT INTO bug_reports (user_id, description, screenshot, page_url, status)
+           VALUES ($1, $2, $3, $4, 'pending')`,
+          [userData ? userData.userId : null, description, screenshot || null, page_url || null]
+        );
+        return res.status(200).json({ success: true });
+      } catch (err) {
+        console.error('submit-bug-report error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
     if (req.body.action === 'claim-task') {
       const userData = await authenticate(req, res);
       if (!userData) return;
