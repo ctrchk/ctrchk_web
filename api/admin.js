@@ -141,6 +141,37 @@ async function ensureAdminRouteSchema() {
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_center_lng DOUBLE PRECISION`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS map_zoom INTEGER`);
   await query(`ALTER TABLE department_config ADD COLUMN IF NOT EXISTS available BOOLEAN DEFAULT TRUE`);
+
+  // Create bug_reports table if not exists
+  await query(`
+    CREATE TABLE IF NOT EXISTS bug_reports (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      description TEXT,
+      screenshot TEXT,
+      page_url VARCHAR(2048),
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  // Create deleted_stations table if not exists
+  await query(`
+    CREATE TABLE IF NOT EXISTS deleted_stations (
+      id SERIAL PRIMARY KEY,
+      station_id VARCHAR(20),
+      area VARCHAR(20),
+      station_number INTEGER,
+      name_zh VARCHAR(255),
+      name_en VARCHAR(255),
+      lat DOUBLE PRECISION,
+      lon DOUBLE PRECISION,
+      road_name VARCHAR(255),
+      is_terminal BOOLEAN DEFAULT FALSE,
+      source VARCHAR(20) DEFAULT 'deleted',
+      deleted_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
 }
 
 /**
@@ -274,6 +305,35 @@ export default async function handler(req, res) {
         return res.status(200).json({ logs: rows });
       } catch (err) {
         console.error('get-terms-log error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
+    if (action === 'get-bug-reports') {
+      try {
+        const { rows } = await query(
+          `SELECT b.*, u.email, u.full_name, u.username
+           FROM bug_reports b
+           LEFT JOIN users u ON u.id = b.user_id
+           ORDER BY b.created_at DESC`
+        );
+        return res.status(200).json({ reports: rows });
+      } catch (err) {
+        console.error('get-bug-reports error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
+    if (action === 'get-deleted-stations') {
+      try {
+        const { rows } = await query(
+          `SELECT * FROM deleted_stations
+           WHERE deleted_at >= NOW() - INTERVAL '30 days'
+           ORDER BY deleted_at DESC`
+        );
+        return res.status(200).json({ stations: rows });
+      } catch (err) {
+        console.error('get-deleted-stations error:', err);
         return res.status(500).json({ message: 'Internal Server Error' });
       }
     }
@@ -423,16 +483,76 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
     }
     if (action === 'delete_dept') { await query(`DELETE FROM department_config WHERE dept_id = $1`, [b.dept_id]); return res.status(200).json({ success: true }); }
-    if (action === 'upsert_station') { const id = buildStationId(b.area, b.station_number); await query(`INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) ON CONFLICT (id) DO UPDATE SET area=EXCLUDED.area, station_number=EXCLUDED.station_number, name_zh=EXCLUDED.name_zh, name_en=EXCLUDED.name_en, lat=EXCLUDED.lat, lon=EXCLUDED.lon, road_name=EXCLUDED.road_name, updated_at=NOW()`, [id, b.area, b.station_number, b.name_zh, b.name_en, b.lat, b.lon, b.road_name]); return res.status(200).json({ success: true, id }); }
+    if (action === 'resolve-bug-report') {
+        await query(`UPDATE bug_reports SET status = $1 WHERE id = $2`, [b.status, b.bug_id]);
+        return res.status(200).json({ success: true });
+    }
+    if (action === 'restore-deleted-station') {
+        const { rows } = await query(`SELECT * FROM deleted_stations WHERE id = $1`, [b.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Station backup not found' });
+        }
+        const st = rows[0];
+        await query(
+            `INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+             ON CONFLICT (id) DO UPDATE SET
+                area = EXCLUDED.area, station_number = EXCLUDED.station_number,
+                name_zh = EXCLUDED.name_zh, name_en = EXCLUDED.name_en,
+                lat = EXCLUDED.lat, lon = EXCLUDED.lon,
+                road_name = EXCLUDED.road_name, is_terminal = EXCLUDED.is_terminal,
+                updated_at = NOW()`,
+            [st.station_id, st.area, st.station_number, st.name_zh, st.name_en, st.lat, st.lon, st.road_name, st.is_terminal]
+        );
+        return res.status(200).json({ success: true });
+    }
+    if (action === 'upsert_station') {
+        const id = buildStationId(b.area, b.station_number);
+        // Backup old one if exists
+        const { rows: existing } = await query(`SELECT * FROM stations WHERE id = $1`, [id]);
+        if (existing.length > 0) {
+            const e = existing[0];
+            await query(
+                `INSERT INTO deleted_stations (station_id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal, source)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'replaced')`,
+                [e.id, e.area, e.station_number, e.name_zh, e.name_en, e.lat, e.lon, e.road_name, !!e.is_terminal]
+            );
+        }
+        await query(`INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) ON CONFLICT (id) DO UPDATE SET area=EXCLUDED.area, station_number=EXCLUDED.station_number, name_zh=EXCLUDED.name_zh, name_en=EXCLUDED.name_en, lat=EXCLUDED.lat, lon=EXCLUDED.lon, road_name=EXCLUDED.road_name, updated_at=NOW()`, [id, b.area, b.station_number, b.name_zh, b.name_en, b.lat, b.lon, b.road_name]);
+        return res.status(200).json({ success: true, id });
+    }
     if (action === 'import_stations_csv') {
         const rows = csvRowsToObjects(b.csv_content); for (const r of rows) {
             const area = pickCsvValue(r, ['area']), num = parseInt(pickCsvValue(r, ['station_number', 'no']), 10), name = pickCsvValue(r, ['name_zh', 'name']), lat = Number(pickCsvValue(r, ['lat'])), lon = Number(pickCsvValue(r, ['lon']));
             if (!area || !num || !name || !lat || !lon) continue;
-            await query(`INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) ON CONFLICT (id) DO UPDATE SET area=EXCLUDED.area, station_number=EXCLUDED.station_number, name_zh=EXCLUDED.name_zh, name_en=EXCLUDED.name_en, lat=EXCLUDED.lat, lon=EXCLUDED.lon, road_name=EXCLUDED.road_name, updated_at=NOW()`, [buildStationId(area, num), area, num, name, pickCsvValue(r, ['name_en']), lat, lon, pickCsvValue(r, ['road_name'])]);
+            const id = buildStationId(area, num);
+            // Backup old one if exists
+            const { rows: existing } = await query(`SELECT * FROM stations WHERE id = $1`, [id]);
+            if (existing.length > 0) {
+                const e = existing[0];
+                await query(
+                    `INSERT INTO deleted_stations (station_id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal, source)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'replaced')`,
+                    [e.id, e.area, e.station_number, e.name_zh, e.name_en, e.lat, e.lon, e.road_name, !!e.is_terminal]
+                );
+            }
+            await query(`INSERT INTO stations (id, area, station_number, name_zh, name_en, lat, lon, road_name, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) ON CONFLICT (id) DO UPDATE SET area=EXCLUDED.area, station_number=EXCLUDED.station_number, name_zh=EXCLUDED.name_zh, name_en=EXCLUDED.name_en, lat=EXCLUDED.lat, lon=EXCLUDED.lon, road_name=EXCLUDED.road_name, updated_at=NOW()`, [id, area, num, name, pickCsvValue(r, ['name_en']), lat, lon, pickCsvValue(r, ['road_name'])]);
         }
         return res.status(200).json({ success: true });
     }
-    if (action === 'delete_station') { await query(`DELETE FROM stations WHERE id = $1`, [b.station_id]); return res.status(200).json({ success: true }); }
+    if (action === 'delete_station') {
+        const { rows: existing } = await query(`SELECT * FROM stations WHERE id = $1`, [b.station_id]);
+        if (existing.length > 0) {
+            const e = existing[0];
+            await query(
+                `INSERT INTO deleted_stations (station_id, area, station_number, name_zh, name_en, lat, lon, road_name, is_terminal, source)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'deleted')`,
+                [e.id, e.area, e.station_number, e.name_zh, e.name_en, e.lat, e.lon, e.road_name, !!e.is_terminal]
+            );
+        }
+        await query(`DELETE FROM stations WHERE id = $1`, [b.station_id]);
+        return res.status(200).json({ success: true });
+    }
     if (action === 'set_terminal_station') { await query(`UPDATE stations SET is_terminal = $1, updated_at = NOW() WHERE id = $2`, [!!b.is_terminal, b.station_id]); return res.status(200).json({ success: true }); }
     if (action === 'upsert_managed_route') {
         await query(`INSERT INTO routes (dept, route_number, start_station_id, end_station_id, type, stops, rewards, alias, bg_color, estimated_minutes, route_fare, unlock_type, unlock_value, tags, gpx, length_text, updated_at) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13,$14::jsonb,$15::jsonb,$16,NOW()) ON CONFLICT (dept, route_number) DO UPDATE SET start_station_id=EXCLUDED.start_station_id, end_station_id=EXCLUDED.end_station_id, type=EXCLUDED.type, stops=EXCLUDED.stops, rewards=EXCLUDED.rewards, alias=EXCLUDED.alias, bg_color=EXCLUDED.bg_color, estimated_minutes=EXCLUDED.estimated_minutes, route_fare=EXCLUDED.route_fare, unlock_type=EXCLUDED.unlock_type, unlock_value=EXCLUDED.unlock_value, tags=EXCLUDED.tags, gpx=EXCLUDED.gpx, length_text=EXCLUDED.length_text, updated_at=NOW()`, [b.dept, b.route_number, b.start_station_id, b.end_station_id, b.type, JSON.stringify(b.stops || []), JSON.stringify(b.rewards || {}), b.alias, b.bg_color, b.estimated_minutes, b.route_fare || 0, b.unlock_type, b.unlock_value, JSON.stringify(b.tags || []), JSON.stringify(b.gpx || []), b.length_text]);

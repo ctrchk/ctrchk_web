@@ -775,6 +775,9 @@
 
       // Initialize PWA-only Keep-Alive SPA System
       initPwaSpaSystem();
+
+      // Inject Bug Report button
+      injectPwaBugReportButton();
     }
     // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();
@@ -785,6 +788,318 @@
       refreshMembershipTheme();
     }
   });
+
+  function injectPwaBugReportButton() {
+    if (document.getElementById('pwa-bug-report-btn')) return;
+
+    // Inject styles
+    const style = document.createElement('style');
+    style.textContent = `
+      #pwa-bug-report-btn {
+        position: fixed;
+        right: 16px;
+        top: 40%;
+        transform: translateY(-50%);
+        z-index: 99999;
+        background: var(--app-accent, #BFE340);
+        color: #121f14;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        cursor: pointer;
+        font-size: 1.4em;
+        transition: transform 0.2s, background-color 0.2s;
+      }
+      #pwa-bug-report-btn:active {
+        transform: translateY(-50%) scale(0.9);
+      }
+      .bug-modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: fadeInBug 0.25s ease-out;
+      }
+      .bug-modal-card {
+        background: #121f14;
+        border: 1px solid #2d4d2d;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 440px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        color: #e8f5e9;
+        animation: slideUpBug 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      .bug-modal-title {
+        font-size: 1.25em;
+        font-weight: bold;
+        color: var(--app-accent, #BFE340);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .bug-screenshot-container {
+        width: 100%;
+        max-height: 180px;
+        overflow: hidden;
+        border: 1px solid #2d4d2d;
+        border-radius: 8px;
+        background: #0d1a12;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .bug-screenshot-preview {
+        width: 100%;
+        height: auto;
+        max-height: 180px;
+        object-fit: contain;
+      }
+      .bug-textarea {
+        width: 100%;
+        height: 100px;
+        padding: 12px;
+        border: 1px solid #2d4d2d;
+        border-radius: 8px;
+        background: #0d1a12;
+        color: #fff;
+        font-size: 0.95em;
+        resize: none;
+        margin-bottom: 16px;
+        box-sizing: border-box;
+      }
+      .bug-textarea:focus {
+        outline: none;
+        border-color: var(--app-accent, #BFE340);
+      }
+      .bug-buttons {
+        display: flex;
+        gap: 12px;
+      }
+      .bug-btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .bug-btn-cancel {
+        background: rgba(255,255,255,0.1);
+        color: #a8d8a0;
+      }
+      .bug-btn-submit {
+        background: var(--app-accent, #BFE340);
+        color: #121f14;
+      }
+      .bug-btn:active {
+        opacity: 0.8;
+      }
+      @keyframes fadeInBug {
+        from { opacity: 0; } to { opacity: 1; }
+      }
+      @keyframes slideUpBug {
+        from { transform: translateY(20px); } to { transform: translateY(0); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    const btn = document.createElement('div');
+    btn.id = 'pwa-bug-report-btn';
+    btn.innerHTML = `<i class="fas fa-bug"></i>`;
+    btn.title = '回報問題';
+
+    btn.addEventListener('click', () => {
+      btn.style.pointerEvents = 'none';
+      btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+
+      loadHtml2Canvas(() => {
+        // Find active element to capture
+        let targetEl = document.body;
+        const activeTabEl = document.querySelector('.spa-tab-content.active');
+        if (activeTabEl) {
+          const iframe = activeTabEl.querySelector('iframe');
+          if (iframe && iframe.contentDocument && iframe.contentDocument.body) {
+            targetEl = iframe.contentDocument.body;
+          } else {
+            targetEl = activeTabEl;
+          }
+        }
+
+        window.html2canvas(targetEl, {
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          ignoreElements: (element) => {
+            return element.id === 'pwa-bug-report-btn' || element.classList.contains('bug-modal-overlay');
+          }
+        }).then(canvas => {
+          downscaleCanvas(canvas, 800, (dataUrl) => {
+            btn.style.pointerEvents = 'auto';
+            btn.innerHTML = `<i class="fas fa-bug"></i>`;
+            showBugReportModal(dataUrl);
+          });
+        }).catch(err => {
+          console.error('Screenshot failed:', err);
+          btn.style.pointerEvents = 'auto';
+          btn.innerHTML = `<i class="fas fa-bug"></i>`;
+          alert('截圖失敗，您仍可提交問題描述。');
+          showBugReportModal(null);
+        });
+      });
+    });
+
+    document.body.appendChild(btn);
+  }
+
+  function loadHtml2Canvas(callback) {
+    if (window.html2canvas) {
+      callback();
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = callback;
+    document.head.appendChild(s);
+  }
+
+  function downscaleCanvas(canvas, maxWidth, callback) {
+    const width = canvas.width;
+    const height = canvas.height;
+    if (width <= maxWidth) {
+      callback(canvas.toDataURL('image/jpeg', 0.6));
+      return;
+    }
+    const ratio = maxWidth / width;
+    const newWidth = maxWidth;
+    const newHeight = height * ratio;
+
+    const resCanvas = document.createElement('canvas');
+    resCanvas.width = newWidth;
+    resCanvas.height = newHeight;
+    const ctx = resCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
+    callback(resCanvas.toDataURL('image/jpeg', 0.6));
+  }
+
+  function showBugReportModal(screenshotDataUrl) {
+    // Remove existing
+    const existing = document.querySelector('.bug-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'bug-modal-overlay';
+
+    const card = document.createElement('div');
+    card.className = 'bug-modal-card';
+
+    // Get active URL
+    let pageUrl = window.location.pathname + window.location.search;
+    const activeTabEl = document.querySelector('.spa-tab-content.active');
+    if (activeTabEl) {
+      const iframe = activeTabEl.querySelector('iframe');
+      if (iframe) {
+        try {
+          const loc = iframe.contentWindow.location;
+          pageUrl = loc.pathname + loc.search;
+        } catch (_) {
+          pageUrl = activeTabEl.dataset.url || pageUrl;
+        }
+      } else {
+        pageUrl = activeTabEl.dataset.url || pageUrl;
+      }
+    }
+
+    let screenshotHtml = '';
+    if (screenshotDataUrl) {
+      screenshotHtml = `
+        <div class="bug-screenshot-container">
+          <img src="${screenshotDataUrl}" class="bug-screenshot-preview" alt="Screenshot Preview">
+        </div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="bug-modal-title">
+        <i class="fas fa-bug"></i> 回報 Beta 版問題
+      </div>
+      <div style="font-size: 0.82em; color: #a8d8a0; margin-bottom: 12px;">
+        目前頁面：<code style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">${pageUrl}</code>
+      </div>
+      ${screenshotHtml}
+      <textarea class="bug-textarea" placeholder="請詳細描述您遇到的問題、操作步驟或錯誤說明..." required></textarea>
+      <div class="bug-buttons">
+        <button class="bug-btn bug-btn-cancel">取消</button>
+        <button class="bug-btn bug-btn-submit">提交問題</button>
+      </div>
+    `;
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    const textarea = card.querySelector('.bug-textarea');
+    textarea.focus();
+
+    card.querySelector('.bug-btn-cancel').onclick = () => {
+      overlay.remove();
+    };
+
+    card.querySelector('.bug-btn-submit').onclick = async () => {
+      const desc = textarea.value.trim();
+      if (!desc) {
+        alert('請填寫問題說明！');
+        return;
+      }
+
+      const submitBtn = card.querySelector('.bug-btn-submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '提交中...';
+
+      const token = localStorage.getItem('accessToken') || '';
+      try {
+        const response = await fetch('/api/user?action=submit-bug-report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            description: desc,
+            screenshot: screenshotDataUrl || null,
+            page_url: pageUrl
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          alert('問題回報成功！感謝您的反饋！');
+          overlay.remove();
+        } else {
+          alert('提交失敗: ' + (data.message || '未知錯誤'));
+          submitBtn.disabled = false;
+          submitBtn.textContent = '提交問題';
+        }
+      } catch (err) {
+        alert('提交出錯: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = '提交問題';
+      }
+    };
+  }
 
   // ── 推送通知權限申請 ────────────────────────────────────────────────────
   async function requestNotificationPermission() {

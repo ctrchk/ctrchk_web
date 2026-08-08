@@ -362,6 +362,9 @@
                 <button class="tab-btn" onclick="showTab('terms-log'); loadTermsLog();">
                     <i class="fas fa-file-signature"></i> 條款同意記錄
                 </button>
+                <button class="tab-btn" onclick="showTab('bugs'); loadBugReports();">
+                    <i class="fas fa-bug"></i> 故障管理
+                </button>
             </div>
 
             <!-- 用戶管理標籤 -->
@@ -722,6 +725,20 @@
                             <tbody id="station-admin-tbody"></tbody>
                         </table>
                     </div>
+
+                    <h5 style="margin: 1.5em 0 0.5em; color: #2c3e50;"><i class="fas fa-history"></i> 已刪除與被替代車站 (30天內可還原)</h5>
+                    <div style="overflow:auto; margin-top:0.5em; max-height: 250px;">
+                        <table class="users-table" style="background: #fafafa;">
+                            <thead>
+                                <tr style="background: #e9ecef;">
+                                    <th>原 ID</th><th>中文站名</th><th>經緯度</th><th>類型</th><th>異動時間</th><th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deleted-station-tbody">
+                                <tr><td colspan="6" style="text-align:center; color:#888;">無最近的已刪除或替代車站。</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
@@ -917,6 +934,39 @@
                         </thead>
                         <tbody id="terms-log-tbody">
                             <tr><td colspan="7" style="text-align:center; color:#888;">暫無同意記錄。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 故障管理標籤 -->
+            <div id="tab-bugs" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-bug"></i> 故障管理 (Bug Reports)</h3>
+                <p style="color:#555; font-size:0.9em;">檢視所有用戶或遊客回報的問題與截圖。可以將未解決的報告標記為「已完成」，已完成的將單獨顯示在「已處理bug」分類中。</p>
+
+                <div style="display:flex; gap:10px; margin-bottom:1.5em; border-bottom:1px solid #ddd; padding-bottom:10px;">
+                    <button id="bug-filter-pending" class="cta-button" style="background:#2c3e50; color:#fff;" onclick="filterBugReports('pending')">待處理 (<span id="count-bug-pending">0</span>)</button>
+                    <button id="bug-filter-resolved" class="cta-button" style="background:#888; color:#fff;" onclick="filterBugReports('resolved')">已處理bug (<span id="count-bug-resolved">0</span>)</button>
+                </div>
+
+                <div id="bugs-loading" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入故障報告資料...</p>
+                </div>
+
+                <div id="bugs-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>回報者 / 頁面</th>
+                                <th>問題描述</th>
+                                <th>螢幕截圖</th>
+                                <th>回報時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bugs-tbody">
+                            <tr><td colspan="5" style="text-align:center; color:#888;">暫無故障報告。</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2343,7 +2393,7 @@
             // Load department admin table
             await loadDeptAdminData();
 
-            await Promise.all([loadGpxOptions(), loadStationRouteAdminData()]);
+            await Promise.all([loadGpxOptions(), loadStationRouteAdminData(), loadDeletedStations()]);
         }
 
         async function loadStationRouteAdminData() {
@@ -2475,6 +2525,7 @@
                 msgEl.textContent = `✅ 已儲存站點 ${data.id || ''}`;
                 resetStationAdminForm();
                 await loadStationRouteAdminData();
+                await loadDeletedStations();
             } catch (e) {
                 msgEl.style.color = 'red';
                 msgEl.textContent = `❌ ${e.message}`;
@@ -2497,6 +2548,7 @@
                 msgEl.style.color = 'green';
                 msgEl.textContent = `✅ 已刪除 ${id}`;
                 await loadStationRouteAdminData();
+                await loadDeletedStations();
             } catch (e) {
                 msgEl.style.color = 'red';
                 msgEl.textContent = `❌ ${e.message}`;
@@ -2857,6 +2909,7 @@
                     msgEl.textContent += `（部分錯誤：${data.errors.slice(0, 2).join('；')}）`;
                 }
                 await loadStationRouteAdminData();
+                await loadDeletedStations();
             } catch (e) {
                 msgEl.style.color = 'red';
                 msgEl.textContent = `❌ ${e.message}`;
@@ -3248,6 +3301,211 @@
             } catch (err) {
                 loading.style.display = 'none';
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
+            }
+        }
+
+        // ── 故障管理 (Bug Reports) JS ──────────────────────────────────────────
+        let allBugReports = [];
+        let currentBugFilter = 'pending';
+
+        async function loadBugReports() {
+            const loading = document.getElementById('bugs-loading');
+            const tbody = document.getElementById('bugs-tbody');
+            if (!loading || !tbody) return;
+
+            loading.style.display = 'block';
+            tbody.innerHTML = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin?action=get-bug-reports', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+
+                loading.style.display = 'none';
+                allBugReports = data.reports || [];
+
+                updateBugCounts();
+                renderBugReports();
+            } catch (err) {
+                loading.style.display = 'none';
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
+            }
+        }
+
+        function updateBugCounts() {
+            const pendingCount = allBugReports.filter(b => b.status === 'pending').length;
+            const resolvedCount = allBugReports.filter(b => b.status === 'resolved').length;
+
+            document.getElementById('count-bug-pending').textContent = pendingCount;
+            document.getElementById('count-bug-resolved').textContent = resolvedCount;
+        }
+
+        function filterBugReports(filter) {
+            currentBugFilter = filter;
+            const pBtn = document.getElementById('bug-filter-pending');
+            const rBtn = document.getElementById('bug-filter-resolved');
+            if (pBtn) {
+                pBtn.style.background = filter === 'pending' ? '#2c3e50' : '#888';
+                pBtn.style.color = '#fff';
+            }
+            if (rBtn) {
+                rBtn.style.background = filter === 'resolved' ? '#2c3e50' : '#888';
+                rBtn.style.color = '#fff';
+            }
+            renderBugReports();
+        }
+
+        function renderBugReports() {
+            const tbody = document.getElementById('bugs-tbody');
+            const list = allBugReports.filter(b => b.status === currentBugFilter);
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">此分類下暫無任何報告。</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(b => {
+                const dateStr = b.created_at ? new Date(b.created_at).toLocaleString('zh-HK') : '—';
+                const reporter = b.email
+                    ? `<div><strong>${escapeHtml(b.full_name || '用戶')}</strong></div>
+                       <div style="font-size:0.8em; color:#888;">${escapeHtml(b.email)}</div>`
+                    : `<span style="color:#888; font-style:italic;">訪客 / 未登入</span>`;
+
+                const pageCode = b.page_url
+                    ? `<div style="margin-top:5px; font-size:0.8em; color:#e67e22;">
+                         頁面: <code style="background:rgba(0,0,0,0.05); padding:2px 4px; border-radius:4px;">${escapeHtml(b.page_url)}</code>
+                       </div>`
+                    : '';
+
+                const screenshotHtml = b.screenshot
+                    ? `<img src="${b.screenshot}" style="max-width:120px; max-height:80px; cursor:zoom-in; border:1px solid #ddd; border-radius:4px;"
+                            onclick="openBugScreenshotModal('${b.screenshot}')" title="點擊放大">`
+                    : '<span style="color:#aaa; font-style:italic;">無截圖</span>';
+
+                const actionButton = b.status === 'pending'
+                    ? `<button class="action-btn btn-promote" onclick="resolveBugReport(${b.id}, 'resolved')">標註已完成</button>`
+                    : `<span style="font-size:0.85em; color:green; font-weight:bold;"><i class="fas fa-check-circle"></i> 已處理</span>`;
+
+                return `
+                    <tr>
+                        <td>
+                            ${reporter}
+                            ${pageCode}
+                        </td>
+                        <td style="max-width:260px; word-break:break-all; white-space:pre-wrap;">${escapeHtml(b.description)}</td>
+                        <td>${screenshotHtml}</td>
+                        <td><span style="font-size:0.85em;">${dateStr}</span></td>
+                        <td>${actionButton}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function resolveBugReport(id, status) {
+            if (!confirm('確定將此報告標註為「已完成」？')) return;
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'resolve-bug-report', bug_id: id, status: status })
+                });
+                if (handleTokenError(resp)) return;
+                if (resp.ok) {
+                    alert('標註成功！');
+                    loadBugReports();
+                } else {
+                    const data = await resp.json();
+                    alert('操作失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
+            }
+        }
+
+        function openBugScreenshotModal(imgUrl) {
+            // Create dynamic modal
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed; inset:0; z-index:200000; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; cursor:zoom-out;';
+            overlay.innerHTML = `<img src="${imgUrl}" style="max-width:95vw; max-height:95vh; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.5); border-radius:8px;">`;
+            overlay.onclick = () => overlay.remove();
+            document.body.appendChild(overlay);
+        }
+
+        // ── 已刪除車站管理 JS ──────────────────────────────────────────────────
+        let deletedStationsData = [];
+
+        async function loadDeletedStations() {
+            const tbody = document.getElementById('deleted-station-tbody');
+            if (!tbody) return;
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin?action=get-deleted-stations', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+                deletedStationsData = data.stations || [];
+                renderDeletedStationsTable();
+            } catch (err) {
+                console.error('loadDeletedStations error:', err);
+            }
+        }
+
+        function renderDeletedStationsTable() {
+            const tbody = document.getElementById('deleted-station-tbody');
+            if (!tbody) return;
+            if (!deletedStationsData.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">無最近的已刪除或替代車站。</td></tr>';
+                return;
+            }
+            tbody.innerHTML = deletedStationsData.map(st => {
+                const typeText = st.source === 'replaced' ? '<span style="color:#d35400;">🔄 被替代</span>' : '<span style="color:#c0392b;">❌ 已刪除</span>';
+                const dateStr = st.deleted_at ? new Date(st.deleted_at).toLocaleString('zh-HK') : '—';
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(st.station_id)}</strong></td>
+                        <td>${escapeHtml(st.name_zh || '-')}<br><span style="font-size:0.8em;color:#666;">${escapeHtml(st.name_en || '')}</span></td>
+                        <td style="font-size:0.85em;">${st.lat ? st.lat.toFixed(5) : '-'}, ${st.lon ? st.lon.toFixed(5) : '-'}</td>
+                        <td>${typeText}</td>
+                        <td><span style="font-size:0.85em;">${dateStr}</span></td>
+                        <td>
+                            <button class="action-btn btn-promote" onclick="restoreDeletedStation(${st.id})">還原</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function restoreDeletedStation(id) {
+            if (!confirm('確定要將此車站資料還原？這將覆蓋現有同編號的車站。')) return;
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'restore-deleted-station', id: id })
+                });
+                if (handleTokenError(resp)) return;
+                if (resp.ok) {
+                    alert('還原成功！');
+                    await loadStationRouteAdminData();
+                    await loadDeletedStations();
+                } else {
+                    const data = await resp.json();
+                    alert('還原失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('錯誤: ' + err.message);
             }
         }
     </script>
