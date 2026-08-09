@@ -190,6 +190,12 @@ async function initGoogleSignIn() {
     const container = document.getElementById('nav-google-login-container');
     if (!container || localStorage.getItem('accessToken')) return;
 
+    // Skip initialization in the header on login or registration pages to prevent GIS multiple-initialization conflicts
+    const path = window.location.pathname;
+    if (path.includes('login') || path.includes('register')) {
+        return;
+    }
+
     try {
         const resp = await fetch('/api/user?action=google-client-id');
         if (!resp.ok) return;

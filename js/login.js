@@ -28,14 +28,26 @@ async function loadGoogleSignIn() {
     } else {
         // GIS 提供 window.onGoogleLibraryLoad 作為載入完成的標準回調
         window.onGoogleLibraryLoad = initGoogleButton;
+        // 額外加上定時器輪詢確保加載成功
+        const interval = setInterval(() => {
+            if (typeof google !== 'undefined' && google.accounts) {
+                clearInterval(interval);
+                initGoogleButton();
+            }
+        }, 100);
+        setTimeout(() => clearInterval(interval), 10000);
     }
 }
 
+let isGoogleBtnInitialized = false;
+
 function initGoogleButton() {
+    if (isGoogleBtnInitialized) return;
     if (typeof google === 'undefined' || !google.accounts) {
         console.error('Google Identity Services 函式庫載入失敗');
         return;
     }
+    isGoogleBtnInitialized = true;
 
     google.accounts.id.initialize({
         client_id: googleClientId,
