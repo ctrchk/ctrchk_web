@@ -1459,7 +1459,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
 
-    if (req.body.action === 'submit-bug-report') {
+    if (req.body.action === 'submit-bug-report' || req.query.action === 'submit-bug-report') {
       const userData = await authenticate(req, res, false);
       const { description, screenshot, page_url } = req.body;
       if (!description) {
