@@ -899,12 +899,12 @@
         transition: opacity 0.2s;
       }
       .bug-btn-cancel {
-        background: rgba(255,255,255,0.1);
-        color: #a8d8a0;
+        background: rgba(255,255,255,0.1) !important;
+        color: #a8d8a0 !important;
       }
       .bug-btn-submit {
-        background: var(--app-accent, #BFE340);
-        color: #121f14;
+        background: var(--app-accent, #BFE340) !important;
+        color: #121f14 !important;
       }
       .bug-btn:active {
         opacity: 0.8;
@@ -914,6 +914,27 @@
       }
       @keyframes slideUpBug {
         from { transform: translateY(20px); } to { transform: translateY(0); }
+      }
+
+      /* Black-gold theme overrides to guarantee text visibility */
+      body.rank-gold .bug-modal-card * {
+        color: #F0D372 !important;
+      }
+      body.rank-gold .bug-modal-card .bug-btn-submit {
+        background-color: #F0D372 !important;
+        color: #000000 !important;
+        border: 2px solid #F0D372 !important;
+      }
+      body.rank-gold .bug-modal-card .bug-btn-submit * {
+        color: #000000 !important;
+      }
+      body.rank-gold .bug-modal-card .bug-btn-cancel {
+        background-color: #000000 !important;
+        color: #F0D372 !important;
+        border: 1px solid #F0D372 !important;
+      }
+      body.rank-gold .bug-modal-card .bug-btn-cancel * {
+        color: #F0D372 !important;
       }
     `;
     document.head.appendChild(style);
@@ -1078,6 +1099,7 @@
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
           body: JSON.stringify({
+            action: 'submit-bug-report',
             description: desc,
             screenshot: screenshotDataUrl || null,
             page_url: pageUrl
