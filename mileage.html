@@ -1758,20 +1758,45 @@
             const userProgressionSec = document.getElementById('user-progression-sec');
             if (userProgressionSec) userProgressionSec.style.display = 'block';
 
-            // Level XP Calculations (XP required for next level is approx level * 1000)
+            // Level XP Calculations using the correct non-linear thresholds
+            const LEVEL_XP = [
+                0, 80, 200, 380, 620, 950, 1400, 1980, 2700, 3600,
+                4000, 5100, 6500, 8100, 10000, 12200, 14800, 17800, 21200, 25200,
+                28200, 33000, 38300, 44200, 50600, 57800, 65500, 74100, 83500, 93900,
+                98800, 110600, 123500, 137800, 153500, 170700, 189700, 210500, 233500, 258700,
+                267300, 295800, 327100, 361500, 399400, 441100, 487000, 537500, 593000, 654000,
+            ];
+
+            function getLevelThreshold(lvl) {
+                const n = lvl - 1;
+                if (n < LEVEL_XP.length) return LEVEL_XP[n];
+                const BASE_GAP = 61000;
+                const GROWTH = 1.10;
+                const BASE_XP = 654000;
+                const BASE_LVL = 50;
+                return BASE_XP + BASE_GAP * (Math.pow(GROWTH, n - BASE_LVL) - 1) / (GROWTH - 1);
+            }
+
             const levelNum = u.level || 1;
-            const xpRequiredForNext = levelNum * 1000;
-            const xpCurrent = u.xp || 0;
-            const xpPct = Math.min(100, Math.max(0, (xpCurrent / xpRequiredForNext) * 100));
+            const xpCurrentTotal = u.xp || 0;
+            const xpBaseForCurrentLevel = getLevelThreshold(levelNum);
+            const xpTargetForNextLevel = getLevelThreshold(levelNum + 1);
+
+            const xpInCurrentLevel = xpCurrentTotal - xpBaseForCurrentLevel;
+            const xpRequiredForNextLevel = xpTargetForNextLevel - xpBaseForCurrentLevel;
+            const xpPct = Math.min(100, Math.max(0, (xpInCurrentLevel / Math.max(1, xpRequiredForNextLevel)) * 100));
+
             const progXpTxt = document.getElementById('prog-xp-txt');
-            if (progXpTxt) progXpTxt.textContent = `${xpCurrent} / ${xpRequiredForNext} XP`;
+            if (progXpTxt) progXpTxt.textContent = `${xpCurrentTotal.toLocaleString()} / ${xpTargetForNextLevel.toLocaleString()} XP`;
             const xpFill = document.getElementById('prog-xp-fill');
             if (xpFill) {
                 xpFill.style.width = `${xpPct}%`;
                 xpFill.className = `prog-bar-fill ${cardRank}`;
             }
             const progXpSubtext = document.getElementById('prog-xp-subtext');
-            if (progXpSubtext) progXpSubtext.textContent = `升級至 Lv.${levelNum + 1} 還需要 ${xpRequiredForNext - xpCurrent} XP。`;
+            if (progXpSubtext) {
+                progXpSubtext.textContent = `升級至 Lv.${levelNum + 1} 還需要 ${(xpTargetForNextLevel - xpCurrentTotal).toLocaleString()} XP。`;
+            }
 
             // Rolling Mileage Target progression based on tiers - Split into Upgrade and Retention
             let upgradeTarget = 150; // default bronze -> silver
