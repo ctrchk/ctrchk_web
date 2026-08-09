@@ -1600,30 +1600,46 @@
         var upNotice = document.getElementById('upgrade-notice');
         if (upNotice) upNotice.style.display = 'none';
 
-        if (role === 'senior_admin') {
-            badge.classList.add('db-role-senior-admin');
-            badge.innerHTML = '<i class="fas fa-crown"></i> 高級管理員';
-            document.getElementById('admin-section').style.display = '';
+        const adminSections = document.querySelectorAll('[id="admin-section"]');
+
+        if (role === 'senior_admin' || role === 'admin') {
+            adminSections.forEach(sec => {
+                sec.style.display = '';
+                const btn = sec.querySelector('.db-admin-btn');
+                if (btn) {
+                    if (role === 'senior_admin') {
+                        btn.href = '/admin.html';
+                        btn.innerHTML = '<i class="fas fa-tools"></i> 前往高級管理員後台';
+                    } else {
+                        btn.href = '/admin_standard.html';
+                        btn.innerHTML = '<i class="fas fa-tools"></i> 前往管理員後台';
+                    }
+                }
+            });
+            if (role === 'senior_admin') {
+                badge.classList.add('db-role-senior-admin');
+                badge.innerHTML = '<i class="fas fa-crown"></i> 高級管理員';
+            } else {
+                badge.classList.add('db-role-admin');
+                badge.innerHTML = '<i class="fas fa-shield-alt"></i> 管理員';
+            }
             if (verifyBtn) verifyBtn.style.display = 'block';
-        } else if (role === 'admin') {
-            badge.classList.add('db-role-admin');
-            badge.innerHTML = '<i class="fas fa-shield-alt"></i> 管理員';
-            document.getElementById('admin-section').style.display = 'none';
-            if (verifyBtn) verifyBtn.style.display = 'block';
-        } else if (role === 'vip') {
-            badge.classList.add('db-role-vip');
-            badge.innerHTML = '<i class="fas fa-gem"></i> VIP 會員';
-            document.getElementById('admin-section').style.display = 'none';
-        } else if (role === 'senior') {
-            badge.classList.add('db-role-senior');
-            badge.innerHTML = '<i class="fas fa-star"></i> 高級會員';
-            document.getElementById('admin-section').style.display = 'none';
         } else {
-            badge.classList.add('db-role-junior');
-            badge.innerHTML = '<i class="fas fa-user"></i> 普通會員';
-            var upNotice = document.getElementById('upgrade-notice');
-            if (upNotice) upNotice.style.display = 'block';
-            document.getElementById('admin-section').style.display = 'none';
+            adminSections.forEach(sec => {
+                sec.style.display = 'none';
+            });
+            if (role === 'vip') {
+                badge.classList.add('db-role-vip');
+                badge.innerHTML = '<i class="fas fa-gem"></i> VIP 會員';
+            } else if (role === 'senior') {
+                badge.classList.add('db-role-senior');
+                badge.innerHTML = '<i class="fas fa-star"></i> 高級會員';
+            } else {
+                badge.classList.add('db-role-junior');
+                badge.innerHTML = '<i class="fas fa-user"></i> 普通會員';
+                var upNotice = document.getElementById('upgrade-notice');
+                if (upNotice) upNotice.style.display = 'block';
+            }
         }
 
         const goldRank = String(mileageRank || '').toLowerCase();

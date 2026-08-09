@@ -146,12 +146,12 @@
             color: white;
             border-color: #04D93C;
         }
-.tab-bar {
+        .tab-bar {
             display: flex;
             gap: 0.4em;
             margin-bottom: 1.5em;
             border-bottom: 2px solid #ddd;
-            overflow-x: auto; /* 螢幕太小時可橫向滑動 */
+            overflow-x: auto;
             padding-bottom: 5px;
         }
         .tab-btn {
@@ -159,35 +159,17 @@
             border: none;
             background: none;
             cursor: pointer;
-            font-size: 0.85em; /* 縮小字體 */
+            font-size: 0.85em;
             color: #666;
             border-bottom: 3px solid transparent;
             margin-bottom: -2px;
-            white-space: nowrap; /* 禁止斷行 */
+            white-space: nowrap;
             flex-shrink: 0;
         }
         .tab-btn.active {
             color: #04D93C;
             border-bottom-color: #04D93C;
             font-weight: bold;
-        }
-        #create-admin-section {
-            background: white;
-            padding: 2em;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            max-width: 500px;
-        }
-        #create-admin-section h3 { color: #2c3e50; margin-top: 0; }
-        #create-admin-section .form-group { margin-bottom: 1em; }
-        #create-admin-section label { display: block; margin-bottom: 0.3em; font-weight: bold; }
-        #create-admin-section input {
-            width: 100%;
-            padding: 0.7em;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1em;
-            box-sizing: border-box;
         }
         .loading { text-align: center; padding: 3em; color: #666; }
         #access-denied {
@@ -244,10 +226,7 @@
 
     <script>
         /**
-         * JWT Payload 解碼（僅讀取，不驗證簽名）
-         * JWT 使用 base64url 編碼，需先轉換為標準 base64 才能使用 atob()。
-         * @param {string} token - JWT token 字串
-         * @returns {object|null} 解碼後的 payload，失敗時回傳 null
+         * JWT Payload 解碼
          */
         function decodeJwtPayload(token) {
             try {
@@ -259,7 +238,7 @@
             }
         }
 
-        // 頁面守衛 - 檢查是否為管理員
+        // 頁面守衛 - 檢查是否為管理員或高級管理員
         (function() {
             const token = localStorage.getItem('accessToken');
             if (!token) {
@@ -274,7 +253,7 @@
                 window.location.replace('/login');
                 throw new Error('Invalid token');
             }
-            if (payload.role !== 'senior_admin') {
+            if (payload.role !== 'admin' && payload.role !== 'senior_admin') {
                 document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('admin-content').style.display = 'none';
                     document.getElementById('access-denied').style.display = 'block';
@@ -290,56 +269,25 @@
         <div id="access-denied" style="display:none;">
             <i class="fas fa-ban" style="font-size:4em; color:#e74c3c;"></i>
             <h2>權限不足</h2>
-            <p>你沒有高級管理員權限，無法訪問此頁面。</p>
+            <p>你沒有管理員權限，無法訪問此頁面。</p>
             <a href="/dashboard.html" class="cta-button">返回儀表板</a>
         </div>
 
         <div id="admin-content" class="admin-container">
             <div class="admin-header-bar">
                 <div style="display:flex; align-items:center; gap:20px;">
-                    <h1><i class="fas fa-shield-alt"></i> 高級管理員後台</h1>
+                    <h1><i class="fas fa-shield-alt"></i> 管理員後台</h1>
                     <nav style="display:flex; gap:15px; font-size:0.9em;">
-                        <a href="/admin.html" style="color:#BFE340; font-weight:bold;">用戶管理</a>
-                        <a href="/admin_badges.html" style="color:white; opacity:0.8; text-decoration:none;">徽章與挑戰</a>
-                        <a href="/blog.html" style="color:white; opacity:0.8; text-decoration:none;">網誌管理</a>
+                        <a href="/blog.html" style="color:white; opacity:0.8; text-decoration:none;">網誌專區</a>
                     </nav>
                 </div>
                 <span id="admin-user-info" style="font-size:0.9em; opacity:0.8;"></span>
             </div>
 
-            <!-- 統計卡片 -->
-            <div class="stats-grid" id="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-num" id="stat-total">-</span>
-                    <span class="stat-label">總用戶數</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-num" id="stat-senior">-</span>
-                    <span class="stat-label">高級會員</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-num" id="stat-junior">-</span>
-                    <span class="stat-label">初級會員</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-num" id="stat-verified">-</span>
-                    <span class="stat-label">已驗證電郵</span>
-                </div>
-            </div>
-
             <!-- 標籤頁 -->
             <div class="tab-bar">
-                <button class="tab-btn active" onclick="showTab('users')">
-                    <i class="fas fa-users"></i> 用戶管理
-                </button>
-                <button class="tab-btn" onclick="showTab('create-admin')">
-                    <i class="fas fa-user-plus"></i> 新增管理員
-                </button>
-                <button class="tab-btn" onclick="showTab('blog'); loadBlogPosts();">
+                <button class="tab-btn active" onclick="showTab('blog'); loadBlogPosts();">
                     <i class="fas fa-pen"></i> 網誌管理
-                </button>
-                <button class="tab-btn" onclick="showTab('game');">
-                    <i class="fas fa-gamepad"></i> 遊戲管理
                 </button>
                 <button class="tab-btn" onclick="showTab('push');">
                     <i class="fas fa-bell"></i> 推送通知
@@ -353,89 +301,10 @@
                 <button class="tab-btn" onclick="showTab('obstacles'); loadObstacles();">
                     <i class="fas fa-exclamation-triangle"></i> 路面障礙審核
                 </button>
-                <button class="tab-btn" onclick="showTab('ai-dev');">
-                    <i class="fas fa-robot"></i> AI 開發
-                </button>
-                <button class="tab-btn" onclick="showTab('email-admin');">
-                    <i class="fas fa-envelope"></i> 郵件管理
-                </button>
-                <button class="tab-btn" onclick="showTab('terms-log'); loadTermsLog();">
-                    <i class="fas fa-file-signature"></i> 條款同意記錄
-                </button>
-                <button class="tab-btn" onclick="showTab('bugs'); loadBugReports();">
-                    <i class="fas fa-bug"></i> 故障管理
-                </button>
             </div>
 
-            <!-- 用戶管理標籤 -->
-            <div id="tab-users">
-                <div class="search-bar">
-                    <input type="text" id="search-input" placeholder="搜尋電郵或姓名...">
-                    <button onclick="loadUsers(1)"><i class="fas fa-search"></i> 搜尋</button>
-                </div>
-
-                <div id="users-loading" class="loading">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
-                    <p>正在載入用戶資料...</p>
-                </div>
-
-                <div id="users-table-container" style="display:none;">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>電郵</th>
-                                <th>姓名</th>
-                                <th>會員身份</th>
-                                <th>等級/XP</th>
-                                <th>里程幣</th>
-                                <th>省下車資</th>
-                                <th>騎行數據</th>
-                                <th>個人資料</th>
-                                <th>登入/註冊</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-tbody"></tbody>
-                    </table>
-                    <div class="pagination" id="pagination"></div>
-                </div>
-            </div>
-
-            <!-- 新增管理員標籤 -->
-            <div id="tab-create-admin" style="display:none;">
-                <div id="create-admin-section">
-                    <h3><i class="fas fa-user-shield"></i> 新增管理員帳戶</h3>
-                    <p style="color:#666; font-size:0.9em;">管理員帳戶只能通過此頁面創建，不可透過一般註冊頁面創建。</p>
-                    <form id="create-admin-form">
-                        <div class="form-group">
-                            <label>電子郵件 *</label>
-                            <input type="email" id="admin-email" required>
-                        </div>
-                        <div class="form-group">
-                            <label>姓名 *</label>
-                            <input type="text" id="admin-name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>用戶名（4-16位英數或底線，可選）</label>
-                            <input type="text" id="admin-username" placeholder="例：admin_hk" minlength="4" maxlength="16" pattern="[A-Za-z0-9_]{4,16}">
-                        </div>
-                        <div class="form-group">
-                            <label>密碼 *（至少 12 個字元）</label>
-                            <input type="password" id="admin-password" required minlength="12">
-                        </div>
-                        <div class="form-group">
-                            <label>確認密碼 *</label>
-                            <input type="password" id="admin-confirm-password" required minlength="12">
-                        </div>
-                        <button type="submit" class="cta-button" style="width:100%;">
-                            <i class="fas fa-plus"></i> 建立管理員帳戶
-                        </button>
-                    </form>
-                </div>
-            </div>
             <!-- 網誌管理標籤 -->
-            <div id="tab-blog" style="display:none;">
+            <div id="tab-blog">
                 <div style="margin-bottom:1.5em; display:flex; gap:1em; align-items:center; flex-wrap:wrap;">
                     <h3 style="margin:0; flex:1;">網誌文章列表</h3>
                     <button class="cta-button" onclick="openBlogModal(null)" style="white-space:nowrap;">
@@ -449,106 +318,6 @@
                 </div>
 
                 <div id="blog-list-admin" style="display:none;"></div>
-            </div>
-
-            <!-- 遊戲管理標籤 -->
-            <div id="tab-game" style="display:none;">
-                <h3 style="margin-top:0;"><i class="fas fa-gamepad"></i> 遊戲管理</h3>
-                <p style="color:#555; font-size:0.9em;">搜尋並調整指定用戶的 XP、里程幣及已解鎖路線。等級由 XP 自動計算。每次提交需輸入安全密碼。</p>
-
-                <!-- 安全密碼設定 -->
-                <div style="background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:1em 1.5em; margin-bottom:1.5em; max-width:540px;">
-                    <h4 style="margin-top:0; color:#e65100;"><i class="fas fa-lock"></i> 安全密碼設定</h4>
-                    <p style="margin:0 0 0.8em; font-size:0.9em; color:#555;">首次使用前請設定 6 位數字安全密碼，提交遊戲管理操作時需要輸入。</p>
-                    <div style="display:flex; gap:0.5em; align-items:center; flex-wrap:wrap;">
-                        <input type="password" id="admin-pin-input" maxlength="6" pattern="[0-9]{6}" placeholder="輸入 6 位數字密碼"
-                            style="flex:1; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box; letter-spacing:0.2em;">
-                        <button class="cta-button" onclick="setAdminPin()" style="white-space:nowrap; padding:0.6em 1.2em; background:#e65100;">
-                            <i class="fas fa-key"></i> 設定密碼
-                        </button>
-                    </div>
-                    <div id="admin-pin-msg" style="margin-top:0.5em; font-size:0.85em;"></div>
-                    <div id="admin-pin-status" style="margin-top:0.4em; font-size:0.85em; color:#666;"></div>
-                </div>
-
-                <!-- 搜尋欄 -->
-                <div class="search-bar" style="max-width:540px;">
-                    <input type="text" id="game-search-input" placeholder="輸入用戶 ID 或電郵...">
-                    <button onclick="loadGameProfile()"><i class="fas fa-search"></i> 搜尋</button>
-                </div>
-
-                <div id="game-loading" style="display:none;" class="loading">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
-                    <p>正在載入...</p>
-                </div>
-
-                <div id="game-profile-section" style="display:none;">
-                    <!-- 用戶資訊摘要 -->
-                    <div style="background:#f0f7ff; border-radius:8px; padding:1em 1.5em; margin-bottom:1.5em; font-size:0.95em;">
-                        <strong id="gp-name"></strong>
-                        &nbsp;(<span id="gp-email" style="color:#666;"></span>)
-                        &nbsp;— ID: <span id="gp-id" style="font-family:monospace;"></span>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5em; align-items:start;">
-                        <!-- XP / 里程幣 / 里程卡 編輯面板（等級由 XP 自動計算） -->
-                        <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-                            <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-star"></i> XP / 里程幣 / 里程卡</h4>
-                            <div style="margin-bottom:1em; background:#f0f7ff; border-radius:6px; padding:0.7em 1em; font-size:0.9em;">
-                                <i class="fas fa-info-circle" style="color:#3498db;"></i>
-                                等級將根據 XP 值自動計算，目前等級：<strong id="gp-level-display">—</strong>
-                            </div>
-                            <div style="margin-bottom:1em;">
-                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">XP（≥ 0）</label>
-                                <input type="number" id="gp-xp" min="0" step="1"
-                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
-                            </div>
-                            <div style="margin-bottom:1.2em;">
-                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">里程幣（≥ 0）</label>
-                                <input type="number" id="gp-coins" min="0" step="1"
-                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
-                            </div>
-                            <div style="margin-bottom:1em;">
-                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">里程（公里，≥ 0）</label>
-                                <input type="number" id="gp-mileage-km" min="0" step="0.01"
-                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
-                            </div>
-                            <div style="margin-bottom:1.2em;">
-                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">里程卡級</label>
-                                <select id="gp-mileage-rank"
-                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
-                                    <option value="bronze">銅卡</option>
-                                    <option value="silver">銀卡</option>
-                                    <option value="gold">金卡</option>
-                                </select>
-                            </div>
-                            <div style="margin-bottom:1.2em;">
-                                <label style="display:block; font-weight:bold; margin-bottom:0.3em;">已省車資 ($)</label>
-                                <input type="number" id="gp-total-saved-fare" min="0" step="0.1"
-                                    style="width:100%; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:1em; box-sizing:border-box;">
-                            </div>
-                            <button class="cta-button" onclick="saveGameStats()" style="width:100%;">
-                                <i class="fas fa-save"></i> 儲存更改
-                            </button>
-                            <div id="gp-stats-msg" style="margin-top:0.8em; font-size:0.9em;"></div>
-                        </div>
-
-                        <!-- 已解鎖路線面板 -->
-                        <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-                            <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-route"></i> 已解鎖路線</h4>
-                            <div id="gp-routes-list" style="margin-bottom:1em; max-height:220px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:0.5em;"></div>
-                            <div style="display:flex; gap:0.5em; align-items:center; flex-wrap:wrap;">
-                                <select id="gp-route-select"
-                                    style="flex:1; padding:0.6em 0.8em; border:1px solid #ccc; border-radius:6px; font-size:0.95em;">
-                                </select>
-                                <button class="cta-button" onclick="grantRoute()" style="white-space:nowrap; padding:0.55em 1.1em;">
-                                    <i class="fas fa-plus"></i> 授予路線
-                                </button>
-                            </div>
-                            <div id="gp-route-msg" style="margin-top:0.8em; font-size:0.9em;"></div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- 推送通知標籤 -->
@@ -654,6 +423,7 @@
                     <div id="discord-messages-list"></div>
                 </div>
             </div>
+
             <!-- 路線管理標籤 -->
             <div id="tab-route-mgmt" style="display:none;">
                 <h3 style="margin-top:0;"><i class="fas fa-route"></i> 路線管理</h3>
@@ -868,172 +638,8 @@
                     </table>
                 </div>
             </div>
-
-            <div id="tab-email-admin" style="display:none;">
-                <!-- CTRCHK Mail Entry Button -->
-                <div style="margin-bottom: 2em; display: flex; gap: 1em;">
-                    <a href="/email-login.html" class="cta-button" style="background: #bb86fc; color: #121212; display: flex; align-items: center; gap: 0.5em; text-decoration: none;">
-                        <i class="fas fa-envelope-open"></i> 進入 CTRCHK Mail 系統
-                    </a>
-                </div>
-
-                <div style="background:white; padding:2em; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); max-width:600px;">
-                    <h3 style="margin-top:0; color:#2c3e50;"><i class="fas fa-envelope-open-text"></i> 建立企業郵件帳戶 (@ctrchk.com)</h3>
-                    <p style="color:#666; font-size:0.9em; margin-bottom:1.5em;">此功能用於手動為團隊成員建立自定義的 @ctrchk.com 郵件地址。</p>
-
-                    <div style="margin-bottom:1.2em;">
-                        <label style="display:block; margin-bottom:0.4em; font-weight:bold;">郵件地址前綴</label>
-                        <div style="display:flex; align-items:center; gap:0.5em;">
-                            <input type="text" id="email-admin-prefix" placeholder="例如: support"
-                                style="flex:1; padding:0.8em; border:1px solid #ddd; border-radius:8px; font-size:1em;">
-                            <span style="font-weight:bold; color:#2c3e50;">@ctrchk.com</span>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom:1.2em;">
-                        <label style="display:block; margin-bottom:0.4em; font-weight:bold;">初始密碼</label>
-                        <input type="password" id="email-admin-password" placeholder="請輸入至少 8 位密碼"
-                            style="width:100%; padding:0.8em; border:1px solid #ddd; border-radius:8px; font-size:1em; box-sizing:border-box;">
-                    </div>
-
-                    <div style="margin-bottom:1.5em;">
-                        <label style="display:block; margin-bottom:0.4em; font-weight:bold;">Admin Secret 驗證碼</label>
-                        <input type="password" id="email-admin-secret" placeholder="請輸入系統 Admin Secret"
-                            style="width:100%; padding:0.8em; border:1px solid #ddd; border-radius:8px; font-size:1em; box-sizing:border-box;">
-                    </div>
-
-                    <button id="btn-email-admin-create" onclick="createEmailAccount()"
-                        style="width:100%; background:#2c3e50; color:white; padding:1em; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:1em; transition: background 0.3s;">
-                        <i class="fas fa-plus-circle"></i> 立即建立帳戶
-                    </button>
-
-                    <div id="email-admin-status" style="margin-top:1.2em; font-size:0.95em; text-align:center; min-height:1.2em;"></div>
-                </div>
-            </div>
-
-            <!-- 條款同意記錄標籤 -->
-            <div id="tab-terms-log" style="display:none;">
-                <h3 style="margin-top:0;"><i class="fas fa-file-signature"></i> 條款及免責聲明同意記錄</h3>
-                <p style="color:#555; font-size:0.9em;">此表格記錄所有用戶對各版本條款與細則及免責聲明的同意歷史（IP 位址、精確同意時間及版本）。</p>
-                <div id="terms-log-loading" class="loading" style="display:none;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
-                    <p>正在載入同意記錄...</p>
-                </div>
-                <div id="terms-log-container">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>用戶 ID</th>
-                                <th>電郵</th>
-                                <th>姓名</th>
-                                <th>用戶名</th>
-                                <th>同意版本</th>
-                                <th>IP 位址</th>
-                                <th>同意時間 (精確到秒)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="terms-log-tbody">
-                            <tr><td colspan="7" style="text-align:center; color:#888;">暫無同意記錄。</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 故障管理標籤 -->
-            <div id="tab-bugs" style="display:none;">
-                <h3 style="margin-top:0;"><i class="fas fa-bug"></i> 故障管理 (Bug Reports)</h3>
-                <p style="color:#555; font-size:0.9em;">檢視所有用戶或遊客回報的問題與截圖。可以將未解決的報告標記為「已完成」，已完成的將單獨顯示在「已處理bug」分類中。</p>
-
-                <div style="display:flex; gap:10px; margin-bottom:1.5em; border-bottom:1px solid #ddd; padding-bottom:10px;">
-                    <button id="bug-filter-pending" class="cta-button" style="background:#2c3e50; color:#fff;" onclick="filterBugReports('pending')">待處理 (<span id="count-bug-pending">0</span>)</button>
-                    <button id="bug-filter-resolved" class="cta-button" style="background:#888; color:#fff;" onclick="filterBugReports('resolved')">已處理bug (<span id="count-bug-resolved">0</span>)</button>
-                </div>
-
-                <div id="bugs-loading" class="loading" style="display:none;">
-                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
-                    <p>正在載入故障報告資料...</p>
-                </div>
-
-                <div id="bugs-container">
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>回報者 / 頁面</th>
-                                <th>問題描述</th>
-                                <th>螢幕截圖</th>
-                                <th>回報時間</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bugs-tbody">
-                            <tr><td colspan="5" style="text-align:center; color:#888;">暫無故障報告。</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-<div id="tab-ai-dev" style="display:none;">
-    <div style="background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-        <h3>🤖 AI 自動開發特工</h3>
-        <p style="color:#666; font-size:14px;">路徑輸入 <b>blank</b> 即開啟全自動模式</p>
-        
-        <div style="margin-bottom:15px;">
-            <label style="display:block; margin-bottom:5px;">1. 檔案路徑</label>
-            <input type="text" id="ai-path" placeholder="例如: blank" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
         </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; margin-bottom:5px;">2. 修改需求</label>
-            <textarea id="ai-prompt" rows="4" placeholder="請描述想做的事..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;"></textarea>
-        </div>
-
-        <div style="margin-bottom:15px;">
-            <label style="display:block; margin-bottom:5px;">3. 安全授權碼 (PIN)</label>
-            <input type="password" id="ai-pin" placeholder="輸入 032024" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
-        </div>
-
-        <button id="ai-btn" onclick="executeAiDev()" style="width:100%; background:#6c5ce7; color:white; padding:12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">啟動任務</button>
-        <div id="ai-status" style="margin-top:15px; font-size:14px; white-space:pre-wrap;"></div>
-    </div>
-</div>
-
-    <!-- 騎行紀錄管理 Modal -->
-    <!-- 安全密碼驗證 Modal -->
-    <div id="admin-pin-modal" class="pin-modal">
-        <div class="pin-modal-content">
-            <h3 style="margin-top:0;"><i class="fas fa-shield-alt"></i> 安全驗證</h3>
-            <p style="font-size:0.9em; color:#666;">請輸入 6 位數字安全密碼</p>
-            <input type="password" id="admin-pin-modal-input" class="pin-modal-input" maxlength="6" pattern="[0-9]{6}" inputmode="numeric">
-            <div id="admin-pin-modal-err" style="color:red; font-size:0.85em; margin-bottom:1em; height:1.2em;"></div>
-            <div class="pin-modal-buttons">
-                <button id="admin-pin-modal-cancel" class="btn-cancel">取消</button>
-                <button id="admin-pin-modal-confirm" class="btn-confirm">確認</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="ride-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:3000; align-items:center; justify-content:center;">
-        <div style="background:white; width:min(94vw, 850px); max-height:85vh; border-radius:12px; display:flex; flex-direction:column; overflow:hidden;">
-            <div style="padding:1.2em 1.5em; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; color:#333;"><i class="fas fa-history"></i> <span id="ride-modal-title">管理騎行紀錄</span></h3>
-                <button onclick="closeRideModal()" style="background:none; border:none; font-size:1.5em; cursor:pointer;">&times;</button>
-            </div>
-            <div id="ride-list-container" style="flex:1; overflow-y:auto; padding:1.5em;">
-                <div id="ride-loading" class="loading"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>
-                <table class="users-table" id="ride-table" style="display:none;">
-                    <thead>
-                        <tr>
-                            <th>ID</th><th>日期</th><th>路線</th><th>里程 (km)</th><th>時間 (min)</th><th>XP</th><th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ride-tbody"></tbody>
-                </table>
-            </div>
-            <div style="padding:1em 1.5em; border-top:1px solid #eee; text-align:right; background:#f9f9f9;">
-                <button onclick="closeRideModal()" class="cta-button" style="background:#888;">關閉</button>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <!-- 網誌管理 Modal -->
     <div id="blog-modal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:3000; align-items:center; justify-content:center;">
@@ -1068,6 +674,20 @@
         </div>
     </div>
 
+    <!-- 安全密碼驗證 Modal -->
+    <div id="admin-pin-modal" class="pin-modal">
+        <div class="pin-modal-content">
+            <h3 style="margin-top:0;"><i class="fas fa-shield-alt"></i> 安全驗證</h3>
+            <p style="font-size:0.9em; color:#666;">請輸入 6 位數字安全密碼</p>
+            <input type="password" id="admin-pin-modal-input" class="pin-modal-input" maxlength="6" pattern="[0-9]{6}" inputmode="numeric">
+            <div id="admin-pin-modal-err" style="color:red; font-size:0.85em; margin-bottom:1em; height:1.2em;"></div>
+            <div class="pin-modal-buttons">
+                <button id="admin-pin-modal-cancel" class="btn-cancel">取消</button>
+                <button id="admin-pin-modal-confirm" class="btn-confirm">確認</button>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2026 香港城市運輸單車. All Rights Reserved.</p>
     </footer>
@@ -1075,7 +695,6 @@
     <script src="/js/main.js"></script>
     <script src="/js/login.js"></script>
     <script>
-        let currentPage = 1;
         let stationAdminData = [];
         let managedRoutesData = [];
         let legacyRoutesData = [];
@@ -1087,11 +706,9 @@
             if (!dateStr) return '—';
             let d = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
             if (isNaN(d.getTime())) {
-                // Try to handle Safari space-separated timestamp: "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS"
                 const formatted = String(dateStr).trim().replace(' ', 'T');
                 d = new Date(formatted);
                 if (isNaN(d.getTime())) {
-                    // Still invalid? Return a safe sliced string
                     return String(dateStr).slice(0, 10);
                 }
             }
@@ -1102,17 +719,10 @@
             }
         }
 
-        /**
-         * 統一處理 API 回應中的 Token 錯誤（401/403）。
-         * 若 Token 已過期或失效（例如更換 JWT_SECRET 後），
-         * 清除本地 Token 並提示用戶重新登入。
-         * @param {Response} resp - fetch() 回傳的 Response 物件
-         * @returns {boolean} 若已處理 Token 錯誤則回傳 true
-         */
         function handleTokenError(resp) {
             if (resp.status === 401 || resp.status === 403) {
                 localStorage.removeItem('accessToken');
-                alert('登入憑證已過期或無效，請重新登入管理員帳戶。\n（更換 JWT_SECRET 環境變數後，需重新登入以取得新的 Token。）');
+                alert('登入憑證已過期或無效，請重新登入管理員帳戶。');
                 window.location.replace('/login');
                 return true;
             }
@@ -1124,214 +734,12 @@
             document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
             document.getElementById(`tab-${tab}`).style.display = 'block';
 
-            // Safe search without querySelector pattern matching risks
             const btns = Array.from(document.querySelectorAll('.tab-btn'));
             const btn = btns.find(b => {
                 const onc = b.getAttribute('onclick') || '';
                 return onc.includes(`'${tab}'`) || onc.includes(`"${tab}"`);
             });
             if (btn) btn.classList.add('active');
-        }
-
-        async function loadUsers(page = 1) {
-            currentPage = page;
-            const search = document.getElementById('search-input').value.trim();
-            const token = localStorage.getItem('accessToken');
-
-            document.getElementById('users-loading').style.display = 'block';
-            document.getElementById('users-table-container').style.display = 'none';
-
-            try {
-                const url = `/api/admin-users?page=${page}&limit=20${search ? '&search=' + encodeURIComponent(search) : ''}`;
-                const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!response.ok) {
-                    if (handleTokenError(response)) return;
-                    const err = await response.json();
-                    throw new Error(err.message || '載入失敗');
-                }
-
-                const data = await response.json();
-                renderUsersTable(data.users);
-                renderPagination(data.pagination);
-                updateStats(data.users, data.pagination.total);
-
-                document.getElementById('users-loading').style.display = 'none';
-                document.getElementById('users-table-container').style.display = 'block';
-
-            } catch (err) {
-                document.getElementById('users-loading').innerHTML = `<p style="color:red;">載入失敗: ${err.message}</p>`;
-            }
-        }
-
-        function updateStats(users, total) {
-            document.getElementById('stat-total').textContent = total;
-            // 以下統計僅反映當前頁面的用戶，並非全站總計
-            const senior = users.filter(u => u.user_role === 'senior').length;
-            const junior = users.filter(u => u.user_role === 'junior').length;
-            const verified = users.filter(u => u.email_verified).length;
-            document.getElementById('stat-senior').textContent = `${senior}（本頁）`;
-            document.getElementById('stat-junior').textContent = `${junior}（本頁）`;
-            document.getElementById('stat-verified').textContent = `${verified}（本頁）`;
-        }
-
-        function renderUsersTable(users) {
-            const tbody = document.getElementById('users-tbody');
-            const roleLabelMap = {
-                senior_admin: '高級管理員',
-                admin: '管理員',
-                vip: 'VIP 會員',
-                senior: '高級會員',
-                junior: '普通會員',
-            };
-            function cyclistTier(level) {
-                const lv = Number(level || 1);
-                if (lv >= 76) return '頂尖車手';
-                if (lv >= 51) return '精英車手';
-                if (lv >= 31) return '資深車手';
-                if (lv >= 16) return '進階車手';
-                if (lv >= 6) return '初階車手';
-                return '入門車手';
-            }
-            tbody.innerHTML = users.map(user => {
-                const roleClass =
-                    user.user_role === 'senior_admin' ? 'role-senior-admin' :
-                    user.user_role === 'admin' ? 'role-admin' :
-                    user.user_role === 'vip' ? 'role-vip' :
-                    user.user_role === 'senior' ? 'role-senior' : 'role-junior';
-                const roleLabel = roleLabelMap[user.user_role] || user.user_role || '普通會員';
-                const verifiedHtml = user.email_verified 
-                    ? '<i class="fas fa-check-circle verified-badge" title="已驗證"></i>'
-                    : '<i class="fas fa-times-circle unverified-badge" title="未驗證"></i>';
-                const date = safeFormatDate(user.created_at);
-                
-                return `
-                    <tr>
-                        <td>${user.id}</td>
-                        <td>
-                            <div style="font-weight:bold;">${escapeHtml(user.email)}</div>
-                            <div style="font-size:0.8em; color:#888;">ID: ${user.username || '-'}</div>
-                            ${verifiedHtml}
-                        </td>
-                        <td>${escapeHtml(user.full_name || '-')}</td>
-                        <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
-                        <td>
-                            <div><strong>Lv.${Number(user.cyclist_level || 1)}</strong></div>
-                            <div style="font-size:0.8em; color:#666;">${user.xp || 0} XP</div>
-                            <div style="font-size:0.75em; color:#04D93C;">${cyclistTier(user.cyclist_level)}</div>
-                        </td>
-                        <td>🪙 ${user.coins || 0}</td>
-                        <td>$${parseFloat(user.total_saved_fare || 0).toFixed(1)}</td>
-                        <td>
-                            <div>${user.ride_count || 0} 次騎行</div>
-                            <div>${parseFloat(user.total_distance || 0).toFixed(1)} km</div>
-                            <div style="font-size:0.8em; color:#888;">時數: ${(Number(user.total_duration_minutes || 0) / 60).toFixed(1)} h</div>
-                        </td>
-                        <td style="font-size:0.85em;">
-                            <div>經驗: ${escapeHtml(user.experience || '-')}</div>
-                            <div>單車: ${escapeHtml(user.bike_type || '-')}</div>
-                            <div>地區: ${escapeHtml(user.preferred_area || '-')}</div>
-                        </td>
-                        <td style="font-size:0.85em;">
-                            <div>${user.auth_provider || 'email'}</div>
-                            <div style="color:#888;">${date}</div>
-                        </td>
-                        <td>
-                            ${user.user_role !== 'senior_admin'
-                                ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'senior_admin')">設高級管理員</button>`
-                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'admin')">降為管理員</button>`}
-                            ${user.user_role !== 'admin'
-                                ? `<button class="action-btn btn-admin" onclick="setRole(${user.id}, 'admin')">設管理員</button>`
-                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'senior')">移除管理員</button>`}
-                            ${user.user_role !== 'vip'
-                                ? `<button class="action-btn btn-promote" onclick="setRole(${user.id}, 'vip')">設 VIP</button>`
-                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'senior')">取消 VIP</button>`}
-                            ${user.user_role !== 'senior'
-                                ? `<button class="action-btn btn-promote" onclick="setRole(${user.id}, 'senior')">設高級會員</button>`
-                                : `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">降為普通會員</button>`}
-                            ${user.user_role !== 'junior'
-                                ? `<button class="action-btn btn-demote" onclick="setRole(${user.id}, 'junior')">設普通會員</button>`
-                                : ''}
-                            <button class="action-btn btn-admin" onclick="openRideManager(${user.id}, '${escapeHtml(user.email)}')">管理紀錄</button>
-                            <button class="action-btn btn-delete" onclick="deleteUser(${user.id}, '${escapeHtml(user.email)}')">刪除</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function renderPagination(pagination) {
-            const container = document.getElementById('pagination');
-            const { page, totalPages } = pagination;
-            let html = '';
-            
-            if (page > 1) html += `<button onclick="loadUsers(${page - 1})">上一頁</button>`;
-            for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
-                html += `<button class="${i === page ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
-            }
-            if (page < totalPages) html += `<button onclick="loadUsers(${page + 1})">下一頁</button>`;
-            
-            container.innerHTML = html;
-        }
-
-        async function setRole(userId, newRole) {
-            const roleLabelMap = {
-                senior_admin: '高級管理員',
-                admin: '管理員',
-                vip: 'VIP 會員',
-                senior: '高級會員',
-                junior: '普通會員',
-            };
-            const roleLabel = roleLabelMap[newRole] || newRole;
-            if (!confirm(`確定要將此用戶設為「${roleLabel}」嗎？`)) return;
-
-            const token = localStorage.getItem('accessToken');
-            try {
-                const response = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'set_role', user_id: userId, new_role: newRole })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert(data.message);
-                    loadUsers(currentPage);
-                } else {
-                    alert('操作失敗: ' + data.message);
-                }
-            } catch (err) {
-                alert('錯誤: ' + err.message);
-            }
-        }
-
-        async function deleteUser(userId, email) {
-            if (!confirm(`確定要永久刪除用戶「${email}」嗎？此操作無法復原！`)) return;
-
-            const token = localStorage.getItem('accessToken');
-            try {
-                const response = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'delete_user', user_id: userId })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert(data.message);
-                    loadUsers(currentPage);
-                } else {
-                    alert('刪除失敗: ' + data.message);
-                }
-            } catch (err) {
-                alert('錯誤: ' + err.message);
-            }
         }
 
         function escapeHtml(text) {
@@ -1344,193 +752,21 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // 建立管理員帳戶
         document.addEventListener('DOMContentLoaded', function() {
-            // 顯示管理員資訊
             const userData = localStorage.getItem('user');
             if (userData) {
                 const user = JSON.parse(userData);
-                document.getElementById('admin-user-info').textContent = 
-                    `高級管理員: ${user.full_name || user.email}`;
+                document.getElementById('admin-user-info').textContent =
+                    `管理員: ${user.full_name || user.email}`;
             }
 
-            // 載入用戶列表
-            loadUsers(1);
-
-            // 建立管理員表單
-            document.getElementById('create-admin-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const email = document.getElementById('admin-email').value;
-                const name = document.getElementById('admin-name').value;
-                const username = document.getElementById('admin-username').value.trim() || undefined;
-                const password = document.getElementById('admin-password').value;
-                const confirmPw = document.getElementById('admin-confirm-password').value;
-
-                if (password !== confirmPw) {
-                    alert('兩次輸入的密碼不一致。');
-                    return;
-                }
-
-                const token = localStorage.getItem('accessToken');
-                try {
-                    const body = { action: 'create_admin', email, full_name: name, password, role: 'admin' };
-                    if (username) body.username = username;
-                    const response = await fetch('/api/admin-users', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        alert(`管理員帳戶「${email}」已成功建立！`);
-                        document.getElementById('create-admin-form').reset();
-                        loadUsers(1);
-                    } else {
-                        alert('建立失敗: ' + data.message);
-                    }
-                } catch (err) {
-                    alert('錯誤: ' + err.message);
-                }
-            });
+            // 預設載入網誌文章
+            loadBlogPosts();
 
             ['rm-start-station', 'rm-end-station'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('change', refreshStopNatureLabels);
             });
-        });
-
-        let currentRideUserId = null;
-
-        async function openRideManager(userId, email) {
-            currentRideUserId = userId;
-            document.getElementById('ride-modal-title').textContent = `管理 ${email} 的騎行紀錄`;
-            document.getElementById('ride-modal').style.display = 'flex';
-            loadUserRides();
-        }
-
-        function closeRideModal() {
-            document.getElementById('ride-modal').style.display = 'none';
-        }
-
-        async function loadUserRides() {
-            const container = document.getElementById('ride-list-container');
-            const loading = document.getElementById('ride-loading');
-            const table = document.getElementById('ride-table');
-            const tbody = document.getElementById('ride-tbody');
-
-            // Clear previous results/messages
-            const oldMsgs = container.querySelectorAll('.ride-status-msg');
-            oldMsgs.forEach(m => m.remove());
-
-            loading.style.display = 'block';
-            table.style.display = 'none';
-
-            try {
-                const token = localStorage.getItem('accessToken');
-                const resp = await fetch(`/api/admin-users?action=get_user_rides&user_id=${currentRideUserId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-
-                if (!data.rides || data.rides.length === 0) {
-                    loading.style.display = 'none';
-                    tbody.innerHTML = '';
-                    table.style.display = 'none';
-                    const msg = document.createElement('p');
-                    msg.className = 'ride-status-msg';
-                    msg.style.cssText = 'text-align:center; padding:2em; color:#888;';
-                    msg.textContent = '該用戶尚無騎行紀錄';
-                    container.appendChild(msg);
-                    return;
-                }
-
-                tbody.innerHTML = data.rides.map(r => `
-                    <tr id="ride-row-${r.id}">
-                        <td>${r.id}</td>
-                        <td>${safeFormatDate(r.ride_date)}</td>
-                        <td><input type="text" value="${escapeHtml(r.route_name || '')}" id="ride-name-${r.id}" style="width:100px;"></td>
-                        <td><input type="number" step="0.01" value="${r.distance_km}" id="ride-dist-${r.id}" style="width:60px;"></td>
-                        <td><input type="number" value="${r.duration_minutes}" id="ride-dur-${r.id}" style="width:50px;"></td>
-                        <td>${r.xp_earned}</td>
-                        <td>
-                            <button class="action-btn btn-promote" onclick="updateRide(${r.id})">儲存</button>
-                            <button class="action-btn btn-delete" onclick="deleteRide(${r.id})">刪除</button>
-                        </td>
-                    </tr>
-                `).join('');
-
-                loading.style.display = 'none';
-                table.style.display = 'table';
-            } catch (err) {
-                loading.style.display = 'none';
-                const msg = document.createElement('p');
-                msg.className = 'ride-status-msg';
-                msg.style.cssText = 'color:red; text-align:center;';
-                msg.textContent = `載入失敗: ${err.message}`;
-                container.appendChild(msg);
-            }
-        }
-
-        async function updateRide(rideId) {
-            const name = document.getElementById(`ride-name-${rideId}`).value;
-            const dist = document.getElementById(`ride-dist-${rideId}`).value;
-            const dur = document.getElementById(`ride-dur-${rideId}`).value;
-
-            const pin = await promptAdminPin();
-            if (pin === null) return;
-
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'update_ride', ride_id: rideId, route_name: name, distance_km: dist, duration_minutes: dur, pin })
-                });
-                const data = await resp.json();
-                if (resp.ok) {
-                    alert('更新成功！');
-                    loadUserRides();
-                } else {
-                    alert('更新失敗: ' + data.message);
-                }
-            } catch (err) {
-                alert('錯誤: ' + err.message);
-            }
-        }
-
-        async function deleteRide(rideId) {
-            if (!confirm('確定要永久刪除此紀錄嗎？')) return;
-            const pin = await promptAdminPin();
-            if (pin === null) return;
-
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'delete_ride', ride_id: rideId, pin })
-                });
-                const data = await resp.json();
-                if (resp.ok) {
-                    alert('已刪除！');
-                    loadUserRides();
-                } else {
-                    alert('刪除失敗: ' + data.message);
-                }
-            } catch (err) {
-                alert('錯誤: ' + err.message);
-            }
-        }
-
-        // 搜尋按 Enter 鍵
-        document.addEventListener('keyup', function(e) {
-            if (e.target.id === 'search-input' && e.key === 'Enter') {
-                loadUsers(1);
-            }
         });
 
         // ── 網誌管理 ──────────────────────────────────────────────────────────
@@ -1649,7 +885,6 @@
                 }
             });
 
-            // 按 Escape 鍵關閉 Modal
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') closeBlogModal();
             });
@@ -1746,13 +981,11 @@
         // ── Discord Relay ─────────────────────────────────────────────────────
 
         function onDiscordRelayTabOpen() {
-            // Pre-fill the fetch channel ID if the send channel ID is already set
             const sendCh = document.getElementById('discord-channel-id').value.trim();
             const fetchCh = document.getElementById('discord-fetch-channel-id');
             if (sendCh && !fetchCh.value.trim()) fetchCh.value = sendCh;
         }
 
-        // Stores messages currently displayed in the messages list: [{ channelId, messageId, content, isBot }]
         let discordMessagesList = [];
 
         function renderDiscordMessages() {
@@ -1881,10 +1114,12 @@
                     resultEl.style.color = 'green';
                     resultEl.textContent = `✅ 已載入 ${data.messages.length} 條消息`;
                 } else {
-                    resultEl.style.color = 'red'; resultEl.textContent = '❌ ' + (data.message || '載入失敗');
+                    resultEl.style.color = 'red';
+                    resultEl.textContent = '❌ ' + (data.message || '載入失敗');
                 }
             } catch (err) {
-                resultEl.style.color = 'red'; resultEl.textContent = '❌ 錯誤：' + err.message;
+                resultEl.style.color = 'red';
+                resultEl.textContent = '❌ 錯誤：' + err.message;
             } finally {
                 btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> 載入消息';
             }
@@ -1947,386 +1182,6 @@
                 btn.innerHTML = '<i class="fas fa-paper-plane"></i> 發送到 Discord';
             }
         }
-
-        // ── 遊戲管理 ─────────────────────────────────────────────────────────
-
-        let gpCurrentUserId = null;
-
-        // 從已載入的路線資料動態生成路線選擇器
-        function populateGameRouteSelect() {
-            const sel = document.getElementById('gp-route-select');
-            if (!sel) return;
-            sel.innerHTML = '<option value="">選擇路線...</option>';
-
-            // 使用 managedRoutesData (由 loadStationRouteAdminData 載入)
-            if (managedRoutesData && managedRoutesData.length > 0) {
-                managedRoutesData.forEach(r => {
-                    const id = r.is_legacy_route ? r.route_number : `${r.dept}-${r.route_number}`;
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = id + (r.alias ? ` (${r.alias})` : '');
-                    sel.appendChild(opt);
-                });
-            } else {
-                // 回退方案：若尚未載入路線列表，則使用硬編碼列表
-                const fallback = ['900','900A','966T','966','914','910','920','923','932','960','S90','S91'];
-                fallback.forEach(id => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = id;
-                    sel.appendChild(opt);
-                });
-            }
-        }
-
-        async function loadGameProfile() {
-            const input = document.getElementById('game-search-input').value.trim();
-            if (!input) { alert('請輸入用戶 ID 或電郵。'); return; }
-
-            const token = localStorage.getItem('accessToken');
-            const loadingEl = document.getElementById('game-loading');
-            const profileEl = document.getElementById('game-profile-section');
-            loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:2em;"></i><p>正在載入...</p>';
-            loadingEl.style.display = 'block';
-            profileEl.style.display = 'none';
-
-            // 若輸入為純數字，視為 user_id；否則先查詢電郵取得 ID
-            let userId;
-            if (/^\d+$/.test(input)) {
-                userId = parseInt(input, 10);
-            } else {
-                // 透過用戶列表 API 搜尋電郵
-                try {
-                    const r = await fetch(`/api/admin-users?search=${encodeURIComponent(input)}&limit=1`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (handleTokenError(r)) return;
-                    const d = await r.json();
-                    if (!r.ok || !d.users || d.users.length === 0) {
-                        loadingEl.innerHTML = `<p style="color:red;">找不到電郵為「${escapeHtml(input)}」的用戶。</p>`;
-                        return;
-                    }
-                    userId = d.users[0].id;
-                } catch (err) {
-                    loadingEl.innerHTML = `<p style="color:red;">搜尋失敗: ${err.message}</p>`;
-                    return;
-                }
-            }
-
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'get_game_profile', user_id: userId })
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.message || '載入失敗');
-
-                gpCurrentUserId = userId;
-                const { user, unlocked_routes } = data;
-
-                document.getElementById('gp-name').textContent  = user.full_name || '(無姓名)';
-                document.getElementById('gp-email').textContent = user.email;
-                document.getElementById('gp-id').textContent    = user.id;
-                document.getElementById('gp-level-display').textContent = user.level;
-                document.getElementById('gp-xp').value          = user.xp;
-                document.getElementById('gp-coins').value       = user.coins;
-                document.getElementById('gp-mileage-km').value  = Number(user.mileage_km_365 || 0).toFixed(2);
-                document.getElementById('gp-mileage-rank').value = String(user.mileage_rank || 'bronze').toLowerCase();
-                document.getElementById('gp-total-saved-fare').value = Number(user.total_saved_fare || 0).toFixed(1);
-                document.getElementById('gp-stats-msg').textContent = '';
-                document.getElementById('gp-route-msg').textContent = '';
-
-                renderUnlockedRoutes(unlocked_routes);
-
-                loadingEl.style.display = 'none';
-                profileEl.style.display = 'block';
-            } catch (err) {
-                loadingEl.innerHTML = `<p style="color:red;">載入失敗: ${err.message}</p>`;
-            }
-        }
-
-        function renderUnlockedRoutes(routes) {
-            const container = document.getElementById('gp-routes-list');
-            if (!routes || routes.length === 0) {
-                container.innerHTML = '<p style="color:#aaa; text-align:center; padding:0.5em; font-size:0.9em;">尚未解鎖任何路線</p>';
-                return;
-            }
-            container.innerHTML = routes.map(r => `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.3em 0.4em; border-bottom:1px solid #f5f5f5;">
-                    <span style="font-weight:bold; font-family:monospace;">${escapeHtml(r.route_id)}</span>
-                    <span style="color:#888; font-size:0.8em; flex:1; margin:0 0.5em;">${escapeHtml(r.unlock_method)}</span>
-                    <button class="action-btn btn-delete" onclick="revokeRoute('${escapeHtml(r.route_id)}')" style="font-size:0.75em; padding:0.2em 0.5em;">
-                        <i class="fas fa-times"></i> 移除
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        async function saveGameStats() {
-            if (!gpCurrentUserId) return;
-            const xp    = parseInt(document.getElementById('gp-xp').value,    10);
-            const coins = parseInt(document.getElementById('gp-coins').value,  10);
-            const mileageKm = parseFloat(document.getElementById('gp-mileage-km').value);
-            const mileageRank = String(document.getElementById('gp-mileage-rank').value || '').toLowerCase();
-            const totalSavedFare = parseFloat(document.getElementById('gp-total-saved-fare').value);
-            const msgEl = document.getElementById('gp-stats-msg');
-
-            if (isNaN(xp)    || xp    < 0) { msgEl.style.color = 'red'; msgEl.textContent = 'XP 不可為負數。';     return; }
-            if (isNaN(coins) || coins < 0) { msgEl.style.color = 'red'; msgEl.textContent = '里程幣不可為負數。'; return; }
-            if (isNaN(mileageKm) || mileageKm < 0) { msgEl.style.color = 'red'; msgEl.textContent = '里程不可為負數。'; return; }
-            if (!['bronze', 'silver', 'gold'].includes(mileageRank)) { msgEl.style.color = 'red'; msgEl.textContent = '里程卡級無效。'; return; }
-
-            const pin = await promptAdminPin();
-            if (pin === null) return;
-
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'set_game_stats',
-                        user_id: gpCurrentUserId,
-                        xp,
-                        coins,
-                        mileage_km_365: mileageKm,
-                        mileage_rank: mileageRank,
-                        total_saved_fare: totalSavedFare
-                    })
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-                if (resp.ok) {
-                    msgEl.style.color = 'green';
-                    msgEl.textContent = '✅ 已更新！等級已自動根據 XP 計算，里程與里程卡級已更新。';
-                    // Refresh the level display
-                    await refreshGameProfile();
-                } else {
-                    msgEl.style.color = 'red';
-                    msgEl.textContent = '❌ ' + (data.message || '更新失敗');
-                }
-            } catch (err) {
-                msgEl.style.color = 'red';
-                msgEl.textContent = '❌ 錯誤：' + err.message;
-            }
-        }
-
-        async function grantRoute() {
-            if (!gpCurrentUserId) return;
-            const routeId = document.getElementById('gp-route-select').value;
-            const msgEl = document.getElementById('gp-route-msg');
-            if (!routeId) return;
-
-            const pin = await promptAdminPin();
-            if (pin === null) return;
-
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'grant_route', user_id: gpCurrentUserId, route_id: routeId })
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-                if (resp.ok) {
-                    msgEl.style.color = 'green';
-                    msgEl.textContent = `✅ 路線 ${routeId} 已授予。`;
-                    await refreshUnlockedRoutes();
-                } else {
-                    msgEl.style.color = 'red';
-                    msgEl.textContent = '❌ ' + (data.message || '操作失敗');
-                }
-            } catch (err) {
-                msgEl.style.color = 'red';
-                msgEl.textContent = '❌ 錯誤：' + err.message;
-            }
-        }
-
-        async function revokeRoute(routeId) {
-            if (!gpCurrentUserId) return;
-            if (!confirm(`確定要移除用戶的路線「${routeId}」嗎？`)) return;
-
-            const pin = await promptAdminPin();
-            if (pin === null) return;
-
-            const msgEl = document.getElementById('gp-route-msg');
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'revoke_route', user_id: gpCurrentUserId, route_id: routeId })
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-                if (resp.ok) {
-                    msgEl.style.color = 'green';
-                    msgEl.textContent = `✅ 路線 ${routeId} 已移除。`;
-                    await refreshUnlockedRoutes();
-                } else {
-                    msgEl.style.color = 'red';
-                    msgEl.textContent = '❌ ' + (data.message || '操作失敗');
-                }
-            } catch (err) {
-                msgEl.style.color = 'red';
-                msgEl.textContent = '❌ 錯誤：' + err.message;
-            }
-        }
-
-        async function refreshUnlockedRoutes() {
-            if (!gpCurrentUserId) return;
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'get_game_profile', user_id: gpCurrentUserId })
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-                if (resp.ok) {
-                    renderUnlockedRoutes(data.unlocked_routes);
-                }
-            } catch (_) {}
-        }
-
-        async function refreshGameProfile() {
-            if (!gpCurrentUserId) return;
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'get_game_profile', user_id: gpCurrentUserId })
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-                if (resp.ok && data.user) {
-                    document.getElementById('gp-level-display').textContent = data.user.level;
-                    document.getElementById('gp-xp').value   = data.user.xp;
-                    document.getElementById('gp-coins').value = data.user.coins;
-                    document.getElementById('gp-mileage-km').value = Number(data.user.mileage_km_365 || 0).toFixed(2);
-                    document.getElementById('gp-mileage-rank').value = String(data.user.mileage_rank || 'bronze').toLowerCase();
-                    document.getElementById('gp-total-saved-fare').value = Number(data.user.total_saved_fare || 0).toFixed(1);
-                    renderUnlockedRoutes(data.unlocked_routes);
-                }
-            } catch (e) { console.error('[Admin] refreshGameProfile error:', e); }
-        }
-
-        // ── 安全密碼（6位數字，SHA-256 hash 存 localStorage）──────────────
-        const PIN_PATTERN = /^\d{6}$/;
-
-        async function sha256(text) {
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        async function setAdminPin() {
-            const input = document.getElementById('admin-pin-input').value.trim();
-            const msgEl = document.getElementById('admin-pin-msg');
-            if (!PIN_PATTERN.test(input)) {
-                msgEl.style.color = 'red';
-                msgEl.textContent = '❌ 安全密碼必須為 6 位數字。';
-                return;
-            }
-            const hash = await sha256(input);
-            localStorage.setItem('adminSecurityPinHash', hash);
-            document.getElementById('admin-pin-input').value = '';
-            msgEl.style.color = 'green';
-            msgEl.textContent = '✅ 安全密碼已設定。';
-            updatePinStatus();
-        }
-
-        function updatePinStatus() {
-            const statusEl = document.getElementById('admin-pin-status');
-            if (!statusEl) return;
-            statusEl.textContent = localStorage.getItem('adminSecurityPinHash')
-                ? '🔒 安全密碼已設定'
-                : '⚠️ 尚未設定安全密碼';
-        }
-
-        // Returns null if cancelled/failed, or the PIN string if verified
-        function promptAdminPin() {
-            return new Promise((resolve) => {
-                const storedHash = localStorage.getItem('adminSecurityPinHash');
-                if (!storedHash) {
-                    alert('請先設定 6 位數字安全密碼後再進行操作。');
-                    resolve(null);
-                    return;
-                }
-                const modal = document.getElementById('admin-pin-modal');
-                const input = document.getElementById('admin-pin-modal-input');
-                const errEl = document.getElementById('admin-pin-modal-err');
-                input.value = '';
-                errEl.textContent = '';
-                modal.style.display = 'flex';
-                input.focus();
-
-                function cleanup() {
-                    modal.style.display = 'none';
-                    document.removeEventListener('keydown', onKey);
-                }
-                async function onConfirm() {
-                    const pin = input.value.trim();
-                    if (!PIN_PATTERN.test(pin)) {
-                        errEl.textContent = '請輸入 6 位數字密碼。';
-                        return;
-                    }
-                    const hash = await sha256(pin);
-                    if (hash !== storedHash) {
-                        errEl.textContent = '❌ 密碼錯誤，請重試。';
-                        input.value = '';
-                        input.focus();
-                        return;
-                    }
-                    cleanup();
-                    resolve(pin);
-                }
-                function onCancel() {
-                    cleanup();
-                    resolve(null);
-                }
-                function onKey(e) {
-                    if (e.key === 'Enter') onConfirm();
-                    if (e.key === 'Escape') onCancel();
-                }
-                document.addEventListener('keydown', onKey);
-                document.getElementById('admin-pin-modal-confirm').onclick = onConfirm;
-                document.getElementById('admin-pin-modal-cancel').onclick  = onCancel;
-            });
-        }
-
-        // 遊戲管理搜尋按 Enter
-        document.addEventListener('DOMContentLoaded', function() {
-            const gpInput = document.getElementById('game-search-input');
-            if (gpInput) {
-                gpInput.addEventListener('keyup', function(e) {
-                    if (e.key === 'Enter') loadGameProfile();
-                });
-            }
-            updatePinStatus();
-        });
 
         // ── 路線管理功能 ────────────────────────────────────────────────────
         function normalizeDeptId(raw) {
@@ -2421,11 +1276,7 @@
         }
 
         async function loadRouteMgmt() {
-            const token = localStorage.getItem('accessToken');
-
-            // Load department admin table
             await loadDeptAdminData();
-
             await Promise.all([loadGpxOptions(), loadStationRouteAdminData(), loadDeletedStations()]);
         }
 
@@ -2447,7 +1298,6 @@
                 renderRouteAdminTable();
                 renderTerminalAdminTable();
                 refreshStationSelectOptions();
-                populateGameRouteSelect();
             } catch (e) {
                 console.error('[Admin] loadStationRouteAdminData error:', e);
             }
@@ -2812,7 +1662,6 @@
             document.getElementById('rm-reward-time-limit').value = rewards.time_limit_bonus ?? '';
             document.getElementById('route-admin-msg').textContent = `正在編輯 ${managedRouteEditingKey}`;
         }
-    
 
         async function saveManagedRoute() {
             const stops = Array.from(document.querySelectorAll('#rm-stops-list > div')).map((row, idx) => ({
@@ -2937,10 +1786,6 @@
                 if (!resp.ok) throw new Error(data.message || '導入失敗');
                 msgEl.style.color = 'green';
                 msgEl.textContent = `✅ 成功 ${data.imported || 0} 筆；失敗 ${data.failed || 0} 筆`;
-                if (Array.isArray(data.errors) && data.errors.length) {
-                    msgEl.style.color = '#d35400';
-                    msgEl.textContent += `（部分錯誤：${data.errors.slice(0, 2).join('；')}）`;
-                }
                 await loadStationRouteAdminData();
                 await loadDeletedStations();
             } catch (e) {
@@ -2966,10 +1811,6 @@
                 if (!resp.ok) throw new Error(data.message || '導入失敗');
                 msgEl.style.color = 'green';
                 msgEl.textContent = `✅ 成功 ${data.imported || 0} 筆；失敗 ${data.failed || 0} 筆`;
-                if (Array.isArray(data.errors) && data.errors.length) {
-                    msgEl.style.color = '#d35400';
-                    msgEl.textContent += `（部分錯誤：${data.errors.slice(0, 2).join('；')}）`;
-                }
                 await loadStationRouteAdminData();
             } catch (e) {
                 msgEl.style.color = 'red';
@@ -3100,95 +1941,6 @@
             }
         }
 
-
-        async function executeAiDev() {
-            const path = document.getElementById('ai-path').value.trim();
-            const prompt = document.getElementById('ai-prompt').value.trim();
-            const pin = document.getElementById('ai-pin').value.trim();
-            const btn = document.getElementById('ai-btn');
-            const status = document.getElementById('ai-status');
-
-            if (!path || !prompt || !pin) {
-                alert("三個欄位都必須填寫！");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = "執行中...";
-            status.innerHTML = "⏳ 正在與 AI 通訊，這可能需要一分鐘...";
-
-            const finalPath = (path.toLowerCase() === 'blank') ? "AUTO" : path;
-
-            try {
-                const token = localStorage.getItem('accessToken');
-                const response = await fetch('/api/admin-users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ action: 'ai-dev', path: finalPath, prompt: prompt, pin: pin })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    status.innerHTML = `<b style="color:green">✅ 成功！</b>\n修改了 ${result.count} 個檔案。\n<a href="${result.commitUrl}" target="_blank">點此查看 GitHub 修改紀錄</a>`;
-                    document.getElementById('ai-pin').value = ""; // 成功後清空 PIN
-                } else {
-                    status.innerHTML = `<b style="color:red">❌ 錯誤：</b> ${result.error || result.message}`;
-                }
-            } catch (e) {
-                status.innerHTML = "❌ 連線失敗: " + e.message;
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = "啟動任務";
-            }
-        }
-
-        async function createEmailAccount() {
-            const prefix = document.getElementById('email-admin-prefix').value.trim();
-            const password = document.getElementById('email-admin-password').value.trim();
-            const adminSecret = document.getElementById('email-admin-secret').value.trim();
-            const statusEl = document.getElementById('email-admin-status');
-            const btn = document.getElementById('btn-email-admin-create');
-
-            if (!prefix || !password || !adminSecret) {
-                statusEl.style.color = 'red';
-                statusEl.textContent = '❌ 請填寫所有必填欄位。';
-                return;
-            }
-
-            statusEl.style.color = '#2c3e50';
-            statusEl.textContent = '⏳ 正在建立帳戶...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch('/api/email?action=create-account', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email_address: `${prefix}@ctrchk.com`,
-                        password: password,
-                        admin_secret: adminSecret
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    statusEl.style.color = 'green';
-                    statusEl.innerHTML = `✅ 帳戶 <b>${prefix}@ctrchk.com</b> 建立成功！`;
-                    document.getElementById('email-admin-prefix').value = '';
-                    document.getElementById('email-admin-password').value = '';
-                } else {
-                    statusEl.style.color = 'red';
-                    statusEl.textContent = `❌ 錯誤: ${result.message || '無法建立帳戶'}`;
-                }
-            } catch (error) {
-                statusEl.style.color = 'red';
-                statusEl.textContent = `❌ 連線失敗: ${error.message}`;
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
         function toggleDoubleMileageTag(checked) {
             const tagsInput = document.getElementById('rm-tags');
             if (!tagsInput) return;
@@ -3285,190 +2037,62 @@
             }
         }
 
-        async function loadTermsLog() {
-            const loading = document.getElementById('terms-log-loading');
-            const tbody = document.getElementById('terms-log-tbody');
-            if (!loading || !tbody) return;
+        // ── 安全密碼驗證 ───────────────────────────────────────────────────
+        const PIN_PATTERN = /^\d{6}$/;
 
-            loading.style.display = 'block';
-            tbody.innerHTML = '';
+        async function sha256(text) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
-            try {
-                const token = localStorage.getItem('accessToken');
-                const resp = await fetch('/api/admin?action=get-terms-log', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-
-                loading.style.display = 'none';
-                const list = data.logs || [];
-                if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">暫無同意記錄。</td></tr>';
+        function promptAdminPin() {
+            return new Promise((resolve) => {
+                const storedHash = localStorage.getItem('adminSecurityPinHash');
+                if (!storedHash) {
+                    alert('請先設定 6 位數字安全密碼後再進行操作。');
+                    resolve(null);
                     return;
                 }
+                const modal = document.getElementById('admin-pin-modal');
+                const input = document.getElementById('admin-pin-modal-input');
+                const errEl = document.getElementById('admin-pin-modal-err');
+                input.value = '';
+                errEl.textContent = '';
+                modal.style.display = 'flex';
+                input.focus();
 
-                tbody.innerHTML = list.map(log => {
-                    let dateStr = '—';
-                    if (log.agreed_at) {
-                        try {
-                            const d = new Date(log.agreed_at);
-                            const pad = n => String(n).padStart(2, '0');
-                            dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-                        } catch (e) {
-                            dateStr = log.agreed_at;
-                        }
-                    }
-                    return `
-                        <tr>
-                            <td>${log.user_id}</td>
-                            <td><strong>${escapeHtml(log.email)}</strong></td>
-                            <td>${escapeHtml(log.full_name || '—')}</td>
-                            <td>${escapeHtml(log.username || '—')}</td>
-                            <td><span class="role-badge role-senior" style="font-size:0.8em; padding:3px 8px;">${escapeHtml(log.version)}</span></td>
-                            <td><code style="font-family:monospace; background:#f4f4f4; padding:2px 5px; border-radius:4px;">${escapeHtml(log.ip_address)}</code></td>
-                            <td><strong>${dateStr}</strong></td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (err) {
-                loading.style.display = 'none';
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
-            }
-        }
-
-        // ── 故障管理 (Bug Reports) JS ──────────────────────────────────────────
-        let allBugReports = [];
-        let currentBugFilter = 'pending';
-
-        async function loadBugReports() {
-            const loading = document.getElementById('bugs-loading');
-            const tbody = document.getElementById('bugs-tbody');
-            if (!loading || !tbody) return;
-
-            loading.style.display = 'block';
-            tbody.innerHTML = '';
-
-            try {
-                const token = localStorage.getItem('accessToken');
-                const resp = await fetch('/api/admin?action=get-bug-reports', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (handleTokenError(resp)) return;
-                const data = await resp.json();
-
-                loading.style.display = 'none';
-                allBugReports = data.reports || [];
-
-                updateBugCounts();
-                renderBugReports();
-            } catch (err) {
-                loading.style.display = 'none';
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
-            }
-        }
-
-        function updateBugCounts() {
-            const pendingCount = allBugReports.filter(b => b.status === 'pending').length;
-            const resolvedCount = allBugReports.filter(b => b.status === 'resolved').length;
-
-            document.getElementById('count-bug-pending').textContent = pendingCount;
-            document.getElementById('count-bug-resolved').textContent = resolvedCount;
-        }
-
-        function filterBugReports(filter) {
-            currentBugFilter = filter;
-            const pBtn = document.getElementById('bug-filter-pending');
-            const rBtn = document.getElementById('bug-filter-resolved');
-            if (pBtn) {
-                pBtn.style.background = filter === 'pending' ? '#2c3e50' : '#888';
-                pBtn.style.color = '#fff';
-            }
-            if (rBtn) {
-                rBtn.style.background = filter === 'resolved' ? '#2c3e50' : '#888';
-                rBtn.style.color = '#fff';
-            }
-            renderBugReports();
-        }
-
-        function renderBugReports() {
-            const tbody = document.getElementById('bugs-tbody');
-            const list = allBugReports.filter(b => b.status === currentBugFilter);
-
-            if (list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">此分類下暫無任何報告。</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = list.map(b => {
-                const dateStr = b.created_at ? new Date(b.created_at).toLocaleString('zh-HK') : '—';
-                const reporter = b.email
-                    ? `<div><strong>${escapeHtml(b.full_name || '用戶')}</strong></div>
-                       <div style="font-size:0.8em; color:#888;">${escapeHtml(b.email)}</div>`
-                    : `<span style="color:#888; font-style:italic;">訪客 / 未登入</span>`;
-
-                const pageCode = b.page_url
-                    ? `<div style="margin-top:5px; font-size:0.8em; color:#e67e22;">
-                         頁面: <code style="background:rgba(0,0,0,0.05); padding:2px 4px; border-radius:4px;">${escapeHtml(b.page_url)}</code>
-                       </div>`
-                    : '';
-
-                const screenshotHtml = b.screenshot
-                    ? `<img src="${b.screenshot}" style="max-width:120px; max-height:80px; cursor:zoom-in; border:1px solid #ddd; border-radius:4px;"
-                            onclick="openBugScreenshotModal('${b.screenshot}')" title="點擊放大">`
-                    : '<span style="color:#aaa; font-style:italic;">無截圖</span>';
-
-                const actionButton = b.status === 'pending'
-                    ? `<button class="action-btn btn-promote" onclick="resolveBugReport(${b.id}, 'resolved')">標註已完成</button>`
-                    : `<span style="font-size:0.85em; color:green; font-weight:bold;"><i class="fas fa-check-circle"></i> 已處理</span>`;
-
-                return `
-                    <tr>
-                        <td>
-                            ${reporter}
-                            ${pageCode}
-                        </td>
-                        <td style="max-width:260px; word-break:break-all; white-space:pre-wrap;">${escapeHtml(b.description)}</td>
-                        <td>${screenshotHtml}</td>
-                        <td><span style="font-size:0.85em;">${dateStr}</span></td>
-                        <td>${actionButton}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        async function resolveBugReport(id, status) {
-            if (!confirm('確定將此報告標註為「已完成」？')) return;
-            const token = localStorage.getItem('accessToken');
-            try {
-                const resp = await fetch('/api/admin', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'resolve-bug-report', bug_id: id, status: status })
-                });
-                if (handleTokenError(resp)) return;
-                if (resp.ok) {
-                    alert('標註成功！');
-                    loadBugReports();
-                } else {
-                    const data = await resp.json();
-                    alert('操作失敗: ' + data.message);
+                function cleanup() {
+                    modal.style.display = 'none';
+                    document.removeObserver ? document.removeObserver('keydown', onKey) : document.removeEventListener('keydown', onKey);
                 }
-            } catch (err) {
-                alert('錯誤: ' + err.message);
-            }
-        }
-
-        function openBugScreenshotModal(imgUrl) {
-            // Create dynamic modal
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed; inset:0; z-index:200000; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; cursor:zoom-out;';
-            overlay.innerHTML = `<img src="${imgUrl}" style="max-width:95vw; max-height:95vh; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.5); border-radius:8px;">`;
-            overlay.onclick = () => overlay.remove();
-            document.body.appendChild(overlay);
+                async function onConfirm() {
+                    const pin = input.value.trim();
+                    if (!PIN_PATTERN.test(pin)) {
+                        errEl.textContent = '請輸入 6 位數字密碼。';
+                        return;
+                    }
+                    const hash = await sha256(pin);
+                    if (hash !== storedHash) {
+                        errEl.textContent = '❌ 密碼錯誤，請重試。';
+                        input.value = '';
+                        input.focus();
+                        return;
+                    }
+                    cleanup();
+                    resolve(pin);
+                }
+                function onCancel() {
+                    cleanup();
+                    resolve(null);
+                }
+                function onKey(e) {
+                    if (e.key === 'Enter') onConfirm();
+                    if (e.key === 'Escape') onCancel();
+                }
+                document.addEventListener('keydown', onKey);
+                document.getElementById('admin-pin-modal-confirm').onclick = onConfirm;
+                document.getElementById('admin-pin-modal-cancel').onclick  = onCancel;
+            });
         }
 
         // ── 已刪除車站管理 JS ──────────────────────────────────────────────────
