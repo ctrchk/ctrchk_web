@@ -60,14 +60,20 @@
       --hud-text-sub: rgba(255, 255, 255, 0.6);
       --hud-blur: blur(16px);
       --app-accent: #BFE340;
+      --hud-nav-text: #ffffff;
+      --hud-nav-text-sub: rgba(255, 255, 255, 0.9);
+      --hud-nav-border: rgba(255, 255, 255, 0.2);
     }
 
     body.app-light-theme {
       --hud-bg: rgba(245, 250, 245, 0.95);
-      --hud-highway-green: rgba(46, 125, 50, 0.95);
+      --hud-highway-green: rgba(240, 248, 240, 0.95);
       --hud-text: #1b3a1f;
       --hud-text-sub: rgba(27, 58, 31, 0.6);
       --app-accent: #2e7d32;
+      --hud-nav-text: #1b3a1f;
+      --hud-nav-text-sub: rgba(27, 58, 31, 0.8);
+      --hud-nav-border: rgba(0, 0, 0, 0.1);
     }
 
     body.rank-gold {
@@ -76,6 +82,9 @@
       --hud-text: #d4af37;
       --hud-text-sub: rgba(212, 175, 55, 0.6);
       --app-accent: #d4af37;
+      --hud-nav-text: #d4af37;
+      --hud-nav-text-sub: rgba(212, 175, 55, 0.8);
+      --hud-nav-border: rgba(212, 175, 55, 0.3);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -167,7 +176,7 @@
       background: var(--hud-highway-green);
       backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
-      border: 2px solid rgba(255,255,255,0.2);
+      border: 2px solid var(--hud-nav-border, rgba(255,255,255,0.2));
       border-radius: 16px;
       padding: 16px 20px;
       margin: 8px 16px 0;
@@ -179,12 +188,12 @@
     }
     .hud-top.hidden { display: none; }
 
-    .nav-next-icon { font-size: 32px; color: #fff; min-width: 40px; text-align: center; }
+    .nav-next-icon { font-size: 32px; color: var(--hud-nav-text); min-width: 40px; text-align: center; }
     .nav-instruction-wrap { flex: 1; min-width: 0; }
-    .nav-next-road { font-size: 12px; opacity: 0.9; color: rgba(255,255,255,0.9); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .nav-instruction { font-size: 20px; font-weight: 800; color: #fff; line-height: 1.2; }
-    .nav-dist-wrap { text-align: right; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 16px; min-width: 70px; }
-    .nav-dist-val { font-size: 26px; font-weight: 900; color: #fff; line-height: 1; }
+    .nav-next-road { font-size: 12px; opacity: 0.9; color: var(--hud-nav-text-sub); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nav-instruction { font-size: 20px; font-weight: 800; color: var(--hud-nav-text); line-height: 1.2; }
+    .nav-dist-wrap { text-align: right; border-left: 1px solid var(--hud-nav-border, rgba(255,255,255,0.2)); padding-left: 16px; min-width: 70px; }
+    .nav-dist-val { font-size: 26px; font-weight: 900; color: var(--hud-nav-text); line-height: 1; }
     .nav-dist-unit { font-size: 11px; color: var(--app-accent); opacity: 0.8; }
 
     /* Bottom: Combined Stats and Controls Panel */
@@ -588,6 +597,32 @@
     const STOP_DETECTION_RADIUS_M = 40;
     const OFF_ROUTE_THRESHOLD_M = 50;
 
+    function shouldReverseStops(route, dirIndex) {
+        if (!route.gpx || !route.gpx[dirIndex]) return false;
+        const gpxItem = route.gpx[dirIndex];
+        if (gpxItem.dir_filter === 'up') return true;
+        if (gpxItem.dir_filter === 'down') return false;
+
+        const label = gpxItem.label || '';
+        if (label.includes('逆')) return true;
+
+        if (label.includes('往') && route.stops && route.stops.length > 0) {
+            const firstStop = route.stops[0];
+            const lastStop = route.stops[route.stops.length - 1];
+            const destinationName = label.split('往')[1] || '';
+            if (destinationName) {
+                const firstMatch = firstStop.name.includes(destinationName) ||
+                                   (firstStop.code && firstStop.code.includes(destinationName));
+                const lastMatch = lastStop.name.includes(destinationName) ||
+                                  (lastStop.code && lastStop.code.includes(destinationName));
+                if (firstMatch && !lastMatch) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     function haversineM(lat1, lon1, lat2, lon2) {
       const R = 6371000;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -745,12 +780,42 @@
         });
     }
 
+    let lastSpokenText = "";
+    let lastSpokenTime = 0;
+    function speak(text) {
+        if (!text) return;
+        const now = Date.now();
+        // Prevent repeating the same announcement within 15 seconds
+        if (text === lastSpokenText && (now - lastSpokenTime < 15000)) {
+            return;
+        }
+        lastSpokenText = text;
+        lastSpokenTime = now;
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-HK';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
     function updateHUD(lat, lon, speed) {
         const next = routeStops.find(s => !reachedStops.has(s.order)) || routeStops[routeStops.length - 1];
         const dist = haversineM(lat, lon, next.lat, next.lon);
         document.getElementById('next-dist').textContent = Math.round(dist);
         document.getElementById('next-road').textContent = routeId + ' ' + (routeData?.alias || '');
-        document.getElementById('next-instruction').textContent = reachedStops.has(next.order) ? '即將到達終點' : `前往：${next.name}`;
+
+        const isCompleted = reachedStops.has(next.order);
+        document.getElementById('next-instruction').textContent = isCompleted ? '即將到達終點' : `前往：${next.name}`;
+
+        if (!isCompleted && dist <= 50 && dist > STOP_DETECTION_RADIUS_M) {
+            speak(`即將到達 ${next.name}。`);
+        } else if (isCompleted) {
+            speak("你已完成全部站點，即將抵達終點。");
+        }
+
         updateStopsOverview();
     }
 
@@ -762,6 +827,14 @@
             const stopText = `${reachedStops.size}/${routeStops.length}`;
             const stopTop = document.getElementById('stat-stops-top');
             if (stopTop) stopTop.textContent = stopText;
+
+            speak(`成功到達 ${next.name}。`);
+
+            const allCompleted = routeStops.every(s => reachedStops.has(s.order));
+            if (allCompleted) {
+                speak(`恭喜！你已完成 ${routeData?.alias || '目前'} 路線的全部站點，請點擊結束騎行。`);
+            }
+
             updateStopsOverview();
             renderRouteStops(); // Update map markers
         }
@@ -1340,7 +1413,20 @@
             }
 
             if (routeData) {
-                fullRouteStops = (routeData.stops || []).map((s, i) => ({ ...s, order: i + 1 }));
+                let displayStops = routeData.stops || [];
+                if (routeData.gpx && routeData.gpx[dirIndex]) {
+                    const filter = routeData.gpx[dirIndex].dir_filter;
+                    if (filter === 'up') {
+                        displayStops = displayStops.filter(s => s.direction !== '⬇️').slice().reverse();
+                    } else if (filter === 'down') {
+                        displayStops = displayStops.filter(s => s.direction !== '⬆️');
+                    } else {
+                        if (shouldReverseStops(routeData, dirIndex)) {
+                            displayStops = displayStops.slice().reverse();
+                        }
+                    }
+                }
+                fullRouteStops = displayStops.map((s, i) => ({ ...s, order: i + 1 }));
                 routeStops = [...fullRouteStops];
 
                 if (startStopIdx > 0 && startStopIdx < routeStops.length) {

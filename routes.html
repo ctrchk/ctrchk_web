@@ -318,7 +318,7 @@
 }
 /* Search + filter bar */
 .app-ride-topbar {
-    padding: calc(env(safe-area-inset-top) + 0.6em) 0.8em 0.6em;
+    padding: calc(env(safe-area-inset-top) + 0.8em) 1.2em 0.7em;
     background: var(--app-bg-primary, #121f14);
     flex-shrink: 0;
     display: flex;
@@ -831,7 +831,7 @@ body.app-light-theme .app-filter-chip.random-btn {
         </div>
 
         <!-- Search + filter bar -->
-        <div class="app-ride-topbar" style="padding-top:0.6em;">
+        <div class="app-ride-topbar">
             <div class="app-ride-search-row">
                 <i class="fas fa-search" style="margin-left:0.3em;"></i>
                 <input type="text" id="app-search-input" class="app-ride-search-input"
@@ -851,6 +851,9 @@ body.app-light-theme .app-filter-chip.random-btn {
                 <div class="app-filter-chip" data-filter="新手必試">新手推薦</div>
                 <div class="app-filter-chip" data-filter="長途">長途</div>
                 <div class="app-filter-chip random-btn" id="app-random-btn">🎲 隨機</div>
+            </div>
+            <div class="app-filter-row" id="app-terminal-chips-row" style="margin-top:0.4em; display:none; gap:0.5em; overflow-x:auto;">
+                <!-- Terminal buttons will be injected here dynamically -->
             </div>
         </div>
 
@@ -1067,6 +1070,7 @@ function selectTerminal(terminal) {
     badge.classList.add('visible');
     document.getElementById('app-map-hint').style.display = 'none';
     map.setView([terminal.lat, terminal.lng], 14, { animate: true });
+    renderTerminalChips();
     renderRoutes();
 }
 
@@ -1074,7 +1078,46 @@ function clearTerminal() {
     selectedTerminalId = null;
     document.getElementById('app-terminal-badge').classList.remove('visible');
     document.getElementById('app-map-hint').style.display = '';
+    renderTerminalChips();
     renderRoutes();
+}
+
+function renderTerminalChips() {
+    const row = document.getElementById('app-terminal-chips-row');
+    if (!row) return;
+    row.innerHTML = '';
+
+    // Filter terminals belonging to the selected department
+    const deptTerminals = TERMINALS.filter(t => t.dept === selectedDeptId);
+    if (deptTerminals.length === 0) {
+        row.style.display = 'none';
+        return;
+    }
+    row.style.display = 'flex';
+
+    // Add a label
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size: 0.78em; font-weight: bold; color: var(--app-text-secondary, #a8d8a0); display: flex; align-items: center; margin-right: 0.4em; white-space: nowrap;';
+    label.textContent = '總站篩選：';
+    row.appendChild(label);
+
+    deptTerminals.forEach(t => {
+        const chip = document.createElement('div');
+        chip.className = 'app-filter-chip';
+        if (selectedTerminalId === t.id) {
+            chip.classList.add('active');
+        }
+        chip.textContent = t.name;
+        chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (selectedTerminalId === t.id) {
+                clearTerminal();
+            } else {
+                selectTerminal(t);
+            }
+        });
+        row.appendChild(chip);
+    });
 }
 
 // ── GPX loading & route display ────────────────────────────────────────
@@ -1307,7 +1350,13 @@ function renderRoutes() {
 
     if (claimBtn) {
         // Show claim button if 100% and not already claimed
-        const isClaimed = localStorage.getItem('catalog_reward_claimed') === '1';
+        let isCatalogRewardClaimed = false;
+        try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            isCatalogRewardClaimed = !!storedUser.catalog_reward_claimed;
+        } catch(e) {}
+
+        const isClaimed = isCatalogRewardClaimed || localStorage.getItem('catalog_reward_claimed') === '1';
         if (catalogPct === 100 && !isClaimed) {
             claimBtn.style.display = 'block';
             claimBtn.onclick = claimCatalogReward;
@@ -1349,6 +1398,32 @@ function renderRoutes() {
     const sortedRoutes = routeStatuses.sort((a, b) => {
         return routeSortKey(a.route.id) - routeSortKey(b.route.id);
     });
+
+    function shouldReverseStops(route, dirIndex) {
+        if (!route.gpx || !route.gpx[dirIndex]) return false;
+        const gpxItem = route.gpx[dirIndex];
+        if (gpxItem.dir_filter === 'up') return true;
+        if (gpxItem.dir_filter === 'down') return false;
+
+        const label = gpxItem.label || '';
+        if (label.includes('逆')) return true;
+
+        if (label.includes('往') && route.stops && route.stops.length > 0) {
+            const firstStop = route.stops[0];
+            const lastStop = route.stops[route.stops.length - 1];
+            const destinationName = label.split('往')[1] || '';
+            if (destinationName) {
+                const firstMatch = firstStop.name.includes(destinationName) ||
+                                   (firstStop.code && firstStop.code.includes(destinationName));
+                const lastMatch = lastStop.name.includes(destinationName) ||
+                                  (lastStop.code && lastStop.code.includes(destinationName));
+                if (firstMatch && !lastMatch) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     function buildCard({ route, cost, isCoinRoute, coinUnlocked, coinLocked, deptLocked, isConquered, isLocked }) {
         const xp = route.xp_reward || ROUTE_XP[route.id] || 0;
@@ -1455,13 +1530,17 @@ function renderRoutes() {
                 stopSelect.onclick = (e) => e.stopPropagation();
 
                 // Process stops based on selected direction filter
-                let displayStops = route.stops;
+                let displayStops = route.stops || [];
                 if (route.gpx && route.gpx[selectedDirIndex]) {
                     const filter = route.gpx[selectedDirIndex].dir_filter;
                     if (filter === 'up') {
                         displayStops = route.stops.filter(s => s.direction !== '⬇️').slice().reverse();
                     } else if (filter === 'down') {
                         displayStops = route.stops.filter(s => s.direction !== '⬆️');
+                    } else {
+                        if (shouldReverseStops(route, selectedDirIndex)) {
+                            displayStops = route.stops.slice().reverse();
+                        }
                     }
                 }
 
@@ -1487,7 +1566,41 @@ function renderRoutes() {
         return card;
     }
 
-    sortedRoutes.forEach(r => container.appendChild(buildCard(r)));
+    if (selectedTerminalId) {
+        const terminal = TERMINALS.find(t => t.id === selectedTerminalId);
+        if (terminal) {
+            const name = terminal.name;
+            const starting = sortedRoutes.filter(r => r.route.start && r.route.start.includes(name));
+            const passing = sortedRoutes.filter(r => !r.route.start || !r.route.start.includes(name));
+
+            if (starting.length > 0) {
+                const header = document.createElement('div');
+                header.className = 'app-routes-divider';
+                header.innerHTML = `📍 從 ${name} 出發的路線`;
+                container.appendChild(header);
+
+                starting.forEach(r => container.appendChild(buildCard(r)));
+            }
+
+            if (passing.length > 0) {
+                const header = document.createElement('div');
+                header.className = 'app-routes-divider';
+                header.innerHTML = `🔄 途經 ${name} 的路線`;
+                container.appendChild(header);
+
+                passing.forEach(r => container.appendChild(buildCard(r)));
+            }
+
+            if (starting.length === 0 && passing.length === 0) {
+                const noRoutes = document.createElement('div');
+                noRoutes.className = 'app-no-routes';
+                noRoutes.innerHTML = '<i class="fas fa-search"></i>該總站暫無符合條件的路線';
+                container.appendChild(noRoutes);
+            }
+        }
+    } else {
+        sortedRoutes.forEach(r => container.appendChild(buildCard(r)));
+    }
 }
 
 async function claimCatalogReward() {
@@ -1909,6 +2022,7 @@ function enterDepartment(dept, pushState) {
         }
     }
 
+    renderTerminalChips();
     renderRoutes();
 }
 
@@ -1992,31 +2106,41 @@ async function initAppRidePage() {
     }
 
     try {
-        const cachedOverride = getCachedData(ROUTE_DATA_CACHE_KEY);
-        const cachedStatic = getCachedData(STATIC_ROUTES_CACHE_KEY);
+        let staticData = getCachedData(STATIC_ROUTES_CACHE_KEY);
+        let overrideData = getCachedData(ROUTE_DATA_CACHE_KEY);
 
-        let staticData = cachedStatic;
-        let overrideData = cachedOverride;
-
-        const fetchPromises = [];
-        if (!staticData) {
-            fetchPromises.push(fetch('/routes.json').then(r => r.json()).then(d => {
-                staticData = d;
-                setCachedData(STATIC_ROUTES_CACHE_KEY, d);
-            }));
-        }
-        if (!overrideData) {
-            fetchPromises.push(fetch('/api/user?action=route-data').then(r => r.json()).then(d => {
-                overrideData = d;
-                setCachedData(ROUTE_DATA_CACHE_KEY, d);
-            }));
-        }
-
-        if (fetchPromises.length > 0) {
+        if (navigator.onLine) {
             try {
+                const [r1, r2] = await Promise.all([
+                    fetch('/routes.json').then(r => r.json()),
+                    fetch('/api/user?action=route-data').then(r => r.json())
+                ]);
+                staticData = r1;
+                overrideData = r2;
+                setCachedData(STATIC_ROUTES_CACHE_KEY, r1);
+                setCachedData(ROUTE_DATA_CACHE_KEY, r2);
+            } catch (e) {
+                console.warn('[Routes] Failed to fetch fresh route data, using cache:', e);
+            }
+        }
+
+        // If online fetch failed or we are offline, and we have no cached data, fetch once anyway as a backup
+        if (!staticData || !overrideData) {
+            const fetchPromises = [];
+            if (!staticData) {
+                fetchPromises.push(fetch('/routes.json').then(r => r.json()).then(d => {
+                    staticData = d;
+                    setCachedData(STATIC_ROUTES_CACHE_KEY, d);
+                }).catch(e => console.warn(e)));
+            }
+            if (!overrideData) {
+                fetchPromises.push(fetch('/api/user?action=route-data').then(r => r.json()).then(d => {
+                    overrideData = d;
+                    setCachedData(ROUTE_DATA_CACHE_KEY, d);
+                }).catch(e => console.warn(e)));
+            }
+            if (fetchPromises.length > 0) {
                 await Promise.all(fetchPromises);
-            } catch(e) {
-                console.warn('[Routes] Error prefetching route data:', e);
             }
         }
 
@@ -2109,6 +2233,7 @@ async function initAppRidePage() {
                 TERMINALS = mergeTerminalLists(DEFAULT_TERMINALS, overrideData.terminals || []);
                 rebuildTerminalIndex();
                 renderTerminalMarkers();
+                renderTerminalChips();
 
                 // Dynamically update DEPARTMENTS from API
                 if (Array.isArray(overrideData.departments) && overrideData.departments.length > 0) {
