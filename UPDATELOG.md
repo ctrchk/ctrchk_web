@@ -4,6 +4,41 @@
 
 ---
 
+## v2.2.3 Beta — 2026-08-10
+
+### 全域實時主題同步、3D 導航語音播報、地圖總站篩選與座標精度修正 (Real-time Theme Syncing, TTS Navigation, Map Terminal Selection, and Coordinate Accuracy Fixes)
+
+- **全域實時主題同步 (Instant Real-time Theme Syncing)**:
+  - 徹底重構 `js/main.js` 中的主題初始化及同步機制。
+  - 將 `'storage'` 事件監聽器擴展至 `appTheme`、`silverThemeDisabled`、`goldThemeDisabled` 與 `user` 鍵。
+  - 當用戶於任何分頁、iframe 內切換顏色模式或激活銀卡、金卡特殊會員主題時，其他背景加載的 Keep-Alive SPA 頁面無需重載即可瞬間實時切換顏色主題。
+  - 重構 `initAppTheme()` 以統一控制卡級 CSS 樣式類（`rank-silver`、`rank-gold`），保證多端與多頁面主題樣式 100% 絕對一致。
+
+- **地圖 3D 智慧語音導航及 TTS 播報 (Text-to-Speech Smart Navigation)**:
+  - 於導航頁 (`nav.html`) 和騎行頁 (`ride.html`) 全面引進 Text-to-Speech (TTS) 語音播報，採用免費、免 API Key 的瀏覽器原生 `window.speechSynthesis` 引擎（適配 `zh-HK` 粵語及繁體中文）。
+  - **幾何拐彎語音預報 (Turn-by-Turn Angle Warning)**：在 `nav.html` 中結合 Turf.js 計算前兩段路網的 Vector Bearing 夾角，於距離拐彎處 < 40m 時主動發起語音播報（例如：「前方左轉」、「前方右轉」）。
+  - **行人路段與抵達提示 (Pedestrian & Arrival Announcements)**：進入行人路段時精確播報語音警告（「進入行人路路段，請下車推行」），並於接近目的地/站點或成功打卡時播放語音反饋，保障行車安全。
+  - **語音去噪與防抖播報 (TTS Anti-spam)**：引入 `lastSpokenText` 靜態語音快取防抖與 15 秒間隔限制，避免相同語音被重複、重疊播放。
+
+- **地圖總站位置篩選與路線分流渲染 (Terminal Map Selection & Route Split Rendering)**:
+  - 在路線頁 (`routes.html`) 地圖下方整合優雅的懸浮終端標籤行 (`#app-terminal-chips-row`) 與 `renderTerminalChips()` 控制器。
+  - 支持用戶一鍵篩選總站，並實施動態分流渲染：將路線列表拆分為「📍 從 [總站] 出發的路線」與「🔄 途經 [總站] 的路線」，大幅提升多路網接駁交互便利。
+
+- **香港 1980 座標系 EPSG:2326 精度校正與將軍澳搜尋限制 (Coordinate Conversion & TKO Search Filter)**:
+  - **1.2 km 座標漂移修復**：修正 `nav.html` 中 HK80 轉 WGS84 的 linear projection 算法。將 false Easting（假東偏）由錯誤的 `835477.98` 修正為標準 EPSG:2326 Spec 中的 `836694.05`，完美解決香港政府地圖 API 搜索結果向東偏移約 1.2 公里的重大歷史 Bug。
+  - **將軍澳區域範圍鎖定 (Strict TKO Search Boundary)**：引入 `isInTseungKwanO(coords)` 經緯度範圍邊界過濾器（`lon: [114.23, 114.29]`，`lat: [22.27, 22.34]`），將導航頁（`nav.html`）中的本機車站搜尋與政府地圖 API 全局搜尋結果嚴格過濾、限制於將軍澳 (TKO) 區段，防止非相關港九新界地址對騎士造成視覺混淆。
+
+- **騎行頁淺色模式 HUD 頂部導航欄深色樣式修復 (HUD Navigation Styling Patch)**:
+  - 重構 `ride.html` 淺色主題變量與對比度樣式，消除了淺色模式下 HUD 導航頂欄與文字重疊偏暗的色差問題，使其保持高度清晰的可視度。
+
+- **單車路線圖鑑與數據庫同步優化 (Workable Route Catalog)**:
+  - 為 `ensureRideTables()` 與 `api/user.js` 後端加入 `catalog_reward_claimed` DDL 數據庫欄位對接，支持跨設備實時同步和防刷防重領。
+
+- **Serverless 函數數量合規審查**:
+  - 全站 API 嚴格維持在 12 個 Serverless 服務（`admin.js`、`blog.js`、`chat.js`、`email.js`、`forum.js`、`getHistory.js`、`login.js`、`oauth.js`、`password-reset.js`、`push.js`、`register.js`、`user.js`），符合 Vercel 免費 Hobby 計劃額度限制。
+
+---
+
 ## v2.2.2 Beta — 2026-07-30
 
 ### 全分頁 Keep-Alive SPA 系統與 iOS 26 Liquid Glass 導航動畫重磅落地 (Task P3-2 Complete)

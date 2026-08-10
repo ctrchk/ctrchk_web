@@ -1150,10 +1150,17 @@
       // HK80 to WGS84 Conversion Logic
       hk80ToWgs84(N, E) {
         if (isNaN(N) || isNaN(E)) return [114.178556, 22.312133];
-        // More accurate linear approximation for HK region
+        // More accurate linear approximation for HK region (corrected false Easting to 836694.05)
         const lat = 22.312133 + (N - 819069.80) / 111232.0;
-        const lon = 114.178556 + (E - 835477.98) / (111320.0 * Math.cos(22.312133 * Math.PI / 180));
+        const lon = 114.178556 + (E - 836694.05) / (111320.0 * Math.cos(22.312133 * Math.PI / 180));
         return [lon, lat];
+      },
+
+      isInTseungKwanO(coords) {
+        if (!coords || isNaN(coords[0]) || isNaN(coords[1])) return false;
+        const [lon, lat] = coords;
+        // Bounding box for Tseung Kwan O area
+        return (lon >= 114.23 && lon <= 114.29 && lat >= 22.27 && lat <= 22.34);
       },
 
       async performSearch(query, container, onSelect, input) {
@@ -1190,7 +1197,7 @@
 
         // Render results
         container.innerHTML = '';
-        const all = [...localResults, ...govResults];
+        const all = [...localResults, ...govResults].filter(item => this.isInTseungKwanO(item.center));
 
         if (all.length === 0) {
           container.innerHTML = '<div class="search-result-item" style="color: rgba(255,255,255,0.4);">無搜尋結果</div>';
@@ -1625,6 +1632,52 @@
         document.getElementById('next-dist').textContent = Math.round(remain < 100 ? remain : 100);
       },
 
+      lastSpokenText: "",
+      lastSpokenTime: 0,
+      speak(text) {
+        if (!text) return;
+        const now = Date.now();
+        // Prevent repeating the same announcement within 15 seconds
+        if (text === this.lastSpokenText && (now - this.lastSpokenTime < 15000)) {
+            return;
+        }
+        this.lastSpokenText = text;
+        this.lastSpokenTime = now;
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-HK';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+      },
+
+      getNextTurnDirection(coords, currentIndex) {
+        if (!coords || coords.length < currentIndex + 3) return null;
+        const p1 = coords[currentIndex];
+        const p2 = coords[currentIndex + 1];
+        const p3 = coords[currentIndex + 2];
+
+        try {
+          const b1 = turf.bearing(turf.point(p1), turf.point(p2));
+          const b2 = turf.bearing(turf.point(p2), turf.point(p3));
+
+          let diff = b2 - b1;
+          while (diff < -180) diff += 360;
+          while (diff > 180) diff -= 360;
+
+          if (diff < -30 && diff > -135) {
+              return "left";
+          } else if (diff > 30 && diff < 135) {
+              return "right";
+          }
+        } catch (e) {
+          console.warn('[Nav] Turn detection calc error', e);
+        }
+        return "straight";
+      },
+
       updateRoadInfo(pos) {
         const point = turf.point(pos);
         let currentRoad = '路徑';
@@ -1670,14 +1723,45 @@
         if (distToDest < 50) {
           document.getElementById('next-instruction').textContent = '即將抵達目的地';
           document.getElementById('next-icon').innerHTML = '<i class="fas fa-flag-checkered"></i>';
+          this.speak("即將抵達目的地。");
         } else if (isPedestrian) {
           document.getElementById('next-instruction').textContent = '行人路：請下車推行';
           document.getElementById('next-icon').innerHTML = '<i class="fas fa-walking"></i>';
           document.getElementById('hud-top').style.background = 'var(--hud-red)';
+          this.speak("進入行人路路段，請下車推行。");
         } else {
-          document.getElementById('next-instruction').textContent = '沿單車徑前行';
-          document.getElementById('next-icon').innerHTML = '<i class="fas fa-arrow-up"></i>';
-          document.getElementById('hud-top').style.background = 'var(--hud-highway-green)';
+          const line = turf.lineString(this.routeData.coords);
+          const snapped = turf.nearestPointOnLine(line, point);
+          const idx = snapped.properties.index;
+          const nextPoint = this.routeData.coords[idx + 1];
+          let turnDetected = false;
+
+          if (nextPoint) {
+            const distToTurn = turf.distance(point, turf.point(nextPoint)) * 1000;
+            if (distToTurn < 40) {
+              const turn = this.getNextTurnDirection(this.routeData.coords, idx);
+              if (turn === "left") {
+                document.getElementById('next-instruction').textContent = '前方左轉';
+                document.getElementById('next-icon').innerHTML = '<i class="fas fa-arrow-left"></i>';
+                document.getElementById('hud-top').style.background = 'var(--hud-highway-green)';
+                this.speak("前方左轉。");
+                turnDetected = true;
+              } else if (turn === "right") {
+                document.getElementById('next-instruction').textContent = '前方右轉';
+                document.getElementById('next-icon').innerHTML = '<i class="fas fa-arrow-right"></i>';
+                document.getElementById('hud-top').style.background = 'var(--hud-highway-green)';
+                this.speak("前方右轉。");
+                turnDetected = true;
+              }
+            }
+          }
+
+          if (!turnDetected) {
+            document.getElementById('next-instruction').textContent = '沿單車徑前行';
+            document.getElementById('next-icon').innerHTML = '<i class="fas fa-arrow-up"></i>';
+            document.getElementById('hud-top').style.background = 'var(--hud-highway-green)';
+            this.speak("請沿單車徑前行。");
+          }
         }
       },
 

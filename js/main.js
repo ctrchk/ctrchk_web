@@ -18,22 +18,66 @@ function isStandaloneAppMode() {
     );
 }
 
-(function initAppTheme() {
+function initAppTheme() {
     if (!isStandaloneAppMode()) {
-        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+        document.body.classList.remove('app-theme-explicit', 'app-light-theme', 'rank-silver', 'rank-gold');
         return;
     }
-    const stored = localStorage.getItem('appTheme'); // 'dark' | 'light' | null
-    if (stored === 'dark') {
+
+    // 1. Determine membership rank and preference
+    let isGold = false;
+    let isSilver = false;
+    try {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            const user = JSON.parse(userData);
+            const rankRaw = String(user.permission_rank || user.mileage_rank || user.mileage_card || 'bronze').toLowerCase();
+            isGold = rankRaw.includes('gold') || rankRaw.includes('金');
+            isSilver = rankRaw.includes('silver') || rankRaw.includes('銀');
+        }
+    } catch (e) {
+        console.warn('Error parsing user rank for theme', e);
+    }
+
+    const silverEnabled = localStorage.getItem('silverThemeDisabled') !== '1';
+    const goldEnabled = localStorage.getItem('goldThemeDisabled') !== '1';
+
+    // 2. Clear old rank classes
+    document.body.classList.remove('rank-silver', 'rank-gold');
+
+    // 3. Apply appropriate classes and colors
+    if (isGold && goldEnabled) {
+        document.body.classList.add('rank-gold');
+        // Gold forces dark mode
         document.body.classList.add('app-theme-explicit');
         document.body.classList.remove('app-light-theme');
-    } else if (stored === 'light') {
-        document.body.classList.add('app-theme-explicit', 'app-light-theme');
     } else {
-        // No explicit preference — let CSS @media prefers-color-scheme decide
-        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+        if (isSilver && silverEnabled) {
+            document.body.classList.add('rank-silver');
+        }
+
+        const stored = localStorage.getItem('appTheme');
+        if (stored === 'dark') {
+            document.body.classList.add('app-theme-explicit');
+            document.body.classList.remove('app-light-theme');
+        } else if (stored === 'light') {
+            document.body.classList.add('app-theme-explicit', 'app-light-theme');
+        } else {
+            document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+        }
     }
-})();
+}
+window.initAppTheme = initAppTheme;
+initAppTheme();
+
+// Listen to the HTML5 storage event to synchronize the color theme across all loaded background frames/iframes in real-time
+window.addEventListener('storage', (event) => {
+    if (event.key === 'appTheme' || event.key === 'silverThemeDisabled' || event.key === 'goldThemeDisabled' || event.key === 'user') {
+        if (window.initAppTheme) {
+            window.initAppTheme();
+        }
+    }
+});
 
 /**
  * 切換主題並儲存設定
@@ -41,18 +85,11 @@ function isStandaloneAppMode() {
  */
 function setAppTheme(theme) {
     if (!isStandaloneAppMode()) {
-        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
+        document.body.classList.remove('app-theme-explicit', 'app-light-theme', 'rank-silver', 'rank-gold');
         return;
     }
     localStorage.setItem('appTheme', theme);
-    if (theme === 'light') {
-        document.body.classList.add('app-theme-explicit', 'app-light-theme');
-    } else if (theme === 'dark') {
-        document.body.classList.add('app-theme-explicit');
-        document.body.classList.remove('app-light-theme');
-    } else {
-        document.body.classList.remove('app-theme-explicit', 'app-light-theme');
-    }
+    initAppTheme();
 }
 
 // =========================================================================

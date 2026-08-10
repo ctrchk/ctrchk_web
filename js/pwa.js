@@ -239,6 +239,13 @@
 
     document.body.appendChild(nav);
 
+    // Hide bottom nav if we are not on one of the 5 main tabs
+    const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+    const currentPathClean = currentPath.split('?')[0].split('#')[0];
+    if (!mainTabs.includes(currentPathClean)) {
+        nav.style.display = 'none';
+    }
+
     // Animate active liquid bubble on load
     setTimeout(updateLiquidBubble, 50);
   }
@@ -579,6 +586,14 @@
 
       // Sync bottom navigation active states and bubble indicator
       updateAppBottomNavActiveState(cleanUrl);
+
+      // Show/hide bottom nav bar dynamically based on whether it is a main tab or sub-page
+      const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+      const nav = document.getElementById('app-bottom-nav');
+      if (nav) {
+          const isMainTab = mainTabs.includes(cleanUrl);
+          nav.style.display = isMainTab ? 'flex' : 'none';
+      }
     };
 
     // Listen to browser Back and Forward navigation events
@@ -761,6 +776,56 @@
     else document.addEventListener('DOMContentLoaded', fn);
   }
 
+  function injectBackArrow() {
+    if (!isStandalone) return;
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+
+    if (mainTabs.includes(path)) return;
+    if (document.getElementById('pwa-back-arrow-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'pwa-back-arrow-btn';
+    btn.className = 'btn-click-effect';
+    btn.style.cssText = `
+      position: fixed;
+      left: 16px;
+      top: calc(env(safe-area-inset-top) + 16px);
+      z-index: 99999;
+      background: rgba(18, 31, 20, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--app-accent, #BFE340);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      font-size: 1.1em;
+      transition: transform 0.2s, background-color 0.2s;
+    `;
+    btn.innerHTML = `<i class="fas fa-arrow-left"></i>`;
+    btn.title = '返回';
+
+    btn.addEventListener('click', () => {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.history.back();
+        } else {
+          window.history.back();
+        }
+      } catch (e) {
+        window.history.back();
+      }
+    });
+
+    document.body.appendChild(btn);
+  }
+
   onReady(() => {
     // Ensure body class is set (body is now definitely available)
     if (isStandalone) {
@@ -778,6 +843,9 @@
 
       // Inject Bug Report button
       injectPwaBugReportButton();
+
+      // Inject Back Arrow button
+      injectBackArrow();
     }
     // Apply mileage-rank theme only in installed app mode
     refreshMembershipTheme();

@@ -136,6 +136,7 @@ async function ensureRideTables() {
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64) UNIQUE;`); } catch(e) {}
       try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS wallet_serial VARCHAR(64);`); } catch(e) {}
       try { await query(`ALTER TABLE cycling_history ADD COLUMN IF NOT EXISTS client_uuid VARCHAR(36) UNIQUE;`); } catch(e) {}
+      try { await query(`ALTER TABLE user_game_profile ADD COLUMN IF NOT EXISTS catalog_reward_claimed BOOLEAN DEFAULT FALSE;`); } catch(e) {}
       try {
         await query(`
           CREATE TABLE IF NOT EXISTS terms_agreements (
@@ -1110,6 +1111,7 @@ export default async function handler(req, res) {
                              gp.xp_multiplier, gp.multiplier_expiry,
                              gp.elite_score, gp.elevation_gain_30, gp.consistency_days_30,
                              gp.exploration_ratio, gp.community_contribution, gp.current_season,
+                             gp.catalog_reward_claimed,
                              COALESCE((SELECT SUM(ch.distance_km) FROM cycling_history ch WHERE ch.user_id = u.id), 0) AS total_distance_km,
                              COALESCE((SELECT SUM(ch.distance_km)
                                        FROM cycling_history ch
