@@ -2,6 +2,14 @@
 
 // --- 初始化 Google Identity Services ---
 let googleClientId = '';
+let isGoogleBtnInitialized = false;
+
+// 定義 GIS 全域載入回調函數，避免 gsi/client 載入時找不到 window.onGoogleLibraryLoad
+window.onGoogleLibraryLoad = function() {
+    if (googleClientId && !isGoogleBtnInitialized) {
+        initGoogleButton();
+    }
+};
 
 async function loadGoogleSignIn() {
     try {
@@ -22,15 +30,13 @@ async function loadGoogleSignIn() {
         return;
     }
 
-    // 若 GIS 函式庫已載入則直接初始化，否則等待其 onload 回調
-    if (typeof google !== 'undefined' && google.accounts) {
+    // 若 GIS 函式庫已載入則直接初始化
+    if (typeof google !== 'undefined' && google && google.accounts && google.accounts.id) {
         initGoogleButton();
     } else {
-        // GIS 提供 window.onGoogleLibraryLoad 作為載入完成的標準回調
-        window.onGoogleLibraryLoad = initGoogleButton;
-        // 額外加上定時器輪詢確保加載成功
+        // 輪詢確認加載
         const interval = setInterval(() => {
-            if (typeof google !== 'undefined' && google.accounts) {
+            if (typeof google !== 'undefined' && google && google.accounts && google.accounts.id) {
                 clearInterval(interval);
                 initGoogleButton();
             }
@@ -39,32 +45,48 @@ async function loadGoogleSignIn() {
     }
 }
 
-let isGoogleBtnInitialized = false;
-
 function initGoogleButton() {
     if (isGoogleBtnInitialized) return;
-    if (typeof google === 'undefined' || !google.accounts) {
+    if (typeof google === 'undefined' || !google || !google.accounts || !google.accounts.id) {
         console.error('Google Identity Services 函式庫載入失敗');
         return;
     }
     isGoogleBtnInitialized = true;
 
-    google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true
-    });
-
-    const container = document.getElementById('google-login-btn-container');
-    if (container) {
-        google.accounts.id.renderButton(container, {
-            theme: 'outline',
-            size: 'large',
-            text: 'signin_with',
-            locale: 'zh-TW',
-            width: container.offsetWidth || 300
+    try {
+        google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            ux_mode: 'popup',
+            use_fedcm_for_prompt: false
         });
+
+        const container = document.getElementById('google-login-btn-container');
+        if (container) {
+            google.accounts.id.renderButton(container, {
+                theme: 'outline',
+                size: 'large',
+                text: 'signin_with',
+                locale: 'zh-TW',
+                width: container.offsetWidth || 300
+            });
+
+            // 綁定點擊事件作為備用觸發點，確保按鈕點擊必有回應
+            container.addEventListener('click', () => {
+                try {
+                    google.accounts.id.prompt();
+                } catch (err) {
+                    console.warn('Google prompt error on click:', err);
+                }
+            });
+        }
+
+        // 喚起 Google One-Tap / 帳號選擇器
+        google.accounts.id.prompt();
+    } catch (err) {
+        console.error('Google Sign-In 初始化失敗:', err);
     }
 }
 
@@ -83,12 +105,19 @@ async function handleGoogleCredentialResponse(response) {
             localStorage.setItem('accessToken', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
+            const targetUrl = !data.user.profile_completed ? '/profile-setup.html' : '/dashboard';
+
             if (!data.user.profile_completed) {
                 alert('歡迎加入城市運輸單車！\n請補充您的資料以升級為高級會員，享受完整功能。');
-                window.location.href = '/profile-setup.html';
             } else {
                 alert('Google 登入成功！');
-                window.location.href = '/dashboard';
+            }
+
+            // 支援全頁跳轉（即使在 Keep-Alive SPA iframe 內也能正確認導）
+            if (window.top && window.top !== window) {
+                window.top.location.href = targetUrl;
+            } else {
+                window.location.href = targetUrl;
             }
         } else {
             alert('Google 登入失敗：' + (data.message || '未知錯誤'));
