@@ -538,6 +538,7 @@
         const iframe = document.createElement('iframe');
         iframe.src = iframeSrc;
         iframe.className = 'spa-page-iframe';
+        iframe.setAttribute('allow', 'identity-credentials-get; clipboard-read; clipboard-write');
         iframe.style.cssText = 'width:100%; height:100%; border:none; display:block;';
 
         iframeTab.appendChild(iframe);

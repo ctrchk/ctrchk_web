@@ -257,6 +257,8 @@ async function initGoogleSignIn() {
             callback: handleGoogleCredentialResponse,
             auto_select: false,
             cancel_on_tap_outside: true,
+            ux_mode: 'popup',
+            use_fedcm_for_prompt: false
         });
 
         window.google.accounts.id.renderButton(container, {
@@ -265,6 +267,14 @@ async function initGoogleSignIn() {
             shape: 'pill',
             text: 'signin_with',
             logo_alignment: 'left'
+        });
+
+        container.addEventListener('click', () => {
+            try {
+                window.google.accounts.id.prompt();
+            } catch (err) {
+                console.warn('Google prompt error on container click:', err);
+            }
         });
 
         container.style.display = 'block';
@@ -286,7 +296,11 @@ async function handleGoogleCredentialResponse(response) {
         if (res.ok && token) {
             localStorage.setItem('accessToken', token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            window.location.reload();
+            if (window.top && window.top !== window) {
+                window.top.location.reload();
+            } else {
+                window.location.reload();
+            }
         } else {
             alert(data.message || 'Google 登入失敗');
         }
