@@ -7,41 +7,43 @@ let _ensureEmailTablesPromise = null;
 async function ensureEmailTables() {
   if (!_ensureEmailTablesPromise) {
     _ensureEmailTablesPromise = (async () => {
-      await query(`
-        CREATE TABLE IF NOT EXISTS email_accounts (
-            id SERIAL PRIMARY KEY,
-            email_address VARCHAR(255) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            role VARCHAR(20) DEFAULT 'USER' CHECK (role IN ('ADMIN', 'USER')),
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-      `);
-      await query(`
-        CREATE TABLE IF NOT EXISTS email_messages (
-            id SERIAL PRIMARY KEY,
-            account_id INTEGER REFERENCES email_accounts(id) ON DELETE CASCADE,
-            direction VARCHAR(10) NOT NULL CHECK (direction IN ('INBOX', 'SENT')),
-            sender VARCHAR(255) NOT NULL,
-            recipient VARCHAR(255) NOT NULL,
-            subject VARCHAR(255),
-            body_text TEXT,
-            body_html TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-      `);
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS email_accounts (
+              id SERIAL PRIMARY KEY,
+              email_address VARCHAR(255) UNIQUE NOT NULL,
+              password_hash VARCHAR(255) NOT NULL,
+              role VARCHAR(20) DEFAULT 'USER' CHECK (role IN ('ADMIN', 'USER')),
+              created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        await query(`
+          CREATE TABLE IF NOT EXISTS email_messages (
+              id SERIAL PRIMARY KEY,
+              account_id INTEGER REFERENCES email_accounts(id) ON DELETE CASCADE,
+              direction VARCHAR(10) NOT NULL CHECK (direction IN ('INBOX', 'SENT')),
+              sender VARCHAR(255) NOT NULL,
+              recipient VARCHAR(255) NOT NULL,
+              subject VARCHAR(255),
+              body_text TEXT,
+              body_html TEXT,
+              created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
 
-      // Migrations for length constraints and case consistency
-      await query(`ALTER TABLE email_messages ALTER COLUMN sender TYPE TEXT;`);
-      await query(`ALTER TABLE email_messages ALTER COLUMN recipient TYPE TEXT;`);
-      await query(`ALTER TABLE email_messages ALTER COLUMN subject TYPE TEXT;`);
-      await query(`UPDATE email_accounts SET email_address = LOWER(email_address);`);
+        // Migrations for length constraints and case consistency
+        await query(`ALTER TABLE email_messages ALTER COLUMN sender TYPE TEXT;`).catch(() => {});
+        await query(`ALTER TABLE email_messages ALTER COLUMN recipient TYPE TEXT;`).catch(() => {});
+        await query(`ALTER TABLE email_messages ALTER COLUMN subject TYPE TEXT;`).catch(() => {});
+        await query(`UPDATE email_accounts SET email_address = LOWER(email_address);`).catch(() => {});
 
-      await query(`CREATE INDEX IF NOT EXISTS idx_email_messages_account_id ON email_messages(account_id);`);
-      await query(`CREATE INDEX IF NOT EXISTS idx_email_accounts_email_address ON email_accounts(email_address);`);
-    })().catch((err) => {
-      _ensureEmailTablesPromise = null;
-      throw err;
-    });
+        await query(`CREATE INDEX IF NOT EXISTS idx_email_messages_account_id ON email_messages(account_id);`).catch(() => {});
+        await query(`CREATE INDEX IF NOT EXISTS idx_email_accounts_email_address ON email_accounts(email_address);`).catch(() => {});
+      } catch (err) {
+        _ensureEmailTablesPromise = null;
+        console.warn('ensureEmailTables warning:', err.message);
+      }
+    })();
   }
   await _ensureEmailTablesPromise;
 }
@@ -107,7 +109,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Only run expensive DDL checks if explicitly requested or on health check
+    // Only trigger ensureEmailTables if database URL is available or action requires DB
     if (!action || action === 'init-db') {
       await ensureEmailTables();
     }
@@ -206,6 +208,19 @@ export default async function handler(req, res) {
       }
     }
 
+    // Helper to safely extract string from email fields (handles objects, arrays, display names)
+    const extractEmailString = (val) => {
+      if (!val) return '';
+      if (Array.isArray(val)) {
+        val = val[0];
+      }
+      if (typeof val === 'object' && val !== null) {
+        val = val.address || val.email || val.value || JSON.stringify(val);
+      }
+      if (typeof val !== 'string') val = String(val);
+      return val.trim();
+    };
+
     // 4. action=send (POST)
     if (action === 'send') {
       if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
@@ -218,6 +233,10 @@ export default async function handler(req, res) {
 
         if (!to || !subject || !emailBody) {
           return res.status(400).json({ message: 'Missing fields (to, subject, or body)' });
+        }
+
+        if (!process.env.RESEND_API_KEY) {
+          return res.status(500).json({ message: '未設定 RESEND_API_KEY 環境變數，無法發送郵件。' });
         }
 
         const htmlContent = emailBody.replace(/\n/g, '<br>');
@@ -238,9 +257,14 @@ export default async function handler(req, res) {
           })
         });
 
-        const resendData = await resendResp.json();
+        const resendData = await resendResp.json().catch(() => ({}));
         if (!resendResp.ok) {
-          return res.status(resendResp.status).json({ message: 'Resend API error', error: resendData });
+          const detailMsg = resendData.message || resendData.error || (typeof resendData === 'string' ? resendData : JSON.stringify(resendData));
+          console.error('Resend API error:', resendResp.status, resendData);
+          return res.status(resendResp.status).json({
+            message: `Resend API error: ${detailMsg || '未知錯誤'}`,
+            error: resendData
+          });
         }
 
         // Database: Log SENT email
@@ -251,7 +275,11 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ message: 'Email sent successfully', id: resendData.id });
       } catch (err) {
-        return res.status(401).json({ message: 'Invalid or expired token' });
+        if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+          return res.status(401).json({ message: 'Invalid or expired token' });
+        }
+        console.error('Send Email Error:', err);
+        return res.status(500).json({ message: err.message || 'Send email failed' });
       }
     }
 
@@ -260,11 +288,11 @@ export default async function handler(req, res) {
       if (req.method !== 'POST') return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
 
       // Robust field extraction with fallbacks
-      const sender = body.sender || body.from;
-      const recipient = body.recipient || body.to;
+      const rawSender = extractEmailString(body.sender || body.from || body.from_email || body.fromEmail);
+      const rawRecipient = extractEmailString(body.recipient || body.to || body.to_email || body.toEmail);
       const subject = body.subject;
-      const body_text = body.body_text || body.text;
-      const body_html = body.body_html || body.html;
+      const body_text = body.body_text || body.text || body['body-plain'] || body.content;
+      const body_html = body.body_html || body.html || body['body-html'];
       const secret = body.secret;
 
       // Security: Check WEBHOOK_SECRET
@@ -274,8 +302,8 @@ export default async function handler(req, res) {
 
       // Robustness: Extract clean email from recipient (handles "Name <email@domain.com>" format)
       const emailRegex = /([a-zA-Z0-9._%+-]+@ctrchk\.com)/i;
-      const match = recipient?.match(emailRegex);
-      const cleanRecipient = match ? match[1].toLowerCase().trim() : recipient?.toLowerCase().trim();
+      const match = rawRecipient.match(emailRegex);
+      const cleanRecipient = match ? match[1].toLowerCase().trim() : rawRecipient.toLowerCase().trim();
 
       if (!cleanRecipient) {
         return res.status(400).json({ message: 'Recipient missing or invalid' });
@@ -294,14 +322,14 @@ export default async function handler(req, res) {
       }
 
       if (rows.length === 0) {
-        console.warn(`Incoming email skipped: Recipient ${cleanRecipient} not found. Original header: ${recipient}`);
+        console.warn(`Incoming email skipped: Recipient ${cleanRecipient} not found. Original header: ${rawRecipient}`);
         return res.status(200).json({ message: 'Recipient account not found, skipping' });
       }
 
       // Insert incoming email
       const insertResult = await query(
         `INSERT INTO email_messages (account_id, direction, sender, recipient, subject, body_text, body_html) VALUES ($1, 'INBOX', $2, $3, $4, $5, $6) RETURNING id`,
-        [rows[0].id, sender || 'Unknown Sender', cleanRecipient, subject || '(No Subject)', body_text, body_html]
+        [rows[0].id, rawSender || 'Unknown Sender', cleanRecipient, subject || '(No Subject)', body_text || '', body_html || '']
       );
 
       return res.status(200).json({

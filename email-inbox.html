@@ -565,6 +565,11 @@
                     return;
                 }
 
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.message || `伺服器回應錯誤 (${response.status})`);
+                }
+
                 allEmails = await response.json();
                 renderEmailList();
                 document.getElementById('mail-count').textContent = `${allEmails.length} 封郵件`;
@@ -689,7 +694,8 @@
                     document.getElementById('compose-body').value = '';
                     loadEmails(); // Refresh list
                 } else {
-                    alert(`錯誤: ${data.message}`);
+                    const errDetail = data.message || (data.error && (data.error.message || JSON.stringify(data.error))) || '發送失敗';
+                    alert(`錯誤: ${errDetail}`);
                 }
             } catch (error) {
                 alert(`發送失敗: ${error.message}`);
