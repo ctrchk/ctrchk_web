@@ -1156,8 +1156,58 @@
         }
     }
 
+    function parseTrackCoordinates(rawTrack) {
+        if (!rawTrack) return [];
+        let data = rawTrack;
+        if (typeof data === 'string') {
+            const trimmed = data.trim();
+            if (!trimmed) return [];
+            try {
+                data = JSON.parse(trimmed);
+                if (typeof data === 'string') data = JSON.parse(data.trim());
+            } catch (e) { return []; }
+        }
+        if (!data) return [];
+        let rawPoints = [];
+        if (Array.isArray(data)) rawPoints = data;
+        else if (typeof data === 'object') {
+            const extract = (obj) => {
+                if (!obj) return [];
+                if (obj.type === 'FeatureCollection' && Array.isArray(obj.features)) {
+                    let pts = []; obj.features.forEach(f => pts.push(...extract(f))); return pts;
+                } else if (obj.type === 'Feature' && obj.geometry) return extract(obj.geometry);
+                else if (obj.type === 'LineString' && Array.isArray(obj.coordinates)) return obj.coordinates;
+                else if (obj.type === 'MultiLineString' && Array.isArray(obj.coordinates)) {
+                    let pts = []; obj.coordinates.forEach(line => { if (Array.isArray(line)) pts.push(...line); }); return pts;
+                } else if (Array.isArray(obj.coordinates)) return obj.coordinates;
+                return [];
+            };
+            rawPoints = extract(data);
+        }
+        if (!Array.isArray(rawPoints) || rawPoints.length === 0) return [];
+        const normalized = [];
+        for (let i = 0; i < rawPoints.length; i++) {
+            const pt = rawPoints[i]; if (!pt) continue;
+            let lat = null, lng = null;
+            if (Array.isArray(pt) && pt.length >= 2) {
+                const num0 = Number(pt[0]), num1 = Number(pt[1]);
+                if (isNaN(num0) || isNaN(num1)) continue;
+                if (Math.abs(num0) > 90) { lng = num0; lat = num1; }
+                else if (Math.abs(num1) > 90) { lat = num0; lng = num1; }
+                else { lat = num0; lng = num1; }
+            } else if (typeof pt === 'object' && pt !== null) {
+                const rawLat = pt.lat ?? pt.latitude ?? pt.y;
+                const rawLng = pt.lng ?? pt.lon ?? pt.longitude ?? pt.x;
+                if (rawLat != null && rawLng != null) { lat = Number(rawLat); lng = Number(rawLng); }
+            }
+            if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) normalized.push([lat, lng]);
+        }
+        return normalized;
+    }
+
     window.downloadTrackMap = () => {
-        if (!trackingCoords.length) { alert('無軌跡數據可供下載'); return; }
+        const coords = parseTrackCoordinates(trackingCoords);
+        if (!coords.length) { alert('無軌跡數據可供下載'); return; }
 
         const canvas = document.createElement('canvas');
         canvas.width = 1080; canvas.height = 1350; // Taller to fit stats
@@ -1165,14 +1215,15 @@
 
         // Find bounds
         let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-        trackingCoords.forEach(([lat, lon]) => {
+        coords.forEach(([lat, lon]) => {
             minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
             minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
         });
 
-        const dLat = maxLat - minLat, dLon = maxLon - minLon;
+        const dLat = Math.max(maxLat - minLat, 0.0001);
+        const dLon = Math.max(maxLon - minLon, 0.0001);
         const centerLat = (maxLat + minLat) / 2, centerLon = (maxLon + minLon) / 2;
-        const zoom = 0.75 / Math.max(dLat, dLon || 0.001);
+        const zoom = 0.75 / Math.max(dLat, dLon);
 
         // 1. Draw Path
         ctx.strokeStyle = '#BFE340';
@@ -1183,7 +1234,7 @@
         ctx.shadowColor = 'rgba(191, 227, 64, 0.5)';
 
         ctx.beginPath();
-        trackingCoords.forEach(([lat, lon], i) => {
+        coords.forEach(([lat, lon], i) => {
             const x = 540 + (lon - centerLon) * zoom * 1000;
             const y = 600 - (lat - centerLat) * zoom * 1000; // Shifted down
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);

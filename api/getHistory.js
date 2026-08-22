@@ -1144,7 +1144,7 @@ export default async function handler(req, res) {
           !!all_stops,
           Number.isFinite(districts_count) ? Math.max(0, parseInt(districts_count, 10)) : 0,
           xpReward,
-          gpx_track || null,
+          gpx_track ? (typeof gpx_track === 'string' ? gpx_track : JSON.stringify(gpx_track)) : null,
           source,
           false,
           null,
