@@ -1173,6 +1173,10 @@
         else if (typeof data === 'object') {
             const extract = (obj) => {
                 if (!obj) return [];
+                if (typeof obj === 'string') {
+                    try { return extract(JSON.parse(obj.trim())); } catch(e) { return []; }
+                }
+                if (Array.isArray(obj)) return obj;
                 if (obj.type === 'FeatureCollection' && Array.isArray(obj.features)) {
                     let pts = []; obj.features.forEach(f => pts.push(...extract(f))); return pts;
                 } else if (obj.type === 'Feature' && obj.geometry) return extract(obj.geometry);
@@ -1180,6 +1184,12 @@
                 else if (obj.type === 'MultiLineString' && Array.isArray(obj.coordinates)) {
                     let pts = []; obj.coordinates.forEach(line => { if (Array.isArray(line)) pts.push(...line); }); return pts;
                 } else if (Array.isArray(obj.coordinates)) return obj.coordinates;
+                else if (Array.isArray(obj.coords)) return obj.coords;
+                else if (Array.isArray(obj.path)) return obj.path;
+                else if (Array.isArray(obj.points)) return obj.points;
+                else if (Array.isArray(obj.trackingCoords)) return obj.trackingCoords;
+                else if (obj.gpx_track) return extract(obj.gpx_track);
+                else if (obj.data) return extract(obj.data);
                 return [];
             };
             rawPoints = extract(data);
