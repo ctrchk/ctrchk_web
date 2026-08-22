@@ -123,6 +123,101 @@
     <script>
         let currentRide = null;
 
+        function parseTrackCoordinates(rawTrack) {
+            if (!rawTrack) return [];
+
+            let data = rawTrack;
+
+            if (typeof data === 'string') {
+                const trimmed = data.trim();
+                if (!trimmed) return [];
+                try {
+                    data = JSON.parse(trimmed);
+                    if (typeof data === 'string') {
+                        data = JSON.parse(data.trim());
+                    }
+                } catch (e) {
+                    console.warn('[parseTrackCoordinates] JSON parse error:', e);
+                    return [];
+                }
+            }
+
+            if (!data) return [];
+
+            let rawPoints = [];
+
+            if (Array.isArray(data)) {
+                rawPoints = data;
+            } else if (typeof data === 'object') {
+                const extractFromGeoJSON = (obj) => {
+                    if (!obj) return [];
+                    if (obj.type === 'FeatureCollection' && Array.isArray(obj.features)) {
+                        let pts = [];
+                        obj.features.forEach(f => {
+                            pts.push(...extractFromGeoJSON(f));
+                        });
+                        return pts;
+                    } else if (obj.type === 'Feature' && obj.geometry) {
+                        return extractFromGeoJSON(obj.geometry);
+                    } else if (obj.type === 'LineString' && Array.isArray(obj.coordinates)) {
+                        return obj.coordinates;
+                    } else if (obj.type === 'MultiLineString' && Array.isArray(obj.coordinates)) {
+                        let pts = [];
+                        obj.coordinates.forEach(line => {
+                            if (Array.isArray(line)) pts.push(...line);
+                        });
+                        return pts;
+                    } else if (Array.isArray(obj.coordinates)) {
+                        return obj.coordinates;
+                    }
+                    return [];
+                };
+                rawPoints = extractFromGeoJSON(data);
+            }
+
+            if (!Array.isArray(rawPoints) || rawPoints.length === 0) {
+                return [];
+            }
+
+            const normalized = [];
+            for (let i = 0; i < rawPoints.length; i++) {
+                const pt = rawPoints[i];
+                if (!pt) continue;
+
+                let lat = null, lng = null;
+
+                if (Array.isArray(pt) && pt.length >= 2) {
+                    const num0 = Number(pt[0]);
+                    const num1 = Number(pt[1]);
+                    if (isNaN(num0) || isNaN(num1)) continue;
+
+                    if (Math.abs(num0) > 90) {
+                        lng = num0;
+                        lat = num1;
+                    } else if (Math.abs(num1) > 90) {
+                        lat = num0;
+                        lng = num1;
+                    } else {
+                        lat = num0;
+                        lng = num1;
+                    }
+                } else if (typeof pt === 'object' && pt !== null) {
+                    const rawLat = pt.lat ?? pt.latitude ?? pt.y;
+                    const rawLng = pt.lng ?? pt.lon ?? pt.longitude ?? pt.x;
+                    if (rawLat != null && rawLng != null) {
+                        lat = Number(rawLat);
+                        lng = Number(rawLng);
+                    }
+                }
+
+                if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+                    normalized.push([lat, lng]);
+                }
+            }
+
+            return normalized;
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const rideId = params.get('id');
@@ -205,27 +300,8 @@
 
             if (ride.gpx_track) {
                 try {
-                    let coords = [];
-                    let geojson = null;
-
-                    if (typeof ride.gpx_track === 'string') {
-                        if (ride.gpx_track.startsWith('[')) {
-                            coords = JSON.parse(ride.gpx_track);
-                        } else {
-                            geojson = JSON.parse(ride.gpx_track);
-                        }
-                    } else if (Array.isArray(ride.gpx_track)) {
-                        coords = ride.gpx_track;
-                    } else if (typeof ride.gpx_track === 'object') {
-                        geojson = ride.gpx_track;
-                    }
-
-                    if (geojson) {
-                        const layer = L.geoJSON(geojson, {
-                            style: { color: '#04D93C', weight: 4, opacity: 0.8 }
-                        }).addTo(map);
-                        map.fitBounds(layer.getBounds(), { padding: [20, 20] });
-                    } else if (coords.length > 0) {
+                    const coords = parseTrackCoordinates(ride.gpx_track);
+                    if (coords.length > 0) {
                         const polyline = L.polyline(coords, { color: '#04D93C', weight: 4, opacity: 0.8 }).addTo(map);
                         map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
                     } else {
@@ -261,26 +337,9 @@
             }
 
             try {
-                let coords = [];
-                if (typeof currentRide.gpx_track === 'string') {
-                    if (currentRide.gpx_track.startsWith('[')) {
-                        coords = JSON.parse(currentRide.gpx_track);
-                    } else {
-                        const geo = JSON.parse(currentRide.gpx_track);
-                        if (geo.type === 'LineString') coords = geo.coordinates.map(p => [p[1], p[0]]);
-                        else if (geo.type === 'FeatureCollection') {
-                            geo.features.forEach(f => {
-                                if (f.geometry.type === 'LineString') {
-                                    coords.push(...f.geometry.coordinates.map(p => [p[1], p[0]]));
-                                }
-                            });
-                        }
-                    }
-                } else if (Array.isArray(currentRide.gpx_track)) {
-                    coords = currentRide.gpx_track;
-                }
+                const coords = parseTrackCoordinates(currentRide.gpx_track);
 
-                if (coords.length < 2) {
+                if (!coords || coords.length < 2) {
                     alert('軌跡點不足，無法生成地圖。');
                     return;
                 }
@@ -297,8 +356,9 @@
                 const minLat = Math.min(...lats), maxLat = Math.max(...lats);
                 const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
 
-                const rangeLat = maxLat - minLat;
-                const rangeLng = maxLng - minLng;
+                const rangeLat = Math.max(maxLat - minLat, 0.0001);
+                const rangeLng = Math.max(maxLng - minLng, 0.0001);
+
                 const padding = 150;
                 const mapW = canvas.width - (padding * 2);
                 const mapH = 750;
@@ -345,11 +405,15 @@
 
                 const statsY = 1000;
                 ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                if (ctx.roundRect) {
-                    ctx.beginPath();
-                    ctx.roundRect(80, statsY, canvas.width - 160, 260, 24);
-                    ctx.fill();
-                } else {
+                try {
+                    if (typeof ctx.roundRect === 'function') {
+                        ctx.beginPath();
+                        ctx.roundRect(80, statsY, canvas.width - 160, 260, 24);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(80, statsY, canvas.width - 160, 260);
+                    }
+                } catch (e) {
                     ctx.fillRect(80, statsY, canvas.width - 160, 260);
                 }
 
@@ -377,7 +441,7 @@
                 ctx.textAlign = 'right';
                 ctx.fillStyle = 'rgba(255,255,255,0.4)';
                 ctx.font = '24px monospace';
-                const dateStr = new Date(currentRide.ride_date).toLocaleDateString('en-GB');
+                const dateStr = currentRide.ride_date ? new Date(currentRide.ride_date).toLocaleDateString('en-GB') : '';
                 ctx.fillText(`DATE: ${dateStr} | ID: ${currentRide.id}`, canvas.width - 100, canvas.height - 50);
 
                 ctx.textAlign = 'left';
@@ -388,7 +452,7 @@
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             } catch (err) {
-                console.error(err);
+                console.error('[downloadTrackMap] error:', err);
                 alert('下載失敗。');
             }
         }
