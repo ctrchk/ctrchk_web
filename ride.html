@@ -1374,13 +1374,24 @@
     };
 
     function showPauseModal() {
+        document.body.classList.remove('is-navigating');
+        if (window.parent && window.parent.document && window.parent.document.body) {
+            window.parent.document.body.classList.remove('is-navigating');
+        }
+
         const modal = document.getElementById('custom-pause-modal');
         const msg = document.getElementById('pause-modal-msg');
         msg.innerHTML = `暫停行程？可稍後繼續。<br><br>系統將會為你同步至雲端並儲存為未完成路線，你可以隨時在主頁或路線頁面恢復行程。`;
 
         const btnResume = document.getElementById('btn-pause-resume');
         btnResume.textContent = "繼續騎行";
-        btnResume.onclick = () => { modal.style.display = 'none'; };
+        btnResume.onclick = () => {
+            modal.style.display = 'none';
+            document.body.classList.add('is-navigating');
+            if (window.parent && window.parent.document && window.parent.document.body) {
+                window.parent.document.body.classList.add('is-navigating');
+            }
+        };
 
         const btnClose = document.getElementById('btn-pause-close');
         btnClose.textContent = "暫時關閉";
@@ -1492,13 +1503,33 @@
                 }).catch(e => console.warn(e));
             } catch(e) {}
         } else {
-            // Route mode: Fetch data first
+            // Route mode: Fetch data safely with individual try/catch
             try {
-                const [r1, r2] = await Promise.all([fetch('/routes.json'), fetch('/api/user?action=route-data')]);
-                const d1 = await r1.json(), d2 = await r2.json();
-                routeData = d2.routes.find(r => String(r.route_id) === String(routeId)) || d1.routes.find(r => String(r.id) === String(routeId));
+                let d1 = { routes: [] }, d2 = { routes: [] };
+                try {
+                    const r1 = await fetch('/routes.json');
+                    if (r1.ok) d1 = await r1.json();
+                } catch(e) {}
+                try {
+                    const r2 = await fetch('/api/user?action=route-data');
+                    if (r2.ok) d2 = await r2.json();
+                } catch(e) {}
+
+                const rList1 = Array.isArray(d1.routes) ? d1.routes : (Array.isArray(d1) ? d1 : []);
+                const rList2 = Array.isArray(d2.routes) ? d2.routes : (Array.isArray(d2) ? d2 : []);
+
+                routeData = rList2.find(r => String(r.route_id || r.id) === String(routeId)) ||
+                            rList1.find(r => String(r.id || r.route_id) === String(routeId));
+
+                // Fallback for custom or unlisted route IDs to prevent unnecessary redirects
+                if (!routeData && routeId) {
+                    routeData = { route_id: routeId, alias: routeId, stops: [] };
+                }
             } catch (err) {
                 console.warn('Failed to load route data', err);
+                if (routeId) {
+                    routeData = { route_id: routeId, alias: routeId, stops: [] };
+                }
             }
 
             if (routeData) {

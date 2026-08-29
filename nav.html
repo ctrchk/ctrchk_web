@@ -800,8 +800,8 @@
           hideLoader();
         });
 
-        // Safety timeout: Ensure overlay hides after max 3.5 seconds even if map loading hangs
-        setTimeout(hideLoader, 3500);
+        // Hide loader quickly (max 1 second) so page never feels stuck
+        setTimeout(hideLoader, 1000);
 
         this.setupUI();
         this.requestLocation();
