@@ -1011,14 +1011,91 @@
     const btn = document.createElement('div');
     btn.id = 'pwa-bug-report-btn';
     btn.innerHTML = `<i class="fas fa-bug"></i>`;
-    btn.title = '回報問題';
+    btn.title = '回報問題（可自由拖曳靠邊）';
 
-    btn.addEventListener('click', () => {
+    // Drag and Snap to Edge functionality
+    let isDraggingBugBtn = false;
+    let hasMovedBugBtn = false;
+    let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
+
+    function onPointerDown(e) {
+      if (e.button && e.button !== 0) return;
+      isDraggingBugBtn = true;
+      hasMovedBugBtn = false;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      startX = clientX;
+      startY = clientY;
+
+      const rect = btn.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      btn.style.transition = 'none';
+      btn.style.right = 'auto';
+      btn.style.transform = 'none';
+      btn.style.left = initialLeft + 'px';
+      btn.style.top = initialTop + 'px';
+    }
+
+    function onPointerMove(e) {
+      if (!isDraggingBugBtn) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      if (Math.hypot(dx, dy) > 5) {
+        hasMovedBugBtn = true;
+      }
+
+      if (hasMovedBugBtn) {
+        if (e.cancelable) e.preventDefault();
+        const newLeft = Math.max(8, Math.min(window.innerWidth - 58, initialLeft + dx));
+        const newTop = Math.max(8, Math.min(window.innerHeight - 58, initialTop + dy));
+        btn.style.left = newLeft + 'px';
+        btn.style.top = newTop + 'px';
+      }
+    }
+
+    function onPointerUp() {
+      if (!isDraggingBugBtn) return;
+      isDraggingBugBtn = false;
+
+      if (hasMovedBugBtn) {
+        btn.style.transition = 'all 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+        const rect = btn.getBoundingClientRect();
+        const center = rect.left + rect.width / 2;
+
+        if (center < window.innerWidth / 2) {
+          btn.style.left = '12px';
+        } else {
+          btn.style.left = (window.innerWidth - rect.width - 12) + 'px';
+        }
+      }
+    }
+
+    btn.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('touchmove', onPointerMove, { passive: false });
+    window.addEventListener('touchend', onPointerUp);
+
+    btn.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    btn.addEventListener('click', (e) => {
+      if (hasMovedBugBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
       btn.style.pointerEvents = 'none';
       btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
 
       loadHtml2Canvas(() => {
-        // Find active element to capture
         let targetEl = document.body;
         const activeTabEl = document.querySelector('.spa-tab-content.active');
         if (activeTabEl) {
@@ -1285,10 +1362,14 @@
     if (Notification.permission === 'granted') {
       subscribeToPush();
       scheduleDailyCheckinReminder();
+      checkHkoWeatherWarnings();
     } else if (Notification.permission !== 'denied') {
       // Auto-request permission on first visit (default ON behavior)
       requestNotificationPermission().then((granted) => {
-        if (granted) scheduleDailyCheckinReminder();
+        if (granted) {
+          scheduleDailyCheckinReminder();
+          checkHkoWeatherWarnings();
+        }
       });
     }
   });
@@ -1415,12 +1496,74 @@
     };
   };
 
+  // ── 天文台警告與安全提醒通知 ──────────────────────────────────────────────
+  async function checkHkoWeatherWarnings() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (localStorage.getItem('pushNotificationsDisabled') === '1') return;
+
+    try {
+      let resp = await fetch('/api/_weather/warnsum').catch(() => null);
+      if (!resp || !resp.ok) {
+        resp = await fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc').catch(() => null);
+      }
+      if (!resp || !resp.ok) return;
+
+      const data = await resp.json();
+      const warningItems = [];
+      let isTyphoonActive = false;
+
+      if (data && typeof data === 'object') {
+        Object.values(data).forEach(w => {
+          if (w && w.name) {
+            warningItems.push(w.name);
+            const nameStr = String(w.name);
+            if (nameStr.includes('熱帶氣旋') || nameStr.includes('颱風') || nameStr.includes('風球') || nameStr.includes('1號') || nameStr.includes('3號') || nameStr.includes('8號') || nameStr.includes('9號') || nameStr.includes('10號')) {
+              isTyphoonActive = true;
+            }
+          }
+        });
+      }
+
+      if (warningItems.length === 0) return;
+
+      // Create unique hash for current active warnings to prevent repeated alerts in the same session
+      const warnHash = warningItems.sort().join('|') + (isTyphoonActive ? '_typhoon' : '');
+      const lastWarnHash = sessionStorage.getItem('last_hko_warn_hash');
+      if (lastWarnHash === warnHash) return; // Already notified in this session
+
+      sessionStorage.setItem('last_hko_warn_hash', warnHash);
+
+      const title = `⚠️ 天文台【${warningItems.join('、')}】警告生效`;
+      let body = `安全提醒：氣象警告生效中，請注意騎行安全。`;
+
+      const allWarnStr = warningItems.join(' ');
+      if (allWarnStr.includes('暴雨') || allWarnStr.includes('大雨')) {
+        body = `暴雨警告生效中：請儘可能避免戶外騎行，路面濕滑滑倒風險極高！`;
+      } else if (allWarnStr.includes('雷暴')) {
+        body = `雷暴警告生效中：切勿在空曠地方騎行或停留，請儘快前往安全室內暫避！`;
+      } else if (allWarnStr.includes('酷熱')) {
+        body = `酷熱天氣警告：請補充足夠水分與電解質，避免長時間暴曬預防中暑。`;
+      } else if (allWarnStr.includes('寒冷')) {
+        body = `寒冷天氣警告：請穿著足夠防風保暖衣物，注意關節與呼吸道保暖。`;
+      }
+
+      if (isTyphoonActive) {
+        body += `\n🚨 颱風信號生效中：將軍澳跨灣大橋單車徑可能實施封路措施，請留意最新路況通知。`;
+      }
+
+      sendLocalNotification(title, body, 'ctrc-weather-warning');
+    } catch (e) {
+      console.warn('[PWA] Failed to check HKO weather warnings:', e);
+    }
+  }
+
   // ── 公開 API ─────────────────────────────────────────────────────────────
   window.CTRCHK_PWA = {
     isStandalone,
     requestNotificationPermission,
     sendLocalNotification,
     scheduleDailyCheckinReminder,
+    checkHkoWeatherWarnings,
     subscribeToPush,
     unsubscribeFromPush,
     // Manually enable/disable Liquid Glass (for settings UI)

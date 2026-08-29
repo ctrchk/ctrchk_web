@@ -1912,7 +1912,7 @@
         }
 
         // Initialize state
-        (async function initPremiumPage() {
+        async function initPremiumPage() {
             if (!isLoggedIn()) {
                 fallbackToGuest();
                 return;
@@ -1997,7 +1997,18 @@
                     fallbackToGuest();
                 }
             }
-        })();
+        }
+
+        initPremiumPage();
+
+        // Re-fetch fresh data when page becomes visible again or focused (e.g. after ride submission / SPA tab switch)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                initPremiumPage();
+            }
+        });
+        window.addEventListener('focus', initPremiumPage);
+        window.addEventListener('pageshow', initPremiumPage);
     </script>
 </body>
 </html>

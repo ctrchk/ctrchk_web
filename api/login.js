@@ -53,6 +53,15 @@ export default async function handler(req, res) {
       { expiresIn: '7d' } // Token 有效期 7 天
     );
 
+    let termsAgreed = false;
+    try {
+      const { rows: taRows } = await query(
+        "SELECT agreed_at FROM terms_agreements WHERE user_id = $1 AND version = $2",
+        [user.id, 'v2.2.0']
+      );
+      termsAgreed = taRows.length > 0;
+    } catch (e) {}
+
     return res.status(200).json({
       message: 'Login successful',
       token: token,
@@ -67,7 +76,9 @@ export default async function handler(req, res) {
         permission_rank: user.mileage_rank || 'bronze',
         profile_completed: user.profile_completed || false,
         email_verified: user.email_verified || false,
-        avatar_url: user.avatar_url || null
+        avatar_url: user.avatar_url || null,
+        terms_agreed: termsAgreed,
+        terms_version: 'v2.2.0'
       }
     });
 

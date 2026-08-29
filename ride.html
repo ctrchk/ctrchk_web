@@ -651,8 +651,23 @@
         map = L.map('ride-map', { zoomControl: false, attributionControl: false }).setView(center, 18);
         window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
-        const tiles = isLight ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-        tileLayer = L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
+        const getTileUrl = (light) => light
+            ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        const fallbackTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+        tileLayer = L.tileLayer(getTileUrl(isLight), {
+            maxZoom: 20,
+            subdomains: 'abcd',
+            errorTileUrl: ''
+        }).addTo(map);
+
+        tileLayer.on('tileerror', function(error) {
+            console.warn('[Leaflet] Tile load error, switching to fallback tile source', error);
+            if (this._url !== fallbackTileUrl) {
+                this.setUrl(fallbackTileUrl);
+            }
+        });
 
         if (routeData && gpxCoords.length > 0) {
             L.polyline(gpxCoords, { color: routeData.color || '#BFE340', weight: 6, opacity: 0.8 }).addTo(map);
@@ -874,6 +889,10 @@
 
     async function beginRide() {
         if (rideStarted) return;
+        document.body.classList.add('is-navigating');
+        if (window.parent && window.parent.document && window.parent.document.body) {
+            window.parent.document.body.classList.add('is-navigating');
+        }
 
         // If in multiplayer room, tell server ride has started
         if (roomCode) {
@@ -945,8 +964,13 @@
                 try {
                     map.removeLayer(tileLayer);
                     const isLight = document.body.classList.contains('app-light-theme');
-                    const tiles = isLight ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                    tileLayer = L.tileLayer(tiles, { maxZoom: 20 }).addTo(map);
+                    const tiles = isLight
+                        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+                        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+                    tileLayer = L.tileLayer(tiles, { maxZoom: 20, subdomains: 'abcd' }).addTo(map);
+                    tileLayer.on('tileerror', function() {
+                        this.setUrl('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+                    });
                     if (breadcrumbLine) breadcrumbLine.bringToFront();
                 } catch (e) {
                     console.warn('[Tile Recycle] Error:', e);
@@ -1105,6 +1129,10 @@
 
     async function endRide() {
         clearInterval(timerInterval); clearInterval(heartbeatInterval);
+        document.body.classList.remove('is-navigating');
+        if (window.parent && window.parent.document && window.parent.document.body) {
+            window.parent.document.body.classList.remove('is-navigating');
+        }
         if (watchId) navigator.geolocation.clearWatch(watchId);
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
 
@@ -1550,6 +1578,7 @@
                                     modal.style.display = 'none';
                                     localStorage.removeItem('unsyncedActiveRideState');
                                     localStorage.removeItem('unsyncedTempCoordinates');
+                                    beginRide();
                                 };
                             }
 
@@ -1560,6 +1589,7 @@
                                     modal.style.display = 'none';
                                     localStorage.removeItem('unsyncedActiveRideState');
                                     localStorage.removeItem('unsyncedTempCoordinates');
+                                    beginRide();
                                 };
                             }
 

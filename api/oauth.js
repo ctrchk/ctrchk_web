@@ -203,6 +203,15 @@ async function handleGoogleAuth(req, res) {
     // 獲取最新的 full_name
     const fullNameToReturn = user.full_name || full_name || '';
 
+    let termsAgreed = false;
+    try {
+      const { rows: taRows } = await query(
+        "SELECT agreed_at FROM terms_agreements WHERE user_id = $1 AND version = $2",
+        [user.id, 'v2.2.0']
+      );
+      termsAgreed = taRows.length > 0;
+    } catch (e) {}
+
     return res.status(200).json({
       message: rows.length > 0 ? '登入成功' : '已建立新帳號',
       token,
@@ -218,7 +227,9 @@ async function handleGoogleAuth(req, res) {
         profile_completed: user.profile_completed,
         email_verified: true, // Google 帳號視為已驗證
         auth_provider: 'google',
-        avatar_url: user.avatar_url || null
+        avatar_url: user.avatar_url || null,
+        terms_agreed: termsAgreed,
+        terms_version: 'v2.2.0'
       }
     });
 

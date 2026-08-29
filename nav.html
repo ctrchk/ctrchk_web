@@ -785,10 +785,23 @@
           attributionControl: false
         });
 
+        const hideLoader = () => {
+          const overlay = document.getElementById('loading-overlay');
+          if (overlay) overlay.classList.add('hidden');
+        };
+
         this.map.on('load', () => {
           this.onMapLoad();
-          document.getElementById('loading-overlay').classList.add('hidden');
+          hideLoader();
         });
+
+        this.map.on('error', (e) => {
+          console.warn('[NavMapboxError]', e);
+          hideLoader();
+        });
+
+        // Safety timeout: Ensure overlay hides after max 3.5 seconds even if map loading hangs
+        setTimeout(hideLoader, 3500);
 
         this.setupUI();
         this.requestLocation();
