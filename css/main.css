@@ -1126,12 +1126,13 @@ iframe[src^="https://accounts.google.com/gsi/"] {
     z-index: 2147483647 !important;
 }
 
-/* Hide bottom navigation bar during app splash screen loading */
-body.app-loading #app-bottom-nav {
+/* Hide bottom navigation bar during app splash screen loading or active riding/navigation */
+body.app-loading #app-bottom-nav,
+body.is-navigating #app-bottom-nav {
+    display: none !important;
     opacity: 0 !important;
     pointer-events: none !important;
     transform: translateY(100px) !important;
-    transition: none !important;
 }
 
 #app-bottom-nav a {

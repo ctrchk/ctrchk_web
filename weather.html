@@ -244,31 +244,43 @@
     }
 
     async function initStormRadar() {
+        const timeEl = document.getElementById('wx-radar-time');
+        const imgEl = document.getElementById('wx-radar-img');
+
+        imgEl.onerror = () => {
+            if (timeEl) timeEl.textContent = '雷達圖像載入失敗，已切換至備用信號';
+            imgEl.src = 'https://www.hko.gov.hk/wxinfo/radars/radar_128/rad128_latest.gif';
+        };
+
         try {
             const resp = await fetch('/api/_weather/radar');
-            if (!resp.ok) return;
+            if (!resp.ok) throw new Error(`API status ${resp.status}`);
             const data = await resp.json();
-            const range1Images = data?.radar?.range1?.image || [];
-            if (range1Images.length > 0) {
-                const latestString = range1Images[range1Images.length - 1];
-                const match = latestString.match(/="([^"]+)"/);
+            const imageList = data?.radar?.range1?.image || data?.radar?.range0?.image || data?.radar?.range2?.image || [];
+
+            if (imageList.length > 0) {
+                const latestString = imageList[imageList.length - 1];
+                const match = latestString.match(/="([^"]+)"/) || latestString.match(/"([^"]+)"/);
                 if (match && match[1]) {
                     const imgPath = match[1];
                     const fullImgUrl = `https://www.hko.gov.hk/wxinfo/radars/${imgPath}`;
-                    document.getElementById('wx-radar-img').src = fullImgUrl;
+                    imgEl.src = fullImgUrl;
 
                     const timeMatch = imgPath.match(/_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
-                    if (timeMatch) {
+                    if (timeMatch && timeEl) {
                         const [_, y, m, d, hh, mm] = timeMatch;
-                        document.getElementById('wx-radar-time').textContent = `雷達最新觀測時間：${y}-${m}-${d} ${hh}:${mm} HKT`;
-                    } else {
-                        document.getElementById('wx-radar-time').textContent = `已實時連接香港天文台雷達數據`;
+                        timeEl.textContent = `雷達最新觀測時間：${y}-${m}-${d} ${hh}:${mm} HKT`;
+                    } else if (timeEl) {
+                        timeEl.textContent = `已實時連接香港天文台雷達數據`;
                     }
+                    return;
                 }
             }
+            throw new Error('No radar image list found');
         } catch (e) {
             console.warn('Failed to load storm radar', e);
-            document.getElementById('wx-radar-time').textContent = '雷達圖像暫時無法載入，請稍候重試';
+            imgEl.src = 'https://www.hko.gov.hk/wxinfo/radars/radar_128/rad128_latest.gif';
+            if (timeEl) timeEl.textContent = '已連接香港天文台最新雷達數據';
         }
     }
 

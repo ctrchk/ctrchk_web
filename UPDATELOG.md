@@ -4,6 +4,45 @@
 
 ---
 
+## v2.2.4 Beta — 2026-08-30
+
+### 全面 Bug 修復與香港天文台警告/將軍澳跨灣大橋動態提醒系統 (System-wide Bug Fixes & HKO Warning Alerts)
+
+- **導航頁載入超時保護 (Navigation Page Loader Fix)**:
+  - 於 `nav.html` 的 Mapbox 地圖初始化中新增地圖加載錯誤監聽器 (`map.on('error')`) 及 3.5 秒安全超時釋放定時器，徹底解決導航頁面無限停留在「系統初始化中...」遮罩的 Bug。
+
+- **騎行頁地圖瓦片降級與 API Key 修復 (Ride Map Tile & Key Fix)**:
+  - 將 `ride.html` 的 Leaflet 瓦片源替換為免 Key CartoDB 高清圖層，並加入 `tileerror` 自動觸發 OpenStreetMap 免費備用源機制，完全消除騎行地圖上的 "API KEY REQUIRED" / 圖層載入失敗提示。
+
+- **騎行暫停恢復與續騎狀態連貫性修復 (Pause/Resume Cycle Repair)**:
+  - 修復 `ride.html` 中從 `localStorage` 恢復暫停行程時，點擊 modal 按鈕 (繼續行程/重新開始/刪除記錄) 無法啟動計時器與繪製軌跡的缺陷，補齊 `beginRide()` 觸發鏈與站點 HUD 重新激活。
+
+- ** Bug 回報按鈕可拖曳與自動靠邊貼合 (Draggable Bug Report Float Button)**:
+  - 重構 `js/pwa.js` 中的 `#pwa-bug-report-btn` 按鈕，新增跨平台 Touch 及 Mouse 指針拖曳事件。放手時根據螢幕中心點自動平滑靠邊貼合至螢幕左側或右側，且精確區分拖曳手勢與點擊截圖提交觸發。
+
+- **Google Sign-In 於 Keep-Alive SPA/iframe 模式穩定渲染 (Google GSI Rendering Fix)**:
+  - 在 `login.html` 和 `js/login.js` 中優化 Google 登入按鈕初始化，解決當容器在 Keep-Alive SPA 模式或 iframe 內初始寬度為 0 時導致按鈕消失的 Bug，新增延遲重試渲染與容器防禦邊界。
+
+- **金卡暴雨雷達圖 JSON 解析與圖像載入修正 (Storm Radar Map Fix)**:
+  - 修復 `weather.html` 中金卡會員暴雨雷達圖的 JSON Regex 路徑提取邏輯，新增 `onerror` 自動切換至天文台 128km 最新雷達動態 GIF，解決雷達卡片一直顯示「數據載入中...」的問題。
+
+- **騎行與導航時底部導航欄遮擋 Dashboard 徹底消除 (Bottom Nav Auto-Hide)**:
+  - 在 `css/main.css` 中增加 `body.is-navigating #app-bottom-nav` 的隱藏規則 (`display: none !important;`)，並於 `ride.html` 啟動騎行時同步向當前及外層父窗口 body 注入 `.is-navigating` 類別，防止底部導航欄擋住騎行 HUD dashboard。
+
+- **騎行完成後里程頁面 365天滾動里程與 Elite Score 秒級刷新 (Mileage Data Real-time Sync)**:
+  - 在 `mileage.html` 中加入 `visibilitychange`、`focus` 與 `pageshow` 事件監聽器，當騎行結束或切換頁面標籤時，自動向伺服器拉取最新的 365 天滾動里程與 Elite Score 並重新渲染。
+
+- **跨設備重新登入免重複同意條款 (Cross-device Terms Agreement Persist)**:
+  - 在 `api/login.js` 與 `api/oauth.js` 的登入/授權回傳數據中加上資料庫 `terms_agreements` 表對最新條款版本 `v2.2.0` 的同意狀態查詢 (`terms_agreed`)，同一帳號在任何新設備登入均無需重複彈出條款同意框。
+
+- **設置頁面退出/返回母頁面導向 (Profile Page Parent Route Back)**:
+  - 在 `profile.html` 的帳戶頁面頂部新增「返回儀表板」顯式按鈕，點擊後統一無縫返回母頁面 `/dashboard.html`，解決返回非母頁面問題。
+
+- **香港天文台即時警告推送與將軍澳跨灣大橋提醒 (HKO Warning Alerts & TKO Bridge Alert)**:
+  - 在 `js/pwa.js` 中新增 `checkHkoWeatherWarnings()` 模組，自動連接天文台 API，當暴雨、雷暴、酷熱等警告生效時發送 PWA 提醒通知與安全建議；當熱帶氣旋/颱風信號生效時，特別加入「颱風信號生效中，將軍澳跨灣大橋單車徑可能實施封路措施，請留意最新路況通知」提醒。
+
+---
+
 ## v2.2.3 Beta — 2026-08-10
 
 ### 全域實時主題同步、3D 導航語音播報、地圖總站篩選與座標精度修正 (Real-time Theme Syncing, TTS Navigation, Map Terminal Selection, and Coordinate Accuracy Fixes)

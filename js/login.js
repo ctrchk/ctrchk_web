@@ -65,15 +65,26 @@ function initGoogleButton() {
 
         const container = document.getElementById('google-login-btn-container');
         if (container) {
-            google.accounts.id.renderButton(container, {
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                locale: 'zh-TW',
-                width: container.offsetWidth || 300
-            });
+            const renderBtn = () => {
+                const btnWidth = Math.max(250, Math.min(container.offsetWidth || 300, 400));
+                container.innerHTML = '';
+                google.accounts.id.renderButton(container, {
+                    theme: 'outline',
+                    size: 'large',
+                    text: 'signin_with',
+                    locale: 'zh-TW',
+                    width: btnWidth
+                });
+            };
 
-            // 綁定點擊事件作為備用觸發點，確保按鈕點擊必有回應
+            renderBtn();
+
+            // Retry rendering if width was 0 due to hidden iframe / SPA tab transition
+            if (!container.offsetWidth) {
+                setTimeout(renderBtn, 300);
+                setTimeout(renderBtn, 1000);
+            }
+
             container.addEventListener('click', () => {
                 try {
                     google.accounts.id.prompt();
