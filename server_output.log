@@ -1,67 +1,132 @@
-127.0.0.1 - - [10/Aug/2026 03:50:43] "HEAD /routes.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:44] "GET /routes.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:44] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:44] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:44] "GET /js/pwa.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:45] "GET /routes.json HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:45] "GET /header.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:45] "GET /images/icon-192.png HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:45] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:45] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:45] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:45] "GET /routes.html HTTP/1.1" 304 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET /routes HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET /dashboard HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET /api/user?action=route-data HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET /api/user?user_id=12345 HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET /terms.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:46] "GET /routes.html HTTP/1.1" 304 -
-127.0.0.1 - - [10/Aug/2026 03:51:47] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:47] "GET /api/user?action=route-data HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:47] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:47] "GET /api/user?user_id=12345 HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:48] "GET /nav.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:48] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:48] "GET /api/user?action=config HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:48] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [10/Aug/2026 03:51:48] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:51:48] "GET /api/user?action=active-ride&type=navigation HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:51:51] "GET /CYCFACI.gdb_CYCRAMP_converted.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:51] "GET /data/TKO_full.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:51] "GET /CYCFACI.gdb_CYCPARKSPACE_converted.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:51:51] "GET /data/tko_pedestrian.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:54] "GET /routes.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:54] "GET /css/main.css HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:54] "GET /js/pwa.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:54] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /header.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /routes.json HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /sw.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /routes HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /dashboard HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /images/icon-192.png HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /api/user?action=route-data HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /routes.html HTTP/1.1" 304 -
-127.0.0.1 - - [10/Aug/2026 03:52:55] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:55] "GET /api/user?action=route-data HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:52:57] "GET /sw.js HTTP/1.1" 304 -
-127.0.0.1 - - [10/Aug/2026 03:52:57] "GET /nav.html HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:52:58] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:58] "GET /api/user?action=config HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:52:58] code 404, message File not found
-127.0.0.1 - - [10/Aug/2026 03:52:58] "GET /api/user?action=active-ride&type=navigation HTTP/1.1" 404 -
-127.0.0.1 - - [10/Aug/2026 03:53:00] "GET /data/TKO_full.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:53:00] "GET /CYCFACI.gdb_CYCRAMP_converted.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:53:00] "GET /data/tko_pedestrian.geojson HTTP/1.1" 200 -
-127.0.0.1 - - [10/Aug/2026 03:53:00] "GET /CYCFACI.gdb_CYCPARKSPACE_converted.geojson HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:13] "HEAD / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:53] "GET /nav.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:53] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:53] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:55] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:55] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:04:55] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:04:55] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:04:55] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:04:55] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:56] "GET /nav.html HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 12:04:56] "GET /ride.html?mode=free HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:57] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:04:57] "GET /api/user?action=route-data HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:04:57] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:04:58] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 12:04:59] "GET /weather.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:05:00] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:05:00] "GET /login HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 12:05:01] "GET /weather.html HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 12:05:01] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 12:05:01] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:02:57] "GET /nav.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:02:57] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:02:57] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:02:58] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:02:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:02:58] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:02:58] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:02:58] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:02:58] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:02:58] "GET /images/icon-512.png HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 34834)
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 683, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 882, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+127.0.0.1 - - [29/Aug/2026 13:02:59] "GET /nav.html HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 13:02:59] "GET /ride.html?mode=free HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:00] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:00] "GET /api/user?action=route-data HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:00] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:00] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 13:03:02] "GET /weather.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:02] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:02] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:02] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:02] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:02] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:03] "GET /weather.html HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 13:03:04] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:04] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:39] "GET /nav.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:39] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:39] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:40] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:40] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:40] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:40] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:40] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:40] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:40] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:40] "GET /login HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:40] "GET /nav.html HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 13:03:41] "GET /ride.html?mode=free HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:41] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:41] "GET /api/user?action=route-data HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:41] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:42] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /weather.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:44] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:44] "GET /login HTTP/1.1" 404 -
+127.0.0.1 - - [29/Aug/2026 13:03:45] "GET /weather.html HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 13:03:45] code 404, message File not found
+127.0.0.1 - - [29/Aug/2026 13:03:45] "GET /api/user?action=google-client-id HTTP/1.1" 404 -

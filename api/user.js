@@ -1264,14 +1264,56 @@ export default async function handler(req, res) {
         user.xp = 0;
         user.coins = 0;
       }
+      // Live calculate 365-day rolling mileage and total distance from cycling_history
+      try {
+        const { rows: distAggRows } = await query(
+          `SELECT COALESCE(SUM(distance_km), 0) AS total_km,
+                  COALESCE(SUM(CASE WHEN ride_date >= CURRENT_DATE - INTERVAL '365 days' THEN distance_km ELSE 0 END), 0) AS rolling_365_km
+           FROM cycling_history
+           WHERE user_id = $1`,
+          [user.id]
+        );
+        if (distAggRows.length > 0) {
+          const liveTotalKm = Number(distAggRows[0].total_km || 0);
+          const liveRollingKm = Number(distAggRows[0].rolling_365_km || 0);
+          if (liveTotalKm > 0 || liveRollingKm > 0) {
+            user.total_distance_km = liveTotalKm;
+            user.rolling_distance_km = liveRollingKm;
+          }
+        }
+      } catch (distErr) {
+        console.warn('[UserAPI] Live distance aggregation error:', distErr.message);
+      }
+
       user.total_distance_km = Number(user.total_distance_km || 0);
       const rollingKm = Number(user.rolling_distance_km || 0);
-      const storedRank = normalizeMileageRank(user.mileage_rank || 'bronze');
-      const storedMileageKm = Number(
-        user.mileage_km_365 === null || user.mileage_km_365 === undefined
-          ? rollingKm
-          : user.mileage_km_365
-      );
+
+      // Auto-calculate and sync rank based on rolling 365-day mileage
+      const calcRank = (km, prevRank) => {
+        const k = Number(km || 0);
+        const p = String(prevRank || 'bronze').toLowerCase();
+        if (k >= 500) return 'gold';
+        if (p === 'gold' && k >= 400) return 'gold';
+        if (k >= 150) return 'silver';
+        if (p === 'silver' && k >= 120) return 'silver';
+        return 'bronze';
+      };
+
+      const computedRank = calcRank(rollingKm, user.mileage_rank);
+      const storedRank = normalizeMileageRank(computedRank);
+      const storedMileageKm = rollingKm;
+
+      if (storedRank !== user.mileage_rank || Number(user.mileage_km_365) !== storedMileageKm) {
+        try {
+          await query(
+            `UPDATE user_game_profile SET mileage_km_365 = $1, mileage_rank = $2, updated_at = NOW() WHERE user_id = $3`,
+            [storedMileageKm, storedRank, user.id]
+          );
+        } catch (updateErr) {
+          console.warn('[UserAPI] Sync profile rank error:', updateErr.message);
+        }
+      }
+
       user.mileage_rank = storedRank;
       user.mileage_km_365 = storedMileageKm;
       user.mileage_card = getMileageCardByRank(storedRank);

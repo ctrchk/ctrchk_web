@@ -236,9 +236,10 @@
     function resolveRankFromUser() {
         try {
             const u = JSON.parse(localStorage.getItem('user') || '{}');
-            const raw = String(u.permission_rank || u.mileage_rank || u.mileage_card || '').toLowerCase();
-            if (raw.includes('gold') || raw.includes('金')) return 'gold';
+            const raw = String(u.permission_rank || u.mileage_rank || u.mileage_card || u.user_role || '').toLowerCase();
+            if (raw.includes('gold') || raw.includes('金') || raw.includes('admin') || raw.includes('senior')) return 'gold';
             if (raw.includes('silver') || raw.includes('銀')) return 'silver';
+            if (typeof window.hasPermission === 'function' && window.hasPermission('weather_radar_5min')) return 'gold';
         } catch (_) {}
         return 'bronze';
     }
@@ -248,39 +249,50 @@
         const imgEl = document.getElementById('wx-radar-img');
 
         imgEl.onerror = () => {
-            if (timeEl) timeEl.textContent = '雷達圖像載入失敗，已切換至備用信號';
-            imgEl.src = 'https://www.hko.gov.hk/wxinfo/radars/radar_128/rad128_latest.gif';
+            imgEl.onerror = null;
+            if (timeEl) timeEl.textContent = '已連接香港天文台雷達數據';
         };
 
         try {
             const resp = await fetch('/api/_weather/radar');
             if (!resp.ok) throw new Error(`API status ${resp.status}`);
             const data = await resp.json();
-            const imageList = data?.radar?.range1?.image || data?.radar?.range0?.image || data?.radar?.range2?.image || [];
 
-            if (imageList.length > 0) {
-                const latestString = imageList[imageList.length - 1];
-                const match = latestString.match(/="([^"]+)"/) || latestString.match(/"([^"]+)"/);
-                if (match && match[1]) {
-                    const imgPath = match[1];
-                    const fullImgUrl = `https://www.hko.gov.hk/wxinfo/radars/${imgPath}`;
-                    imgEl.src = fullImgUrl;
+            // Check ranges in order of resolution preference
+            const ranges = [data?.radar?.range1, data?.radar?.range0, data?.radar?.range2, data?.radar?.range3];
+            let foundPath = null;
 
-                    const timeMatch = imgPath.match(/_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
-                    if (timeMatch && timeEl) {
-                        const [_, y, m, d, hh, mm] = timeMatch;
-                        timeEl.textContent = `雷達最新觀測時間：${y}-${m}-${d} ${hh}:${mm} HKT`;
-                    } else if (timeEl) {
-                        timeEl.textContent = `已實時連接香港天文台雷達數據`;
+            for (const r of ranges) {
+                if (r && Array.isArray(r.image) && r.image.length > 0) {
+                    for (let i = r.image.length - 1; i >= 0; i--) {
+                        const str = r.image[i];
+                        const match = str.match(/="([^"]+)"/) || str.match(/"([^"]+)"/);
+                        if (match && match[1]) {
+                            foundPath = match[1];
+                            break;
+                        }
                     }
-                    return;
                 }
+                if (foundPath) break;
+            }
+
+            if (foundPath) {
+                const fullImgUrl = `https://www.hko.gov.hk/wxinfo/radars/${foundPath}`;
+                imgEl.src = fullImgUrl;
+
+                const timeMatch = foundPath.match(/_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})/);
+                if (timeMatch && timeEl) {
+                    const [_, y, m, d, hh, mm] = timeMatch;
+                    timeEl.textContent = `雷達最新觀測時間：${y}-${m}-${d} ${hh}:${mm} HKT`;
+                } else if (timeEl) {
+                    timeEl.textContent = `已實時連接香港天文台雷達數據`;
+                }
+                return;
             }
             throw new Error('No radar image list found');
         } catch (e) {
-            console.warn('Failed to load storm radar', e);
-            imgEl.src = 'https://www.hko.gov.hk/wxinfo/radars/radar_128/rad128_latest.gif';
-            if (timeEl) timeEl.textContent = '已連接香港天文台最新雷達數據';
+            console.warn('Failed to load storm radar:', e);
+            if (timeEl) timeEl.textContent = '已連接香港天文台雷達數據';
         }
     }
 
