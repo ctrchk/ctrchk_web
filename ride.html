@@ -651,23 +651,14 @@
         map = L.map('ride-map', { zoomControl: false, attributionControl: false }).setView(center, 18);
         window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
-        const getTileUrl = (light) => light
-            ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        const getTileUrl = (light) => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         const fallbackTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
         tileLayer = L.tileLayer(getTileUrl(isLight), {
-            maxZoom: 20,
-            subdomains: 'abcd',
+            maxZoom: 19,
+            subdomains: 'abc',
             errorTileUrl: ''
         }).addTo(map);
-
-        tileLayer.on('tileerror', function(error) {
-            console.warn('[Leaflet] Tile load error, switching to fallback tile source', error);
-            if (this._url !== fallbackTileUrl) {
-                this.setUrl(fallbackTileUrl);
-            }
-        });
 
         if (routeData && gpxCoords.length > 0) {
             L.polyline(gpxCoords, { color: routeData.color || '#BFE340', weight: 6, opacity: 0.8 }).addTo(map);
@@ -893,6 +884,9 @@
         if (window.parent && window.parent.document && window.parent.document.body) {
             window.parent.document.body.classList.add('is-navigating');
         }
+        if (window.top && window.top.document && window.top.document.body) {
+            window.top.document.body.classList.add('is-navigating');
+        }
 
         // If in multiplayer room, tell server ride has started
         if (roomCode) {
@@ -963,14 +957,8 @@
             if (map && tileLayer) {
                 try {
                     map.removeLayer(tileLayer);
-                    const isLight = document.body.classList.contains('app-light-theme');
-                    const tiles = isLight
-                        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-                        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                    tileLayer = L.tileLayer(tiles, { maxZoom: 20, subdomains: 'abcd' }).addTo(map);
-                    tileLayer.on('tileerror', function() {
-                        this.setUrl('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-                    });
+                    const tiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abc' }).addTo(map);
                     if (breadcrumbLine) breadcrumbLine.bringToFront();
                 } catch (e) {
                     console.warn('[Tile Recycle] Error:', e);
@@ -1132,6 +1120,9 @@
         document.body.classList.remove('is-navigating');
         if (window.parent && window.parent.document && window.parent.document.body) {
             window.parent.document.body.classList.remove('is-navigating');
+        }
+        if (window.top && window.top.document && window.top.document.body) {
+            window.top.document.body.classList.remove('is-navigating');
         }
         if (watchId) navigator.geolocation.clearWatch(watchId);
         if (wakeLock) { wakeLock.release(); wakeLock = null; }
@@ -1340,6 +1331,13 @@
         if (!rideStarted || confirm('確定要放棄此次騎行嗎？資料將不會儲存。')) {
             localStorage.removeItem('unsyncedActiveRideState');
             localStorage.removeItem('unsyncedTempCoordinates');
+            document.body.classList.remove('is-navigating');
+            if (window.parent && window.parent.document && window.parent.document.body) {
+                window.parent.document.body.classList.remove('is-navigating');
+            }
+            if (window.top && window.top.document && window.top.document.body) {
+                window.top.document.body.classList.remove('is-navigating');
+            }
             location.href = '/dashboard';
         }
     };
@@ -1378,6 +1376,9 @@
         if (window.parent && window.parent.document && window.parent.document.body) {
             window.parent.document.body.classList.remove('is-navigating');
         }
+        if (window.top && window.top.document && window.top.document.body) {
+            window.top.document.body.classList.remove('is-navigating');
+        }
 
         const modal = document.getElementById('custom-pause-modal');
         const msg = document.getElementById('pause-modal-msg');
@@ -1390,6 +1391,9 @@
             document.body.classList.add('is-navigating');
             if (window.parent && window.parent.document && window.parent.document.body) {
                 window.parent.document.body.classList.add('is-navigating');
+            }
+            if (window.top && window.top.document && window.top.document.body) {
+                window.top.document.body.classList.add('is-navigating');
             }
         };
 
@@ -1522,14 +1526,18 @@
                             rList1.find(r => String(r.id || r.route_id) === String(routeId));
 
                 // Fallback for custom or unlisted route IDs to prevent unnecessary redirects
-                if (!routeData && routeId) {
-                    routeData = { route_id: routeId, alias: routeId, stops: [] };
+                if (!routeData) {
+                    routeData = { route_id: routeId || 'ROUTE_ACTIVE', alias: routeId || '繼續騎行', stops: [] };
                 }
             } catch (err) {
                 console.warn('Failed to load route data', err);
-                if (routeId) {
-                    routeData = { route_id: routeId, alias: routeId, stops: [] };
+                if (!routeData) {
+                    routeData = { route_id: routeId || 'ROUTE_ACTIVE', alias: routeId || '繼續騎行', stops: [] };
                 }
+            }
+
+            if (!routeData) {
+                routeData = { route_id: routeId || 'ROUTE_ACTIVE', alias: routeId || '繼續騎行', stops: [] };
             }
 
             if (routeData) {
@@ -1634,8 +1642,6 @@
                 if (!hasResumed) {
                     hideLoader();
                 }
-            } else {
-                location.href = '/routes';
             }
         }
 

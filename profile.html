@@ -350,7 +350,7 @@
             <div class="profile-container">
                 <h2><i class="fas fa-user-circle" style="color: var(--app-accent, #6dba65);"></i> <span data-i18n="profile_title">我的帳戶</span></h2>
                 <div style="display:flex;gap:0.6em;flex-wrap:wrap;margin-bottom:0.8em;">
-                    <a href="/dashboard.html" class="btn-settings-shortcut" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2);">
+                    <a href="/dashboard.html" id="btn-return-dashboard" class="btn-settings-shortcut" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2);">
                         <i class="fas fa-arrow-left"></i> <span>返回儀表板</span>
                     </a>
                     <a href="#settings-section" class="btn-settings-shortcut">
@@ -616,6 +616,24 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const btnReturn = document.getElementById('btn-return-dashboard');
+        if (btnReturn) {
+            btnReturn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.parent && window.parent.switchToTab) {
+                    try {
+                        window.parent.switchToTab('/dashboard.html');
+                        return;
+                    } catch(err) {}
+                }
+                if (window.top && window.top !== window) {
+                    window.top.location.href = '/dashboard.html';
+                } else {
+                    window.location.href = '/dashboard.html';
+                }
+            });
+        }
+
         const userData = localStorage.getItem('user');
         if (!userData) {
             window.location.replace('/login');

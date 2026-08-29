@@ -85,11 +85,25 @@ function initGoogleButton() {
                 setTimeout(renderBtn, 1000);
             }
 
-            container.addEventListener('click', () => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        container.addEventListener('click', (e) => {
+            if (isIOS || isStandalone) {
+                // Direct OAuth redirect for iOS / PWA to bypass Safari popup/FedCM blocking
+                triggerGoogleOAuthRedirect();
+                return;
+            }
                 try {
-                    google.accounts.id.prompt();
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        console.warn('Google prompt suppressed, falling back to direct OAuth redirect.');
+                        triggerGoogleOAuthRedirect();
+                    }
+                });
                 } catch (err) {
                     console.warn('Google prompt error on click:', err);
+                triggerGoogleOAuthRedirect();
                 }
             });
         }
@@ -145,8 +159,38 @@ async function handleGoogleCredentialResponse(response) {
     }
 }
 
+function triggerGoogleOAuthRedirect() {
+    if (!googleClientId) return;
+    const redirectUri = window.location.origin + '/login.html';
+    const nonce = Math.random().toString(36).substring(2);
+    const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=id_token&scope=openid%20email%20profile&nonce=${nonce}`;
+    if (window.top && window.top !== window) {
+        window.top.location.href = oauthUrl;
+    } else {
+        window.location.href = oauthUrl;
+    }
+}
+
+function checkGoogleHashResponse() {
+    const hash = window.location.hash || (window.top && window.top.location.hash) || '';
+    if (hash && hash.includes('id_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const idToken = params.get('id_token');
+        if (idToken) {
+            try {
+                history.replaceState(null, '', window.location.pathname);
+            } catch(e) {}
+            handleGoogleCredentialResponse({ credential: idToken });
+            return true;
+        }
+    }
+    return false;
+}
+
 // --- 監聽表單提交 ---
 document.addEventListener('DOMContentLoaded', () => {
+    if (checkGoogleHashResponse()) return;
+
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
 

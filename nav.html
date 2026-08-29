@@ -479,6 +479,12 @@
     <div class="loader-ring"></div>
     <div style="color: var(--nav-loading-text); font-weight: bold; font-size: 18px;">系統初始化中...</div>
   </div>
+  <script>
+    setTimeout(function() {
+      var ov = document.getElementById('loading-overlay');
+      if (ov) ov.classList.add('hidden');
+    }, 500);
+  </script>
 
   <!-- Resume Modal -->
   <div id="resume-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:3000; align-items:center; justify-content:center; padding:20px;">
@@ -634,7 +640,9 @@
   <script src="/js/pwa.js"></script>
   <script>
     // Default Mapbox Token fallback
-    mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
+    if (typeof mapboxgl !== 'undefined') {
+      mapboxgl.accessToken = 'pk.eyJ1IjoiY3RyY2hrIiwiYSI6ImNtcHowaGF4cjBjYW8ydHB5dG1oMnl6cDMifQ.yEFQziumf4lLCa9W0H36qw';
+    }
 
     function parseTrackCoordinates(rawTrack) {
         if (!rawTrack) return [];
@@ -768,6 +776,14 @@
       },
 
       async init() {
+        const hideLoader = () => {
+          const overlay = document.getElementById('loading-overlay');
+          if (overlay) overlay.classList.add('hidden');
+        };
+
+        // Guarantee loader overlay is hidden immediately within 500ms
+        setTimeout(hideLoader, 500);
+
         await this.fetchConfig();
 
         let mapStyle = 'mapbox://styles/mapbox/dark-v11';
@@ -775,33 +791,30 @@
           mapStyle = 'mapbox://styles/mapbox/light-v11';
         }
 
-        this.map = new mapboxgl.Map({
-          container: 'map',
-          style: mapStyle,
-          center: [114.2597, 22.3083], // Default TKO
-          zoom: 13,
-          pitch: 0,
-          antialias: true,
-          attributionControl: false
-        });
+        try {
+          this.map = new mapboxgl.Map({
+            container: 'map',
+            style: mapStyle,
+            center: [114.2597, 22.3083], // Default TKO
+            zoom: 13,
+            pitch: 0,
+            antialias: true,
+            attributionControl: false
+          });
 
-        const hideLoader = () => {
-          const overlay = document.getElementById('loading-overlay');
-          if (overlay) overlay.classList.add('hidden');
-        };
+          this.map.on('load', () => {
+            this.onMapLoad();
+            hideLoader();
+          });
 
-        this.map.on('load', () => {
-          this.onMapLoad();
+          this.map.on('error', (e) => {
+            console.warn('[NavMapboxError]', e);
+            hideLoader();
+          });
+        } catch (mapErr) {
+          console.error('[Nav] Mapbox initialization failed:', mapErr);
           hideLoader();
-        });
-
-        this.map.on('error', (e) => {
-          console.warn('[NavMapboxError]', e);
-          hideLoader();
-        });
-
-        // Hide loader quickly (max 1 second) so page never feels stuck
-        setTimeout(hideLoader, 1000);
+        }
 
         this.setupUI();
         this.requestLocation();
@@ -2276,6 +2289,12 @@
           this.trackingCoords = [];
         }
         document.body.classList.add('is-navigating');
+        if (window.parent && window.parent.document && window.parent.document.body) {
+          window.parent.document.body.classList.add('is-navigating');
+        }
+        if (window.top && window.top.document && window.top.document.body) {
+          window.top.document.body.classList.add('is-navigating');
+        }
 
         // Request Fullscreen if possible
         if (document.documentElement.requestFullscreen) {
@@ -2446,6 +2465,12 @@
         this.isNavigating = false;
         this.isLaneLevel = false;
         document.body.classList.remove('is-navigating');
+        if (window.parent && window.parent.document && window.parent.document.body) {
+          window.parent.document.body.classList.remove('is-navigating');
+        }
+        if (window.top && window.top.document && window.top.document.body) {
+          window.top.document.body.classList.remove('is-navigating');
+        }
         this.toggleLaneLevelUI(false);
 
         if (document.exitFullscreen && document.fullscreenElement) {
@@ -2482,8 +2507,17 @@
       console.info('Hook: onNavigationEnd', tripData);
     }
 
-    // Run Engine
-    NavEngine.init();
+    // Run Engine with top-level error safety
+    const safeHideLoader = () => {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) overlay.classList.add('hidden');
+    };
+    setTimeout(safeHideLoader, 800);
+
+    NavEngine.init().catch(err => {
+      console.warn('[NavEngine] init error:', err);
+      safeHideLoader();
+    });
 
     window.addEventListener('pagehide', () => NavEngine.cleanup());
     window.addEventListener('beforeunload', () => NavEngine.cleanup());

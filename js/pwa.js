@@ -871,18 +871,18 @@
   });
 
   function injectPwaBugReportButton() {
-    // Only inject in top-level window to avoid duplicate bug buttons in Keep-Alive SPA child iframes
-    if (window.parent !== window) return;
+    // Strictly prevent duplicate buttons across iframes, parent, or window frames
+    if (window.parent !== window || window.self !== window.top || window.frameElement) return;
     if (document.getElementById('pwa-bug-report-btn')) return;
+    if (window.top && window.top.document && window.top.document.getElementById('pwa-bug-report-btn')) return;
 
     // Inject styles
     const style = document.createElement('style');
     style.textContent = `
       #pwa-bug-report-btn {
         position: fixed;
-        right: 16px;
+        left: calc(100vw - 22px);
         top: 40%;
-        transform: translateY(-50%);
         z-index: 99999;
         background: var(--app-accent, #BFE340);
         color: #121f14;
@@ -896,7 +896,11 @@
         box-shadow: 0 4px 16px rgba(0,0,0,0.3);
         cursor: pointer;
         font-size: 1.4em;
-        transition: transform 0.2s, background-color 0.2s;
+        transition: transform 0.2s, background-color 0.2s, left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        touch-action: none;
+      }
+      #pwa-bug-report-btn:hover {
+        transform: scale(1.05);
       }
       #pwa-bug-report-btn:active {
         transform: translateY(-50%) scale(0.9);
@@ -1067,7 +1071,7 @@
 
       if (hasMovedBugBtn) {
         if (e.cancelable) e.preventDefault();
-        const newLeft = Math.max(8, Math.min(window.innerWidth - 58, initialLeft + dx));
+        const newLeft = Math.max(-28, Math.min(window.innerWidth - 22, initialLeft + dx));
         const newTop = Math.max(8, Math.min(window.innerHeight - 58, initialTop + dy));
         btn.style.left = newLeft + 'px';
         btn.style.top = newTop + 'px';
@@ -1078,17 +1082,15 @@
       if (!isDraggingBugBtn) return;
       isDraggingBugBtn = false;
 
-      if (hasMovedBugBtn) {
-        btn.style.transition = 'all 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
-        const rect = btn.getBoundingClientRect();
-        const center = rect.left + rect.width / 2;
+      btn.style.transition = 'left 0.3s cubic-bezier(0.25, 1, 0.5, 1), top 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+      const rect = btn.getBoundingClientRect();
+      const center = rect.left + rect.width / 2;
 
-        // Snap and partially hide on edge (leave 22px tab visible) for subtle unobtrusive placement
-        if (center < window.innerWidth / 2) {
-          btn.style.left = '-28px';
-        } else {
-          btn.style.left = (window.innerWidth - 22) + 'px';
-        }
+      // Snap and partially hide on edge (leave 22px tab visible)
+      if (center < window.innerWidth / 2) {
+        btn.style.left = '-28px';
+      } else {
+        btn.style.left = (window.innerWidth - 22) + 'px';
       }
     }
 
@@ -1524,49 +1526,77 @@
       if (!resp || !resp.ok) return;
 
       const data = await resp.json();
-      const warningItems = [];
-      let isTyphoonActive = false;
+      const currentMap = {}; // categoryKey -> levelName
 
       if (data && typeof data === 'object') {
-        Object.values(data).forEach(w => {
-          if (w && w.name) {
-            warningItems.push(w.name);
-            const nameStr = String(w.name);
-            if (nameStr.includes('熱帶氣旋') || nameStr.includes('颱風') || nameStr.includes('風球') || nameStr.includes('1號') || nameStr.includes('3號') || nameStr.includes('8號') || nameStr.includes('9號') || nameStr.includes('10號')) {
-              isTyphoonActive = true;
-            }
+        Object.entries(data).forEach(([key, w]) => {
+          if (!w || !w.name) return;
+          const name = String(w.name || '').trim();
+          const code = String(key || w.code || '').toUpperCase();
+
+          let cat = 'OTHER';
+          if (code.includes('TYPH') || name.includes('熱帶氣旋') || name.includes('風球') || name.includes('颱風')) {
+            cat = 'TYPHOON';
+          } else if (code.includes('RAIN') || name.includes('暴雨') || name.includes('大雨')) {
+            cat = 'RAIN';
+          } else if (code.includes('TS') || name.includes('雷暴')) {
+            cat = 'THUNDERSTORM';
+          } else if (code.includes('HOT') || name.includes('酷熱')) {
+            cat = 'VERY_HOT';
+          } else if (code.includes('COLD') || name.includes('寒冷')) {
+            cat = 'COLD';
+          } else if (code.includes('FIRE') || name.includes('火危')) {
+            cat = 'FIRE';
+          } else if (code.includes('WIND') || name.includes('季候風')) {
+            cat = 'MONSOON';
           }
+
+          currentMap[cat] = name;
         });
       }
 
-      if (warningItems.length === 0) return;
+      let lastMap = {};
+      try {
+        const stored = localStorage.getItem('hko_active_warnings_state');
+        if (stored) lastMap = JSON.parse(stored);
+      } catch (_) {}
 
-      // Create unique hash for current active warnings to prevent repeated alerts in the same session
-      const warnHash = warningItems.sort().join('|') + (isTyphoonActive ? '_typhoon' : '');
-      const lastWarnHash = sessionStorage.getItem('last_hko_warn_hash');
-      if (lastWarnHash === warnHash) return; // Already notified in this session
+      // Compare currentMap with lastMap
+      const categories = new Set([...Object.keys(currentMap), ...Object.keys(lastMap)]);
 
-      sessionStorage.setItem('last_hko_warn_hash', warnHash);
+      categories.forEach(cat => {
+        const currentLevel = currentMap[cat];
+        const lastLevel = lastMap[cat];
 
-      const title = `⚠️ 天文台【${warningItems.join('、')}】警告生效`;
-      let body = `安全提醒：氣象警告生效中，請注意騎行安全。`;
+        if (currentLevel && !lastLevel) {
+          // 1. Newly issued
+          let title = `⚠️ 天文台發出【${currentLevel}】`;
+          let body = `安全提醒：${currentLevel}生效中，請注意騎行安全。`;
+          if (cat === 'TYPHOON') {
+            body += `\n🚨 颱風信號生效：將軍澳跨灣大橋單車徑可能實施封路措施，請留意最新路況。`;
+          } else if (cat === 'RAIN') {
+            body = `暴雨警告生效：請盡量避免戶外騎行，路面濕滑滑倒風險極高！`;
+          } else if (cat === 'THUNDERSTORM') {
+            body = `雷暴警告生效：切勿在空曠地方停留，請盡快前往安全室內暫避！`;
+          }
+          sendLocalNotification(title, body, `hko-warn-${cat}`);
+        } else if (currentLevel && lastLevel && currentLevel !== lastLevel) {
+          // 2. Level upgraded/downgraded
+          let title = `🔄 天文台警告變更：【${currentLevel}】`;
+          let body = `氣象警告等級已有變更（由「${lastLevel}」調整為「${currentLevel}」）。請評估路況並注意個人安全。`;
+          if (cat === 'TYPHOON') {
+            body += `\n🚨 將軍澳跨灣大橋單車徑封路措施可能隨時調整，請關注交通消息。`;
+          }
+          sendLocalNotification(title, body, `hko-warn-${cat}`);
+        } else if (!currentLevel && lastLevel) {
+          // 3. Cancelled/cleared
+          let title = `✅ 天文台【${lastLevel}】已解除`;
+          let body = `好消息：先前發出的${lastLevel}已告解除。請繼續留意天氣狀況，祝您騎行愉快！`;
+          sendLocalNotification(title, body, `hko-warn-${cat}`);
+        }
+      });
 
-      const allWarnStr = warningItems.join(' ');
-      if (allWarnStr.includes('暴雨') || allWarnStr.includes('大雨')) {
-        body = `暴雨警告生效中：請儘可能避免戶外騎行，路面濕滑滑倒風險極高！`;
-      } else if (allWarnStr.includes('雷暴')) {
-        body = `雷暴警告生效中：切勿在空曠地方騎行或停留，請儘快前往安全室內暫避！`;
-      } else if (allWarnStr.includes('酷熱')) {
-        body = `酷熱天氣警告：請補充足夠水分與電解質，避免長時間暴曬預防中暑。`;
-      } else if (allWarnStr.includes('寒冷')) {
-        body = `寒冷天氣警告：請穿著足夠防風保暖衣物，注意關節與呼吸道保暖。`;
-      }
-
-      if (isTyphoonActive) {
-        body += `\n🚨 颱風信號生效中：將軍澳跨灣大橋單車徑可能實施封路措施，請留意最新路況通知。`;
-      }
-
-      sendLocalNotification(title, body, 'ctrc-weather-warning');
+      localStorage.setItem('hko_active_warnings_state', JSON.stringify(currentMap));
     } catch (e) {
       console.warn('[PWA] Failed to check HKO weather warnings:', e);
     }
