@@ -125,7 +125,13 @@ async function handleGoogleCredentialResponse(response) {
             }
 
             // 支援全頁跳轉（即使在 Keep-Alive SPA iframe 內也能正確認導）
-            if (window.top && window.top !== window) {
+            if (window.parent && window.parent.switchToTab) {
+                try {
+                    window.parent.switchToTab(targetUrl);
+                } catch(e) {
+                    window.top.location.href = targetUrl;
+                }
+            } else if (window.top && window.top !== window) {
                 window.top.location.href = targetUrl;
             } else {
                 window.location.href = targetUrl;

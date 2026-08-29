@@ -813,6 +813,18 @@
     btn.title = '返回';
 
     btn.addEventListener('click', () => {
+      const currentCleanPath = path.split('?')[0];
+      if (currentCleanPath === '/profile' || currentCleanPath === '/profile.html' || currentCleanPath === '/profile-setup' || currentCleanPath === '/profile-setup.html') {
+        if (window.parent && window.parent.switchToTab) {
+          try {
+            window.parent.switchToTab('/dashboard.html');
+            return;
+          } catch(e) {}
+        }
+        window.location.href = '/dashboard.html';
+        return;
+      }
+
       try {
         if (window.parent && window.parent !== window) {
           window.parent.history.back();
@@ -859,6 +871,8 @@
   });
 
   function injectPwaBugReportButton() {
+    // Only inject in top-level window to avoid duplicate bug buttons in Keep-Alive SPA child iframes
+    if (window.parent !== window) return;
     if (document.getElementById('pwa-bug-report-btn')) return;
 
     // Inject styles
@@ -1069,10 +1083,11 @@
         const rect = btn.getBoundingClientRect();
         const center = rect.left + rect.width / 2;
 
+        // Snap and partially hide on edge (leave 22px tab visible) for subtle unobtrusive placement
         if (center < window.innerWidth / 2) {
-          btn.style.left = '12px';
+          btn.style.left = '-28px';
         } else {
-          btn.style.left = (window.innerWidth - rect.width - 12) + 'px';
+          btn.style.left = (window.innerWidth - 22) + 'px';
         }
       }
     }

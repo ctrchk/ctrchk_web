@@ -1006,10 +1006,12 @@ body.is-pwa.app-light-theme {
 
 /* When app bottom nav is present, add padding so content isn't obscured */
 body.is-pwa main,
-body.is-pwa footer { padding-bottom: calc(4.5em + env(safe-area-inset-bottom)); }
+body.is-pwa footer { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
+body.in-spa-iframe main,
+body.in-spa-iframe footer { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
 @media (display-mode: standalone) {
-    main { padding-bottom: calc(4.5em + env(safe-area-inset-bottom)); }
-    footer { padding-bottom: calc(4.5em + env(safe-area-inset-bottom)); }
+    main { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
+    footer { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
 }
 
 /* ── App-specific page overrides ────────────────────────────────────── */
