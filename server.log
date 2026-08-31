@@ -1,0 +1,93 @@
+127.0.0.1 - - [31/Aug/2026 07:22:24] "GET /nav.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:24] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:24] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:25] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:25] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:25] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:22:25] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:22:25] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:22:25] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:22:26] "GET /nav.html HTTP/1.1" 304 -
+127.0.0.1 - - [31/Aug/2026 07:22:27] "GET /weather.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:27] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:28] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:28] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:28] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:22:28] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:28] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:22:28] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [31/Aug/2026 07:22:29] "GET /mileage.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:29] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:22:29] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:22:29] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [31/Aug/2026 07:22:30] "GET /login.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:30] "GET /js/login.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:22:30] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:22:30] "GET /api/user?action=config HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:22:31] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /login.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /css/main.css HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /js/login.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /js/pwa.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /api/user?action=config HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /routes.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /header.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /images/icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /weather.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /routes HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /dashboard HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:06] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:06] "GET /login HTTP/1.1" 404 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 42400)
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 735, in send_head
+    f = open(path, 'rb')
+        ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/app/login'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 1326, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 676, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 440, in handle
+    self.handle_one_request()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 680, in do_GET
+    f = self.send_head()
+        ^^^^^^^^^^^^^^^^
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 737, in send_head
+    self.send_error(HTTPStatus.NOT_FOUND, "File not found")
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/http/server.py", line 495, in send_error
+    self.wfile.write(body)
+  File "/home/jules/.pyenv/versions/3.12.13/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+127.0.0.1 - - [31/Aug/2026 07:23:07] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:07] "GET /api/_weather/rhrread?lang=tc HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:07] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:07] "GET /api/_weather/warnsum?lang=tc HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:07] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:07] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:08] "GET /mileage.html HTTP/1.1" 200 -
+127.0.0.1 - - [31/Aug/2026 07:23:09] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:09] "GET /api/user?action=google-client-id HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:10] "GET /sw.js HTTP/1.1" 304 -
+127.0.0.1 - - [31/Aug/2026 07:23:10] code 404, message File not found
+127.0.0.1 - - [31/Aug/2026 07:23:10] "GET /api/user?action=config HTTP/1.1" 404 -
+127.0.0.1 - - [31/Aug/2026 07:23:12] "GET /sw.js HTTP/1.1" 304 -

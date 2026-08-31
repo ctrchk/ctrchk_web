@@ -620,6 +620,10 @@
         if (btnReturn) {
             btnReturn.addEventListener('click', function(e) {
                 e.preventDefault();
+                document.body.classList.remove('is-navigating');
+                try { if (window.parent && window.parent.document && window.parent.document.body) window.parent.document.body.classList.remove('is-navigating'); } catch(err){}
+                try { if (window.top && window.top.document && window.top.document.body) window.top.document.body.classList.remove('is-navigating'); } catch(err){}
+
                 if (window.parent && window.parent.switchToTab) {
                     try {
                         window.parent.switchToTab('/dashboard.html');

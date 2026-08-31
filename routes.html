@@ -1027,12 +1027,15 @@ function initMap() {
     }).setView([22.308, 114.262], 13);
     window.PWA_MAPS_INITED.add('app-ride-map');
 
-    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const isLight = document.body.classList.contains('app-light-theme');
+    const tileUrl = isLight
+        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
     L.tileLayer(tileUrl, {
         maxZoom: 19,
-        subdomains: 'abc',
-        attribution: '© OpenStreetMap'
+        subdomains: 'abcd',
+        attribution: '© CARTO'
     }).addTo(map);
 
     // Add zoom control (top-right)

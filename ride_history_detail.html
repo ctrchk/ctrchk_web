@@ -307,11 +307,14 @@
             mapInstance = map;
             window.PWA_MAPS_INITED.add('ride-history-map');
 
-            const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            const isLight = document.body.classList.contains('app-light-theme');
+            const tileUrl = isLight
+                ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+                : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
             L.tileLayer(tileUrl, {
                 maxZoom: 19,
-                subdomains: 'abc'
+                subdomains: 'abcd'
             }).addTo(map);
 
             if (ride.gpx_track) {
