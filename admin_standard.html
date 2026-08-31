@@ -301,6 +301,92 @@
                 <button class="tab-btn" onclick="showTab('obstacles'); loadObstacles();">
                     <i class="fas fa-exclamation-triangle"></i> 路面障礙審核
                 </button>
+                <button class="tab-btn" onclick="showTab('third-party'); loadThirdPartyRides();">
+                    <i class="fas fa-bicycle"></i> 行程上載管理
+                </button>
+                <button class="tab-btn" onclick="showTab('tournaments-admin'); loadTournamentsAdmin();">
+                    <i class="fas fa-trophy"></i> 活動管理
+                </button>
+            </div>
+
+            <!-- 活動管理標籤 -->
+            <div id="tab-tournaments-admin" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-trophy"></i> 活動管理 (Tournament & Challenge Admin)</h3>
+                <p style="color:#555; font-size:0.9em;">監控特快升卡、秋日加倍賽與大橋有禮等限時賽事。檢視所有參與會員、報名時間、累計里程進度與解鎖完成狀態。</p>
+
+                <div id="tour-admin-loading" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入賽事數據...</p>
+                </div>
+
+                <div id="tour-admin-container">
+                    <h4 style="color:#2c3e50; margin-bottom:10px;">🏆 現有挑戰賽一覽</h4>
+                    <table class="users-table" style="margin-bottom:20px;">
+                        <thead>
+                            <tr>
+                                <th>賽事名稱</th>
+                                <th>適用對象</th>
+                                <th>報名費</th>
+                                <th>時間範圍 (UTC+8)</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tour-events-tbody">
+                            <tr><td colspan="5" style="text-align:center; color:#888;">載入中...</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4 style="color:#2c3e50; margin-bottom:10px;">👥 會員參與與進度記錄</h4>
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>會員姓名 / 電郵</th>
+                                <th>參與賽事</th>
+                                <th>報名時間</th>
+                                <th>當前進度數據</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tour-regs-tbody">
+                            <tr><td colspan="5" style="text-align:center; color:#888;">載入中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 行程上載管理標籤 -->
+            <div id="tab-third-party" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-bicycle"></i> 第三方行程上載管理 (Third-Party Ride Audits)</h3>
+                <p style="color:#555; font-size:0.9em;">審核用戶上載之 LocoBike 其它共享單車行程圖檔。檢視詳情圖、單車 QRCode 圖及近 30 天紀錄圖，確認或手動修正單車編號與里程數後進行批准/拒絕。</p>
+
+                <div style="display:flex; gap:10px; margin-bottom:1.5em; border-bottom:1px solid #ddd; padding-bottom:10px;">
+                    <button id="tp-filter-pending" class="cta-button" style="background:#2c3e50; color:#fff;" onclick="filterThirdPartyRides('pending')">待審核 (<span id="count-tp-pending">0</span>)</button>
+                    <button id="tp-filter-approved" class="cta-button" style="background:#888; color:#fff;" onclick="filterThirdPartyRides('approved')">已批准 (<span id="count-tp-approved">0</span>)</button>
+                    <button id="tp-filter-rejected" class="cta-button" style="background:#888; color:#fff;" onclick="filterThirdPartyRides('rejected')">已拒絕 (<span id="count-tp-rejected">0</span>)</button>
+                </div>
+
+                <div id="tp-loading" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入行程上載資料...</p>
+                </div>
+
+                <div id="tp-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>提交用戶</th>
+                                <th>平台 & 單車編號</th>
+                                <th>騎行距離 (km)</th>
+                                <th>提交相片 (詳情 / 單車 / 歷史)</th>
+                                <th>提交時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tp-tbody">
+                            <tr><td colspan="6" style="text-align:center; color:#888;">暫無行程上載紀錄。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- 網誌管理標籤 -->
@@ -907,6 +993,236 @@
                 }
             } catch (err) {
                 alert('錯誤: ' + err.message);
+            }
+        }
+
+        // ── 活動管理 (Tournaments Admin) JS ─────────────────
+        async function loadTournamentsAdmin() {
+            const loading = document.getElementById('tour-admin-loading');
+            const eventsTbody = document.getElementById('tour-events-tbody');
+            const regsTbody = document.getElementById('tour-regs-tbody');
+            if (!loading || !eventsTbody) return;
+
+            loading.style.display = 'block';
+            eventsTbody.innerHTML = '';
+            regsTbody.innerHTML = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin?action=get-tournaments-admin', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+
+                loading.style.display = 'none';
+                renderTournamentsAdmin(data.tournaments || [], data.userRegistrations || []);
+            } catch (err) {
+                loading.style.display = 'none';
+                eventsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
+            }
+        }
+
+        function renderTournamentsAdmin(events, regs) {
+            const eventsTbody = document.getElementById('tour-events-tbody');
+            const regsTbody = document.getElementById('tour-regs-tbody');
+
+            if (events.length === 0) {
+                eventsTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">暫無賽事</td></tr>';
+            } else {
+                eventsTbody.innerHTML = events.map(t => {
+                    const fee = Number(t.entry_fee_coins || 0) > 0 ? `${t.entry_fee_coins} 🪙` : '免費';
+                    const startStr = t.start_date ? new Date(t.start_date).toLocaleDateString('zh-HK') : '—';
+                    const endStr = t.end_date ? new Date(t.end_date).toLocaleDateString('zh-HK') : '—';
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(t.title_zh)}</strong><br><span style="font-size:0.8em; color:#888;">${t.event_key}</span></td>
+                            <td>${t.target_rank === 'bronze_silver' ? '銅卡 / 銀卡' : '全體會員'}</td>
+                            <td>${fee}</td>
+                            <td>${startStr} ～ ${endStr}</td>
+                            <td><span style="color:#2ecc71; font-weight:bold;">進行中</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            if (regs.length === 0) {
+                regsTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">暫無會員報名紀錄</td></tr>';
+            } else {
+                regsTbody.innerHTML = regs.map(r => {
+                    const regDate = r.registered_at ? new Date(r.registered_at).toLocaleString('zh-HK') : '—';
+                    const pData = typeof r.progress_data === 'object' ? JSON.stringify(r.progress_data) : (r.progress_data || '{}');
+                    const statusText = r.is_completed
+                        ? '<span style="color:#2ecc71; font-weight:bold;"><i class="fas fa-check-circle"></i> 已達成</span>'
+                        : '<span style="color:#3498db; font-weight:bold;"><i class="fas fa-spinner"></i> 進行中</span>';
+
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(r.full_name || r.username || '會員')}</strong><br><span style="font-size:0.8em; color:#888;">${escapeHtml(r.email)}</span></td>
+                            <td><strong style="color:#d4af37;">${r.event_key}</strong></td>
+                            <td>${regDate}</td>
+                            <td><code style="font-size:0.85em; background:rgba(0,0,0,0.05); padding:2px 6px; border-radius:4px;">${escapeHtml(pData)}</code></td>
+                            <td>${statusText}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // ── 第三方行程上載管理 (Third-Party Ride Audits) JS ─────────────────
+        let allThirdPartyRides = [];
+        let currentTpFilter = 'pending';
+
+        async function loadThirdPartyRides() {
+            const loading = document.getElementById('tp-loading');
+            const tbody = document.getElementById('tp-tbody');
+            if (!loading || !tbody) return;
+
+            loading.style.display = 'block';
+            tbody.innerHTML = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const resp = await fetch('/api/admin?action=get-third-party-rides', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (handleTokenError(resp)) return;
+                const data = await resp.json();
+
+                loading.style.display = 'none';
+                allThirdPartyRides = data.rides || [];
+
+                updateThirdPartyCounts();
+                renderThirdPartyRides();
+            } catch (err) {
+                loading.style.display = 'none';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">載入失敗: ${err.message}</td></tr>`;
+            }
+        }
+
+        function updateThirdPartyCounts() {
+            const pending = allThirdPartyRides.filter(r => r.status === 'pending').length;
+            const approved = allThirdPartyRides.filter(r => r.status === 'approved').length;
+            const rejected = allThirdPartyRides.filter(r => r.status === 'rejected').length;
+
+            const cp = document.getElementById('count-tp-pending'); if (cp) cp.textContent = pending;
+            const ca = document.getElementById('count-tp-approved'); if (ca) ca.textContent = approved;
+            const cr = document.getElementById('count-tp-rejected'); if (cr) cr.textContent = rejected;
+        }
+
+        function filterThirdPartyRides(filter) {
+            currentTpFilter = filter;
+            ['pending', 'approved', 'rejected'].forEach(f => {
+                const btn = document.getElementById(`tp-filter-${f}`);
+                if (btn) {
+                    btn.style.background = (filter === f) ? '#2c3e50' : '#888';
+                    btn.style.color = '#fff';
+                }
+            });
+            renderThirdPartyRides();
+        }
+
+        function renderThirdPartyRides() {
+            const tbody = document.getElementById('tp-tbody');
+            const list = allThirdPartyRides.filter(r => r.status === currentTpFilter);
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">此分類下暫無紀錄。</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(r => {
+                const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('zh-HK') : '—';
+                const reporter = r.email
+                    ? `<div><strong>${escapeHtml(r.full_name || '用戶')}</strong></div>
+                       <div style="font-size:0.8em; color:#888;">${escapeHtml(r.email)}</div>`
+                    : `<span style="color:#888;">未知用戶</span>`;
+
+                const imgsHtml = `
+                    <div style="display:flex; gap:4px;">
+                        ${r.img_detail ? `<img src="${r.img_detail}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; cursor:zoom-in;" onclick="alert('圖片詳情')" title="詳情圖">` : ''}
+                        ${r.img_bike ? `<img src="${r.img_bike}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; cursor:zoom-in;" onclick="alert('單車圖')" title="單車圖">` : ''}
+                        ${r.img_history ? `<img src="${r.img_history}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; cursor:zoom-in;" onclick="alert('紀錄圖')" title="紀錄圖">` : ''}
+                    </div>
+                `;
+
+                let actionHtml = '';
+                if (r.status === 'pending') {
+                    actionHtml = `
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <button class="action-btn btn-promote" style="background:#2ecc71; color:#fff;" onclick="auditThirdPartyRide(${r.id}, 'approved')">批准 (加里程)</button>
+                            <button class="action-btn btn-demote" style="background:#e74c3c; color:#fff;" onclick="auditThirdPartyRide(${r.id}, 'rejected')">拒絕 (寫原因)</button>
+                        </div>
+                    `;
+                } else if (r.status === 'approved') {
+                    actionHtml = `<span style="color:#2ecc71; font-weight:bold;"><i class="fas fa-check-circle"></i> 已批准</span>`;
+                } else {
+                    actionHtml = `<span style="color:#e74c3c; font-weight:bold;"><i class="fas fa-times-circle"></i> 已拒絕</span>
+                        ${r.reject_reason ? `<div style="font-size:0.75em; color:#888; margin-top:2px;">${escapeHtml(r.reject_reason)}</div>` : ''}`;
+                }
+
+                return `
+                    <tr>
+                        <td>${reporter}</td>
+                        <td>
+                            <strong style="color:#3498db;">${r.platform ? r.platform.toUpperCase() : 'LOCOBIKE'}</strong>
+                            <div style="margin-top:4px;">
+                                <input type="text" id="tp-bikeno-${r.id}" value="${escapeHtml(r.bike_no || '')}" placeholder="單車編號" style="width:100px; padding:2px 4px; font-size:0.85em; border:1px solid #ccc; border-radius:4px;" ${r.status !== 'pending' ? 'disabled' : ''}>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="number" step="0.1" id="tp-dist-${r.id}" value="${r.distance_km || 0}" style="width:80px; padding:2px 4px; font-size:0.85em; border:1px solid #ccc; border-radius:4px;" ${r.status !== 'pending' ? 'disabled' : ''}> km
+                        </td>
+                        <td>${imgsHtml}</td>
+                        <td><span style="font-size:0.85em;">${dateStr}</span></td>
+                        <td>${actionHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function auditThirdPartyRide(id, status) {
+            const bikeNoInput = document.getElementById(`tp-bikeno-${id}`);
+            const distInput = document.getElementById(`tp-dist-${id}`);
+
+            const bikeNo = bikeNoInput ? bikeNoInput.value.trim() : '';
+            const distKm = distInput ? parseFloat(distInput.value || 0) : 0;
+
+            let reason = '';
+            if (status === 'rejected') {
+                reason = prompt('請列出拒絕原因：', '圖片不清晰 / 欠缺關鍵資訊');
+                if (reason === null) return; // User cancelled
+            } else {
+                if (!confirm(`確定批准此個案？將會為用戶增加 ${distKm} km 的 365 天滾動里程。`)) return;
+            }
+
+            const token = localStorage.getItem('accessToken');
+            try {
+                const resp = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'audit-third-party-ride',
+                        id: id,
+                        status: status,
+                        bike_no: bikeNo,
+                        distance_km: distKm,
+                        reject_reason: reason
+                    })
+                });
+                if (handleTokenError(resp)) return;
+                if (resp.ok) {
+                    alert(status === 'approved' ? '已批准！用戶 365 天滾動里程已更新。' : '已拒絕該個案。');
+                    loadThirdPartyRides();
+                } else {
+                    const data = await resp.json();
+                    alert('操作失敗: ' + data.message);
+                }
+            } catch (err) {
+                alert('系統錯誤: ' + err.message);
             }
         }
 

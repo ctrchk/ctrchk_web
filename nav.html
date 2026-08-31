@@ -858,12 +858,12 @@
 
         const isLight = document.body.classList.contains('app-light-theme');
         const tileUrl = isLight
-          ? 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
-          : 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+          ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+          : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
         if (typeof L !== 'undefined') {
           this.leafletMap = L.map('map', { zoomControl: false, attributionControl: false }).setView([22.3083, 114.2597], 14);
-          L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(this.leafletMap);
+          L.tileLayer(tileUrl, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; CARTO' }).addTo(this.leafletMap);
           this.leafletRouteLine = L.polyline([], { color: '#BFE340', weight: 6, opacity: 0.9 }).addTo(this.leafletMap);
         }
 
@@ -1904,6 +1904,30 @@
       },
 
       updateUserMarker(coords, heading) {
+        if (this.isLeaflet && this.leafletMap) {
+          if (!this.userMarker) {
+            const icon = L.divIcon({
+              className: '',
+              html: `<div class="user-arrow" style="transform: rotate(${heading || 0}deg);"></div>`,
+              iconSize: [24, 30], iconAnchor: [12, 15]
+            });
+            this.userMarker = L.marker([coords[1], coords[0]], { icon }).addTo(this.leafletMap);
+          } else {
+            this.userMarker.setLatLng([coords[1], coords[0]]);
+            const icon = L.divIcon({
+              className: '',
+              html: `<div class="user-arrow" style="transform: rotate(${heading || 0}deg);"></div>`,
+              iconSize: [24, 30], iconAnchor: [12, 15]
+            });
+            this.userMarker.setIcon(icon);
+          }
+          if (this.isFollowing) {
+            this.leafletMap.panTo([coords[1], coords[0]], { animate: true });
+          }
+          return;
+        }
+
+        if (!this.map) return;
         if (!this.userMarker) {
           const el = document.createElement('div');
           el.className = 'user-arrow';
@@ -2190,6 +2214,20 @@
       },
 
       drawRoute(coords, types) {
+        if (this.isLeaflet && this.leafletMap) {
+          const latLngs = coords.map(c => [c[1], c[0]]);
+          if (this.leafletRouteLine) {
+            this.leafletRouteLine.setLatLngs(latLngs);
+          } else {
+            this.leafletRouteLine = L.polyline(latLngs, { color: '#BFE340', weight: 6, opacity: 0.9 }).addTo(this.leafletMap);
+          }
+          if (latLngs.length > 0) {
+            this.leafletMap.fitBounds(L.polyline(latLngs).getBounds(), { padding: [50, 50] });
+          }
+          return;
+        }
+
+        if (!this.map) return;
         // Create a FeatureCollection where each segment can have its own type
         const features = [];
         for (let i = 0; i < coords.length - 1; i++) {

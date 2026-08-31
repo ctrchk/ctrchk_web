@@ -149,6 +149,62 @@ async function ensureRideTables() {
           );
         `);
       } catch(e) {}
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS tournaments (
+            id SERIAL PRIMARY KEY,
+            event_key VARCHAR(50) UNIQUE NOT NULL,
+            title_zh VARCHAR(255) NOT NULL,
+            subtitle_zh VARCHAR(255),
+            description_zh TEXT,
+            banner_url TEXT,
+            target_rank VARCHAR(50) DEFAULT 'all',
+            entry_fee_coins INTEGER DEFAULT 0,
+            start_date TIMESTAMP WITH TIME ZONE,
+            end_date TIMESTAMP WITH TIME ZONE,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        await query(`
+          CREATE TABLE IF NOT EXISTS user_tournaments (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            event_key VARCHAR(50) REFERENCES tournaments(event_key) ON DELETE CASCADE,
+            registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            progress_data JSONB DEFAULT '{}'::jsonb,
+            is_completed BOOLEAN DEFAULT FALSE,
+            completed_at TIMESTAMP WITH TIME ZONE,
+            UNIQUE(user_id, event_key)
+          );
+        `);
+        await query(`
+          INSERT INTO tournaments (event_key, title_zh, subtitle_zh, description_zh, banner_url, target_rank, entry_fee_coins, start_date, end_date)
+          VALUES
+          ('express_upgrade', '特快升卡挑戰賽', '完成指定將軍澳/港島海濱路線，直升銀卡/金卡！', '報名成功後，在活動期限內完成6次任意將軍澳或港島海濱路線（總里程>10km）即可自動升級為銀卡並贈1000XP！完成12次將軍澳路線（總里程>30km）即可自動升級金卡並贈2500XP及100里程幣！', '/images/900.jpg', 'bronze_silver', 50, '2026-08-31 00:00:00+08', '2026-12-31 23:59:59+08'),
+          ('autumn_double', '秋日加倍賽', '騎行里程階段加碼，角逐 Top 3 萬分大獎！', '報名成功後至活動結束前，騎行每達10km可獲得100里程幣與500XP；每達50km可獲得1000里程幣及5000XP！活動結束時騎行最多的前3名用戶可獲2000里程幣及10000XP大獎！', '/images/914.jpg', 'all', 0, '2026-08-31 00:00:00+08', '2026-11-30 23:59:59+08'),
+          ('bridge_gift', '大橋有禮', '經過跨灣大橋 LHP01 站點即送里程幣！', '活動期間每次騎行路線經過 LHP01 站點時，即可獲得額外 10 里程幣（一次騎行最多獲得一次）。', '/images/929.jpg', 'all', 0, '2026-08-31 00:00:00+08', '2027-02-28 23:59:59+08')
+          ON CONFLICT (event_key) DO NOTHING;
+        `);
+      } catch(e) {}
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS third_party_rides (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            platform VARCHAR(50) DEFAULT 'locobike',
+            img_detail TEXT,
+            img_bike TEXT,
+            img_history TEXT,
+            bike_no VARCHAR(50),
+            distance_km NUMERIC DEFAULT 0,
+            status VARCHAR(20) DEFAULT 'pending',
+            reject_reason TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+      } catch(e) {}
     })().catch(err => {
       _ensureRideTablesPromise = null;
       throw err;
@@ -768,7 +824,27 @@ export default async function handler(req, res) {
       ]);
 
       const stationMap = new Map();
-      stations.forEach(s => stationMap.set(s.id, s));
+      stations.forEach(s => {
+        if (s.id) {
+          stationMap.set(s.id, s);
+          stationMap.set(String(s.id).toUpperCase().trim(), s);
+          stationMap.set(String(s.id).replace(/[^A-Za-z0-9]/g, '').toUpperCase(), s);
+        }
+      });
+
+      const findStation = (key) => {
+        if (!key) return null;
+        if (stationMap.has(key)) return stationMap.get(key);
+        const uKey = String(key).toUpperCase().trim();
+        if (stationMap.has(uKey)) return stationMap.get(uKey);
+        const cleanKey = uKey.replace(/[^A-Za-z0-9]/g, '');
+        if (stationMap.has(cleanKey)) return stationMap.get(cleanKey);
+        return stations.find(s =>
+          s.id === key ||
+          s.name_zh === key ||
+          (s.station_number && String(s.station_number) === String(key))
+        ) || null;
+      };
 
       const terminals = stations.filter(s => s.is_terminal).map(t => ({
         id: t.id,
@@ -810,8 +886,8 @@ export default async function handler(req, res) {
         const perStopXp = rewards.per_stop_xp || 0;
 
         const resolvedStops = rawStops.map((rs, idx) => {
-          const st = stationMap.get(rs.station_id);
-          if (!st) return null;
+          const sid = rs.station_id || rs.code || rs.id;
+          const st = findStation(sid);
 
           let direction = '↕️';
           if (rs.nature === 'start') direction = '🔴';
@@ -821,20 +897,38 @@ export default async function handler(req, res) {
           else if (idx === 0) direction = '🔴';
           else if (idx === rawStops.length - 1) direction = '🟢';
 
-          return {
-            order: idx + 1,
-            code: st.id,
-            name: st.name_zh,
-            name_en: st.name_en,
-            road: st.road_name,
-            direction: direction,
-            nature: rs.nature || 'both',
-            type: rs.type || 'standard',
-            district: st.area,
-            xp: perStopXp,
-            lat: st.lat,
-            lon: st.lon,
-          };
+          if (st) {
+            return {
+              order: idx + 1,
+              code: st.id,
+              name: st.name_zh,
+              name_en: st.name_en || '',
+              road: st.road_name || '',
+              direction: direction,
+              nature: rs.nature || 'both',
+              type: rs.type || 'standard',
+              district: st.area || '',
+              xp: perStopXp || 10,
+              lat: Number(st.lat),
+              lon: Number(st.lon),
+            };
+          } else if (rs.name || rs.name_zh) {
+            return {
+              order: idx + 1,
+              code: rs.code || rs.station_id || `STOP_${idx + 1}`,
+              name: rs.name || rs.name_zh,
+              name_en: rs.name_en || '',
+              road: rs.road || rs.road_name || '',
+              direction: direction,
+              nature: rs.nature || 'both',
+              type: rs.type || 'standard',
+              district: rs.district || rs.area || '',
+              xp: rs.xp || perStopXp || 10,
+              lat: Number(rs.lat || rs.latitude || 22.3083),
+              lon: Number(rs.lon || rs.longitude || 114.2597),
+            };
+          }
+          return null;
         }).filter(Boolean);
 
         return {
@@ -1052,6 +1146,94 @@ export default async function handler(req, res) {
       }
     }
 
+    if (req.query.action === 'my-bug-reports') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        const { rows } = await query(
+          `SELECT id, description, screenshot, page_url, status, reject_reason, created_at
+           FROM bug_reports
+           WHERE user_id = $1
+           ORDER BY created_at DESC`,
+          [userData.userId]
+        );
+        return res.status(200).json({ reports: rows });
+      } catch (error) {
+        console.error('Get my-bug-reports error:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
+    if (req.query.action === 'list-tournaments') {
+      try {
+        await ensureRideTables();
+        const userData = await authenticate(req, res, false);
+        const userId = userData ? userData.userId : null;
+
+        const { rows: tournaments } = await query(
+          `SELECT t.*,
+                  ut.registered_at, ut.progress_data, ut.is_completed, ut.completed_at
+           FROM tournaments t
+           LEFT JOIN user_tournaments ut ON ut.event_key = t.event_key AND ut.user_id = $1
+           WHERE t.is_active = TRUE AND t.end_date >= NOW()
+           ORDER BY t.start_date ASC`,
+          [userId]
+        );
+
+        return res.status(200).json({ tournaments });
+      } catch (error) {
+        console.error('list-tournaments error:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
+    if (req.query.action === 'tournament-detail') {
+      const { event_key } = req.query;
+      if (!event_key) return res.status(400).json({ message: 'event_key is required' });
+      try {
+        await ensureRideTables();
+        const userData = await authenticate(req, res, false);
+        const userId = userData ? userData.userId : null;
+
+        const { rows } = await query(
+          `SELECT t.*,
+                  ut.registered_at, ut.progress_data, ut.is_completed, ut.completed_at
+           FROM tournaments t
+           LEFT JOIN user_tournaments ut ON ut.event_key = t.event_key AND ut.user_id = $1
+           WHERE t.event_key = $2`,
+          [userId, event_key]
+        );
+
+        if (rows.length === 0) {
+          return res.status(404).json({ message: 'Tournament not found' });
+        }
+
+        return res.status(200).json({ tournament: rows[0] });
+      } catch (error) {
+        console.error('tournament-detail error:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
+    if (req.query.action === 'my-third-party-submissions') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      try {
+        await ensureRideTables();
+        const { rows } = await query(
+          `SELECT id, platform, bike_no, distance_km, status, reject_reason, created_at
+           FROM third_party_rides
+           WHERE user_id = $1
+           ORDER BY created_at DESC`,
+          [userData.userId]
+        );
+        return res.status(200).json({ submissions: rows });
+      } catch (error) {
+        console.error('Get my-third-party-submissions error:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
     // action=config → return public config (replaces config.js)
     if (req.query.action === 'config' || req.query.action === 'google-client-id') {
       res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -1212,23 +1394,18 @@ export default async function handler(req, res) {
         const explorationRatio = Math.min(1.0, conqueredCount / totalRoutesCount);
         const xFactor = explorationRatio * 200;
 
-        // 6. Community Factor (P): Forum/Feedback contribution score (posts/replies/likes count * 20)
-        let forumTopicsCount = 0;
-        let forumRepliesCount = 0;
+        // 6. Community / Bug Factor (P): valid/approved bug reports count * 20
+        let validBugReportsCount = 0;
         try {
-          const { rows: forumCountRows } = await query(
-            `SELECT COUNT(*) AS cnt FROM forum_topics WHERE user_id = $1`, [userId]
+          const { rows: bugCountRows } = await query(
+            `SELECT COUNT(*)::int AS cnt FROM bug_reports WHERE user_id = $1 AND status IN ('valid', 'approved', 'resolved')`, [userId]
           );
-          const { rows: replyCountRows } = await query(
-            `SELECT COUNT(*) AS cnt FROM forum_replies WHERE user_id = $1`, [userId]
-          );
-          forumTopicsCount = Number(forumCountRows[0]?.cnt || 0);
-          forumRepliesCount = Number(replyCountRows[0]?.cnt || 0);
+          validBugReportsCount = Number(bugCountRows[0]?.cnt || 0);
         } catch (pErr) {
           console.error('[Elite Score] P factor calc error:', pErr.message);
         }
-        const communityContribution = forumTopicsCount + forumRepliesCount;
-        const pFactor = communityContribution * 20;
+        const communityContribution = validBugReportsCount;
+        const pFactor = validBugReportsCount * 20;
 
         const totalEliteScore = Math.round(mFactor + eFactor + cFactor + aFactor + xFactor + pFactor);
 
@@ -1502,6 +1679,100 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+
+    if (req.body.action === 'register-tournament') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      const { event_key } = req.body;
+      if (!event_key) return res.status(400).json({ message: 'event_key is required' });
+
+      try {
+        await ensureRideTables();
+
+        const { rows: tRows } = await query(
+          `SELECT * FROM tournaments WHERE event_key = $1 AND is_active = TRUE`, [event_key]
+        );
+        if (tRows.length === 0) return res.status(404).json({ message: 'Tournament not found or inactive' });
+        const tour = tRows[0];
+
+        const { rows: existing } = await query(
+          `SELECT id FROM user_tournaments WHERE user_id = $1 AND event_key = $2`,
+          [userData.userId, event_key]
+        );
+        if (existing.length > 0) {
+          return res.status(400).json({ message: '已報名該挑戰賽！' });
+        }
+
+        const fee = Number(tour.entry_fee_coins || 0);
+        if (fee > 0) {
+          const { rows: pRows } = await query(
+            `SELECT coins FROM user_game_profile WHERE user_id = $1`, [userData.userId]
+          );
+          const currentCoins = Number(pRows[0]?.coins || 0);
+          if (currentCoins < fee) {
+            return res.status(400).json({ message: `里程幣不足！報名需要 ${fee} 里程幣，您當前持有 ${currentCoins} 里程幣。` });
+          }
+
+          await query(
+            `UPDATE user_game_profile SET coins = coins - $1 WHERE user_id = $2`,
+            [fee, userData.userId]
+          );
+        }
+
+        await query(
+          `INSERT INTO user_tournaments (user_id, event_key, registered_at, progress_data)
+           VALUES ($1, $2, NOW(), '{}'::jsonb)`,
+          [userData.userId, event_key]
+        );
+
+        return res.status(200).json({ success: true, message: '成功報名挑戰賽！' });
+      } catch (error) {
+        console.error('register-tournament error:', error);
+        return res.status(500).json({ message: 'Internal Server Error: ' + error.message });
+      }
+    }
+
+    if (req.body.action === 'submit-third-party-ride') {
+      const userData = await authenticate(req, res);
+      if (!userData) return;
+      const { img_detail, img_bike, img_history } = req.body;
+      if (!img_detail || !img_bike || !img_history) {
+        return res.status(400).json({ message: '必須提供全部三張相片（行程詳情、單車照片、30天紀錄）' });
+      }
+
+      try {
+        await ensureRideTables();
+
+        // Automatic extraction heuristic
+        let extractedDist = 0;
+        let extractedBikeNo = '';
+
+        if (img_detail && typeof img_detail === 'string') {
+          const kmMatch = img_detail.match(/(\d+(\.\d+)?)\s*km/i);
+          if (kmMatch) extractedDist = parseFloat(kmMatch[1]);
+        }
+        if (img_bike && typeof img_bike === 'string') {
+          const bikeMatch = img_bike.match(/([A-Z0-9]{4,10})/i);
+          if (bikeMatch) extractedBikeNo = bikeMatch[1];
+        }
+
+        const { rows } = await query(
+          `INSERT INTO third_party_rides (user_id, platform, img_detail, img_bike, img_history, bike_no, distance_km, status)
+           VALUES ($1, 'locobike', $2, $3, $4, $5, $6, 'pending') RETURNING id`,
+          [userData.userId, img_detail, img_bike, img_history, extractedBikeNo || '待確認', extractedDist || 0]
+        );
+
+        return res.status(200).json({
+          success: true,
+          submission_id: rows[0].id,
+          extracted_bike_no: extractedBikeNo,
+          extracted_distance_km: extractedDist
+        });
+      } catch (err) {
+        console.error('submit-third-party-ride error:', err);
+        return res.status(500).json({ message: 'Internal Server Error: ' + err.message });
+      }
+    }
 
     if (req.body.action === 'submit-bug-report' || req.query.action === 'submit-bug-report') {
       const userData = await authenticate(req, res, false);

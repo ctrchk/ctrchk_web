@@ -997,6 +997,12 @@
                     </div>
 
                     <!-- Specific Mileage Records Box -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 1.2em 0 0.6em;">
+                        <span style="font-size: 0.9em; font-weight: bold; color: var(--app-accent, #BFE340);"><i class="fas fa-chart-line"></i> 里程數據統計</span>
+                        <button id="btn-sync-mileage" onclick="syncMileageNow()" style="background: rgba(191, 227, 64, 0.15); border: 1px solid var(--app-accent, #BFE340); color: var(--app-accent, #BFE340); padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-sync-alt" id="sync-icon"></i> 立即同步
+                        </button>
+                    </div>
                     <div class="mileage-records-box">
                         <div class="mileage-record-item">
                             <div class="mileage-record-val" id="rec-rolling-mileage">0.0 km</div>
@@ -1012,7 +1018,7 @@
                         </div>
                         <div class="mileage-record-item">
                             <div class="mileage-record-val" id="rec-community-score">0</div>
-                            <div class="mileage-record-lbl">社群貢獻度</div>
+                            <div class="mileage-record-lbl">屬實 Bug 報告</div>
                         </div>
                     </div>
                 </div>
@@ -1072,7 +1078,7 @@
                         <span class="factor-score" id="f-p">0</span>
                     </div>
                     <div class="factor-title">貢獻因子 (P)</div>
-                    <div class="factor-desc">論壇發文/回覆/舉報障礙 * 20。共建優質車友生態圈。</div>
+                    <div class="factor-desc">成功回報屬實 Bug * 20。共建優質 App 生態圈。</div>
                 </div>
             </div>
         </section>
@@ -2019,6 +2025,33 @@
                 }
             }
         }
+
+        window.syncMileageNow = async function() {
+            const icon = document.getElementById('sync-icon');
+            if (icon) icon.classList.add('fa-spin');
+            try {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    alert('請先登入後再進行同步');
+                    return;
+                }
+                const res = await fetch('/api/user', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const freshUser = await res.json();
+                    localStorage.setItem('user', JSON.stringify(freshUser));
+                    applyUserPayloadToUI(freshUser);
+                    alert('里程與 Elite Score 已即時同步！');
+                } else {
+                    alert('同步失敗，請再試一次');
+                }
+            } catch (e) {
+                alert('同步失敗，請檢查網路連線');
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        };
 
         initPremiumPage();
 

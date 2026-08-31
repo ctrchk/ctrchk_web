@@ -151,9 +151,11 @@ async function ensureAdminRouteSchema() {
       screenshot TEXT,
       page_url VARCHAR(2048),
       status VARCHAR(20) DEFAULT 'pending',
+      reject_reason TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE bug_reports ADD COLUMN IF NOT EXISTS reject_reason TEXT;`);
 
   // Create deleted_stations table if not exists
   await query(`
@@ -309,6 +311,38 @@ export default async function handler(req, res) {
       }
     }
 
+    if (action === 'get-tournaments-admin') {
+      try {
+        const { rows: tournaments } = await query(`SELECT * FROM tournaments ORDER BY id ASC`);
+        const { rows: userRegistrations } = await query(
+          `SELECT ut.*, u.email, u.full_name, u.username, gp.level, gp.mileage_rank
+           FROM user_tournaments ut
+           JOIN users u ON u.id = ut.user_id
+           LEFT JOIN user_game_profile gp ON gp.user_id = u.id
+           ORDER BY ut.registered_at DESC`
+        );
+        return res.status(200).json({ tournaments, userRegistrations });
+      } catch (err) {
+        console.error('get-tournaments-admin error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
+    if (action === 'get-third-party-rides') {
+      try {
+        const { rows } = await query(
+          `SELECT tpr.*, u.email, u.full_name, u.username
+           FROM third_party_rides tpr
+           LEFT JOIN users u ON u.id = tpr.user_id
+           ORDER BY tpr.created_at DESC`
+        );
+        return res.status(200).json({ rides: rows });
+      } catch (err) {
+        console.error('get-third-party-rides error:', err);
+        return res.status(500).json({ message: 'Internal Server Error' });
+      }
+    }
+
     if (action === 'get-bug-reports') {
       try {
         const { rows } = await query(
@@ -401,6 +435,40 @@ export default async function handler(req, res) {
         );
         return res.status(200).json({ success: true });
     }
+
+    if (action === 'audit-third-party-ride') {
+      const { id, status, bike_no, distance_km, reject_reason } = b;
+      if (!id || !status) return res.status(400).json({ message: 'ID and status required' });
+
+      // Fetch the ride item
+      const { rows: rideRows } = await query(
+        `SELECT user_id, status FROM third_party_rides WHERE id = $1`, [id]
+      );
+      if (rideRows.length === 0) return res.status(404).json({ message: 'Submission not found' });
+      const ride = rideRows[0];
+
+      const distNum = parseFloat(distance_km || 0);
+
+      // If approving for the first time
+      if (status === 'approved' && ride.status !== 'approved' && distNum > 0) {
+        // Update user_game_profile mileage_km_365
+        await query(
+          `UPDATE user_game_profile
+           SET mileage_km_365 = COALESCE(mileage_km_365, 0) + $1, updated_at = NOW()
+           WHERE user_id = $2`,
+          [distNum, ride.user_id]
+        );
+      }
+
+      await query(
+        `UPDATE third_party_rides
+         SET status = $1, bike_no = $2, distance_km = $3, reject_reason = $4, updated_at = NOW()
+         WHERE id = $5`,
+        [status, bike_no || '未填寫', distNum, reject_reason || null, id]
+      );
+
+      return res.status(200).json({ success: true });
+    }
     if (action === 'create-badge' || action === 'update-badge') {
         if (action === 'create-badge') {
             await query(
@@ -484,7 +552,11 @@ export default async function handler(req, res) {
     }
     if (action === 'delete_dept') { await query(`DELETE FROM department_config WHERE dept_id = $1`, [b.dept_id]); return res.status(200).json({ success: true }); }
     if (action === 'resolve-bug-report') {
-        await query(`UPDATE bug_reports SET status = $1 WHERE id = $2`, [b.status, b.bug_id]);
+        const { bug_id, status, reject_reason } = b;
+        await query(
+          `UPDATE bug_reports SET status = $1, reject_reason = $2 WHERE id = $3`,
+          [status, reject_reason || null, bug_id]
+        );
         return res.status(200).json({ success: true });
     }
     if (action === 'restore-deleted-station') {

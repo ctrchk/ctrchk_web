@@ -781,35 +781,35 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
         <div style="height: 2em;"></div>
     </div>
 
-    <!-- ════════ APP TUTORIAL OVERLAY ════════ -->
+    <!-- ════════ APP TUTORIAL OVERLAY (Game-like Step Wizard) ════════ -->
     <div id="app-tutorial-overlay">
-        <div class="tutorial-sheet">
-            <h2>🚴 App 使用教學</h2>
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">① 選擇路線與點亮圖籍</div>
-                <div class="tutorial-step-desc">未征服的路線在圖籍中顯示為灰色。選擇路線並按「開始騎行」出發。</div>
+        <div class="tutorial-sheet" style="border: 1px solid var(--app-accent, #BFE340); border-radius: 24px; padding: 20px; max-width: 420px; text-align: center; position: relative;">
+            <!-- Step Header Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span id="tour-badge" style="background: rgba(191,227,64,0.15); color: var(--app-accent, #BFE340); font-weight: bold; font-size: 0.8em; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--app-accent, #BFE340);">關卡 1 / 7</span>
+                <button onclick="closeAppTutorial()" style="background: none; border: none; color: #888; font-size: 1.2em; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>
             </div>
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">② 自動到站偵測</div>
-                <div class="tutorial-step-desc">進入車站 50 米範圍內會自動記錄。完成所有站點後，該路線將在圖籍中「變回彩色」。</div>
+
+            <!-- Progress Bar -->
+            <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 18px;">
+                <div id="tour-progress-bar" style="height: 100%; background: var(--app-accent, #BFE340); width: 14%; transition: width 0.3s ease;"></div>
             </div>
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">③ 圖籍收集獎勵</div>
-                <div class="tutorial-step-desc">集齊全集路線可領取 10,000 XP 及 1,000 里程幣，並解鎖隱藏的「特別限定路線」。</div>
+
+            <!-- Step Content Container -->
+            <div id="tour-step-content" style="min-height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div id="tour-icon" style="font-size: 48px; margin-bottom: 12px; filter: drop-shadow(0 4px 10px rgba(191,227,64,0.3));">🚴✨</div>
+                <h3 id="tour-title" style="font-size: 1.25em; font-weight: 900; color: var(--app-accent, #BFE340); margin-bottom: 6px;">歡迎來到 CTRC 城市運輸單車！</h3>
+                <div id="tour-subtitle" style="font-size: 0.85em; opacity: 0.8; margin-bottom: 12px; font-weight: bold;">探索香港單車遊戲生態圈</div>
+                <p id="tour-desc" style="font-size: 0.88em; line-height: 1.5; color: rgba(255,255,255,0.85); margin-bottom: 16px;">本 App 專為香港單車迷打造，將城市單車網絡遊戲化！騎行即可積累經驗值 (XP)、升級會員卡別、賺取里程幣與參加限時賽事。</p>
             </div>
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">④ 解鎖新部門</div>
-                <div class="tutorial-step-desc">點擊地圖上方的區域標籤（如：將軍澳部）可切換不同地區，發掘更多路線。</div>
-            </div>
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">⑤ 每日任務與里程幣</div>
-                <div class="tutorial-step-desc">完成任務賺取里程幣，可用於解鎖新地區或購買特別版路線。</div>
-            </div>
-            <div class="tutorial-footer">
-                <label class="tutorial-no-show">
+
+            <!-- Footer Controls -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
+                <button id="tour-btn-prev" onclick="tourPrevStep()" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 18px; border-radius: 12px; font-weight: bold; cursor: pointer; display: none;">上一關</button>
+                <label style="font-size: 0.78em; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 6px;">
                     <input type="checkbox" id="tutorial-no-show-chk"> 不再顯示
                 </label>
-                <button class="tutorial-close-btn" onclick="closeAppTutorial()">明白了！</button>
+                <button id="tour-btn-next" onclick="tourNextStep()" style="background: var(--app-accent, #BFE340); color: #121f14; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 12px rgba(191,227,64,0.3);">下一步 ➔</button>
             </div>
         </div>
     </div>
@@ -1134,13 +1134,100 @@ body.app-light-theme .app-stat-pill .val { color: var(--app-text-primary, #1b3a1
     });
 })();
 
-// ── App Tutorial ───────────────────────────────────────────────────
-function showAppTutorial() {
-    document.getElementById('app-tutorial-overlay').classList.add('show');
+// ── App Tutorial (Game-like Step Wizard) ───────────────────────────
+const TOUR_STEPS = [
+  {
+    icon: "🚴✨",
+    title: "歡迎來到 CTRC 城市運輸單車！",
+    subtitle: "探索香港單車遊戲生態圈",
+    desc: "本 App 專為香港單車迷打造，將城市單車網絡遊戲化！騎行即可積累經驗值 (XP)、升級會員卡別、賺取里程幣與參加限時賽事。"
+  },
+  {
+    icon: "📊🎮",
+    title: "第一關：儀表板與即時資訊",
+    subtitle: "掌控您的騎行戰績",
+    desc: "登入主頁可查看您的當前等級 (Level)、XP 升級進度、365 天滾動里程、個人勳章牆與熱門挑戰賽。"
+  },
+  {
+    icon: "🗺️🚩",
+    title: "第二關：單車路線與站點圖鑑",
+    subtitle: "點亮將軍澳與全港路網",
+    desc: "進入「路線」選擇將軍澳或港島海濱路線，挑選方向與出發站。騎行進入車站 40 米內自動打卡，完成全線打卡可點亮彩色圖鑑！"
+  },
+  {
+    icon: "🧭⚡",
+    title: "第三關：3D 車道級智慧導航",
+    subtitle: "離線防黑屏 + 語音廣播",
+    desc: "進入「導航」享有 3D 地圖、車道級發光軌跡與廣東話語音播報！支援實時速度、均速與自動備用地圖防護。"
+  },
+  {
+    icon: "👑💎",
+    title: "第四關：里程專區與 365 滾動等級",
+    subtitle: "銅卡 ➔ 銀卡 ➔ 金卡尊榮",
+    desc: "根據 365 天滾動里程自動晉升！享有包含里程 (M)、爬升 (E)、自律 (C)、成就 (A)、探索 (X) 與 Bug 報告 (P) 的多維 Elite Score 評分。"
+  },
+  {
+    icon: "🚲📸",
+    title: "第五關：第三方平台里程累積",
+    subtitle: "LocoBike 等共享單車同步",
+    desc: "在 LocoBike 等平台踩完車？在騎行頁面點擊「第三方平台里程累積」，上傳「踩完車詳情」、「單車照片 (含 QR Code)」及「近 30 天紀錄」，審核通過即可直接增加 365 天滾動里程！"
+  },
+  {
+    icon: "🏆🔥",
+    title: "終極關：限時挑戰賽",
+    subtitle: "條款即時同意並報名解鎖大獎",
+    desc: "點擊主頁「報名挑戰賽」參與【特快升卡】、【秋日加倍賽】與【大橋有禮】！完成指定條件自動升級銀卡/金卡，贏取大量 XP 與里程幣！"
+  }
+];
+
+let currentTourStep = 0;
+
+function renderTourStep() {
+  const step = TOUR_STEPS[currentTourStep];
+  const total = TOUR_STEPS.length;
+
+  const badge = document.getElementById('tour-badge'); if (badge) badge.textContent = `關卡 ${currentTourStep + 1} / ${total}`;
+  const pbar = document.getElementById('tour-progress-bar'); if (pbar) pbar.style.width = `${((currentTourStep + 1) / total) * 100}%`;
+  const icon = document.getElementById('tour-icon'); if (icon) icon.textContent = step.icon;
+  const title = document.getElementById('tour-title'); if (title) title.textContent = step.title;
+  const subtitle = document.getElementById('tour-subtitle'); if (subtitle) subtitle.textContent = step.subtitle;
+  const desc = document.getElementById('tour-desc'); if (desc) desc.textContent = step.desc;
+
+  const btnPrev = document.getElementById('tour-btn-prev');
+  const btnNext = document.getElementById('tour-btn-next');
+
+  if (btnPrev) btnPrev.style.display = currentTourStep === 0 ? 'none' : 'block';
+  if (btnNext) btnNext.textContent = currentTourStep === total - 1 ? '開始冒險 🚀' : '下一步 ➔';
 }
+
+function tourNextStep() {
+  if (currentTourStep < TOUR_STEPS.length - 1) {
+    currentTourStep++;
+    renderTourStep();
+  } else {
+    closeAppTutorial();
+  }
+}
+
+function tourPrevStep() {
+  if (currentTourStep > 0) {
+    currentTourStep--;
+    renderTourStep();
+  }
+}
+
+function showAppTutorial() {
+  currentTourStep = 0;
+  renderTourStep();
+  const overlay = document.getElementById('app-tutorial-overlay');
+  if (overlay) overlay.classList.add('show');
+}
+
 function closeAppTutorial() {
-    document.getElementById('app-tutorial-overlay').classList.remove('show');
-    if (document.getElementById('tutorial-no-show-chk').checked) {
+    const overlay = document.getElementById('app-tutorial-overlay');
+    if (overlay) overlay.classList.remove('show');
+    const chk = document.getElementById('tutorial-no-show-chk');
+    if (chk && chk.checked) {
         localStorage.setItem('appTutorialDone', '1');
     }
 }

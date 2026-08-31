@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-53F09894GX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-53F09894GX');
+</script>
+
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#121f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="限時挑戰賽">
+  <link rel="apple-touch-icon" href="/images/icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>限時挑戰賽 | 香港城市運輸單車 CTRC HK</title>
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+  <style>
+    :root {
+      --app-bg: #121f14;
+      --app-card: rgba(255,255,255,0.05);
+      --app-accent: #BFE340;
+      --app-gold: #FFD700;
+      --app-border: rgba(255,255,255,0.1);
+    }
+
+    body {
+      background: var(--app-bg);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding-bottom: calc(100px + env(safe-area-inset-bottom));
+      margin: 0;
+    }
+
+    .event-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: calc(env(safe-area-inset-top) + 1em) 1.2em 1.2em;
+    }
+
+    .event-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .event-title-wrap h1 {
+      font-size: 1.5em;
+      font-weight: 900;
+      color: var(--app-gold);
+      margin: 0 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .event-title-wrap p {
+      font-size: 0.85em;
+      color: rgba(255,255,255,0.7);
+      margin: 0;
+    }
+
+    .event-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--app-border);
+      padding-bottom: 10px;
+    }
+
+    .event-tab-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--app-border);
+      color: rgba(255,255,255,0.7);
+      padding: 10px;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 0.9em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .event-tab-btn.active {
+      background: var(--app-gold);
+      color: #121f14;
+      border-color: var(--app-gold);
+      box-shadow: 0 4px 12px rgba(255,215,0,0.3);
+    }
+
+    .event-card {
+      background: var(--app-card);
+      border: 1px solid var(--app-border);
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .event-card:hover {
+      border-color: var(--app-gold);
+      transform: translateY(-2px);
+    }
+
+    .event-card-banner {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #0d1a12;
+    }
+
+    .event-card-body {
+      padding: 16px;
+      text-align: left;
+    }
+
+    .event-badge-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .event-badge {
+      font-size: 0.75em;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.9);
+    }
+
+    .event-badge.fee {
+      background: rgba(255,215,0,0.2);
+      color: var(--app-gold);
+      border: 1px solid var(--app-gold);
+    }
+
+    .event-badge.registered {
+      background: rgba(46,204,113,0.2);
+      color: #2ecc71;
+      border: 1px solid #2ecc71;
+    }
+
+    .event-card-title {
+      font-size: 1.2em;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .event-card-subtitle {
+      font-size: 0.85em;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .event-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--app-border);
+      padding-top: 12px;
+      margin-top: 12px;
+      font-size: 0.8em;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .btn-event-detail {
+      background: var(--app-gold);
+      color: #121f14;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-weight: 900;
+      font-size: 0.9em;
+      box-shadow: 0 4px 10px rgba(255,215,0,0.3);
+    }
+  </style>
+</head>
+<body class="is-pwa">
+
+  <div class="event-container">
+    <div class="event-header-row">
+      <div class="event-title-wrap">
+        <h1><i class="fas fa-trophy"></i> 限時挑戰賽</h1>
+        <p>限時完成指定任務，解鎖大量 XP、里程幣與特快卡級！</p>
+      </div>
+      <a href="/dashboard.html" style="color: rgba(255,255,255,0.6); font-size: 1.2em; text-decoration: none;"><i class="fas fa-times"></i></a>
+    </div>
+
+    <div class="event-tabs">
+      <button class="event-tab-btn active" id="tab-btn-active" onclick="switchEventTab('active')">🔥 熱門賽事</button>
+      <button class="event-tab-btn" id="tab-btn-mine" onclick="switchEventTab('mine')">📋 我的報名</button>
+    </div>
+
+    <div id="events-list-container">
+      <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 40px 0;"><i class="fas fa-spinner fa-spin"></i> 載入賽事中...</div>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script>
+    let allTournaments = [];
+    let currentTab = 'active';
+
+    const DEFAULT_TOURNAMENTS = [
+      {
+        event_key: 'express_upgrade',
+        title_zh: '特快升卡挑戰賽',
+        subtitle_zh: '完成指定將軍澳/港島海濱路線，直升銀卡/金卡！',
+        description_zh: '報名成功後，在活動期限內完成6次任意將軍澳或港島海濱路線（總里程>10km）即可自動升級為銀卡並贈1000XP！完成12次將軍澳路線（總里程>30km）即可自動升級金卡並贈2500XP及100里程幣！',
+        banner_url: '/images/900.jpg',
+        target_rank: 'bronze_silver',
+        entry_fee_coins: 50,
+        start_date: '2026-08-31 00:00:00+08',
+        end_date: '2026-12-31 23:59:59+08'
+      },
+      {
+        event_key: 'autumn_double',
+        title_zh: '秋日加倍賽',
+        subtitle_zh: '騎行里程階段加碼，角逐 Top 3 萬分大獎！',
+        description_zh: '報名成功後至活動結束前，騎行每達10km可獲得100里程幣與500XP；每達50km可獲得1000里程幣及5000XP！活動結束時騎行最多的前3名用戶可獲2000里程幣及10000XP大獎！',
+        banner_url: '/images/914.jpg',
+        target_rank: 'all',
+        entry_fee_coins: 0,
+        start_date: '2026-08-31 00:00:00+08',
+        end_date: '2026-11-30 23:59:59+08'
+      },
+      {
+        event_key: 'bridge_gift',
+        title_zh: '大橋有禮',
+        subtitle_zh: '經過跨灣大橋 LHP01 站點即送里程幣！',
+        description_zh: '活動期間每次騎行路線經過 LHP01 站點時，即可獲得額外 10 里程幣（一次騎行最多獲得一次）。',
+        banner_url: '/images/929.jpg',
+        target_rank: 'all',
+        entry_fee_coins: 0,
+        start_date: '2026-08-31 00:00:00+08',
+        end_date: '2027-02-28 23:59:59+08'
+      }
+    ];
+
+    async function loadTournaments() {
+      const container = document.getElementById('events-list-container');
+      try {
+        const token = localStorage.getItem('accessToken') || '';
+        const res = await fetch('/api/user?action=list-tournaments', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          allTournaments = (data.tournaments && data.tournaments.length) ? data.tournaments : DEFAULT_TOURNAMENTS;
+        } else {
+          allTournaments = DEFAULT_TOURNAMENTS;
+        }
+        renderTournaments();
+      } catch (e) {
+        allTournaments = DEFAULT_TOURNAMENTS;
+        renderTournaments();
+      }
+    }
+
+    function switchEventTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-btn-active').classList.toggle('active', tab === 'active');
+      document.getElementById('tab-btn-mine').classList.toggle('active', tab === 'mine');
+      renderTournaments();
+    }
+
+    function formatDateHkt(isoStr) {
+      if (!isoStr) return '—';
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('zh-HK', { month: 'short', day: 'numeric', year: 'numeric' }) + ' (UTC+8)';
+    }
+
+    function renderTournaments() {
+      const container = document.getElementById('events-list-container');
+      const list = allTournaments.filter(t => {
+        if (currentTab === 'mine') {
+          return !!t.registered_at;
+        }
+        return true;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:rgba(255,255,255,0.5); padding:40px 0;">${currentTab === 'mine' ? '您尚未報名任何挑戰賽' : '目前沒有進行中的挑戰賽'}</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(t => {
+        const feeText = Number(t.entry_fee_coins || 0) > 0 ? `${t.entry_fee_coins} 里程幣` : '免費';
+        const isRegistered = !!t.registered_at;
+        const isCompleted = !!t.is_completed;
+
+        let badgeStatus = `<span class="event-badge fee">${feeText}</span>`;
+        if (isCompleted) {
+          badgeStatus += `<span class="event-badge" style="background:#BFE340; color:#121f14;">✅ 已完成</span>`;
+        } else if (isRegistered) {
+          badgeStatus += `<span class="event-badge registered">⚡ 進行中</span>`;
+        }
+
+        return `
+          <div class="event-card">
+            <img src="${t.banner_url || '/images/900.jpg'}" class="event-card-banner" alt="${t.title_zh}" onerror="this.src='/images/900.jpg'">
+            <div class="event-card-body">
+              <div class="event-badge-row">
+                ${badgeStatus}
+                <span class="event-badge">UTC+8</span>
+              </div>
+              <div class="event-card-title">${t.title_zh}</div>
+              <div class="event-card-subtitle">${t.subtitle_zh || ''}</div>
+              <div class="event-card-footer">
+                <span><i class="far fa-clock"></i> 截止：${formatDateHkt(t.end_date)}</span>
+                <a href="/event_detail.html?id=${t.event_key}" class="btn-event-detail">查看詳情 ➔</a>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTournaments);
+  </script>
+</body>
+</html>
