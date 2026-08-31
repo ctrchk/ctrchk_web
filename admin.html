@@ -356,6 +356,9 @@
                 <button class="tab-btn" onclick="showTab('obstacles'); loadObstacles();">
                     <i class="fas fa-exclamation-triangle"></i> 路面障礙審核
                 </button>
+                <button class="tab-btn" onclick="showTab('third-party'); loadThirdPartyRides();">
+                    <i class="fas fa-file-upload"></i> 行程上載管理
+                </button>
                 <button class="tab-btn" onclick="showTab('ai-dev');">
                     <i class="fas fa-robot"></i> AI 開發
                 </button>
@@ -839,6 +842,41 @@
                             <tbody id="terminal-admin-tbody"></tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- 第三方行程上載管理標籤 -->
+            <div id="tab-third-party" style="display:none;">
+                <h3 style="margin-top:0;"><i class="fas fa-file-upload"></i> 第三方行程上載管理 (Third-Party Ride Audits)</h3>
+                <p style="color:#555; font-size:0.9em;">審核來自 LocoBike 等第三方共享單車 App 的騎行紀錄上傳截圖。確認圖片數據無誤後，可批准直接為用戶注入 365 天滾動里程。</p>
+
+                <div style="display:flex; gap:10px; margin-bottom:1.5em; border-bottom:1px solid #ddd; padding-bottom:10px;">
+                    <button id="tp-filter-pending" class="cta-button" style="background:#2c3e50; color:#fff;" onclick="filterThirdPartyRides('pending')">待審核 (<span id="count-tp-pending">0</span>)</button>
+                    <button id="tp-filter-approved" class="cta-button" style="background:#888; color:#fff;" onclick="filterThirdPartyRides('approved')">已批准 (<span id="count-tp-approved">0</span>)</button>
+                    <button id="tp-filter-rejected" class="cta-button" style="background:#888; color:#fff;" onclick="filterThirdPartyRides('rejected')">已拒絕 (<span id="count-tp-rejected">0</span>)</button>
+                </div>
+
+                <div id="tp-loading" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2em;"></i>
+                    <p>正在載入第三方行程資料...</p>
+                </div>
+
+                <div id="tp-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>提交會員</th>
+                                <th>平台 / 單車號碼</th>
+                                <th>騎行距離</th>
+                                <th>憑證截圖 (詳情 / 車輛 / 歷史)</th>
+                                <th>提交時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tp-tbody">
+                            <tr><td colspan="6" style="text-align:center; color:#888;">暫無紀錄。</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

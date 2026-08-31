@@ -788,54 +788,8 @@
 
         await this.fetchConfig();
 
-        let mapStyle = 'mapbox://styles/mapbox/dark-v11';
-        if (document.body.classList.contains('app-light-theme')) {
-          mapStyle = 'mapbox://styles/mapbox/light-v11';
-        }
-
-        let mapboxLoaded = false;
-
-        try {
-          if (typeof mapboxgl !== 'undefined' && mapboxgl.supported && mapboxgl.supported()) {
-            this.map = new mapboxgl.Map({
-              container: 'map',
-              style: mapStyle,
-              center: [114.2597, 22.3083], // Default TKO
-              zoom: 13,
-              pitch: 0,
-              antialias: true,
-              attributionControl: false
-            });
-
-            this.map.on('load', () => {
-              mapboxLoaded = true;
-              this.onMapLoad();
-              hideLoader();
-            });
-
-            this.map.on('error', (e) => {
-              console.warn('[NavMapboxError]', e);
-              if (!mapboxLoaded) {
-                this.initLeafletFallback();
-              }
-              hideLoader();
-            });
-
-            // Fallback timeout if Mapbox GL fails to trigger load within 2.5s
-            setTimeout(() => {
-              if (!mapboxLoaded) {
-                console.warn('[Nav] Mapbox loading timed out, initializing Leaflet fallback.');
-                this.initLeafletFallback();
-              }
-            }, 2500);
-          } else {
-            this.initLeafletFallback();
-          }
-        } catch (mapErr) {
-          console.error('[Nav] Mapbox initialization failed:', mapErr);
-          this.initLeafletFallback();
-          hideLoader();
-        }
+        // Always use Leaflet fallback map directly to avoid Mapbox API key required watermark
+        this.initLeafletFallback();
 
         this.setupUI();
         this.requestLocation();
