@@ -82,7 +82,7 @@
             <h2 style="margin-top:0; font-size:1.15em; color:var(--app-accent, #BFE340);"><i class="fas fa-satellite-dish"></i> 連接香港天文台 暴雨雷達圖 (即時雨量監測)</h2>
             <p style="font-size:0.85em; color:var(--app-text-secondary, #aac2ad); margin-bottom:0.85em;">🔑 <b>金卡專屬特權：</b>實時對接香港天文台 128 公里高解析度多普勒天氣雷達，每 6 分鐘動態更新雨雲動向。</p>
             <div style="background:#08080c; padding:0.5em; border-radius:10px; border:1px solid var(--app-border, #2f4c36); text-align:center; position:relative;">
-                <img id="wx-radar-img" src="" alt="暴雨雷達圖" style="max-width:100%; height:auto; display:inline-block; border-radius:6px; box-shadow:0 0 15px rgba(191,227,64,0.15);">
+                <img id="wx-radar-img" src="" alt="暴雨雷達圖" referrerpolicy="no-referrer" crossorigin="anonymous" style="max-width:100%; height:auto; display:inline-block; border-radius:6px; box-shadow:0 0 15px rgba(191,227,64,0.15);">
                 <div style="font-size:0.75em; color:#888; margin-top:5px;" id="wx-radar-time">雷達數據載入中...</div>
             </div>
         </section>
@@ -248,11 +248,6 @@
         const timeEl = document.getElementById('wx-radar-time');
         const imgEl = document.getElementById('wx-radar-img');
 
-        imgEl.onerror = () => {
-            imgEl.onerror = null;
-            if (timeEl) timeEl.textContent = '已連接香港天文台雷達數據';
-        };
-
         try {
             const resp = await fetch('/api/_weather/radar');
             if (!resp.ok) throw new Error(`API status ${resp.status}`);
@@ -277,6 +272,12 @@
             }
 
             if (foundPath) {
+                imgEl.onerror = () => {
+                    imgEl.onerror = null;
+                    console.warn('[Radar] Direct image fetch failed, switching to proxy...');
+                    imgEl.src = `/api/_weather/radar-img?path=${encodeURIComponent(foundPath)}`;
+                };
+
                 const fullImgUrl = `https://www.hko.gov.hk/wxinfo/radars/${foundPath}`;
                 imgEl.src = fullImgUrl;
 

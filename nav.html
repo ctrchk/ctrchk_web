@@ -25,6 +25,8 @@
   <!-- Mapbox GL JS & Geocoder -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -791,28 +793,47 @@
           mapStyle = 'mapbox://styles/mapbox/light-v11';
         }
 
+        let mapboxLoaded = false;
+
         try {
-          this.map = new mapboxgl.Map({
-            container: 'map',
-            style: mapStyle,
-            center: [114.2597, 22.3083], // Default TKO
-            zoom: 13,
-            pitch: 0,
-            antialias: true,
-            attributionControl: false
-          });
+          if (typeof mapboxgl !== 'undefined' && mapboxgl.supported && mapboxgl.supported()) {
+            this.map = new mapboxgl.Map({
+              container: 'map',
+              style: mapStyle,
+              center: [114.2597, 22.3083], // Default TKO
+              zoom: 13,
+              pitch: 0,
+              antialias: true,
+              attributionControl: false
+            });
 
-          this.map.on('load', () => {
-            this.onMapLoad();
-            hideLoader();
-          });
+            this.map.on('load', () => {
+              mapboxLoaded = true;
+              this.onMapLoad();
+              hideLoader();
+            });
 
-          this.map.on('error', (e) => {
-            console.warn('[NavMapboxError]', e);
-            hideLoader();
-          });
+            this.map.on('error', (e) => {
+              console.warn('[NavMapboxError]', e);
+              if (!mapboxLoaded) {
+                this.initLeafletFallback();
+              }
+              hideLoader();
+            });
+
+            // Fallback timeout if Mapbox GL fails to trigger load within 2.5s
+            setTimeout(() => {
+              if (!mapboxLoaded) {
+                console.warn('[Nav] Mapbox loading timed out, initializing Leaflet fallback.');
+                this.initLeafletFallback();
+              }
+            }, 2500);
+          } else {
+            this.initLeafletFallback();
+          }
         } catch (mapErr) {
           console.error('[Nav] Mapbox initialization failed:', mapErr);
+          this.initLeafletFallback();
           hideLoader();
         }
 
@@ -825,6 +846,29 @@
             await this.requestWakeLock();
           }
         });
+      },
+
+      initLeafletFallback() {
+        if (this.isLeaflet) return;
+        this.isLeaflet = true;
+        console.warn('[Nav] Using Leaflet fallback map');
+
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) mapContainer.innerHTML = '';
+
+        const isLight = document.body.classList.contains('app-light-theme');
+        const tileUrl = isLight
+          ? 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+          : 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+
+        if (typeof L !== 'undefined') {
+          this.leafletMap = L.map('map', { zoomControl: false, attributionControl: false }).setView([22.3083, 114.2597], 14);
+          L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(this.leafletMap);
+          this.leafletRouteLine = L.polyline([], { color: '#BFE340', weight: 6, opacity: 0.9 }).addTo(this.leafletMap);
+        }
+
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.classList.add('hidden');
       },
 
       async checkActiveRide() {
@@ -2519,9 +2563,15 @@
       safeHideLoader();
     });
 
-    window.addEventListener('pagehide', () => NavEngine.cleanup());
-    window.addEventListener('beforeunload', () => NavEngine.cleanup());
-    window.addEventListener('unload', () => NavEngine.cleanup());
+    function removeNavigatingClassGlobal() {
+      document.body.classList.remove('is-navigating');
+      try { if (window.parent && window.parent.document && window.parent.document.body) window.parent.document.body.classList.remove('is-navigating'); } catch(e){}
+      try { if (window.top && window.top.document && window.top.document.body) window.top.document.body.classList.remove('is-navigating'); } catch(e){}
+    }
+
+    window.addEventListener('pagehide', () => { removeNavigatingClassGlobal(); NavEngine.cleanup(); });
+    window.addEventListener('beforeunload', () => { removeNavigatingClassGlobal(); NavEngine.cleanup(); });
+    window.addEventListener('unload', () => { removeNavigatingClassGlobal(); NavEngine.cleanup(); });
 
   </script>
 </body>

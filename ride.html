@@ -651,12 +651,13 @@
         map = L.map('ride-map', { zoomControl: false, attributionControl: false }).setView(center, 18);
         window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
-        const getTileUrl = (light) => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        const fallbackTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        const getTileUrl = (light) => light
+            ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
         tileLayer = L.tileLayer(getTileUrl(isLight), {
             maxZoom: 19,
-            subdomains: 'abc',
+            subdomains: 'abcd',
             errorTileUrl: ''
         }).addTo(map);
 
@@ -957,8 +958,11 @@
             if (map && tileLayer) {
                 try {
                     map.removeLayer(tileLayer);
-                    const tiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abc' }).addTo(map);
+                    const isLight = document.body.classList.contains('app-light-theme');
+                    const tiles = isLight
+                        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+                        : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
                     if (breadcrumbLine) breadcrumbLine.bringToFront();
                 } catch (e) {
                     console.warn('[Tile Recycle] Error:', e);
@@ -1651,6 +1655,10 @@
     })();
 
     function cleanupAllResources() {
+        document.body.classList.remove('is-navigating');
+        try { if (window.parent && window.parent.document && window.parent.document.body) window.parent.document.body.classList.remove('is-navigating'); } catch(e){}
+        try { if (window.top && window.top.document && window.top.document.body) window.top.document.body.classList.remove('is-navigating'); } catch(e){}
+
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
         if (dpSimplifyInterval) { clearInterval(dpSimplifyInterval); dpSimplifyInterval = null; }

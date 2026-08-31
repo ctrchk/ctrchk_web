@@ -629,17 +629,42 @@
     });
   }
 
+  function normalizeTabPath(urlPath) {
+    if (!urlPath) return '/';
+    let clean = urlPath.split('?')[0].split('#')[0].replace(/\/$/, '') || '/';
+    if (clean.endsWith('.html')) clean = clean.slice(0, -5);
+    if (!clean) clean = '/';
+    return clean;
+  }
+
+  function getTabCategory(urlPath) {
+    const norm = normalizeTabPath(urlPath);
+    if (['/dashboard', '/profile', '/mileage', '/settings', '/login'].includes(norm)) return 'my';
+    if (['/tasks'].includes(norm)) return 'tasks';
+    if (['/routes', '/route_detail', '/ride', '/en/routes'].includes(norm)) return 'ride';
+    if (['/nav'].includes(norm)) return 'nav';
+    if (['/', '/index', '/en'].includes(norm)) return 'home';
+    return 'other';
+  }
+
+  function isMainTabPath(urlPath) {
+    const category = getTabCategory(urlPath);
+    return ['home', 'tasks', 'ride', 'nav', 'my'].includes(category);
+  }
+
   // Update bottom navigation elements
   function updateAppBottomNavActiveState(activeUrl) {
     const nav = document.getElementById('app-bottom-nav');
     if (!nav) return;
 
+    const currentCat = getTabCategory(activeUrl);
+
     const links = nav.querySelectorAll('a');
     links.forEach(a => {
       a.classList.remove('active');
       const href = a.getAttribute('href');
-      const normalised = href.replace(/\/$/, '') || '/';
-      if (activeUrl === normalised || (normalised !== '/' && activeUrl.startsWith(normalised))) {
+      const linkCat = getTabCategory(href);
+      if (currentCat === linkCat) {
         a.classList.add('active');
       }
     });
@@ -881,7 +906,7 @@
     style.textContent = `
       #pwa-bug-report-btn {
         position: fixed;
-        left: calc(100vw - 22px);
+        left: calc(100vw - 66px);
         top: 40%;
         z-index: 99999;
         background: var(--app-accent, #BFE340);
@@ -1084,12 +1109,11 @@
 
       btn.style.transition = 'left 0.3s cubic-bezier(0.25, 1, 0.5, 1), top 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
       const rect = btn.getBoundingClientRect();
-      const center = rect.left + rect.width / 2;
 
-      // Snap and partially hide on edge (leave 22px tab visible)
-      if (center < window.innerWidth / 2) {
+      // Only partially hide when explicitly dragged near the screen edge (within 30px)
+      if (rect.left < 30) {
         btn.style.left = '-28px';
-      } else {
+      } else if (rect.right > window.innerWidth - 30) {
         btn.style.left = (window.innerWidth - 22) + 'px';
       }
     }

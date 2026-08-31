@@ -1006,12 +1006,35 @@ body.is-pwa.app-light-theme {
 
 /* When app bottom nav is present, add padding so content isn't obscured */
 body.is-pwa main,
-body.is-pwa footer { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
+body.is-pwa footer,
+body.is-pwa .content,
+body.is-pwa .main-content,
+body.is-pwa .detail-container,
+body.is-pwa .profile-container,
+body.is-pwa .premium-container,
+body.is-pwa .dashboard-container,
+body.is-pwa .tasks-container,
+body.is-pwa .forum-container,
+body.is-pwa .leaderboard-container,
+body.is-pwa .wx-wrap { padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+
 body.in-spa-iframe main,
-body.in-spa-iframe footer { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
+body.in-spa-iframe footer,
+body.in-spa-iframe .content,
+body.in-spa-iframe .main-content,
+body.in-spa-iframe .detail-container,
+body.in-spa-iframe .profile-container,
+body.in-spa-iframe .premium-container,
+body.in-spa-iframe .dashboard-container,
+body.in-spa-iframe .tasks-container,
+body.in-spa-iframe .forum-container,
+body.in-spa-iframe .leaderboard-container,
+body.in-spa-iframe .wx-wrap { padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+
 @media (display-mode: standalone) {
-    main { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
-    footer { padding-bottom: calc(6em + env(safe-area-inset-bottom)) !important; }
+    main, footer, .content, .main-content, .detail-container, .profile-container, .premium-container, .dashboard-container, .tasks-container, .forum-container, .leaderboard-container, .wx-wrap {
+        padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
+    }
 }
 
 /* ── App-specific page overrides ────────────────────────────────────── */
