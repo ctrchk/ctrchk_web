@@ -239,8 +239,8 @@
 
     document.body.appendChild(nav);
 
-    // Hide bottom nav if we are not on one of the 5 main tabs
-    const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+    // Hide bottom nav if we are not on one of the main tabs
+    const mainTabs = ['/', '/index', '/index.html', '/tasks', '/tasks.html', '/routes', '/routes.html', '/nav', '/nav.html', '/dashboard', '/dashboard.html', '/mileage', '/mileage.html', '/profile', '/profile.html', '/weather', '/weather.html', '/leaderboard', '/leaderboard.html', '/chat', '/chat.html', '/login', '/login.html', '/en', '/en/routes'];
     const currentPathClean = currentPath.split('?')[0].split('#')[0];
     if (!mainTabs.includes(currentPathClean)) {
         nav.style.display = 'none';
@@ -453,7 +453,7 @@
         }
 
         const cleanUrl = targetUrl.split('#')[0].split('?')[0].replace(/\/$/, '') || '/';
-        const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+        const mainTabs = ['/', '/index', '/index.html', '/tasks', '/tasks.html', '/routes', '/routes.html', '/nav', '/nav.html', '/dashboard', '/dashboard.html', '/mileage', '/mileage.html', '/profile', '/profile.html', '/weather', '/weather.html', '/leaderboard', '/leaderboard.html', '/chat', '/chat.html', '/login', '/login.html', '/en', '/en/routes'];
 
         if (mainTabs.includes(cleanUrl)) {
           e.preventDefault();
@@ -588,8 +588,11 @@
       // Sync bottom navigation active states and bubble indicator
       updateAppBottomNavActiveState(cleanUrl);
 
+      // Ensure navigation locks are removed when switching tabs
+      document.body.classList.remove('is-navigating');
+
       // Show/hide bottom nav bar dynamically based on whether it is a main tab or sub-page
-      const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+      const mainTabs = ['/', '/index', '/index.html', '/tasks', '/tasks.html', '/routes', '/routes.html', '/nav', '/nav.html', '/dashboard', '/dashboard.html', '/mileage', '/mileage.html', '/profile', '/profile.html', '/weather', '/weather.html', '/leaderboard', '/leaderboard.html', '/chat', '/chat.html', '/login', '/login.html', '/en', '/en/routes'];
       const nav = document.getElementById('app-bottom-nav');
       if (nav) {
           const isMainTab = mainTabs.includes(cleanUrl);
@@ -805,7 +808,7 @@
   function injectBackArrow() {
     if (!isStandalone) return;
     const path = window.location.pathname.replace(/\/$/, '') || '/';
-    const mainTabs = ['/', '/index', '/tasks', '/routes', '/nav', '/dashboard', '/login', '/en', '/en/routes'];
+    const mainTabs = ['/', '/index', '/index.html', '/tasks', '/tasks.html', '/routes', '/routes.html', '/nav', '/nav.html', '/dashboard', '/dashboard.html', '/mileage', '/mileage.html', '/profile', '/profile.html', '/weather', '/weather.html', '/leaderboard', '/leaderboard.html', '/chat', '/chat.html', '/login', '/login.html', '/en', '/en/routes'];
 
     if (mainTabs.includes(path)) return;
     if (document.getElementById('pwa-back-arrow-btn')) return;
@@ -1028,25 +1031,20 @@
         from { transform: translateY(20px); } to { transform: translateY(0); }
       }
 
-      /* Black-gold theme overrides to guarantee text visibility */
-      body.rank-gold .bug-modal-card * {
-        color: #F0D372 !important;
+      /* High contrast theme overrides for bug modal */
+      body.rank-gold .bug-modal-card {
+        border-color: #F0D372 !important;
       }
       body.rank-gold .bug-modal-card .bug-btn-submit {
         background-color: #F0D372 !important;
         color: #000000 !important;
-        border: 2px solid #F0D372 !important;
-      }
-      body.rank-gold .bug-modal-card .bug-btn-submit * {
-        color: #000000 !important;
+        border: none !important;
+        font-weight: 900 !important;
       }
       body.rank-gold .bug-modal-card .bug-btn-cancel {
-        background-color: #000000 !important;
+        background-color: rgba(255,255,255,0.1) !important;
         color: #F0D372 !important;
-        border: 1px solid #F0D372 !important;
-      }
-      body.rank-gold .bug-modal-card .bug-btn-cancel * {
-        color: #F0D372 !important;
+        border: 1px solid rgba(240,211,114,0.3) !important;
       }
     `;
     document.head.appendChild(style);
@@ -1242,14 +1240,27 @@
     }
 
     card.innerHTML = `
-      <div class="bug-modal-title">
-        <i class="fas fa-bug"></i> 回報 Beta 版問題
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div class="bug-modal-title" style="margin-bottom: 0;">
+          <i class="fas fa-bug"></i> 回報 Beta 版問題
+        </div>
+        <button class="bug-btn-history" style="background: rgba(255,255,255,0.1); color: #a8d8a0; border: 1px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 12px; font-size: 0.8em; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <i class="fas fa-history"></i> 報告記錄
+        </button>
+      </div>
+      <div style="font-size: 0.82em; color: var(--app-accent, #BFE340); font-weight: bold; margin-bottom: 12px; background: rgba(191,227,64,0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(191,227,64,0.2); display: flex; align-items: center; gap: 6px;">
+        <i class="fas fa-coins"></i> 成功報告經審核屬實可增加 Elite Score！
       </div>
       <div style="font-size: 0.82em; color: #a8d8a0; margin-bottom: 12px;">
         目前頁面：<code style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">${pageUrl}</code>
       </div>
-      ${screenshotHtml}
-      <textarea class="bug-textarea" placeholder="請詳細描述您遇到的問題、操作步驟或錯誤說明..." required></textarea>
+      <div id="bug-report-form-body">
+        ${screenshotHtml}
+        <textarea class="bug-textarea" placeholder="請詳細描述您遇到的問題、操作步驟或錯誤說明..." required></textarea>
+      </div>
+      <div id="bug-report-history-body" style="display: none; max-height: 240px; overflow-y: auto; margin-bottom: 16px; padding-right: 4px;">
+        <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9em; padding: 20px 0;">載入記錄中...</div>
+      </div>
       <div class="bug-buttons">
         <button class="bug-btn bug-btn-cancel">取消</button>
         <button class="bug-btn bug-btn-submit">提交問題</button>
@@ -1258,6 +1269,59 @@
 
     overlay.appendChild(card);
     document.body.appendChild(overlay);
+
+    const formBody = card.querySelector('#bug-report-form-body');
+    const historyBody = card.querySelector('#bug-report-history-body');
+    const historyBtn = card.querySelector('.bug-btn-history');
+    let historyLoaded = false;
+
+    historyBtn.onclick = async () => {
+      if (historyBody.style.display === 'none') {
+        formBody.style.display = 'none';
+        historyBody.style.display = 'block';
+        historyBtn.innerHTML = `<i class="fas fa-edit"></i> 返回表格`;
+
+        if (!historyLoaded) {
+          const token = localStorage.getItem('accessToken') || '';
+          try {
+            const res = await fetch('/api/user?action=my-bug-reports', {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            const data = await res.json();
+            const reports = data.reports || [];
+            if (reports.length === 0) {
+              historyBody.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 0.85em; padding: 20px 0;">尚無回報紀錄</div>`;
+            } else {
+              historyBody.innerHTML = reports.map(r => {
+                let badge = '<span style="color:#f1c232; font-weight:bold;">⏳ 審核中</span>';
+                if (r.status === 'valid' || r.status === 'approved' || r.status === 'resolved') {
+                  badge = '<span style="color:#2ecc71; font-weight:bold;">✅ 屬實 (+20 P分)</span>';
+                } else if (r.status === 'invalid' || r.status === 'rejected') {
+                  badge = `<span style="color:#e74c3c; font-weight:bold;">❌ 不屬實${r.reject_reason ? ' (' + r.reject_reason + ')' : ''}</span>`;
+                }
+                const dateStr = new Date(r.created_at).toLocaleDateString('zh-HK');
+                return `
+                  <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 0.85em;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span style="opacity: 0.6; font-size: 0.8em;">${dateStr}</span>
+                      ${badge}
+                    </div>
+                    <div style="color: #fff; line-height: 1.4;">${r.description || ''}</div>
+                  </div>
+                `;
+              }).join('');
+            }
+            historyLoaded = true;
+          } catch(e) {
+            historyBody.innerHTML = `<div style="text-align: center; color: #e74c3c; font-size: 0.85em; padding: 20px 0;">載入歷史紀錄失敗</div>`;
+          }
+        }
+      } else {
+        formBody.style.display = 'block';
+        historyBody.style.display = 'none';
+        historyBtn.innerHTML = `<i class="fas fa-history"></i> 報告記錄`;
+      }
+    };
 
     const textarea = card.querySelector('.bug-textarea');
     textarea.focus();

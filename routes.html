@@ -690,6 +690,9 @@ body.app-light-theme .app-filter-chip.random-btn {
                     <h2 style="font-size:1.15em; font-weight:900; color:var(--app-accent, #BFE340); margin:0; letter-spacing:1px;"><i class="fas fa-book-open"></i> 單車路線圖籍</h2>
                     <button class="catalog-info-btn" onclick="showCatalogGameplay()" title="玩法說明"><i class="fas fa-info"></i></button>
                     <button class="catalog-info-btn" onclick="showHkChallengeModal()" style="background:rgba(191,227,64,0.2); color:#BFE340; border:1px solid #BFE340;" title="全港挑戰"><i class="fas fa-trophy"></i></button>
+                    <button class="catalog-info-btn text-btn" onclick="openThirdPartySyncModal()" style="background:rgba(52,152,219,0.2); color:#3498db; border:1px solid #3498db; width:auto; padding:0 10px; border-radius:12px; font-size:0.75em; font-weight:bold; margin-left:6px;" title="第三方平台里程累積">
+                        <i class="fas fa-file-upload"></i> 第三方平台里程累積
+                    </button>
                 </div>
                 <button id="btn-claim-reward" class="btn-click-effect" style="display:none; background:#D4AF37; color:#000; border:none; padding:0.4em 0.8em; border-radius:12px; font-size:0.75em; font-weight:bold; box-shadow: 0 0 15px rgba(212,175,55,0.4);">領取全集獎勵</button>
             </div>
@@ -733,6 +736,106 @@ body.app-light-theme .app-filter-chip.random-btn {
                     </div>
                 </div>
                 <button onclick="hideCatalogGameplay()" style="width:100%; padding:0.8em; border:none; border-radius:12px; background:#BFE340; color:#121f14; font-weight:bold; cursor:pointer; margin-top:1.5em;">我明白了</button>
+            </div>
+        </div>
+
+        <!-- Third Party Sync Modal -->
+        <div id="third-party-sync-modal" style="display:none; position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); padding:2em 1.2em; overflow-y:auto;">
+            <div style="background:var(--app-bg-card, #1e3820); border:1px solid #3498db; border-radius:24px; max-width:480px; margin:0 auto; padding:24px; color:#fff; position:relative; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="color:#3498db; margin:0; font-size:1.2em;"><i class="fas fa-file-upload"></i> 第三方平台里程累積</h3>
+                    <button onclick="closeThirdPartySyncModal()" style="background:none; border:none; color:#a8d8a0; font-size:1.5em; cursor:pointer;"><i class="fas fa-times"></i></button>
+                </div>
+
+                <!-- Top action buttons -->
+                <div style="display:flex; gap:10px; margin-bottom:16px;">
+                    <button onclick="toggleThirdPartyTab('upload')" id="tp-tab-upload-btn" style="flex:1; background:#3498db; color:#fff; border:none; padding:10px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:0.85em;">提交審核</button>
+                    <button onclick="toggleThirdPartyTab('history')" id="tp-tab-history-btn" style="flex:1; background:rgba(255,255,255,0.1); color:#3498db; border:1px solid rgba(52,152,219,0.4); padding:10px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:0.85em;">審核進度</button>
+                    <button onclick="openLocoTutorial()" style="background:rgba(255,255,255,0.1); color:#BFE340; border:1px solid rgba(191,227,64,0.4); padding:10px 14px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:0.85em;"><i class="fas fa-question-circle"></i> 教學</button>
+                </div>
+
+                <!-- Upload Form View -->
+                <div id="tp-view-upload">
+                    <div style="background:rgba(52,152,219,0.1); border-left:4px solid #3498db; padding:10px 12px; border-radius:4px; font-size:0.82em; color:rgba(255,255,255,0.9); margin-bottom:16px; line-height:1.5; text-align:left;">
+                        首階段支持 <strong>LocoBike 共享單車</strong> 平台行程！<br>
+                        審核通過後將直接增加您 CTRC 的 <strong>365 天滾動里程</strong>（無法累積 XP、里程幣及軌跡圖）。
+                    </div>
+
+                    <form id="tp-upload-form" onsubmit="handleThirdPartySubmit(event)">
+                        <!-- Photo 1 -->
+                        <div style="margin-bottom:14px; text-align:left;">
+                            <label style="font-size:0.85em; font-weight:bold; color:#BFE340; display:block; margin-bottom:4px;">
+                                1. 「踩完車」詳情頁面圖片 <span style="color:#e74c3c;">*</span>
+                            </label>
+                            <div style="font-size:0.75em; opacity:0.7; margin-bottom:6px;">必須包含：開始時間、結束時間、行走距離、地圖及手機時間</div>
+                            <input type="file" id="tp-file-detail" accept="image/*" required style="width:100%; background:rgba(255,255,255,0.05); border:1px dashed #3498db; padding:10px; border-radius:10px; color:#fff; font-size:0.85em;">
+                        </div>
+
+                        <!-- Photo 2 -->
+                        <div style="margin-bottom:14px; text-align:left;">
+                            <label style="font-size:0.85em; font-weight:bold; color:#BFE340; display:block; margin-bottom:4px;">
+                                2. 單車實體照片 <span style="color:#e74c3c;">*</span>
+                            </label>
+                            <div style="font-size:0.75em; opacity:0.7; margin-bottom:6px;">必須包含：車輛 QRCode 及車身編號</div>
+                            <input type="file" id="tp-file-bike" accept="image/*" required style="width:100%; background:rgba(255,255,255,0.05); border:1px dashed #3498db; padding:10px; border-radius:10px; color:#fff; font-size:0.85em;">
+                        </div>
+
+                        <!-- Photo 3 -->
+                        <div style="margin-bottom:16px; text-align:left;">
+                            <label style="font-size:0.85em; font-weight:bold; color:#BFE340; display:block; margin-bottom:4px;">
+                                3. 近 30 天踩車紀錄頁面圖片 <span style="color:#e74c3c;">*</span>
+                            </label>
+                            <div style="font-size:0.75em; opacity:0.7; margin-bottom:6px;">必須包含：要上傳該程行程卡片，含車身編號與使用時間</div>
+                            <input type="file" id="tp-file-history" accept="image/*" required style="width:100%; background:rgba(255,255,255,0.05); border:1px dashed #3498db; padding:10px; border-radius:10px; color:#fff; font-size:0.85em;">
+                        </div>
+
+                        <div style="font-size:0.75em; color:rgba(255,255,255,0.6); margin-bottom:16px; line-height:1.4; text-align:left;">
+                            📌 備註：圖片限制 100MB 以內。個案審核通過 12 個月後會自動從後台資料庫徹底刪除。
+                        </div>
+
+                        <button type="submit" id="tp-submit-btn" style="width:100%; background:#3498db; color:#fff; border:none; padding:14px; border-radius:14px; font-size:1em; font-weight:bold; cursor:pointer; box-shadow: 0 4px 15px rgba(52,152,219,0.4);">確認並提交審核</button>
+                    </form>
+                </div>
+
+                <!-- History View -->
+                <div id="tp-view-history" style="display:none;">
+                    <div id="tp-history-list" style="max-height:300px; overflow-y:auto; padding-right:4px;">
+                        <div style="text-align:center; color:rgba(255,255,255,0.5); padding:20px 0;">載入審核進度中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LocoBike Tutorial Overlay -->
+        <div id="loco-tutorial-modal" style="display:none; position:fixed; inset:0; z-index:2200; background:rgba(0,0,0,0.88); backdrop-filter:blur(10px); padding:2em 1.2em; overflow-y:auto;">
+            <div style="background:var(--app-bg-card, #1e3820); border:1px solid #BFE340; border-radius:24px; max-width:480px; margin:0 auto; padding:24px; color:#fff; position:relative;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="color:#BFE340; margin:0; font-size:1.15em;"><i class="fas fa-book-open"></i> LocoBike 截圖與拍照教學</h3>
+                    <button onclick="closeLocoTutorial()" style="background:none; border:none; color:#a8d8a0; font-size:1.5em; cursor:pointer;"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div style="text-align:left; font-size:0.88em; line-height:1.6; margin-bottom:16px;">
+                    <strong style="color:#3498db; display:block; margin-bottom:6px;">即時完成截圖流程：</strong>
+                    <ol style="padding-left:1.2em; margin-bottom:14px; color:rgba(255,255,255,0.9);">
+                        <li>LocoBike 騎行完畢歸還鎖車。</li>
+                        <li>手機彈出「踩完車」詳情頁面，進行完整螢幕截圖。</li>
+                        <li>拍一下該輛單車的實體照片（必須清楚拍攝車身編號與 QRCode）。</li>
+                    </ol>
+
+                    <strong style="color:#3498db; display:block; margin-bottom:6px;">後續補回紀錄流程：</strong>
+                    <ol style="padding-left:1.2em; margin-bottom:14px; color:rgba(255,255,255,0.9);">
+                        <li>打開 Loco App ➔ 點擊選單「更多」。</li>
+                        <li>點擊「踩車紀錄」並進行截圖。</li>
+                        <li>選擇對應行程點進詳情並截圖。</li>
+                    </ol>
+
+                    <strong style="color:#BFE340; display:block; margin-bottom:6px;">📷 行程詳情範例參考：</strong>
+                    <div style="text-align:center; background:#000; border-radius:12px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
+                        <img src="/images/loco.jpg" style="max-width:100%; max-height:260px; border-radius:8px; object-fit:contain;" alt="LocoBike 行程詳情範例" onerror="this.parentNode.innerHTML='<div style=\'color:#888; padding:20px; font-size:0.8em;\'>[範例圖：images/loco.jpg]</div>'">
+                    </div>
+                </div>
+
+                <button onclick="closeLocoTutorial()" style="width:100%; background:#BFE340; color:#121f14; border:none; padding:12px; border-radius:12px; font-weight:bold; cursor:pointer;">我明白了</button>
             </div>
         </div>
 
@@ -2307,6 +2410,150 @@ async function initAppRidePage() {
         document.getElementById('catalog-gameplay-modal').style.display = 'block';
     };
     window.hideCatalogGameplay = () => { document.getElementById('catalog-gameplay-modal').style.display = 'none'; };
+
+    // --- Third Party App Mileage Sync ---
+    window.openThirdPartySyncModal = () => {
+        document.getElementById('third-party-sync-modal').style.display = 'flex';
+        toggleThirdPartyTab('upload');
+    };
+    window.closeThirdPartySyncModal = () => {
+        document.getElementById('third-party-sync-modal').style.display = 'none';
+    };
+    window.openLocoTutorial = () => {
+        document.getElementById('loco-tutorial-modal').style.display = 'flex';
+    };
+    window.closeLocoTutorial = () => {
+        document.getElementById('loco-tutorial-modal').style.display = 'none';
+    };
+
+    window.toggleThirdPartyTab = (tab) => {
+        const uploadView = document.getElementById('tp-view-upload');
+        const historyView = document.getElementById('tp-view-history');
+        const btnUpload = document.getElementById('tp-tab-upload-btn');
+        const btnHistory = document.getElementById('tp-tab-history-btn');
+
+        if (tab === 'upload') {
+            uploadView.style.display = 'block';
+            historyView.style.display = 'none';
+            btnUpload.style.background = '#3498db'; btnUpload.style.color = '#fff';
+            btnHistory.style.background = 'rgba(255,255,255,0.1)'; btnHistory.style.color = '#3498db';
+        } else {
+            uploadView.style.display = 'none';
+            historyView.style.display = 'block';
+            btnUpload.style.background = 'rgba(255,255,255,0.1)'; btnUpload.style.color = '#3498db';
+            btnHistory.style.background = '#3498db'; btnHistory.style.color = '#fff';
+            loadThirdPartySubmissions();
+        }
+    };
+
+    async function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) return resolve(null);
+            if (file.size > 100 * 1024 * 1024) {
+                return reject(new Error('檔案大小超過 100MB 限制'));
+            }
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    window.handleThirdPartySubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('tp-submit-btn');
+        btn.disabled = true;
+        btn.textContent = '圖片處理並上傳中...';
+
+        try {
+            const fileDetail = document.getElementById('tp-file-detail').files[0];
+            const fileBike = document.getElementById('tp-file-bike').files[0];
+            const fileHistory = document.getElementById('tp-file-history').files[0];
+
+            if (!fileDetail || !fileBike || !fileHistory) {
+                alert('請完整選擇三張相片！');
+                btn.disabled = false;
+                btn.textContent = '確認並提交審核';
+                return;
+            }
+
+            const [imgDetail, imgBike, imgHistory] = await Promise.all([
+                readFileAsBase64(fileDetail),
+                readFileAsBase64(fileBike),
+                readFileAsBase64(fileHistory)
+            ]);
+
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch('/api/user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'submit-third-party-ride',
+                    img_detail: imgDetail,
+                    img_bike: imgBike,
+                    img_history: imgHistory
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert('成功提交審核！您可在「審核進度」標籤頁隨時檢視個案進度。');
+                document.getElementById('tp-upload-form').reset();
+                toggleThirdPartyTab('history');
+            } else {
+                alert('提交失敗: ' + (data.message || '未知錯誤'));
+            }
+        } catch (err) {
+            alert('上傳失敗: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '確認並提交審核';
+        }
+    };
+
+    async function loadThirdPartySubmissions() {
+        const container = document.getElementById('tp-history-list');
+        container.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); padding:20px 0;">載入中...</div>';
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch('/api/user?action=my-third-party-submissions', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const list = data.submissions || [];
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); padding:20px 0;">暫無上傳紀錄</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(s => {
+                let statusTag = '<span style="color:#f1c232; font-weight:bold;">⏳ 審核中</span>';
+                if (s.status === 'approved') {
+                    statusTag = `<span style="color:#2ecc71; font-weight:bold;">✅ 已批准 (+${s.distance_km} km)</span>`;
+                } else if (s.status === 'rejected') {
+                    statusTag = `<span style="color:#e74c3c; font-weight:bold;">❌ 未通過${s.reject_reason ? ' (' + s.reject_reason + ')' : ''}</span>`;
+                }
+                const dateStr = new Date(s.created_at).toLocaleDateString('zh-HK');
+                return `
+                    <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; margin-bottom:10px; font-size:0.85em; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <span style="font-weight:bold; color:#3498db;">${s.platform.toUpperCase()}</span>
+                            ${statusTag}
+                        </div>
+                        <div style="opacity:0.8; margin-bottom:4px;">單車編號：${s.bike_no || '識別中'} | 距離：${s.distance_km || 0} km</div>
+                        <div style="font-size:0.75em; opacity:0.5;">提交時間：${dateStr}</div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            container.innerHTML = '<div style="text-align:center; color:#e74c3c; padding:20px 0;">載入紀錄失敗</div>';
+        }
+    }
 
     // --- HK Challenge ---
     window.showHkChallengeModal = async () => {

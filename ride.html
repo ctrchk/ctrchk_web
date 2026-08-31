@@ -477,13 +477,17 @@
 
         <!-- Expanded Area -->
         <div id="hud-expanded-area" style="display:none; margin-bottom: 15px;">
-            <div class="big-stats-grid" style="margin-bottom: 15px;">
+            <div class="big-stats-grid" style="margin-bottom: 15px; grid-template-columns: 1fr 1fr 1fr;">
                 <div class="big-stat-card" style="padding: 12px;">
-                    <span class="big-stat-val" id="stat-xp" style="font-size: 24px;">0</span>
+                    <span class="big-stat-val" id="stat-avg-speed" style="font-size: 22px;">0.0</span>
+                    <span class="big-stat-lbl" style="font-size: 11px;">💨 均速</span>
+                </div>
+                <div class="big-stat-card" style="padding: 12px;">
+                    <span class="big-stat-val" id="stat-xp" style="font-size: 22px;">0</span>
                     <span class="big-stat-lbl" style="font-size: 11px;">⭐ XP</span>
                 </div>
                 <div class="big-stat-card" style="padding: 12px;">
-                    <span class="big-stat-val" id="stat-stops-top" style="font-size: 24px;">0/0</span>
+                    <span class="big-stat-val" id="stat-stops-top" style="font-size: 22px;">0/0</span>
                     <span class="big-stat-lbl" style="font-size: 11px;">🏣 站點</span>
                 </div>
             </div>
@@ -658,6 +662,7 @@
         tileLayer = L.tileLayer(getTileUrl(isLight), {
             maxZoom: 19,
             subdomains: 'abcd',
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
             errorTileUrl: ''
         }).addTo(map);
 
@@ -744,6 +749,13 @@
 
         const xpEl = document.getElementById('stat-xp');
         if (xpEl) xpEl.textContent = Math.round(sessionXp);
+
+        if (startTime) {
+            const durHours = (Date.now() - startTime) / 3600000;
+            const avgKmh = durHours > 0 ? (distKm / durHours).toFixed(1) : '0.0';
+            const avgEl = document.getElementById('stat-avg-speed');
+            if (avgEl) avgEl.textContent = avgKmh;
+        }
 
         if (goToStartPhase && routeStops.length > 0) {
             // After potential slicing in init, the target start stop is always routeStops[0]
@@ -962,7 +974,7 @@
                     const tiles = isLight
                         ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
                         : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; CARTO' }).addTo(map);
                     if (breadcrumbLine) breadcrumbLine.bringToFront();
                 } catch (e) {
                     console.warn('[Tile Recycle] Error:', e);

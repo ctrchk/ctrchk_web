@@ -873,6 +873,18 @@ export default async function handler(req, res) {
              SET level = $2, xp = $3, coins = $4, updated_at = NOW()`,
           [userData.userId, newLevel, newXp, newCoins]
         );
+        try {
+          await processTournamentProgressOnRide(userData.userId, {
+            route_id,
+            distance_km: distKmVal,
+            stops_reached,
+            ride_mode: normalizedRideMode,
+            dept
+          });
+        } catch(e) {
+          console.warn('[TournamentProcess] Error:', e.message);
+        }
+
         await triggerDiscordBotSyncForUser(userData.userId);
         syncDiscordRolesForUser(userData.userId).catch(e =>
           console.warn('[getHistory] Discord role sync failed:', e.message)
@@ -1465,4 +1477,109 @@ export default async function handler(req, res) {
   }
 
   return res.status(405).json({ message: 'Method Not Allowed' });
+}
+
+async function processTournamentProgressOnRide(userId, rideData) {
+  try {
+    const { rows: userEvents } = await query(
+      `SELECT ut.*, t.title_zh, t.target_rank, t.start_date, t.end_date
+       FROM user_tournaments ut
+       JOIN tournaments t ON t.event_key = ut.event_key
+       WHERE ut.user_id = $1 AND ut.is_completed = FALSE AND t.is_active = TRUE AND t.end_date >= NOW()`,
+      [userId]
+    );
+
+    for (const ut of userEvents) {
+      const key = ut.event_key;
+      let progress = ut.progress_data || {};
+
+      if (key === 'express_upgrade') {
+        const dept = String(rideData.dept || '').toLowerCase();
+        const isTargetRoute = dept === 'tko' || dept === 'hki' || (rideData.route_id && (rideData.route_id.includes('900') || rideData.route_id.includes('914') || rideData.route_id.includes('929')));
+
+        if (isTargetRoute) {
+          progress.tko_rides = (progress.tko_rides || 0) + 1;
+          progress.tko_distance = (progress.tko_distance || 0) + Number(rideData.distance_km || 0);
+
+          const { rows: rankRows } = await query('SELECT mileage_rank FROM user_game_profile WHERE user_id = $1', [userId]);
+          const currentRank = rankRows[0]?.mileage_rank || 'bronze';
+
+          let autoUpgradeRank = null;
+          let bonusXp = 0;
+          let bonusCoins = 0;
+
+          if (currentRank === 'bronze' && progress.tko_rides >= 6 && progress.tko_distance >= 10) {
+            autoUpgradeRank = 'silver';
+            bonusXp = 1000;
+          } else if ((currentRank === 'bronze' || currentRank === 'silver') && progress.tko_rides >= 12 && progress.tko_distance >= 30) {
+            autoUpgradeRank = 'gold';
+            bonusXp = 2500;
+            bonusCoins = 100;
+          }
+
+          if (autoUpgradeRank) {
+            await query(
+              `UPDATE user_game_profile
+               SET mileage_rank = $1, xp = xp + $2, coins = coins + $3, updated_at = NOW()
+               WHERE user_id = $4`,
+              [autoUpgradeRank, bonusXp, bonusCoins, userId]
+            );
+            await query(
+              `UPDATE user_tournaments
+               SET is_completed = TRUE, completed_at = NOW(), progress_data = $1
+               WHERE id = $2`,
+              [JSON.stringify(progress), ut.id]
+            );
+          } else {
+            await query(
+              `UPDATE user_tournaments SET progress_data = $1 WHERE id = $2`,
+              [JSON.stringify(progress), ut.id]
+            );
+          }
+        }
+      } else if (key === 'autumn_double') {
+        const newDist = (progress.total_distance || 0) + Number(rideData.distance_km || 0);
+        const old10Milestone = Math.floor((progress.total_distance || 0) / 10);
+        const new10Milestone = Math.floor(newDist / 10);
+        const milestone10Gained = Math.max(0, new10Milestone - old10Milestone);
+
+        const old50Milestone = Math.floor((progress.total_distance || 0) / 50);
+        const new50Milestone = Math.floor(newDist / 50);
+        const milestone50Gained = Math.max(0, new50Milestone - old50Milestone);
+
+        const addedCoins = (milestone10Gained * 100) + (milestone50Gained * 1000);
+        const addedXp = (milestone10Gained * 500) + (milestone50Gained * 5000);
+
+        progress.total_distance = newDist;
+
+        if (addedCoins > 0 || addedXp > 0) {
+          await query(
+            `UPDATE user_game_profile SET xp = xp + $1, coins = coins + $2, updated_at = NOW() WHERE user_id = $3`,
+            [addedXp, addedCoins, userId]
+          );
+        }
+        await query(
+          `UPDATE user_tournaments SET progress_data = $1 WHERE id = $2`,
+          [JSON.stringify(progress), ut.id]
+        );
+      } else if (key === 'bridge_gift') {
+        const stops = Array.isArray(rideData.stops_reached) ? rideData.stops_reached : [];
+        const passedLhp01 = stops.some(s => String(s).toUpperCase().includes('LHP01') || String(s).toUpperCase().includes('LHP 01') || String(s).toUpperCase().includes('LHP-01') || String(s).includes('康城'));
+
+        if (passedLhp01) {
+          progress.lhp01_claims = (progress.lhp01_claims || 0) + 1;
+          await query(
+            `UPDATE user_game_profile SET coins = coins + 10, updated_at = NOW() WHERE user_id = $1`,
+            [userId]
+          );
+          await query(
+            `UPDATE user_tournaments SET progress_data = $1 WHERE id = $2`,
+            [JSON.stringify(progress), ut.id]
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[TournamentProgress] error:', e.message);
+  }
 }
