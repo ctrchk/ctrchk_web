@@ -2030,22 +2030,8 @@
             const icon = document.getElementById('sync-icon');
             if (icon) icon.classList.add('fa-spin');
             try {
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                    alert('請先登入後再進行同步');
-                    return;
-                }
-                const res = await fetch('/api/user', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const freshUser = await res.json();
-                    localStorage.setItem('user', JSON.stringify(freshUser));
-                    applyUserPayloadToUI(freshUser);
-                    alert('里程與 Elite Score 已即時同步！');
-                } else {
-                    alert('同步失敗，請再試一次');
-                }
+                await initPremiumPage();
+                alert('里程與 Elite Score 已即時同步！');
             } catch (e) {
                 alert('同步失敗，請檢查網路連線');
             } finally {

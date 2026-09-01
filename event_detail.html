@@ -201,6 +201,36 @@
     </div>
   </div>
 
+  <!-- Interactive Terms & Conditions Modal -->
+  <div id="tournament-terms-modal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); backdrop-filter:blur(12px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#18281a; border:1px solid #BFE340; border-radius:20px; max-width:520px; width:100%; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.7); color:#e8f5e9;">
+      <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2);">
+        <h3 style="margin:0; font-size:1.15em; color:#BFE340; display:flex; align-items:center; gap:8px;"><i class="fas fa-file-contract"></i> 挑戰賽條款與細則</h3>
+        <button onclick="closeTournamentTermsModal()" style="background:none; border:none; color:#fff; font-size:1.5em; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <div style="padding:20px; overflow-y:auto; font-size:0.88em; line-height:1.7; color:rgba(255,255,255,0.9);">
+        <h4 style="color:#FFD700; margin-top:0;">一、 資格與報名規範</h4>
+        <p>1. 參與者必須為城市運輸單車 CTRC 之註冊會員。指定等級/卡級專屬之賽事僅限符合條件之帳戶報名。</p>
+        <p>2. 報名成功並扣除對應里程幣費用後，該費用不予退還。</p>
+
+        <h4 style="color:#FFD700; margin-top:16px;">二、 行程採計與時間標準</h4>
+        <p>1. 所有任務計數、里程與打卡紀錄，均自<strong>成功報名之當刻起算</strong>，不追溯報名之前的歷史行程。</p>
+        <p>2. 賽事所有開始與截止時間均嚴格以香港時間（<strong>UTC+8</strong>）為準。</p>
+
+        <h4 style="color:#FFD700; margin-top:16px;">三、 防作弊與公平競賽聲明</h4>
+        <p>1. 系統設有 GPS 速度及軌跡時間滑動窗口審核，禁止使用機動車輛、模擬定位或偽造軌跡。</p>
+        <p>2. 凡經系統防作弊審核 flagged 或審查不屬實之行程，將不予採計賽事進度，情節嚴重者將封禁賽事資格。</p>
+
+        <h4 style="color:#FFD700; margin-top:16px;">四、 獎勵發放與最終解釋權</h4>
+        <p>1. 達成目標時，系統將自動發放對應之卡級升級、XP 及里程幣獎勵至您的個人帳戶。</p>
+        <p>2. CTRC 核心委員會保留隨時修訂條款、暫停或終止本賽事之最終解釋權。</p>
+      </div>
+      <div style="padding:16px 20px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); text-align:right;">
+        <button onclick="closeTournamentTermsModal()" style="background:#BFE340; color:#121f14; border:none; padding:10px 24px; border-radius:10px; font-weight:bold; cursor:pointer;">我已閱讀並理解</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/main.js"></script>
   <script src="/js/pwa.js"></script>
   <script>
@@ -345,9 +375,9 @@
               <div>${t.description_zh || ''}</div>
             </div>
 
-            <div class="terms-notice">
-              📌 <strong>報名須知：</strong><br>
-              點擊「立即報名」即代表您已閱讀並同意本挑戰賽之條款與細則。所有任務計數與統計皆自<strong>成功報名之當刻起算</strong>，時間均以 <strong>UTC+8</strong> 為準。賽事結束後將自動截止記錄。
+            <div class="terms-notice" style="cursor:pointer;" onclick="openTournamentTermsModal()">
+              📌 <strong>報名須知與條款細則：</strong><br>
+              點擊「立即報名」即代表您已閱讀並同意本挑戰賽之條款與細則（<span style="color:var(--app-accent); text-decoration:underline;">點擊查看完整條款與細則</span>）。所有任務計數與統計皆自<strong>成功報名之當刻起算</strong>，時間均以 <strong>UTC+8</strong> 為準。
             </div>
 
             ${btnHtml}
@@ -393,6 +423,16 @@
       } catch (err) {
         alert('報名錯誤: ' + err.message);
       }
+    }
+
+    function openTournamentTermsModal() {
+      const modal = document.getElementById('tournament-terms-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeTournamentTermsModal() {
+      const modal = document.getElementById('tournament-terms-modal');
+      if (modal) modal.style.display = 'none';
     }
 
     document.addEventListener('DOMContentLoaded', loadDetail);
