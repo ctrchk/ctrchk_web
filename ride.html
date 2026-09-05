@@ -581,7 +581,7 @@
     let watchId = null;
     let rideStarted = false;
     let goToStartPhase = true;
-    let isFreeMode = (mode === 'free');
+    let isFreeMode = (mode === 'free' || routeId.toUpperCase() === 'FREE');
     let startTime = null;
     let timerInterval = null;
     let heartbeatInterval = null;
@@ -754,6 +754,18 @@
         const distTop = document.getElementById('stat-dist-top');
         if (distTop) distTop.textContent = distText;
 
+        if (isFreeMode) {
+            sessionXp = Math.round(distKm * 20);
+        } else {
+            let stopXp = 0;
+            reachedStops.forEach(order => {
+                const stop = routeStops.find(s => s.order === order);
+                stopXp += (stop?.xp || 10);
+            });
+            const distXp = Math.round(distKm * 15);
+            sessionXp = Math.max(stopXp, distXp);
+        }
+
         const xpEl = document.getElementById('stat-xp');
         if (xpEl) xpEl.textContent = Math.round(sessionXp);
 
@@ -861,13 +873,21 @@
         document.getElementById('next-dist').textContent = Math.round(dist);
         document.getElementById('next-road').textContent = routeId + ' ' + (routeData?.alias || '');
 
-        const isCompleted = reachedStops.has(next.order);
-        document.getElementById('next-instruction').textContent = isCompleted ? '即將到達終點' : `前往：${next.name}`;
+        const completionRatio = routeStops.length > 0 ? (reachedStops.size / routeStops.length) : 0;
+        const allCompleted = routeStops.length > 0 && routeStops.every(s => reachedStops.has(s.order));
 
-        if (!isCompleted && dist <= 50 && dist > STOP_DETECTION_RADIUS_M) {
+        if (allCompleted) {
+            document.getElementById('next-instruction').textContent = '已完成全部站點！請點擊結束';
+        } else if (completionRatio >= 0.8) {
+            document.getElementById('next-instruction').textContent = `已完成 80% 打卡 (前往：${next.name})`;
+        } else {
+            document.getElementById('next-instruction').textContent = `前往：${next.name}`;
+        }
+
+        if (!allCompleted && dist <= 50 && dist > STOP_DETECTION_RADIUS_M) {
             speak(`即將到達 ${next.name}。`);
-        } else if (isCompleted) {
-            speak("你已完成全部站點，即將抵達終點。");
+        } else if (allCompleted) {
+            speak("你已完成全部站點，請點擊下方結束按鈕。");
         }
 
         updateStopsOverview();
@@ -884,9 +904,12 @@
 
             speak(`成功到達 ${next.name}。`);
 
+            const completionRatio = routeStops.length > 0 ? (reachedStops.size / routeStops.length) : 0;
             const allCompleted = routeStops.every(s => reachedStops.has(s.order));
             if (allCompleted) {
                 speak(`恭喜！你已完成 ${routeData?.alias || '目前'} 路線的全部站點，請點擊結束騎行。`);
+            } else if (completionRatio >= 0.8) {
+                speak(`打卡進度已達 80%！已達成該路線征服條件，可隨時結束騎行。`);
             }
 
             updateStopsOverview();
@@ -1191,6 +1214,7 @@
         const avgSpeed = parseFloat((distKm / (durationMins / 60)).toFixed(1));
 
         const token = localStorage.getItem('accessToken');
+        const isRouteCompleted = !isFreeMode && routeStops.length > 0 ? (reachedStops.size / routeStops.length >= 0.8) : true;
         const res = await fetch('/api/getHistory', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -1201,7 +1225,7 @@
                 duration_minutes: durationMins,
                 avg_speed_kmh: avgSpeed,
                 stops_reached: [...reachedStops],
-                all_stops: reachedStops.size === routeStops.length,
+                all_stops: isRouteCompleted,
                 xp_earned_override: sessionXp,
                 gpx_track: trackingCoords,
                 ride_mode: isFreeMode ? 'free' : 'route'
@@ -1485,7 +1509,7 @@
             }
         };
 
-        if (mode === 'free') {
+        if (isFreeMode) {
             // Free mode: Instant start under 3s by skipping network fetches
             await initMap([22.3143, 114.2697]);
 

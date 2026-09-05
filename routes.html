@@ -719,8 +719,8 @@ body.app-light-theme .app-filter-chip.random-btn {
                     <strong style="color:#BFE340; display:block; margin-bottom:0.5em;">如何收集？</strong>
                     <ul style="padding-left:1.2em; font-size:0.85em; opacity:0.9;">
                         <li>選擇一條標準路線並點擊「開始騎行」</li>
-                        <li>按照順序到達路線上的每一個車站</li>
-                        <li>完成後，該路線將標記為「已征服」</li>
+                        <li>到達路線上的車站進行打卡</li>
+                        <li>完成路線上的 80% 或以上車站打卡，即可標記該路線為「已征服」並點亮彩色圖鑑！</li>
                     </ul>
                 </div>
                 <strong style="color:#BFE340;">🎁 集齊獎勵：</strong>
@@ -2680,10 +2680,11 @@ async function initAppRidePage() {
 
     window.showCreateRoomForm = (preSelectedRouteId = null) => {
         const select = document.getElementById('room-route-select');
-        // Include both current department routes AND challenge routes
+        // Include Free Mode, current department routes AND challenge routes
         const displayRoutes = appRoutes.filter(r => routeBelongsToDept(r, selectedDeptId) || (r.tags && r.tags.includes('全港挑戰')));
 
-        select.innerHTML = displayRoutes.map(r => `<option value="${r.id}">${r.id} ${r.alias || ''}</option>`).join('');
+        select.innerHTML = `<option value="FREE">FREE 自由模式 (無固定路線)</option>` +
+            displayRoutes.map(r => `<option value="${r.id}">${r.id} ${r.alias || ''}</option>`).join('');
         if (preSelectedRouteId) select.value = preSelectedRouteId;
 
         updateRoomDirOptions();

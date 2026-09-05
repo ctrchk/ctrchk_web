@@ -1080,7 +1080,7 @@ export default async function handler(req, res) {
         await ensureRideTables();
         const { rows } = await query(
           `SELECT rr.room_code, u.username as host_name, rr.route_id,
-                  (SELECT alias FROM routes WHERE route_number = rr.route_id LIMIT 1) as route_alias,
+                  COALESCE((SELECT alias FROM routes WHERE route_number = rr.route_id LIMIT 1), CASE WHEN rr.route_id = 'FREE' THEN '自由模式' ELSE rr.route_id END) as route_alias,
                   (SELECT COUNT(*) FROM room_members WHERE room_id = rr.id) as member_count,
                   (rr.password IS NOT NULL AND rr.password != '') as has_password
            FROM ride_rooms rr
