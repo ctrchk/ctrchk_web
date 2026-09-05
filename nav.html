@@ -842,12 +842,17 @@
 
         const isLight = document.body.classList.contains('app-light-theme');
         const tileUrl = isLight
-          ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+          ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
           : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
         if (typeof L !== 'undefined') {
           this.leafletMap = L.map('map', { zoomControl: false, attributionControl: false }).setView([22.3083, 114.2597], 14);
-          L.tileLayer(tileUrl, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; CARTO' }).addTo(this.leafletMap);
+          const navTileLayer = L.tileLayer(tileUrl, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(this.leafletMap);
+          navTileLayer.on('tileerror', function() {
+            if (this._fallbackTriggered) return;
+            this._fallbackTriggered = true;
+            this.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+          });
           this.leafletRouteLine = L.polyline([], { color: '#BFE340', weight: 6, opacity: 0.9 }).addTo(this.leafletMap);
         }
 

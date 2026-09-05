@@ -1053,6 +1053,9 @@ export default async function handler(req, res) {
           // Free Mode: Reward based strictly on distance (20 XP per km)
           // Award XP proportionally for any distance >= 0.2km
           xpReward = Math.round(distKmVal * 20);
+          if (typeof xp_earned_override === 'number' && xp_earned_override > 0) {
+            xpReward = Math.max(xpReward, Math.round(xp_earned_override));
+          }
       } else {
           // Route Mode: Reward based strictly on stops
           try {
@@ -1066,14 +1069,16 @@ export default async function handler(req, res) {
             } else {
               // Fallback for route mode: based on reached stops count (e.g. 10 XP per stop)
               const reachedCount = Number.isFinite(stops_count) ? stops_count : (Array.isArray(stops_reached) ? stops_reached.length : 0);
-              xpReward = reachedCount * 10;
-              maxXpForRoute = xpReward + 50;
+              xpReward = Math.max(reachedCount * 10, Math.round(distKmVal * 15));
+              maxXpForRoute = Math.max(xpReward + 50, 200);
             }
-          } catch (e) { xpReward = 20; }
+          } catch (e) { xpReward = Math.max(20, Math.round(distKmVal * 15)); }
 
-          // If client provides a per-stop computed XP, use it (capped at the route's configured max).
-          if (typeof xp_earned_override === 'number' && xp_earned_override >= 0) {
-            xpReward = Math.min(Math.round(xp_earned_override), maxXpForRoute);
+          // If client provides a computed XP, use the higher value (capped at the route's configured max).
+          if (typeof xp_earned_override === 'number' && xp_earned_override > 0) {
+            xpReward = Math.max(xpReward, Math.min(Math.round(xp_earned_override), maxXpForRoute));
+          } else {
+            xpReward = Math.max(xpReward, Math.round(distKmVal * 15));
           }
       }
 
