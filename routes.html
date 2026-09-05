@@ -1132,14 +1132,20 @@ function initMap() {
 
     const isLight = document.body.classList.contains('app-light-theme');
     const tileUrl = isLight
-        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+        ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
         : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
-    L.tileLayer(tileUrl, {
+    const layer = L.tileLayer(tileUrl, {
         maxZoom: 19,
         subdomains: 'abcd',
-        attribution: '© CARTO'
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
     }).addTo(map);
+
+    layer.on('tileerror', function() {
+        if (this._fallbackTriggered) return;
+        this._fallbackTriggered = true;
+        this.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+    });
 
     // Add zoom control (top-right)
     L.control.zoom({ position: 'topright' }).addTo(map);

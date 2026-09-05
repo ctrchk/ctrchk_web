@@ -314,12 +314,13 @@
 
     /* ── Go-to-start banner ── */
     #go-to-start-banner {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 1001;
       background: var(--hud-bg); backdrop-filter: var(--hud-blur);
       -webkit-backdrop-filter: var(--hud-blur);
       color: #fff; border-radius: 24px 24px 0 0;
-      padding: 24px 24px calc(env(safe-area-inset-bottom) + 24px);
+      padding: 24px 24px calc(100px + env(safe-area-inset-bottom));
       text-align: center; box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+      max-height: 85vh; overflow-y: auto;
     }
     #go-to-start-banner h3 { font-size: 20px; font-weight: 800; color: var(--app-accent); margin-bottom: 8px; }
     #gts-dist-val { font-size: 32px; font-weight: 900; margin: 12px 0; display: block; }
@@ -656,15 +657,21 @@
         window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
         const getTileUrl = (light) => light
-            ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+            ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
             : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
         tileLayer = L.tileLayer(getTileUrl(isLight), {
             maxZoom: 19,
             subdomains: 'abcd',
-            attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
             errorTileUrl: ''
         }).addTo(map);
+
+        tileLayer.on('tileerror', function() {
+            if (this._fallbackTriggered) return;
+            this._fallbackTriggered = true;
+            this.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+        });
 
         if (routeData && gpxCoords.length > 0) {
             L.polyline(gpxCoords, { color: routeData.color || '#BFE340', weight: 6, opacity: 0.8 }).addTo(map);
@@ -801,6 +808,22 @@
 
     let lastSpokenText = "";
     let lastSpokenTime = 0;
+    let iosSpeechUnlocked = false;
+
+    function unlockIosSpeech() {
+        if (iosSpeechUnlocked) return;
+        if ('speechSynthesis' in window) {
+            try {
+                const u = new SpeechSynthesisUtterance('');
+                u.volume = 0;
+                window.speechSynthesis.speak(u);
+                iosSpeechUnlocked = true;
+            } catch (e) {}
+        }
+    }
+    document.addEventListener('touchstart', unlockIosSpeech, { once: true });
+    document.addEventListener('click', unlockIosSpeech, { once: true });
+
     function speak(text) {
         if (!text) return;
         const now = Date.now();
@@ -812,11 +835,23 @@
         lastSpokenTime = now;
 
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-HK';
-            utterance.rate = 1.0;
-            window.speechSynthesis.speak(utterance);
+            try {
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-HK';
+                utterance.rate = 1.0;
+                utterance.volume = 1.0;
+                const voices = window.speechSynthesis.getVoices() || [];
+                const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'zh_HK' || (v.lang && v.lang.includes('yue')));
+                if (hkVoice) utterance.voice = hkVoice;
+                setTimeout(() => {
+                    window.speechSynthesis.speak(utterance);
+                }, 50);
+            } catch (e) {
+                console.warn('[TTS] speak error:', e);
+            }
         }
     }
 
@@ -972,9 +1007,14 @@
                     map.removeLayer(tileLayer);
                     const isLight = document.body.classList.contains('app-light-theme');
                     const tiles = isLight
-                        ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+                        ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
                         : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; CARTO' }).addTo(map);
+                    tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
+                    tileLayer.on('tileerror', function() {
+                        if (this._fallbackTriggered) return;
+                        this._fallbackTriggered = true;
+                        this.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+                    });
                     if (breadcrumbLine) breadcrumbLine.bringToFront();
                 } catch (e) {
                     console.warn('[Tile Recycle] Error:', e);
@@ -1127,6 +1167,9 @@
         if (routeStops.length > 0 && !isFreeMode && showBanner) {
             document.getElementById('go-to-start-banner').style.display = 'block';
             document.getElementById('gts-start-name').textContent = routeStops[0].name;
+            document.body.classList.add('is-navigating');
+            try { if (window.parent && window.parent.document && window.parent.document.body) window.parent.document.body.classList.add('is-navigating'); } catch(e){}
+            try { if (window.top && window.top.document && window.top.document.body) window.top.document.body.classList.add('is-navigating'); } catch(e){}
         }
         updateStopsOverview();
     }
