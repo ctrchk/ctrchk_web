@@ -790,18 +790,31 @@
 
         function safeFormatDate(dateStr) {
             if (!dateStr) return '—';
-            let d = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
-            if (isNaN(d.getTime())) {
-                const formatted = String(dateStr).trim().replace(' ', 'T');
-                d = new Date(formatted);
-                if (isNaN(d.getTime())) {
-                    return String(dateStr).slice(0, 10);
-                }
-            }
             try {
+                let str = String(dateStr).trim();
+                if (str.includes(' ') && !str.includes('T')) {
+                    str = str.replace(' ', 'T');
+                }
+                const d = (dateStr instanceof Date) ? dateStr : new Date(str);
+                if (isNaN(d.getTime())) return String(dateStr).slice(0, 10);
                 return d.toLocaleDateString('zh-HK');
             } catch (err) {
                 return String(dateStr).slice(0, 10);
+            }
+        }
+
+        function safeFormatDateTime(dateStr) {
+            if (!dateStr) return '—';
+            try {
+                let str = String(dateStr).trim();
+                if (str.includes(' ') && !str.includes('T')) {
+                    str = str.replace(' ', 'T');
+                }
+                const d = (dateStr instanceof Date) ? dateStr : new Date(str);
+                if (isNaN(d.getTime())) return String(dateStr).slice(0, 19);
+                return d.toLocaleString('zh-HK');
+            } catch (err) {
+                return String(dateStr).slice(0, 19);
             }
         }
 
@@ -1050,7 +1063,7 @@
                 regsTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">暫無會員報名紀錄</td></tr>';
             } else {
                 regsTbody.innerHTML = regs.map(r => {
-                    const regDate = r.registered_at ? new Date(r.registered_at).toLocaleString('zh-HK') : '—';
+                    const regDate = safeFormatDateTime(r.registered_at);
                     const pData = typeof r.progress_data === 'object' ? JSON.stringify(r.progress_data) : (r.progress_data || '{}');
                     const statusText = r.is_completed
                         ? '<span style="color:#2ecc71; font-weight:bold;"><i class="fas fa-check-circle"></i> 已達成</span>'
@@ -1132,7 +1145,7 @@
             }
 
             tbody.innerHTML = list.map(r => {
-                const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('zh-HK') : '—';
+                const dateStr = safeFormatDateTime(r.created_at);
                 const reporter = r.email
                     ? `<div><strong>${escapeHtml(r.full_name || '用戶')}</strong></div>
                        <div style="font-size:0.8em; color:#888;">${escapeHtml(r.email)}</div>`
@@ -1311,7 +1324,7 @@
             section.style.display = '';
             list.innerHTML = discordMessagesList.map((m, i) => {
                 const canEdit = m.isBot;
-                const ts = m.createdAt ? new Date(m.createdAt).toLocaleString('zh-Hant') : '';
+                const ts = safeFormatDateTime(m.createdAt);
                 return `<div id="discord-msg-row-${i}" style="background:white; border:1px solid #e0e0e0; border-radius:8px; padding:1em 1.2em; margin-bottom:0.8em; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5em; flex-wrap:wrap;">
                         <div style="flex:1; min-width:0;">
@@ -2440,7 +2453,7 @@
             }
             tbody.innerHTML = deletedStationsData.map(st => {
                 const typeText = st.source === 'replaced' ? '<span style="color:#d35400;">🔄 被替代</span>' : '<span style="color:#c0392b;">❌ 已刪除</span>';
-                const dateStr = st.deleted_at ? new Date(st.deleted_at).toLocaleString('zh-HK') : '—';
+                const dateStr = safeFormatDateTime(st.deleted_at);
                 return `
                     <tr>
                         <td><strong>${escapeHtml(st.station_id)}</strong></td>

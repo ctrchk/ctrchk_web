@@ -22,9 +22,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>3D 智慧導航 - CTRCHK</title>
 
-  <!-- Mapbox GL JS & Geocoder -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
+  <!-- MapLibre GL JS (Free vector tiles, no Mapbox key required) -->
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script>window.mapboxgl = window.maplibregl;</script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -783,13 +784,42 @@
           if (overlay) overlay.classList.add('hidden');
         };
 
-        // Guarantee loader overlay is hidden immediately within 500ms
         setTimeout(hideLoader, 500);
 
         await this.fetchConfig();
 
-        // Always use Leaflet fallback map directly to avoid Mapbox API key required watermark
-        this.initLeafletFallback();
+        const isLight = document.body.classList.contains('app-light-theme');
+        const styleUrl = isLight
+          ? 'https://tiles.openfreemap.org/styles/positron'
+          : 'https://tiles.openfreemap.org/styles/dark';
+
+        try {
+          if (typeof maplibregl !== 'undefined' || typeof mapboxgl !== 'undefined') {
+            const MapClass = (typeof maplibregl !== 'undefined') ? maplibregl.Map : mapboxgl.Map;
+            this.map = new MapClass({
+              container: 'map',
+              style: styleUrl,
+              center: [114.2597, 22.3083],
+              zoom: 14,
+              pitch: 0,
+              bearing: 0
+            });
+
+            this.map.on('load', () => {
+              hideLoader();
+              this.onMapLoad();
+            });
+
+            this.map.on('error', (e) => {
+              console.warn('[Map Engine] Error event:', e);
+            });
+          } else {
+            this.initLeafletFallback();
+          }
+        } catch (err) {
+          console.warn('[Nav] Vector map init error, using Leaflet fallback:', err);
+          this.initLeafletFallback();
+        }
 
         this.setupUI();
         this.requestLocation();
@@ -1726,22 +1756,46 @@
 
       lastSpokenText: "",
       lastSpokenTime: 0,
+      unlockIosSpeech() {
+        if (this.iosSpeechUnlocked) return;
+        if ('speechSynthesis' in window) {
+            try {
+                const u = new SpeechSynthesisUtterance('');
+                u.volume = 0;
+                window.speechSynthesis.speak(u);
+                this.iosSpeechUnlocked = true;
+            } catch (e) {}
+        }
+      },
+
       speak(text) {
         if (!text) return;
         const now = Date.now();
         // Prevent repeating the same announcement within 15 seconds
-        if (text === this.lastSpokenText && (now - this.lastSpokenTime < 15000)) {
+        if (text === this.lastSpokenText && (now - (this.lastSpokenTime || 0) < 15000)) {
             return;
         }
         this.lastSpokenText = text;
         this.lastSpokenTime = now;
 
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-HK';
-            utterance.rate = 1.0;
-            window.speechSynthesis.speak(utterance);
+            try {
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-HK';
+                utterance.rate = 1.0;
+                utterance.volume = 1.0;
+                const voices = window.speechSynthesis.getVoices() || [];
+                const hkVoice = voices.find(v => v.lang === 'zh-HK' || v.lang === 'zh_HK' || (v.lang && v.lang.includes('yue')));
+                if (hkVoice) utterance.voice = hkVoice;
+                setTimeout(() => {
+                    window.speechSynthesis.speak(utterance);
+                }, 50);
+            } catch (e) {
+                console.warn('[TTS] speak error:', e);
+            }
         }
       },
 
@@ -2079,22 +2133,38 @@
           return local;
         }
 
-        // 2. Fallback to Mapbox Directions
-        console.log('[Nav] Using Mapbox Directions fallback');
-        const url = `https://api.mapbox.com/directions/v5/mapbox/cycling/${p1[0]},${p1[1]};${p2[0]},${p2[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+        // 2. Fallback to Mapbox Directions / OSRM
         try {
-          const resp = await fetch(url);
+          if (window.mapboxgl && mapboxgl.accessToken && !mapboxgl.accessToken.startsWith('pk.eyJ1I')) {
+            const url = `https://api.mapbox.com/directions/v5/mapbox/cycling/${p1[0]},${p1[1]};${p2[0]},${p2[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.routes && data.routes[0]) {
+              return {
+                coords: data.routes[0].geometry.coordinates,
+                distance: data.routes[0].distance,
+                weight: data.routes[0].distance * 5,
+                segmentTypes: new Array(data.routes[0].geometry.coordinates.length - 1).fill('pedestrian')
+              };
+            }
+          }
+        } catch (e) {}
+
+        // 3. Fallback to free OSRM Public API
+        try {
+          const osrmUrl = `https://router.project-osrm.org/route/v1/biking/${p1[0]},${p1[1]};${p2[0]},${p2[1]}?overview=full&geometries=geojson`;
+          const resp = await fetch(osrmUrl);
           const data = await resp.json();
           if (data.routes && data.routes[0]) {
             return {
               coords: data.routes[0].geometry.coordinates,
               distance: data.routes[0].distance,
-              weight: data.routes[0].distance * 5,
-              segmentTypes: new Array(data.routes[0].geometry.coordinates.length - 1).fill('pedestrian')
+              weight: data.routes[0].distance * 2,
+              segmentTypes: new Array(data.routes[0].geometry.coordinates.length - 1).fill('track')
             };
           }
         } catch (e) {
-          console.error('[Nav] Directions API failed', e);
+          console.error('[Nav] OSRM fallback failed', e);
         }
         return null;
       },
