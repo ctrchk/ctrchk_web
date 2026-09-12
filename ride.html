@@ -657,8 +657,8 @@
         window.PWA_MAPS_INITED.add('ride-map');
         const isLight = document.body.classList.contains('app-light-theme');
         const getTileUrl = (light) => light
-            ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
+            ? 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf'
+            : 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
 
         tileLayer = L.tileLayer(getTileUrl(isLight), {
             maxZoom: 19,
@@ -1030,8 +1030,8 @@
                     map.removeLayer(tileLayer);
                     const isLight = document.body.classList.contains('app-light-theme');
                     const tiles = isLight
-                        ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-                        : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
+                        ? 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf'
+                        : 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
                     tileLayer = L.tileLayer(tiles, { maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
                     tileLayer.on('tileerror', function() {
                         if (this._fallbackTriggered) return;
