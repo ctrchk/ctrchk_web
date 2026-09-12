@@ -521,8 +521,8 @@
         }
         map = L.map('route-map').setView([centerLat, centerLon], zoom || 14);
         window.PWA_MAPS_INITED.add('route-map');
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf', {
+          attribution: '© OpenStreetMap © CARTO',
           maxZoom: 19,
         }).addTo(map);
       }
