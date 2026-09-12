@@ -345,6 +345,7 @@ export default async function handler(req, res) {
 
     if (action === 'get-bug-reports') {
       try {
+        await ensureAdminRouteSchema();
         const { rows } = await query(
           `SELECT b.*, u.email, u.full_name, u.username
            FROM bug_reports b
