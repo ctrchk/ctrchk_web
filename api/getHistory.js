@@ -1223,25 +1223,46 @@ export default async function handler(req, res) {
         // Fetch user routes
         const { rows: routesCountRows } = await query('SELECT COUNT(*) AS total_count FROM routes');
         const totalRoutesCount = Math.max(1, Number(routesCountRows[0]?.total_count || 12));
-        const explorationRatio = Math.min(1.0, 1 / totalRoutesCount); // incremental base
+        const { rows: conqueredRows } = await query(
+          `SELECT DISTINCT route_id FROM cycling_history WHERE user_id = $1 AND route_id IS NOT NULL`,
+          [userData.userId]
+        );
+        const conqueredCount = conqueredRows.length;
+        const explorationRatio = Math.min(1.0, conqueredCount / totalRoutesCount);
         const xFactor = explorationRatio * 200;
 
-        const { rows: forumCountRows } = await query(
-          `SELECT COUNT(*) AS cnt FROM forum_topics WHERE user_id = $1`, [userData.userId]
-        );
-        const { rows: replyCountRows } = await query(
-          `SELECT COUNT(*) AS cnt FROM forum_replies WHERE user_id = $1`, [userData.userId]
-        );
-        const communityContribution = Number(forumCountRows[0]?.cnt || 0) + Number(replyCountRows[0]?.cnt || 0);
-        const pFactor = communityContribution * 20;
+        let validBugReportsCount = 0;
+        try {
+          await query(`
+            CREATE TABLE IF NOT EXISTS bug_reports (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+              description TEXT NOT NULL,
+              screenshot TEXT,
+              page_url TEXT,
+              status VARCHAR(20) DEFAULT 'pending',
+              reject_reason TEXT,
+              created_at TIMESTAMP DEFAULT NOW()
+            );
+          `);
+          const { rows: bugCountRows } = await query(
+            `SELECT COUNT(*)::int AS cnt FROM bug_reports WHERE user_id = $1 AND status IN ('valid', 'approved', 'resolved')`, [userData.userId]
+          );
+          validBugReportsCount = Number(bugCountRows[0]?.cnt || 0);
+        } catch (pErr) {
+          console.error('[Elite Score] P factor calc error:', pErr.message);
+        }
+        const communityContribution = validBugReportsCount;
+        const pFactor = validBugReportsCount * 20;
 
         const totalEliteScore = Math.round(mFactor + eFactor + cFactor + aFactor + xFactor + pFactor);
 
         await query(
           `UPDATE user_game_profile
-           SET elite_score = $1, elevation_gain_30 = $2, consistency_days_30 = $3
-           WHERE user_id = $4`,
-          [totalEliteScore, elevation30, consistencyDays, userData.userId]
+           SET elite_score = $1, elevation_gain_30 = $2, consistency_days_30 = $3,
+               exploration_ratio = $4, community_contribution = $5
+           WHERE user_id = $6`,
+          [totalEliteScore, elevation30, consistencyDays, explorationRatio, communityContribution, userData.userId]
         );
 
         if (levelUp) {
@@ -1441,6 +1462,13 @@ export default async function handler(req, res) {
           coin_multiplier: coinMultiplier,
           mileage_rank: mileageUpdate.rank,
           mileage_km_365: mileageUpdate.rollingKm,
+          elite_score: totalEliteScore,
+          m_factor: Math.round(mFactor),
+          e_factor: Math.round(eFactor),
+          c_factor: Math.round(cFactor),
+          a_factor: Math.round(aFactor),
+          x_factor: Math.round(xFactor),
+          p_factor: Math.round(pFactor),
           commute_streak: commuteStreak,
           total_saved_fare: parseFloat(((profile.total_saved_fare || 0) + savedFare).toFixed(1)),
           saved_fare_earned: parseFloat(savedFare.toFixed(1)),

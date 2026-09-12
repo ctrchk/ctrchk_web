@@ -1397,6 +1397,19 @@ export default async function handler(req, res) {
         // 6. Community / Bug Factor (P): valid/approved bug reports count * 20
         let validBugReportsCount = 0;
         try {
+          // Ensure bug_reports table exists
+          await query(`
+            CREATE TABLE IF NOT EXISTS bug_reports (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+              description TEXT NOT NULL,
+              screenshot TEXT,
+              page_url TEXT,
+              status VARCHAR(20) DEFAULT 'pending',
+              reject_reason TEXT,
+              created_at TIMESTAMP DEFAULT NOW()
+            );
+          `);
           const { rows: bugCountRows } = await query(
             `SELECT COUNT(*)::int AS cnt FROM bug_reports WHERE user_id = $1 AND status IN ('valid', 'approved', 'resolved')`, [userId]
           );
