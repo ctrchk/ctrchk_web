@@ -1238,6 +1238,11 @@
         localStorage.removeItem('unsyncedActiveRideState');
         localStorage.removeItem('unsyncedTempCoordinates');
 
+        // Broadcast mileage update to all open pages & Keep-Alive SPA iframes
+        if (typeof window.broadcastMileageUpdate === 'function') {
+            window.broadcastMileageUpdate({ ride_id: result.ride_id, dist_km: distKm });
+        }
+
         // Check for new badges
         if (result.challenge_completed) {
             showBadgeEarned(result.challenge_completed);

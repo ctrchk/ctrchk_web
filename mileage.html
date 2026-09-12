@@ -2049,6 +2049,20 @@
         });
         window.addEventListener('focus', initPremiumPage);
         window.addEventListener('pageshow', initPremiumPage);
+
+        // Real-time broadcast sync listeners
+        if (window.ctrcSyncChannel) {
+            window.ctrcSyncChannel.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'MILEAGE_UPDATED') {
+                    initPremiumPage();
+                }
+            });
+        }
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'MILEAGE_UPDATED') {
+                initPremiumPage();
+            }
+        });
     </script>
 </body>
 </html>

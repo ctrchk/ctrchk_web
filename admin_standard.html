@@ -1318,6 +1318,9 @@
                 });
                 if (handleTokenError(resp)) return;
                 if (resp.ok) {
+                    if (typeof window.broadcastMileageUpdate === 'function') {
+                        window.broadcastMileageUpdate({ admin_audit: true });
+                    }
                     alert(status === 'approved' ? '已批准！用戶 365 天滾動里程已更新。' : '已拒絕該個案。');
                     loadThirdPartyRides();
                 } else {
