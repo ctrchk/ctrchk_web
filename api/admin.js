@@ -2,6 +2,7 @@
 // Consolidated Admin API - Handles User Management, Route Config, and Discord Relay
 import { query } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
+import { triggerWalletPassUpdate } from '../lib/wallet-helper.js';
 import bcrypt from 'bcryptjs';
 import { syncDiscordRolesForUser } from '../lib/discord-role-sync.js';
 import { Octokit } from "@octokit/rest";
@@ -468,7 +469,15 @@ export default async function handler(req, res) {
         [status, bike_no || '未填寫', distNum, reject_reason || null, id]
       );
 
-      return res.status(200).json({ success: true });
+      try {
+        const host = req.headers.host || '';
+        const protocol = req.headers['x-forwarded-proto'] || 'https';
+        triggerWalletPassUpdate(ride.user_id, host, protocol).catch(err => {
+          console.warn('[AdminAPI] Wallet pass update trigger failed:', err.message);
+        });
+      } catch (e) {}
+
+      return res.status(200).json({ success: true, user_id: ride.user_id });
     }
     if (action === 'create-badge' || action === 'update-badge') {
         if (action === 'create-badge') {
@@ -554,11 +563,25 @@ export default async function handler(req, res) {
     if (action === 'delete_dept') { await query(`DELETE FROM department_config WHERE dept_id = $1`, [b.dept_id]); return res.status(200).json({ success: true }); }
     if (action === 'resolve-bug-report') {
         const { bug_id, status, reject_reason } = b;
+        const { rows: bugRows } = await query(`SELECT user_id FROM bug_reports WHERE id = $1`, [bug_id]);
+        const targetUserId = bugRows[0]?.user_id;
+
         await query(
           `UPDATE bug_reports SET status = $1, reject_reason = $2 WHERE id = $3`,
           [status, reject_reason || null, bug_id]
         );
-        return res.status(200).json({ success: true });
+
+        if (targetUserId) {
+          try {
+            const host = req.headers.host || '';
+            const protocol = req.headers['x-forwarded-proto'] || 'https';
+            triggerWalletPassUpdate(targetUserId, host, protocol).catch(err => {
+              console.warn('[AdminAPI] Wallet pass update trigger failed:', err.message);
+            });
+          } catch (e) {}
+        }
+
+        return res.status(200).json({ success: true, user_id: targetUserId });
     }
     if (action === 'restore-deleted-station') {
         const { rows } = await query(`SELECT * FROM deleted_stations WHERE id = $1`, [b.id]);

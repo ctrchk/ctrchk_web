@@ -1262,6 +1262,10 @@
             if (result.gameProfile) {
                 localStorage.setItem('gameProfile', JSON.stringify(result.gameProfile));
             }
+
+            if (typeof window.broadcastMileageUpdate === 'function') {
+                window.broadcastMileageUpdate({ task_key: taskKey });
+            }
             if (result.level_up && result.gameProfile) {
                 setTimeout(() => showTasksLevelUp(result.gameProfile.level, coins), 600);
             }
@@ -1526,6 +1530,10 @@
                 user.xp = res.gameProfile.xp;
                 user.coins = res.gameProfile.coins;
                 localStorage.setItem('user', JSON.stringify(user));
+            }
+
+            if (typeof window.broadcastMileageUpdate === 'function') {
+                window.broadcastMileageUpdate({ task_key: taskKey });
             }
 
             if (res.level_up && res.gameProfile) {

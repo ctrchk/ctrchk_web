@@ -2,6 +2,26 @@
 
 console.log('--- main.js 檔案已成功載入並開始執行！ ---');
 
+// Global BroadcastChannel for instant cross-tab / iframe real-time synchronization
+if (typeof window !== 'undefined' && window.BroadcastChannel && !window.ctrcSyncChannel) {
+    try {
+        window.ctrcSyncChannel = new BroadcastChannel('ctrc_mileage_sync');
+    } catch (e) {
+        console.warn('[BroadcastChannel] Initialization skipped:', e.message);
+    }
+}
+
+function broadcastMileageUpdate(data = {}) {
+    const payload = { type: 'MILEAGE_UPDATED', timestamp: Date.now(), ...data };
+    if (window.ctrcSyncChannel) {
+        try { window.ctrcSyncChannel.postMessage(payload); } catch (e) {}
+    }
+    if (window.parent && window.parent !== window) {
+        try { window.parent.postMessage(payload, '*'); } catch (e) {}
+    }
+}
+window.broadcastMileageUpdate = broadcastMileageUpdate;
+
 /**
  * @file main.js
  * @description 網站全域腳本。【最終修正與結構優化版】

@@ -185,7 +185,7 @@ async function getRollingMileageKm(userId) {
   const { rows } = await query(
     `SELECT COALESCE(SUM(distance_km), 0) AS total
      FROM cycling_history
-     WHERE user_id = $1 AND ride_date >= (CURRENT_DATE - INTERVAL '365 days')`,
+     WHERE user_id = $1 AND ride_date >= ((CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hong_Kong')::date - INTERVAL '365 days')`,
     [userId]
   );
   return Number(rows[0]?.total || 0);
@@ -1194,16 +1194,16 @@ export default async function handler(req, res) {
         const { rows: m30Rows } = await query(
           `SELECT COALESCE(SUM(distance_km), 0) AS m30
            FROM cycling_history
-           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+           WHERE user_id = $1 AND ride_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hong_Kong')::date - INTERVAL '30 days'`,
           [userData.userId]
         );
         const distance30 = Number(m30Rows[0]?.m30 || 0) + distKmVal;
         const mFactor = distance30 * 10;
 
         const { rows: e30Rows } = await query(
-          `SELECT COALESCE(SUM(distance_km * 18.5), 0) AS e30
+          `SELECT COALESCE(SUM(CASE WHEN elevation_gain_m > 0 THEN elevation_gain_m ELSE distance_km * 18.5 END), 0) AS e30
            FROM cycling_history
-           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+           WHERE user_id = $1 AND ride_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hong_Kong')::date - INTERVAL '30 days'`,
           [userData.userId]
         );
         const elevation30 = Number(e30Rows[0]?.e30 || 0) + (distKmVal * 18.5);
@@ -1212,7 +1212,7 @@ export default async function handler(req, res) {
         const { rows: c30Rows } = await query(
           `SELECT COUNT(DISTINCT ride_date) AS c30
            FROM cycling_history
-           WHERE user_id = $1 AND ride_date >= CURRENT_DATE - INTERVAL '30 days'`,
+           WHERE user_id = $1 AND ride_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Hong_Kong')::date - INTERVAL '30 days'`,
           [userData.userId]
         );
         const consistencyDays = Number(c30Rows[0]?.c30 || 0) + 1;
@@ -1236,29 +1236,29 @@ export default async function handler(req, res) {
         const explorationRatio = Math.min(1.0, conqueredCount / totalRoutesCount);
         const xFactor = explorationRatio * 200;
 
-        let validBugReportsCount = 0;
+        let communityContribution = 0;
         try {
-          await query(`
-            CREATE TABLE IF NOT EXISTS bug_reports (
-              id SERIAL PRIMARY KEY,
-              user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-              description TEXT NOT NULL,
-              screenshot TEXT,
-              page_url TEXT,
-              status VARCHAR(20) DEFAULT 'pending',
-              reject_reason TEXT,
-              created_at TIMESTAMP DEFAULT NOW()
-            );
-          `);
           const { rows: bugCountRows } = await query(
             `SELECT COUNT(*)::int AS cnt FROM bug_reports WHERE user_id = $1 AND status IN ('valid', 'approved', 'resolved')`, [userData.userId]
-          );
-          validBugReportsCount = Number(bugCountRows[0]?.cnt || 0);
+          ).catch(() => ({ rows: [{ cnt: 0 }] }));
+
+          const { rows: thirdPartyRows } = await query(
+            `SELECT COUNT(*)::int AS cnt FROM third_party_rides WHERE user_id = $1 AND status = 'approved'`, [userData.userId]
+          ).catch(() => ({ rows: [{ cnt: 0 }] }));
+
+          const { rows: obstacleRows } = await query(
+            `SELECT COUNT(*)::int AS cnt FROM road_obstacles WHERE user_id = $1 AND status IN ('approved', 'resolved')`, [userData.userId]
+          ).catch(() => ({ rows: [{ cnt: 0 }] }));
+
+          const validBugReportsCount = Number(bugCountRows[0]?.cnt || 0);
+          const approvedThirdPartyCount = Number(thirdPartyRows[0]?.cnt || 0);
+          const approvedObstaclesCount = Number(obstacleRows[0]?.cnt || 0);
+
+          communityContribution = validBugReportsCount + approvedThirdPartyCount + approvedObstaclesCount;
         } catch (pErr) {
           console.error('[Elite Score] P factor calc error:', pErr.message);
         }
-        const communityContribution = validBugReportsCount;
-        const pFactor = validBugReportsCount * 20;
+        const pFactor = communityContribution * 20;
 
         const totalEliteScore = Math.round(mFactor + eFactor + cFactor + aFactor + xFactor + pFactor);
 
