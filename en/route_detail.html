@@ -215,7 +215,11 @@
       function initMap(lat, lon, zoom) {
         if (map) return;
         map = L.map('route-map').setView([lat, lon], zoom || 14);
-        L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf', { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }).addTo(map);
+        const isLight = document.body.classList.contains('app-light-theme');
+        const tileUrl = isLight
+            ? 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf'
+            : 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
+        L.tileLayer(tileUrl, { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }).addTo(map);
       }
 
       async function loadGpx(file) {

@@ -842,8 +842,8 @@
 
         const isLight = document.body.classList.contains('app-light-theme');
         const tileUrl = isLight
-          ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-          : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
+          ? 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf'
+          : 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf';
 
         if (typeof L !== 'undefined') {
           this.leafletMap = L.map('map', { zoomControl: false, attributionControl: false }).setView([22.3083, 114.2597], 14);
@@ -1461,6 +1461,9 @@
         link.download = `ctrc-nav-track-${Date.now()}.png`;
         link.href = canvas.toDataURL();
         link.click();
+        } catch (err) {
+          console.warn('[downloadTrackMap] Error:', err);
+        }
       },
 
       setupUI() {
