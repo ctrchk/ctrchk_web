@@ -3447,6 +3447,9 @@
                 if (!resp.ok) throw new Error(data.message || '儲存失敗');
                 msgEl.style.color = 'green';
                 msgEl.textContent = '✅ 已儲存路線';
+                if (typeof window.broadcastRouteUpdate === 'function') {
+                    window.broadcastRouteUpdate({ action: 'upsert_managed_route' });
+                }
                 resetManagedRouteForm();
                 await loadStationRouteAdminData();
             } catch (e) {
@@ -3470,6 +3473,9 @@
                 if (!resp.ok) throw new Error(data.message || '刪除失敗');
                 msgEl.style.color = 'green';
                 msgEl.textContent = `✅ 已刪除 ${dept}-${routeNumber}`;
+                if (typeof window.broadcastRouteUpdate === 'function') {
+                    window.broadcastRouteUpdate({ action: 'delete_managed_route' });
+                }
                 await loadStationRouteAdminData();
             } catch (e) {
                 msgEl.style.color = 'red';
@@ -3524,6 +3530,9 @@
                 if (Array.isArray(data.errors) && data.errors.length) {
                     msgEl.style.color = '#d35400';
                     msgEl.textContent += `（部分錯誤：${data.errors.slice(0, 2).join('；')}）`;
+                }
+                if (typeof window.broadcastRouteUpdate === 'function') {
+                    window.broadcastRouteUpdate({ action: 'import_routes_csv' });
                 }
                 await loadStationRouteAdminData();
                 await loadDeletedStations();

@@ -932,6 +932,15 @@ export default async function handler(req, res) {
           return null;
         }).filter(Boolean);
 
+        let startStationName = null;
+        let endStationName = null;
+        if (resolvedStops.length > 0) {
+          startStationName = resolvedStops[0].name;
+          if (resolvedStops.length > 1) {
+            endStationName = resolvedStops[resolvedStops.length - 1].name;
+          }
+        }
+
         return {
           route_id: r.route_number,
           dept: r.dept,
@@ -943,6 +952,8 @@ export default async function handler(req, res) {
           tags,
           gpx: Array.isArray(r.gpx) ? r.gpx : parseSafeJsonArray(r.gpx),
           stops: resolvedStops,
+          start: startStationName,
+          end: endStationName,
           length_text: r.length_text || null,
           route_fare: parseFloat(r.route_fare || 0),
         };

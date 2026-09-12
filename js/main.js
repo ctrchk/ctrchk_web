@@ -22,6 +22,17 @@ function broadcastMileageUpdate(data = {}) {
 }
 window.broadcastMileageUpdate = broadcastMileageUpdate;
 
+function broadcastRouteUpdate(data = {}) {
+    const payload = { type: 'ROUTE_UPDATED', timestamp: Date.now(), ...data };
+    if (window.ctrcSyncChannel) {
+        try { window.ctrcSyncChannel.postMessage(payload); } catch (e) {}
+    }
+    if (window.parent && window.parent !== window) {
+        try { window.parent.postMessage(payload, '*'); } catch (e) {}
+    }
+}
+window.broadcastRouteUpdate = broadcastRouteUpdate;
+
 /**
  * @file main.js
  * @description 網站全域腳本。【最終修正與結構優化版】

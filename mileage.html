@@ -1963,9 +1963,11 @@
 
             try {
                 // Fetch fresh profile with Elite Score (passing user_id as a query param for consistency with API expectations)
-                const apiUrl = userId ? `/api/user?user_id=${userId}` : `/api/user`;
+                const cacheBuster = `_t=${Date.now()}`;
+                const apiUrl = userId ? `/api/user?user_id=${userId}&${cacheBuster}` : `/api/user?${cacheBuster}`;
                 const res = await fetch(apiUrl, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store'
                 });
                 if (res.ok) {
                     const u = await res.json();
@@ -1983,8 +1985,9 @@
 
                     // Fetch detailed ride history to build Changelog detailed mileage log
                     try {
-                        const historyRes = await fetch(`/api/getHistory`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
+                        const historyRes = await fetch(`/api/getHistory?${cacheBuster}`, {
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            cache: 'no-store'
                         });
                         if (historyRes.ok) {
                             const historyData = await historyRes.json();
@@ -2050,18 +2053,21 @@
         window.addEventListener('focus', initPremiumPage);
         window.addEventListener('pageshow', initPremiumPage);
 
-        // Real-time broadcast sync listeners
+        // Real-time broadcast sync listeners & SPA tab activation listener
         if (window.ctrcSyncChannel) {
             window.ctrcSyncChannel.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'MILEAGE_UPDATED') {
+                if (event.data && (event.data.type === 'MILEAGE_UPDATED' || event.data.type === 'TAB_ACTIVATED')) {
                     initPremiumPage();
                 }
             });
         }
         window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'MILEAGE_UPDATED') {
+            if (event.data && (event.data.type === 'MILEAGE_UPDATED' || event.data.type === 'TAB_ACTIVATED')) {
                 initPremiumPage();
             }
+        });
+        window.addEventListener('tabactivated', () => {
+            initPremiumPage();
         });
     </script>
 </body>

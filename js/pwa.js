@@ -511,6 +511,19 @@
       type: 'native'
     };
 
+    // Listen for broadcast/postMessage events and forward to all loaded iframe tabs
+    window.addEventListener('message', function(event) {
+      if (event.data && (event.data.type === 'MILEAGE_UPDATED' || event.data.type === 'ROUTE_UPDATED')) {
+        Object.values(spaTabs).forEach(tabObj => {
+          if (tabObj.type === 'iframe' && tabObj.iframe && tabObj.iframe.contentWindow) {
+            try {
+              tabObj.iframe.contentWindow.postMessage(event.data, '*');
+            } catch (e) {}
+          }
+        });
+      }
+    });
+
     // Expose switchToTab on parent window for children to call
     window.switchToTab = function(targetUrl, isPopState = false) {
       const cleanUrl = targetUrl.split('#')[0].split('?')[0].replace(/\/$/, '') || '/';
@@ -571,6 +584,15 @@
       targetTabEl.offsetHeight;
 
       targetTabEl.classList.add('active');
+
+      // Notify the newly activated tab (if it's an iframe) that it has become active
+      if (targetTabObj.type === 'iframe' && targetTabObj.iframe && targetTabObj.iframe.contentWindow) {
+        try {
+          targetTabObj.iframe.contentWindow.postMessage({ type: 'TAB_ACTIVATED', url: cleanUrl }, '*');
+        } catch (e) {}
+      } else if (targetTabObj.type === 'native') {
+        window.dispatchEvent(new CustomEvent('tabactivated', { detail: { url: cleanUrl } }));
+      }
 
       setTimeout(() => {
         if (activeTabEl) {
