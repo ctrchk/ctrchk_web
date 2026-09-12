@@ -215,7 +215,7 @@
       function initMap(lat, lon, zoom) {
         if (map) return;
         map = L.map('route-map').setView([lat, lon], zoom || 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+        L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf', { attribution: '© OpenStreetMap © CARTO', maxZoom: 19 }).addTo(map);
       }
 
       async function loadGpx(file) {

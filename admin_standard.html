@@ -16,6 +16,8 @@
     <title>管理員後台 - 城市運輸單車</title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
         .admin-container {
             max-width: 1100px;
@@ -598,68 +600,148 @@
                 </div>
 
                 <div style="background:white; border-radius:8px; padding:1.5em; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-top:1.5em;">
-                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-route"></i> 路線管理</h4>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em;">
-                        <select id="rm-dept">
-                            <option value="">選擇部門</option>
-                            <option value="tko">將軍澳部 (tko)</option>
-                            <option value="hki">港島海濱部 (hki)</option>
-                            <option value="st">沙田部 (st)</option>
-                        </select>
-                        <input id="rm-route-number" type="text" placeholder="路線編號">
-                        <select id="rm-start-station"><option value="">起點站</option></select>
-                        <select id="rm-end-station"><option value="">終點站</option></select>
+                    <h4 style="margin-top:0; color:#2c3e50;"><i class="fas fa-route"></i> 路線編輯與地圖可視化</h4>
+                    <p style="font-size:0.85em; color:#666; margin-bottom:1em;">在地圖上點擊站點可直接新增為下一個中途站；選擇 GPX 檔案即可即時預覽路線軌跡。</p>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5em; align-items:start;">
+                        <!-- 左側：路線表單 -->
+                        <div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.7em;">
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">部門 *</label>
+                                    <select id="rm-dept" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                        <option value="">選擇部門</option>
+                                        <option value="tko">將軍澳部 (tko)</option>
+                                        <option value="hki">港島海濱部 (hki)</option>
+                                        <option value="st">沙田部 (st)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">路線編號 *</label>
+                                    <input id="rm-route-number" type="text" placeholder="例：900" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.7em; margin-top:0.7em;">
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">起點站</label>
+                                    <select id="rm-start-station" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;"><option value="">選擇起點</option></select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">終點站</label>
+                                    <select id="rm-end-station" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;"><option value="">選擇終點</option></select>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.7em; margin-top:0.7em;">
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">別稱 (顯示名稱)</label>
+                                    <input id="rm-alias" type="text" placeholder="如：將軍澳專線" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">底色</label>
+                                    <input id="rm-bg-color" type="text" placeholder="#RRGGBB" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.7em; margin-top:0.7em;">
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">預計時間 (分鐘)</label>
+                                    <input id="rm-estimated-minutes" type="number" min="1" placeholder="如：35" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">路線車資 (HKD)</label>
+                                    <input id="rm-route-fare" type="number" step="0.1" min="0" placeholder="如：3.5" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.7em; margin-top:0.7em;">
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">距離 (自動計算)</label>
+                                    <input id="rm-length-text" type="text" placeholder="選擇 GPX 後自動計算" readonly style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #eee; background:#f9f9f9;">
+                                </div>
+                                <div style="align-self:end;">
+                                    <button type="button" onclick="addRouteGpxRow()" style="width:100%; padding:0.5em 0.8em; border:1px solid #3498db; border-radius:6px; background:#ebf5fb; color:#2980b9; cursor:pointer; font-weight:bold;">+ 新增 GPX 方向</button>
+                                </div>
+                            </div>
+
+                            <div style="margin-top:0.8em;">
+                                <strong>方向 / GPX（來自 /gpx）</strong>
+                                <div id="rm-gpx-list" style="margin-top:0.4em;"></div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.7em; margin-top:0.7em;">
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">解鎖條件</label>
+                                    <select id="rm-unlock-type" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                        <option value="level">標準路線 (免費導航)</option>
+                                        <option value="coins">特別版路線 (里程幣解鎖)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.82em; font-weight:bold;">里程幣費用</label>
+                                    <input id="rm-unlock-value" type="number" min="0" placeholder="僅限特別版" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                                </div>
+                            </div>
+
+                            <div style="margin-top:0.7em;">
+                                <label style="font-size:0.82em; font-weight:bold;">標籤 (逗號分隔)</label>
+                                <input id="rm-tags" type="text" placeholder="例：將軍澳, 新手必試" style="width:100%; padding:0.5em; border-radius:6px; border:1px solid #ccc;">
+                            </div>
+
+                            <div style="margin-top:0.7em; display:flex; gap:1em; flex-wrap:wrap; align-items:center;">
+                                <label><input type="radio" name="rm-type" value="One-way" checked> 單向</label>
+                                <label><input type="radio" name="rm-type" value="Two-way"> 雙向</label>
+                                <label><input type="radio" name="rm-type" value="Circular"> 循環</label>
+                            </div>
+
+                            <div style="margin-top:0.7em;">
+                                <label style="display:inline-flex; align-items:center; gap:0.4em; font-weight:bold; color:#e67e22; font-size:0.9em;">
+                                    <input type="checkbox" id="rm-is-double-mileage" onchange="toggleDoubleMileageTag(this.checked)">
+                                    <span>⚡ 設為週末雙倍里程推薦路線</span>
+                                </label>
+                            </div>
+
+                            <div style="margin-top:1em; border-top:1px dashed #ddd; padding-top:0.8em;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <strong>中途站清單</strong>
+                                    <button type="button" onclick="addRouteStopRow()" style="padding:0.35em 0.8em; border:1px solid #2ecc71; border-radius:6px; background:#e8f8f5; color:#27ae60; cursor:pointer; font-size:0.85em; font-weight:bold;">+ 新增中途站</button>
+                                </div>
+                                <div id="rm-stops-list" style="margin-top:0.5em;"></div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:0.6em; margin-top:1em;">
+                                <input id="rm-reward-per-stop" type="number" min="0" placeholder="每站 XP">
+                                <input id="rm-reward-cross-district" type="number" min="0" placeholder="跨區加成">
+                                <input id="rm-reward-completion" type="number" min="0" placeholder="完成獎勵">
+                                <input id="rm-reward-time-limit" type="number" min="0" placeholder="限時獎勵">
+                            </div>
+
+                            <div style="margin-top:1em; display:flex; gap:0.6em; flex-wrap:wrap;">
+                                <button class="cta-button" onclick="saveManagedRoute()"><i class="fas fa-save"></i> 儲存路線</button>
+                                <button onclick="resetManagedRouteForm()" style="padding:0.65em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">清除</button>
+                                <span id="route-admin-msg" style="font-size:0.9em; align-self:center;"></span>
+                            </div>
+                        </div>
+
+                        <!-- 右側：互動式地圖編輯與 GPX / 站點預覽 -->
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4em;">
+                                <strong style="font-size:0.95em; color:#2c3e50;"><i class="fas fa-map-marked-alt"></i> 路線與站點可視化地圖</strong>
+                                <div>
+                                    <button type="button" onclick="resetRouteAdminMapView()" style="padding:0.3em 0.7em; font-size:0.8em; border:1px solid #ccc; border-radius:4px; background:#f8f9fa; cursor:pointer;">重置視角</button>
+                                    <button type="button" onclick="clearRouteAdminMapPreview()" style="padding:0.3em 0.7em; font-size:0.8em; border:1px solid #ccc; border-radius:4px; background:#f8f9fa; cursor:pointer;">清除預覽</button>
+                                </div>
+                            </div>
+                            <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; padding:0.5em 0.8em; font-size:0.82em; color:#0369a1; margin-bottom:0.6em;">
+                                <i class="fas fa-info-circle"></i> <b>提示：</b>在地圖上點擊藍色站點標記，即可直接新增為下一個中途站；選擇 GPX 檔案後地圖將即時繪製路線軌跡！
+                            </div>
+                            <div id="route-admin-map" style="height:520px; width:100%; border-radius:8px; border:1px solid #ccc; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);"></div>
+                            <div id="route-admin-map-toast" style="margin-top:0.4em; font-size:0.85em; font-weight:bold; height:1.2em; color:#27ae60;"></div>
+                        </div>
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
-                        <input id="rm-alias" type="text" placeholder="別稱（顯示名稱）">
-                        <input id="rm-bg-color" type="text" placeholder="底色 #RRGGBB">
-                        <input id="rm-estimated-minutes" type="number" min="1" placeholder="預計時間（分鐘）">
-                        <input id="rm-route-fare" type="number" step="0.1" min="0" placeholder="路線車資 (HKD)">
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
-                        <input id="rm-length-text" type="text" placeholder="距離（自動計算）" readonly>
-                        <button type="button" onclick="addRouteGpxRow()" style="padding:0.55em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">+ 新增方向 GPX</button>
-                    </div>
-                    <div style="margin-top:0.8em;">
-                        <strong>方向 / GPX（來自 /gpx）</strong>
-                        <div id="rm-gpx-list" style="margin-top:0.5em;"></div>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.7em; margin-top:0.8em;">
-                        <select id="rm-unlock-type">
-                            <option value="level">標準路線 (免費導航)</option>
-                            <option value="coins">特別版路線 (里程幣解鎖)</option>
-                        </select>
-                        <input id="rm-unlock-value" type="number" min="0" placeholder="里程幣費用 (僅限特別版)">
-                        <input id="rm-tags" type="text" placeholder="標籤（逗號分隔，可留空）">
-                    </div>
-                    <div style="margin-top:0.8em; display:flex; gap:1em; flex-wrap:wrap; align-items:center;">
-                        <label><input type="radio" name="rm-type" value="One-way" checked> 單向</label>
-                        <label><input type="radio" name="rm-type" value="Two-way"> 雙向</label>
-                        <label><input type="radio" name="rm-type" value="Circular"> 循環</label>
-                    </div>
-                    <div style="margin-top:0.8em; display:flex; gap:1.5em; flex-wrap:wrap; align-items:center;">
-                        <label style="display:inline-flex; align-items:center; gap:0.5em; font-weight:bold; color:#e67e22;">
-                            <input type="checkbox" id="rm-is-double-mileage" onchange="toggleDoubleMileageTag(this.checked)">
-                            <span>⚡ 設為週末雙倍里程推薦路線</span>
-                        </label>
-                    </div>
-                    <div style="margin-top:1em;">
-                        <strong>中途站</strong>
-                        <div id="rm-stops-list" style="margin-top:0.5em;"></div>
-                        <button onclick="addRouteStopRow()" style="margin-top:0.5em; padding:0.45em 0.9em; border:1px solid #ccc; border-radius:6px; background:#fff; cursor:pointer;">+ 新增中途站</button>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:0.7em; margin-top:1em;">
-                        <input id="rm-reward-per-stop" type="number" min="0" placeholder="每站 XP">
-                        <input id="rm-reward-cross-district" type="number" min="0" placeholder="跨區加成">
-                        <input id="rm-reward-completion" type="number" min="0" placeholder="完成獎勵">
-                        <input id="rm-reward-time-limit" type="number" min="0" placeholder="限時獎勵">
-                    </div>
-                    <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap;">
-                        <button class="cta-button" onclick="saveManagedRoute()"><i class="fas fa-save"></i> 儲存路線</button>
-                        <button onclick="resetManagedRouteForm()" style="padding:0.65em 1em; border:1px solid #ccc; border-radius:8px; background:#fff; cursor:pointer;">清除</button>
-                        <span id="route-admin-msg" style="font-size:0.9em; align-self:center;"></span>
-                    </div>
-                    <div style="margin-top:0.8em; display:flex; gap:0.6em; flex-wrap:wrap; align-items:center;">
+
+                    <div style="margin-top:1.2em; display:flex; gap:0.6em; flex-wrap:wrap; align-items:center;">
                         <input id="route-csv-file" type="file" accept=".csv,text/csv">
                         <button type="button" onclick="importRoutesCsv()" style="padding:0.65em 1em; border:1px solid #2c3e50; border-radius:8px; background:#2c3e50; color:#fff; cursor:pointer;">
                             <i class="fas fa-file-import"></i> 導入路線 CSV
@@ -667,6 +749,7 @@
                         <span id="route-csv-msg" style="font-size:0.9em; align-self:center; color:#555;"></span>
                     </div>
                     <p style="margin:0.5em 0 0; font-size:0.82em; color:#777;">CSV 欄位：dept, route_number, type, start_station_id, end_station_id, alias, bg_color, estimated_minutes, unlock_type(level/coins), unlock_value, length_text, gpx(JSON), tags, stops(JSON), rewards(JSON)</p>
+
                     <div style="overflow:auto; margin-top:1em;">
                         <table class="users-table">
                             <thead>
@@ -788,6 +871,10 @@
         let managedRouteEditingKey = null;
         let stationEditingId = null;
 
+        let routeAdminMap = null;
+        let routeAdminStationMarkers = [];
+        let routeAdminGpxLayer = null;
+
         function safeFormatDate(dateStr) {
             if (!dateStr) return '—';
             try {
@@ -864,7 +951,10 @@
 
             ['rm-start-station', 'rm-end-station'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.addEventListener('change', refreshStopNatureLabels);
+                if (el) el.addEventListener('change', () => {
+                    refreshStopNatureLabels();
+                    updateRouteAdminMapStopsHighlight();
+                });
             });
         });
 
@@ -1607,6 +1697,7 @@
         async function loadRouteMgmt() {
             await loadDeptAdminData();
             await Promise.all([loadGpxOptions(), loadStationRouteAdminData(), loadDeletedStations()]);
+            initRouteAdminMap();
         }
 
         async function loadStationRouteAdminData() {
@@ -1627,6 +1718,9 @@
                 renderRouteAdminTable();
                 renderTerminalAdminTable();
                 refreshStationSelectOptions();
+                if (routeAdminMap) {
+                    renderRouteAdminStationMarkers();
+                }
             } catch (e) {
                 console.error('[Admin] loadStationRouteAdminData error:', e);
             }
@@ -1800,7 +1894,7 @@
                 .concat(stationAdminData.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.id)} - ${escapeHtml(s.name_zh || '')}</option>`))
                 .join('');
             row.innerHTML = `
-                <button type="button" onclick="this.parentElement.remove()" style="position:absolute; top:0.5em; right:0.5em; border:none; background:none; color:#e74c3c; cursor:pointer; font-size:1.2em; line-height:1;">&times;</button>
+                <button type="button" onclick="this.parentElement.remove(); updateRouteAdminMapStopsHighlight();" style="position:absolute; top:0.5em; right:0.5em; border:none; background:none; color:#e74c3c; cursor:pointer; font-size:1.2em; line-height:1;">&times;</button>
                 <div style="margin-bottom:0.5em; padding-right:1.5em;">
                     <select class="rm-stop-station" style="width:100%; padding:0.4em; border-radius:4px; border:1px solid #ddd;">${stationOptions}</select>
                 </div>
@@ -1825,6 +1919,7 @@
             if (stop.station_id) row.querySelector('.rm-stop-station').value = stop.station_id;
             if (stop.nature) row.querySelector('.rm-stop-nature').value = stop.nature;
             if (stop.type) row.querySelector('.rm-stop-type').value = stop.type;
+            row.querySelector('.rm-stop-station').addEventListener('change', updateRouteAdminMapStopsHighlight);
             return row;
         }
 
@@ -1886,6 +1981,22 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
 
+        async function fetchAndParseGpxCoordinates(file) {
+            if (!file) return [];
+            try {
+                const resp = await fetch('/gpx/' + encodeURIComponent(file));
+                if (!resp.ok) return [];
+                const xml = await resp.text();
+                const doc = new DOMParser().parseFromString(xml, 'application/xml');
+                return Array.from(doc.querySelectorAll('trkpt,rtept')).map(p => ({
+                    lat: Number(p.getAttribute('lat')),
+                    lon: Number(p.getAttribute('lon'))
+                })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+            } catch (_) {
+                return [];
+            }
+        }
+
         async function recalcManagedRouteDistance() {
             const lengthInput = document.getElementById('rm-length-text');
             const files = Array.from(document.querySelectorAll('#rm-gpx-list .rm-gpx-file'))
@@ -1893,11 +2004,149 @@
                 .filter(Boolean);
             if (!files.length) {
                 lengthInput.value = '';
+                clearRouteAdminMapPreview();
                 return;
             }
             const kms = await Promise.all(files.map(f => estimateGpxDistanceKm(f).catch(() => 0)));
             const maxKm = Math.max(...kms, 0);
             lengthInput.value = maxKm > 0 ? `${maxKm.toFixed(1)}km` : '';
+            updateRouteAdminMapGpxPreview();
+        }
+
+        function initRouteAdminMap() {
+            const mapEl = document.getElementById('route-admin-map');
+            if (!mapEl) return;
+
+            if (routeAdminMap) {
+                setTimeout(() => routeAdminMap.invalidateSize(), 100);
+                return;
+            }
+
+            routeAdminMap = L.map('route-admin-map').setView([22.3080, 114.2600], 13);
+            L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_3i2c_1_3753da660425a9a0285fe2bf', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+            }).addTo(routeAdminMap);
+
+            renderRouteAdminStationMarkers();
+        }
+
+        function renderRouteAdminStationMarkers() {
+            if (!routeAdminMap) return;
+            routeAdminStationMarkers.forEach(item => routeAdminMap.removeLayer(item.marker));
+            routeAdminStationMarkers = [];
+
+            stationAdminData.forEach(st => {
+                if (Number.isFinite(st.lat) && Number.isFinite(st.lon)) {
+                    const marker = L.circleMarker([st.lat, st.lon], {
+                        radius: 6,
+                        fillColor: '#3498db',
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(routeAdminMap);
+
+                    marker.bindTooltip(`<b>${escapeHtml(st.id)}</b>: ${escapeHtml(st.name_zh || '')}<br><span style="color:#27ae60;">點擊新增為中途站</span>`, {
+                        direction: 'top',
+                        offset: [0, -5]
+                    });
+
+                    marker.on('click', () => appendStationToRouteFromMap(st));
+                    routeAdminStationMarkers.push({ id: st.id, marker });
+                }
+            });
+
+            updateRouteAdminMapStopsHighlight();
+        }
+
+        function appendStationToRouteFromMap(st) {
+            addRouteStopRow({ station_id: st.id, nature: 'both', type: 'standard' });
+            const toast = document.getElementById('route-admin-map-toast');
+            if (toast) {
+                toast.textContent = `已新增站點 ${st.id} (${st.name_zh || ''}) 至中途站清單！`;
+                setTimeout(() => {
+                    if (toast.textContent.includes(st.id)) toast.textContent = '';
+                }, 3000);
+            }
+            updateRouteAdminMapStopsHighlight();
+        }
+
+        function updateRouteAdminMapStopsHighlight() {
+            if (!routeAdminMap || !routeAdminStationMarkers.length) return;
+
+            const startId = document.getElementById('rm-start-station')?.value || '';
+            const endId = document.getElementById('rm-end-station')?.value || '';
+            const stopIds = Array.from(document.querySelectorAll('#rm-stops-list .rm-stop-station'))
+                .map(el => el.value)
+                .filter(Boolean);
+
+            routeAdminStationMarkers.forEach(({ id, marker }) => {
+                if (id === startId) {
+                    marker.setStyle({ fillColor: '#2ecc71', color: '#ffffff', radius: 9, fillOpacity: 1 });
+                } else if (id === endId) {
+                    marker.setStyle({ fillColor: '#e74c3c', color: '#ffffff', radius: 9, fillOpacity: 1 });
+                } else if (stopIds.includes(id)) {
+                    marker.setStyle({ fillColor: '#f39c12', color: '#ffffff', radius: 8, fillOpacity: 1 });
+                } else {
+                    marker.setStyle({ fillColor: '#3498db', color: '#ffffff', radius: 6, fillOpacity: 0.8 });
+                }
+            });
+        }
+
+        async function updateRouteAdminMapGpxPreview() {
+            if (!routeAdminMap) return;
+            if (routeAdminGpxLayer) {
+                routeAdminMap.removeLayer(routeAdminGpxLayer);
+                routeAdminGpxLayer = null;
+            }
+            const files = Array.from(document.querySelectorAll('#rm-gpx-list .rm-gpx-file'))
+                .map(el => el.value)
+                .filter(Boolean);
+            if (!files.length) return;
+
+            const layerGroup = L.layerGroup();
+            const colors = ['#e74c3c', '#2ecc71', '#3498db', '#9b59b6', '#f39c12'];
+            let allCoords = [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const coords = await fetchAndParseGpxCoordinates(file);
+                if (coords.length > 0) {
+                    const latLngs = coords.map(c => [c.lat, c.lon]);
+                    allCoords = allCoords.concat(latLngs);
+                    const color = colors[i % colors.length];
+                    L.polyline(latLngs, { color: color, weight: 5, opacity: 0.85 }).addTo(layerGroup);
+                }
+            }
+
+            if (allCoords.length > 0) {
+                layerGroup.addTo(routeAdminMap);
+                routeAdminGpxLayer = layerGroup;
+                const bounds = L.latLngBounds(allCoords);
+                if (bounds.isValid()) {
+                    routeAdminMap.fitBounds(bounds, { padding: [30, 30] });
+                }
+            }
+        }
+
+        function resetRouteAdminMapView() {
+            if (!routeAdminMap) return;
+            if (routeAdminGpxLayer) {
+                const files = Array.from(document.querySelectorAll('#rm-gpx-list .rm-gpx-file')).map(el => el.value).filter(Boolean);
+                if (files.length) {
+                    updateRouteAdminMapGpxPreview();
+                    return;
+                }
+            }
+            routeAdminMap.setView([22.3080, 114.2600], 13);
+        }
+
+        function clearRouteAdminMapPreview() {
+            if (routeAdminGpxLayer && routeAdminMap) {
+                routeAdminMap.removeLayer(routeAdminGpxLayer);
+                routeAdminGpxLayer = null;
+            }
         }
 
         function resetManagedRouteForm() {
@@ -1921,6 +2170,8 @@
             const gpxList = document.getElementById('rm-gpx-list');
             if (gpxList) gpxList.innerHTML = '';
             document.getElementById('route-admin-msg').textContent = '';
+            clearRouteAdminMapPreview();
+            updateRouteAdminMapStopsHighlight();
         }
 
         function renderRouteAdminTable() {
@@ -1990,6 +2241,8 @@
             document.getElementById('rm-reward-completion').value = rewards.completion_bonus ?? '';
             document.getElementById('rm-reward-time-limit').value = rewards.time_limit_bonus ?? '';
             document.getElementById('route-admin-msg').textContent = `正在編輯 ${managedRouteEditingKey}`;
+            updateRouteAdminMapStopsHighlight();
+            updateRouteAdminMapGpxPreview();
         }
 
         async function saveManagedRoute() {
