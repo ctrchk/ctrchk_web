@@ -2219,9 +2219,10 @@ async function initAppRidePage() {
 
         if (navigator.onLine) {
             try {
+                const cacheBuster = `_t=${Date.now()}`;
                 const [r1, r2] = await Promise.all([
                     fetch('/routes.json').then(r => r.json()),
-                    fetch('/api/user?action=route-data').then(r => r.json())
+                    fetch(`/api/user?action=route-data&${cacheBuster}`, { cache: 'no-store' }).then(r => r.json())
                 ]);
                 staticData = r1;
                 overrideData = r2;
@@ -2298,6 +2299,8 @@ async function initAppRidePage() {
                         color: o.bg_color || r.color,
                         time: o.estimated_minutes || r.time,
                         length: o.length_text || r.length,
+                        start: o.start || r.start,
+                        end: o.end !== undefined ? o.end : r.end,
                         tags: Array.isArray(o.tags) && o.tags.length ? o.tags : r.tags,
                         gpx: Array.isArray(o.gpx) && o.gpx.length ? o.gpx : r.gpx,
                         stops: Array.isArray(o.stops) && o.stops.length ? o.stops : r.stops,
@@ -2318,8 +2321,8 @@ async function initAppRidePage() {
                     appRoutes.push({
                         id: o.route_id,
                         alias: o.alias || o.route_id,
-                        start: '',
-                        end: '',
+                        start: o.start || '',
+                        end: o.end || '',
                         via: '',
                         nature: '',
                         time: o.estimated_minutes || null,
@@ -2811,6 +2814,26 @@ async function initAppRidePage() {
         enterDepartment(activeDept, !deptParam);
     }
 }
+
+// Real-time route update & SPA tab activation listeners
+function refreshRouteDataRealtime() {
+    _appRideInited = false;
+    initAppRidePage();
+}
+
+if (window.ctrcSyncChannel) {
+    window.ctrcSyncChannel.addEventListener('message', (event) => {
+        if (event.data && (event.data.type === 'ROUTE_UPDATED' || event.data.type === 'TAB_ACTIVATED')) {
+            refreshRouteDataRealtime();
+        }
+    });
+}
+window.addEventListener('message', (event) => {
+    if (event.data && (event.data.type === 'ROUTE_UPDATED' || event.data.type === 'TAB_ACTIVATED')) {
+        refreshRouteDataRealtime();
+    }
+});
+window.addEventListener('tabactivated', refreshRouteDataRealtime);
 
 // Handle browser back/forward navigation
 window.addEventListener('popstate', (e) => {
